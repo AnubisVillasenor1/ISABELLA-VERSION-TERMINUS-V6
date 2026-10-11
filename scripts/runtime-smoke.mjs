@@ -77,7 +77,7 @@ try {
       });
       const llmBody = await llm.json();
       assert.equal(llm.status, 200, `gateway chat returned HTTP ${llm.status}: ${JSON.stringify(llmBody)}`);
-      assert.ok(["open-science", "openrouter-free", "huggingface-free", "gemini"].includes(llmBody.responseEngine), `a real external model must answer; got ${llmBody.responseEngine}`);
+      assert.ok(["openrouter-free", "huggingface-free"].includes(llmBody.responseEngine), `a real free/open provider must answer; got ${llmBody.responseEngine}`);
       assert.equal(typeof llmBody.generativeNarrative, "string");
       assert.ok(llmBody.generativeNarrative.trim().length > 0);
       console.log("EXTERNAL_MODEL_SMOKE_OK", JSON.stringify({ responseEngine: llmBody.responseEngine }));
