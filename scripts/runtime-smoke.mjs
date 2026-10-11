@@ -20,6 +20,11 @@ try {
   assert.equal(health.status, 200, "GET /health must return HTTP 200");
   const healthBody = await health.json();
   assert.equal(healthBody.status, "healthy");
+  const publicHealth = await fetch(`${baseUrl}/api/v1/health`, { signal: AbortSignal.timeout(5_000) });
+  assert.equal(publicHealth.status, 200, "public API health must remain available");
+  const publicHealthBody = await publicHealth.json();
+  assert.equal(typeof publicHealthBody.inferenceMode, "string", "public health must describe inference mode without exposing secrets");
+  assert.equal("hasGeminiKey" in publicHealthBody, false, "public health must not disclose provider credential presence");
 
   const chat = await fetch(`${baseUrl}/api/v1/cognition/route`, {
     method: "POST",
@@ -39,6 +44,8 @@ try {
   assert.ok(chatBody.generativeNarrative.trim().length > 0, "chat narrative must not be empty");
   assert.equal(chatBody.responseEngine, "sovereign", "explicit sovereign mode must disclose the local engine");
   assert.match(chatBody.generativeNarrative, /Soy Isabella Villaseñor AI/, "local fallback must answer greetings conversationally");
+  assert.equal(typeof chatBody.openModelConfigured, "boolean", "response must distinguish open provider configuration");
+  assert.equal(typeof chatBody.paidProviderConfigured, "boolean", "response must distinguish paid provider configuration");
 
   const followUp = await fetch(`${baseUrl}/api/v1/cognition/route`, {
     method: "POST",
