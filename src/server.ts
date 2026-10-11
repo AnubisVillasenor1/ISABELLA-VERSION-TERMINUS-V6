@@ -116,32 +116,32 @@ function buildConversationPrompt(input: string, history: PublicChatTurn[]): stri
 }
 /** Honest local conversational fallback; it is not a language model and never claims external inference. */
 function generateSovereignFallback(input: string, history: PublicChatTurn[], focusLens: string): string {
-  const normalized = input.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().trim();
+  const normalized = input.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
   const has = (...patterns: RegExp[]) => patterns.some((pattern) => pattern.test(normalized));
   const priorUser = [...history].reverse().find((turn) => turn.role === "user")?.content;
   if (has(/^(hola|holi|buenas|buenos dias|buenas tardes|buenas noches|que tal|hey|hello|hi)[.!?, ]*$/)) {
     return "Hola. Soy Isabella Villaseñor AI. Estoy disponible para conversar en esta sesión. El proveedor generativo externo no está disponible ahora, así que responderé con capacidades locales limitadas y te indicaré cuándo no pueda resolver algo con fiabilidad. ¿Qué necesitas trabajar hoy?";
   }
-  if (has(/\\b(gracias|muchas gracias|te agradezco)\\b/)) {
+  if (has(/\b(gracias|muchas gracias|te agradezco)\b/)) {
     return "De nada. Podemos continuar desde aquí. ¿Quieres profundizar en algo de lo anterior o pasar al siguiente punto?";
   }
-  if (has(/\\b(quien eres|quien es isabella|que eres)\\b/)) {
+  if (has(/\b(quien eres|quien es isabella|que eres)\b/)) {
     return "Soy Isabella Villaseñor AI, una interfaz de asistencia conversacional del ecosistema TAMV. En este entorno puedo mantener contexto breve dentro de la sesión, clasificar la intención de la solicitud y aplicar límites de seguridad. La generación con un modelo externo está temporalmente bloqueada por la configuración de AI Gateway; no voy a fingir que este fallback es un LLM.";
   }
-  if (has(/\\b(que puedes hacer|como me puedes ayudar|ayudame|ayuda|capacidades|que sabes hacer)\\b/)) {
+  if (has(/\b(que puedes hacer|como me puedes ayudar|ayudame|ayuda|capacidades|que sabes hacer)\b/)) {
     return "Puedo ayudarte a organizar requisitos, redactar y revisar textos, descomponer problemas técnicos, planear pruebas, revisar código que compartas y convertir objetivos en pasos verificables. En este momento el modo local no tiene conocimiento general equivalente a un LLM ni acceso implícito a tus archivos, memoria privada o web. Dime el objetivo concreto y te señalaré los límites antes de afirmar resultados.";
   }
-  if (has(/\\b(privacidad|mis datos|guardas|almacenas|historial)\\b/)) {
+  if (has(/\b(privacidad|mis datos|guardas|almacenas|historial)\b/)) {
     return "En esta vista previa, el historial conversacional de la interfaz vive en la pestaña y se pierde al recargar. En modo Auto, los mensajes y hasta ocho turnos previos pueden enviarse al proveedor externo si llega a estar operativo. No incluyas contraseñas, claves API ni datos sensibles. No afirmo que exista memoria persistente personal para esta conversación.";
   }
-  if (has(/\\b(tamv|real del monte|rdm digital|ige.?omega|crown|aegis)\\b/)) {
+  if (has(/\b(tamv|real del monte|rdm digital|ige.?omega|crown|aegis)\b/)) {
     return "Puedo ayudarte a estructurar esa cuestión del ecosistema TAMV/RDM/Isabella, pero el modo local no consulta automáticamente los repositorios ni una memoria documental. Para darte una respuesta verificable, comparte el fragmento, requisito o archivo relevante y lo analizaré dentro de los límites disponibles. ¿Qué componente quieres abordar primero?";
   }
-  if (has(/\\b(estas ahi|me escuchas|puedes conversar|funcionas|respondes)\\b/)) {
+  if (has(/\b(estas ahi|me escuchas|puedes conversar|funcionas|respondes)\b/)) {
     return "Sí: el endpoint conversacional está respondiendo y puedo mantener un contexto breve en esta sesión. Aclaración importante: ahora mismo respondo mediante reglas locales, no mediante un modelo generativo externo. Para habilitar ese modelo falta resolver el acceso/facturación de AI Gateway o configurar una clave válida de proveedor.";
   }
   if (input.length < 4) return "Necesito un poco más de contexto para ayudarte. ¿Puedes explicar qué quieres conseguir o formular la pregunta completa?";
-  const excerpt = input.replace(/[\\u0000-\\u001f\\u007f]/g, " ").replace(/\\s+/g, " ").trim().slice(0, 280);
+  const excerpt = input.replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, 280);
   const contextNote = priorUser ? " Tengo un turno anterior en el contexto de esta sesión, pero no debo asumir que resuelve tu petición actual." : "";
   const lens = focusLens === "general" ? "" : " Lente solicitada: " + focusLens + ".";
   return "He recibido tu solicitud: «" + excerpt + (input.length > 280 ? "…" : "") + "»." + contextNote + lens + " El motor generativo externo no está disponible y el modo local no puede razonar de forma fiable sobre cualquier tema. Para evitar inventar una respuesta, puedo ayudarte a delimitar el problema: comparte el contexto esencial, el resultado esperado y cualquier restricción, y te propondré un siguiente paso concreto.";
