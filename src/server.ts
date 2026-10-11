@@ -93,6 +93,7 @@ void runtime.initPersistence().catch((error) => {
 // Initialize Google GenAI client if API key is provided in environment
 const apiKey = process.env.GEMINI_API_KEY || process.env.MODEL_API_KEY;
 const genAi = apiKey ? new GoogleGenAI({ apiKey }) : null;
+const providerTimeoutMs = Math.min(30_000, Math.max(3_000, Number(process.env.INFERENCE_TIMEOUT_MS) || 15_000));
 
 type PublicChatTurn = { role: "user" | "assistant"; content: string };
 
@@ -118,6 +119,7 @@ async function generateGatewayNarrative(systemPrompt: string, input: string, his
   try {
     const result = await generateText({
       model: gateway("inclusionai/ling-3.1-flash-free"),
+      abortSignal: AbortSignal.timeout(providerTimeoutMs),
       system: systemPrompt,
       prompt: buildConversationPrompt(input, history),
       maxOutputTokens: 900,
@@ -593,7 +595,7 @@ app.post("/api/v1/cognition/route", async (req, res) => {
   try {
     const body = req.body ?? {};
     const modelEngine = ["auto", "sovereign", "open-science", "gemini"].includes(body.modelEngine) ? body.modelEngine : "auto";
-    if ((modelEngine === "gemini" || modelEngine === "auto") && genAi && !enforceRateLimit(req, res, publicModelLimiter, "public-model")) return;
+    if (modelEngine !== "sovereign" && !enforceRateLimit(req, res, publicModelLimiter, "public-model")) return;
     const history = sanitizePublicHistory(body.history);
     const input = typeof body.input === "string" ? body.input.trim() : "";
     const focusLens = ["territorial", "epistemic", "security", "governance"].includes(body.focusLens) ? body.focusLens : "general";
@@ -654,7 +656,7 @@ app.post("/api/v1/cognition/route", async (req, res) => {
           const resp = await genAi.models.generateContent({
             model: "gemini-2.5-flash",
             contents,
-            config: { systemInstruction: systemPrompt },
+            config: { systemInstruction: systemPrompt, httpOptions: { timeout: providerTimeoutMs } },
           });
           generativeNarrative = resp.text?.trim() || null;
           if (generativeNarrative) responseEngine = "gemini";
