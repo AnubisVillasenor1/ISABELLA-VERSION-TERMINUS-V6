@@ -11,25 +11,24 @@
  */
 
 :root {
-  --bg-deep-space: #040711;
-  --crystal-surface: rgba(13, 19, 36, 0.42);
-  --crystal-surface-active: rgba(18, 27, 52, 0.65);
-  --crystal-card: rgba(15, 23, 42, 0.38);
-  --crystal-card-hover: rgba(22, 34, 62, 0.58);
-  
-  /* Linear gradient & iridescent borders */
-  --crystal-border-subtle: rgba(255, 255, 255, 0.08);
-  --crystal-border-glow: rgba(0, 242, 254, 0.32);
-  --crystal-highlight-top: rgba(255, 255, 255, 0.22);
-  --crystal-highlight-bottom: rgba(0, 0, 0, 0.45);
-  
-  /* Neon Palette */
-  --neon-cyan: #00f2fe;
-  --neon-indigo: #6366f1;
-  --neon-rose: #f43f5e;
-  --neon-amber: #f59e0b;
-  --neon-emerald: #10b981;
-  --neon-violet: #8b5cf6;
+  /* Enterprise palette: electric blue, platinum, pearl ivory, navy and bandera green. */
+  --bg-deep-space: #061426;
+  --crystal-surface: rgba(9, 25, 48, 0.78);
+  --crystal-surface-active: rgba(15, 40, 76, 0.9);
+  --crystal-card: rgba(13, 34, 64, 0.72);
+  --crystal-card-hover: rgba(20, 52, 91, 0.86);
+
+  --crystal-border-subtle: rgba(214, 226, 240, 0.18);
+  --crystal-border-glow: rgba(37, 181, 255, 0.5);
+  --crystal-highlight-top: rgba(255, 255, 255, 0.3);
+  --crystal-highlight-bottom: rgba(0, 8, 20, 0.55);
+
+  --neon-cyan: #26b9ff;
+  --neon-indigo: #4169e1;
+  --neon-rose: #a9b7c9;
+  --neon-amber: #f0c674;
+  --neon-emerald: #22a06b;
+  --neon-violet: #8ca9d8;
 }
 
 /* ==========================================================================
@@ -229,6 +228,17 @@
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
 .crystal-clear-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 242, 254, 0.5);
-  box-shadow: 0 0 10px rgba(0, 242, 254, 0.4);
+  background: rgba(38, 185, 255, 0.58);
+  box-shadow: 0 0 10px rgba(38, 185, 255, 0.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }
