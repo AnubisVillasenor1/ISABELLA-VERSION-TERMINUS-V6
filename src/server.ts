@@ -1724,7 +1724,7 @@ app.get("/", (_req, res) => {
     <div class="cinematic-orbit cinematic-orbit-one" aria-hidden="true"></div>
     <div class="cinematic-orbit cinematic-orbit-two" aria-hidden="true"></div>
     <div class="cinematic-intro-content">
-      <div class="cinematic-mark" aria-hidden="true">ISA</div>
+      <div class="cinematic-mark" aria-hidden="true"><img src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/logo-isav6-h8D664HhoUaMbFaEXOx0vIupxB3DL4.jpeg" alt="Isabella Villaseñor AI" class="h-full w-full rounded-[18px] object-cover" /></div>
       <p class="cinematic-eyebrow">TAMV · Tecnología Avanzada Mexicana Versátil</p>
       <h1 id="introTitle">Bienvenido a Isabella Villaseñor</h1>
       <p class="cinematic-lede">Inteligencia gobernada, memoria civilizatoria y orgullo latinoamericano desde Real del Monte, Hidalgo.</p>
@@ -1754,8 +1754,8 @@ app.get("/", (_req, res) => {
         </button>
 
         <!-- Iridescent Crystal Avatar Icon -->
-        <div class="relative w-9 h-9 rounded-2xl bg-gradient-to-tr from-amber-500 via-rose-500 to-indigo-600 flex items-center justify-center font-bold text-white text-xs shadow-lg shadow-amber-500/25 ring-1 ring-white/30">
-          <span>ISA</span>
+        <div class="relative w-9 h-9 rounded-2xl overflow-hidden bg-slate-950 flex items-center justify-center font-bold text-white text-xs shadow-lg shadow-cyan-500/25 ring-1 ring-white/30">
+          <img src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/logo-isav6-h8D664HhoUaMbFaEXOx0vIupxB3DL4.jpeg" alt="Logo de Isabella Villaseñor AI" class="h-full w-full object-cover" />
           <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-[#050811]" title="Zero Trust Active"></span>
         </div>
         
@@ -3104,7 +3104,7 @@ app.get("/", (_req, res) => {
     });
 
     document.getElementById('mainInput').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
+      if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && e.keyCode !== 229) {
         e.preventDefault();
         document.getElementById('mainPromptForm').requestSubmit();
       }
@@ -3130,7 +3130,7 @@ app.get("/", (_req, res) => {
       div.className = "space-y-3.5";
       div.innerHTML = \`
         <div class="flex items-center gap-2 text-xs text-slate-400">
-          <div class="w-6 h-6 rounded-lg bg-amber-500/20 text-amber-300 flex items-center justify-center font-bold text-[10px]">ISA</div>
+          <div class="w-6 h-6 rounded-lg overflow-hidden bg-slate-950 text-amber-300 flex items-center justify-center font-bold text-[10px]"><img src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/logo-isav6-h8D664HhoUaMbFaEXOx0vIupxB3DL4.jpeg" alt="" class="h-full w-full object-cover" /></div>
           <span class="font-semibold text-slate-300 font-editorial">Isabella Villaseñor AI</span>
           <span class="text-rose-400 font-semibold text-[10px]">esLatina</span>
           <span class="text-slate-600">·</span>
@@ -3191,7 +3191,7 @@ app.get("/", (_req, res) => {
         <!-- Turn Header & Performance Telemetry -->
         <div class="flex items-center justify-between text-xs">
           <div class="flex items-center gap-2">
-            <div class="w-6 h-6 rounded-lg bg-amber-500/20 text-amber-300 flex items-center justify-center font-bold text-[10px]">ISA</div>
+            <div class="w-6 h-6 rounded-lg overflow-hidden bg-slate-950 text-amber-300 flex items-center justify-center font-bold text-[10px]"><img src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/logo-isav6-h8D664HhoUaMbFaEXOx0vIupxB3DL4.jpeg" alt="" class="h-full w-full object-cover" /></div>
             <span class="font-semibold text-slate-200 font-editorial">Isabella Villaseñor AI</span>
             <span class="text-rose-400 font-semibold text-[10px]">esLatina</span>
             <span class="text-slate-600">·</span>
