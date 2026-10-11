@@ -667,6 +667,10 @@ app.post("/api/v1/cognition/route", async (req, res) => {
         if (generativeNarrative) responseEngine = "open-science";
       }
     }
+    if (!decision.admitted) {
+      generativeNarrative = "No puedo ejecutar esa operación desde una sesión pública. Las acciones privilegiadas o destructivas requieren una identidad verificada y aprobación autorizada. Puedes reformular la solicitud como una pregunta informativa.";
+      responseEngine = "blocked";
+    }
     if (decision.admitted && !generativeNarrative) {
       // Deterministic fallback is disclosed; it is not presented as model-generated.
       generativeNarrative = runtime.mediateIsabella({ input, profile: "general" }).answer;
