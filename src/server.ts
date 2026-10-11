@@ -1674,6 +1674,38 @@ app.get("/", (_req, res) => {
       box-shadow: 0 0 12px rgba(56, 189, 248, 0.4);
     }
 
+    /* Cinematic enterprise onboarding */
+    .cinematic-intro {
+      position: fixed; inset: 0; z-index: 100; display: grid; place-items: center;
+      overflow: hidden; background: radial-gradient(circle at 50% 20%, rgba(38,185,255,.18), transparent 34%), #061426;
+      color: #f8fafc; transition: opacity .8s ease, visibility .8s ease;
+    }
+    .cinematic-intro.is-exiting { opacity: 0; visibility: hidden; pointer-events: none; }
+    .cinematic-grid { position: absolute; inset: 0; opacity: .18; background-image: linear-gradient(rgba(214,226,240,.12) 1px, transparent 1px), linear-gradient(90deg, rgba(214,226,240,.12) 1px, transparent 1px); background-size: 56px 56px; transform: perspective(500px) rotateX(58deg) scale(1.8) translateY(24%); transform-origin: center bottom; }
+    .cinematic-orbit { position: absolute; border: 1px solid rgba(38,185,255,.3); border-radius: 50%; box-shadow: 0 0 45px rgba(38,185,255,.14); animation: orbitFloat 12s ease-in-out infinite; }
+    .cinematic-orbit-one { width: 72vw; height: 72vw; max-width: 780px; max-height: 780px; }
+    .cinematic-orbit-two { width: 42vw; height: 42vw; max-width: 460px; max-height: 460px; border-color: rgba(33,150,83,.32); animation-delay: -4s; }
+    .cinematic-intro-content, .cinematic-trailer { position: relative; z-index: 2; width: min(680px, calc(100% - 40px)); text-align: center; }
+    .cinematic-mark { width: 64px; height: 64px; margin: 0 auto 22px; display: grid; place-items: center; border: 1px solid rgba(214,226,240,.45); border-radius: 20px; color: #d6e2f0; font: 700 14px 'JetBrains Mono', monospace; letter-spacing: .18em; background: linear-gradient(145deg, rgba(255,255,255,.22), rgba(38,185,255,.1)); box-shadow: 0 0 36px rgba(38,185,255,.26), inset 0 1px rgba(255,255,255,.5); }
+    .cinematic-eyebrow, .cinematic-chapter { margin: 0 0 12px; color: #26b9ff; font: 600 11px 'JetBrains Mono', monospace; letter-spacing: .16em; text-transform: uppercase; }
+    .cinematic-intro h1 { margin: 0; color: #fffdf5; font: 600 clamp(2.1rem, 5vw, 4.4rem) 'Newsreader', serif; letter-spacing: -.025em; }
+    .cinematic-lede { margin: 18px auto 0; max-width: 590px; color: #d6e2f0; font-size: 16px; line-height: 1.65; }
+    .cinematic-origin { margin: 16px auto 0; color: rgba(238,242,247,.68); font: italic 15px 'Newsreader', serif; }
+    .cinematic-enter { margin-top: 28px; padding: 13px 42px; border: 1px solid rgba(38,185,255,.72); border-radius: 999px; color: #061426; background: linear-gradient(120deg, #26b9ff, #d6e2f0 48%, #5bc77b); font-weight: 800; letter-spacing: .08em; text-transform: uppercase; box-shadow: 0 0 34px rgba(38,185,255,.28); cursor: pointer; transition: transform .25s ease, box-shadow .25s ease; }
+    .cinematic-enter:hover { transform: translateY(-2px); box-shadow: 0 0 48px rgba(38,185,255,.48); }
+    .cinematic-consent { margin: 16px auto 0; max-width: 560px; color: rgba(238,242,247,.48); font-size: 10px; line-height: 1.5; }
+    .cinematic-status { margin-top: 18px; color: rgba(214,226,240,.68); font: 10px 'JetBrains Mono', monospace; }
+    .cinematic-trailer { display: none; }
+    .cinematic-intro.is-trailer .cinematic-intro-content { display: none; }
+    .cinematic-intro.is-trailer .cinematic-trailer { display: block; animation: trailerReveal .8s ease both; }
+    .cinematic-trailer h2 { margin: 0; color: #fffdf5; font: 600 clamp(2rem, 5vw, 4rem) 'Newsreader', serif; }
+    .cinematic-trailer p:not(.cinematic-chapter) { margin: 18px auto 0; max-width: 570px; color: #d6e2f0; font-size: 16px; line-height: 1.7; }
+    .cinematic-progress { height: 3px; margin: 36px auto 0; max-width: 420px; overflow: hidden; background: rgba(214,226,240,.16); border-radius: 999px; }
+    .cinematic-progress span { display: block; width: 0; height: 100%; background: linear-gradient(90deg, #26b9ff, #5bc77b, #d6e2f0); transition: width .5s ease; }
+    .cinematic-skip { margin-top: 24px; border: 0; background: transparent; color: rgba(214,226,240,.62); font: 11px 'JetBrains Mono', monospace; cursor: pointer; text-decoration: underline; text-underline-offset: 4px; }
+    @keyframes orbitFloat { 0%,100% { transform: rotate(-8deg) scale(.98); } 50% { transform: rotate(8deg) scale(1.03); } }
+    @keyframes trailerReveal { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+
     /* Waveform animation */
     @keyframes wavePulse {
       0%, 100% { transform: scaleY(0.25); }
@@ -1684,7 +1716,31 @@ app.get("/", (_req, res) => {
     }
   </style>
 </head>
-<body class="h-full bg-[#050811] text-slate-100 flex flex-col overflow-hidden selection:bg-amber-500/25 selection:text-amber-200">
+<body class="h-full bg-[#050811] text-slate-100 flex flex-col overflow-hidden selection:bg-cyan-500/25 selection:text-cyan-100">
+
+  <!-- CINEMATIC ONBOARDING: explicit consent before visual/audio immersion -->
+  <section id="cinematicIntro" class="cinematic-intro" aria-labelledby="introTitle">
+    <div class="cinematic-grid" aria-hidden="true"></div>
+    <div class="cinematic-orbit cinematic-orbit-one" aria-hidden="true"></div>
+    <div class="cinematic-orbit cinematic-orbit-two" aria-hidden="true"></div>
+    <div class="cinematic-intro-content">
+      <div class="cinematic-mark" aria-hidden="true">ISA</div>
+      <p class="cinematic-eyebrow">TAMV · Tecnología Avanzada Mexicana Versátil</p>
+      <h1 id="introTitle">Bienvenido a Isabella Villaseñor</h1>
+      <p class="cinematic-lede">Inteligencia gobernada, memoria civilizatoria y orgullo latinoamericano desde Real del Monte, Hidalgo.</p>
+      <p class="cinematic-origin">Un proyecto nacido del pueblo y para el pueblo. Innovación con raíz, rigor y responsabilidad.</p>
+      <button id="enterIsabella" class="cinematic-enter" type="button" onclick="enterIsabellaExperience()">Ingresar</button>
+      <p class="cinematic-consent">Al presionar ingresar, el usuario acepta y autoriza los permisos de visualización y audio para una inmersión completa dentro de Isabella Villaseñor AI.</p>
+      <p id="introStatus" class="cinematic-status" role="status">Experiencia preparada · duración narrativa aproximada: 60 segundos</p>
+    </div>
+    <div id="cinematicTrailer" class="cinematic-trailer" aria-live="polite" aria-hidden="true">
+      <p id="trailerChapter" class="cinematic-chapter">01 / 16 · Origen</p>
+      <h2 id="trailerTitle">Desde Real del Monte, Hidalgo</h2>
+      <p id="trailerCopy">La innovación también puede nacer en la montaña, con memoria, comunidad y propósito.</p>
+      <div class="cinematic-progress"><span id="trailerProgress"></span></div>
+      <button class="cinematic-skip" type="button" onclick="skipCinematicIntro()">Continuar a Isabella</button>
+    </div>
+  </section>
 
   <!-- TOP BAR: MASTER SATELLITE CONTROLLER -->
   <header class="border-b border-white/[0.1] bg-[#080d1a]/80 backdrop-blur-2xl shrink-0 z-50">
@@ -2650,8 +2706,59 @@ app.get("/", (_req, res) => {
 
   <!-- SCRIPT LOGIC: COMPLETE HARMONIZED DASHBOARD -->
   <script>
-    let isDeepThink = true;
-    let isDoubleCheck = false;
+  let isDeepThink = true;
+  let isDoubleCheck = false;
+  let cinematicTimer = null;
+  const cinematicScenes = [
+    ['01 / 16 · Origen', 'Desde Real del Monte, Hidalgo', 'La innovación también puede nacer en la montaña, con memoria, comunidad y propósito.'],
+    ['02 / 16 · Pueblo', 'Nacida del pueblo y para el pueblo', 'Isabella se construye como infraestructura de conocimiento con responsabilidad social.'],
+    ['03 / 16 · Raíz', 'La historia también es tecnología', 'Memoria, territorio y dignidad se convierten en criterios de diseño.'],
+    ['04 / 16 · Comunidad', 'Inteligencia con rostro humano', 'Toda capacidad debe reconocer a las personas, sus contextos y sus límites.'],
+    ['05 / 16 · América Latina', 'Innovación con orgullo latino', 'Desde Latam pensamos, creamos y gobernamos tecnología para el mundo.'],
+    ['06 / 16 · Rigor', 'La evidencia precede a la afirmación', 'Isabella distingue hechos, inferencias, hipótesis y aquello aún no verificado.'],
+    ['07 / 16 · Gobierno', 'Capacidad no es autoridad', 'La decisión humana permanece en el centro de cada acción sensible.'],
+    ['08 / 16 · Memoria', 'BookPI conserva la trazabilidad', 'Cada cambio relevante puede dejar una huella auditable y explicable.'],
+    ['09 / 16 · Territorio', 'El origen no se abandona', 'Real del Monte es ancla cultural, no un adorno narrativo.'],
+    ['10 / 16 · Nueva generación', 'Tecnología de nueva generación', 'Arquitectura modular para aprender, evolucionar y rendir cuentas.'],
+    ['11 / 16 · Presente', 'No somos el futuro', 'Somos la fuerza del presente que nace desde Latam.'],
+    ['12 / 16 · Trabajo', 'El conocimiento se comparte', 'Herramientas sobrias para estudiantes, desarrolladores, comunidades e instituciones.'],
+    ['13 / 16 · Soberanía', 'Crear sin pedir permiso para existir', 'La soberanía tecnológica también es capacidad de imaginar y construir.'],
+    ['14 / 16 · Responsabilidad', 'Avanzar sin perder el juicio', 'La innovación sostenible necesita límites, pruebas y revisión humana.'],
+    ['15 / 16 · TAMV', 'Tecnología Avanzada Mexicana Versátil', 'Una visión mexicana, latinoamericana y abierta al mundo.'],
+    ['16 / 16 · Entrada', 'Isabella Villaseñor AI', 'A huevo que somos latinoamericanos. Bienvenido a la experiencia.']
+  ];
+  let cinematicSceneIndex = 0;
+
+  function enterIsabellaExperience() {
+    const intro = document.getElementById('cinematicIntro');
+    if (!intro) return;
+    intro.classList.add('is-trailer');
+    intro.setAttribute('aria-hidden', 'false');
+    document.getElementById('introStatus').textContent = 'Permisos aceptados por el usuario · iniciando presentación';
+    cinematicSceneIndex = 0;
+    renderCinematicScene();
+    cinematicTimer = window.setInterval(() => {
+      cinematicSceneIndex += 1;
+      if (cinematicSceneIndex >= cinematicScenes.length) { skipCinematicIntro(); return; }
+      renderCinematicScene();
+    }, 3750);
+  }
+
+  function renderCinematicScene() {
+    const scene = cinematicScenes[cinematicSceneIndex];
+    document.getElementById('trailerChapter').textContent = scene[0];
+    document.getElementById('trailerTitle').textContent = scene[1];
+    document.getElementById('trailerCopy').textContent = scene[2];
+    document.getElementById('trailerProgress').style.width = String(((cinematicSceneIndex + 1) / cinematicScenes.length) * 100) + '%';
+  }
+
+  function skipCinematicIntro() {
+    if (cinematicTimer !== null) window.clearInterval(cinematicTimer);
+    const intro = document.getElementById('cinematicIntro');
+    if (!intro) return;
+    intro.classList.add('is-exiting');
+    window.setTimeout(() => intro.remove(), 850);
+  }
     let isLeftNavsOpen = true;
     let isRightNavsOpen = true;
     let currentLastDecision = null;
