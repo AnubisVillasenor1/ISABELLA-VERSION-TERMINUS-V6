@@ -274,3 +274,5 @@ The repository now includes a separately versioned Rust workspace at [`ige-omega
 - [Kubernetes manifests and deployment notes](ige-omega/deployment/k8s/README.md)
 
 The Rust workspace must pass `cargo fmt`, `cargo clippy`, `cargo test` and a release build in CI, with `Cargo.lock` generated and committed, before being marked tested or production-ready.
+
+**Control de costes:** los modos `auto` y `open-science` priorizan proveedores gratuitos configurados. Gemini puede usarse cuando se solicita explícitamente el motor `gemini`; el fallback automático a Gemini/Vercel AI Gateway requiere `ALLOW_PAID_PROVIDER_FALLBACK=true`. No habilites esa variable hasta autorizar conscientemente el posible consumo de servicios sujetos a facturación.
