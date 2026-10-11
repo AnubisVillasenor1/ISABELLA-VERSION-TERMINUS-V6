@@ -4015,9 +4015,14 @@ app.post("/api/v1/connectors/ingest", async (req, res) => {
   }
 });
 
-app.listen(port, host, () => {
+if (!process.env.VERCEL) app.listen(port, host, () => {
   console.log(`[Isabella Genesis TINA V6] Listening on http://${host}:${port}`);
   console.log(`[Isabella Genesis TINA V6] Identity: TINA esLatina · Orgullo Latinoamericano`);
   console.log(`[Isabella Genesis TINA V6] Invariant: CAPABILITY ≠ AUTHORITY ≠ EXECUTION ≠ EVIDENCE ≠ LEARNING ≠ PRODUCTION`);
   console.log(`[Isabella Genesis TINA V6] Academic Registry: ORCID 0009-0008-5050-1539 · DOI 10.5281/zenodo.20606361`);
 });
+
+
+// Vercel's Express adapter invokes the exported application as a request handler.
+// Do not open a listening socket during a serverless function cold start.
+export default app;
