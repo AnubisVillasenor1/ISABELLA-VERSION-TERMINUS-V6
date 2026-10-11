@@ -88,3 +88,46 @@ jobs:
           name: production-evidence-${{ github.sha }}
           path: evidence/
           if-no-files-found: error
+
+  rust-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ige_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ige_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      IGE_TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/ige_test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install stable Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Require committed Rust lockfile
+        working-directory: ige-omega
+        run: |
+          if [ ! -f Cargo.lock ]; then
+            echo "::error::ige-omega/Cargo.lock is missing. Generate it with the approved Rust toolchain and commit it; CI will not silently resolve a new dependency graph."
+            exit 1
+          fi
+      - name: Check formatting
+        working-directory: ige-omega
+        run: cargo fmt --all -- --check
+      - name: Run Clippy with warnings denied
+        working-directory: ige-omega
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: Run workspace tests
+        working-directory: ige-omega
+        run: cargo test --workspace --locked
+      - name: Build gateway release
+        working-directory: ige-omega
+        run: cargo build --release -p gateway --locked
