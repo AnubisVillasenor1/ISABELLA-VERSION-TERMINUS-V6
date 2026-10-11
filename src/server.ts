@@ -162,12 +162,19 @@ function generateSovereignFallback(input: string, history: PublicChatTurn[], foc
 /** OpenAI-compatible free-model routing. Never uses a paid model ID by default. */
 async function generateFreeOpenRouterNarrative(systemPrompt: string, input: string, history: PublicChatTurn[] = []): Promise<string | null> {
   const key = process.env.OPENROUTER_API_KEY;
+  const model = (process.env.OPENROUTER_FREE_MODEL || "openrouter/free").trim();
+  const paidFallbackEnabled = process.env.ALLOW_PAID_PROVIDER_FALLBACK === "true";
+  const explicitlyFreeModel = model === "openrouter/free" || model.endsWith(":free");
   if (!key || Date.now() < openRouterCooldownUntil) return null;
+  if (!paidFallbackEnabled && !explicitlyFreeModel) {
+    console.warn("[Isabella] refusing OpenRouter model without an explicit free suffix while paid fallback is disabled", { model });
+    return null;
+  }
   try {
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", "HTTP-Referer": process.env.APP_PUBLIC_URL || "https://isabella-v6-tina.vercel.app", "X-Title": "Isabella Villaseñor AI" },
-      body: JSON.stringify({ model: process.env.OPENROUTER_FREE_MODEL || "openrouter/free", messages: [{ role: "system", content: systemPrompt }, ...history.map((turn) => ({ role: turn.role === "assistant" ? "assistant" : "user", content: turn.content })), { role: "user", content: input }], max_tokens: 900, temperature: 0.35 }),
+      body: JSON.stringify({ model, messages: [{ role: "system", content: systemPrompt }, ...history.map((turn) => ({ role: turn.role === "assistant" ? "assistant" : "user", content: turn.content })), { role: "user", content: input }], max_tokens: 900, temperature: 0.35 }),
       signal: AbortSignal.timeout(providerTimeoutMs),
     });
     if (!response.ok) throw new Error(`OpenRouter HTTP ${response.status}`);
@@ -753,7 +760,7 @@ app.post("/api/v1/cognition/route", async (req, res) => {
     if (decision.admitted && modelEngine !== "sovereign") {
       // Free/open inference is the default. Paid or billing-enabled providers are never
       // silently selected by Auto/Open Science; they require an explicit operator opt-in.
-      if (modelEngine === "gemini" && genAi) {
+      if (modelEngine === "gemini" && genAi && process.env.ALLOW_PAID_PROVIDER_FALLBACK === "true") {
         try {
           const contents = [
             ...history.map((turn) => ({ role: (turn.role === "assistant" ? "model" : "user") as "model" | "user", parts: [{ text: turn.content }] })),
