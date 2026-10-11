@@ -801,7 +801,9 @@ app.post("/api/v1/cognition/route", async (req, res) => {
     }
     res.status(decision.admitted ? 200 : 403).json({
       success: decision.admitted, decision, principal, generativeNarrative, responseEngine,
-      modelConfigured: Boolean(genAi || process.env.OPENROUTER_API_KEY || (process.env.HF_TOKEN && process.env.HF_FREE_MODELS) || process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN),\n      openModelConfigured: Boolean(process.env.OPENROUTER_API_KEY || (process.env.HF_TOKEN && process.env.HF_FREE_MODELS)),\n      paidProviderConfigured: Boolean(genAi || process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN),\n      conversationContextTurns: history.length,
+      modelConfigured: Boolean(genAi || process.env.OPENROUTER_API_KEY || (process.env.HF_TOKEN && process.env.HF_FREE_MODELS) || process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN),
+      openModelConfigured: Boolean(process.env.OPENROUTER_API_KEY || (process.env.HF_TOKEN && process.env.HF_FREE_MODELS)),
+      paidProviderConfigured: Boolean(genAi || process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN),\n      conversationContextTurns: history.length,
       requestedRiskIgnored: true, publicAuthority: "VIEWER_ONLY",
     });
   } catch {
