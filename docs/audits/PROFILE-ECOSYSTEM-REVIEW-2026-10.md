@@ -85,3 +85,10 @@ A repository can contain substantial code and still lack a reproducible release 
 - Added a default export for the Express app and guarded `app.listen()` so a Vercel serverless cold start does not open a separate listening socket. The first deployment of that change failed TypeScript with `TS2742` because the inferred Express application type was not portable; corrected it with an explicit `Application` annotation.
 - The deployment for the type-annotation fix was still building at the time of this audit update. The serverless handler change must be considered unverified until the newest deployment reaches `READY` and `/health` returns HTTP 200. Then test the chat route with a real POST and verify provider response metadata.
 - Critical release gates remain: no verified Rust `Cargo.lock`/Rust CI, no successful live chat POST test, and no verified latest-SHA test suite. Keep the PR in draft and do not promote to production.
+
+
+## ESM module-resolution finding and regression gate — 2026-10-11
+
+- The first startup smoke-test build failed with `ERR_MODULE_NOT_FOUND`: Node ESM could not resolve the extensionless internal import `dist/genesis/runtime` emitted by plain `tsc` into `dist/server.js`. This provides a concrete explanation for the earlier serverless invocation failures; a successful TypeScript compile had not produced a directly executable Node ESM entrypoint.
+- Added the already-locked `esbuild@0.28.2` as an explicit development dependency and changed the build to bundle `src/server.ts` into `dist/server.js` (`platform=node`, ESM, external package dependencies). The startup smoke script now imports that production artifact, binds it to an ephemeral local HTTP server, checks `GET /health`, and posts a simple conversation to `/api/v1/cognition/route` in explicit sovereign mode.
+- The lockfile now declares the existing locked esbuild version in the root importer; the upcoming frozen install/build must confirm consistency. The deployment containing the bundle and smoke gate was queued at the time of this update; neither smoke success nor runtime recovery is yet confirmed.
