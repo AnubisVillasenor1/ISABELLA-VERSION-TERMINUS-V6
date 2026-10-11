@@ -110,6 +110,7 @@ describe("circuit breaker", () => {
     expect(breaker.allow(50)).toBe(false);
     expect(breaker.allow(150)).toBe(true);
     expect(breaker.currentState).toBe("HALF_OPEN");
+    expect(breaker.allow(151)).toBe(false);
     breaker.recordSuccess();
     expect(breaker.currentState).toBe("CLOSED");
   });
