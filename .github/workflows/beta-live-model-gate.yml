@@ -40,7 +40,7 @@ jobs:
         shell: bash
         run: |
           if [[ -z "$OPENROUTER_API_KEY" && ( -z "$HF_TOKEN" || -z "$HF_FREE_MODELS" ) ]]; then
-            echo "::error::Configure repository secret OPENROUTER_API_KEY or both secret HF_TOKEN and variable HF_FREE_MODELS. This gate intentionally does not use paid providers."
+            echo "::error::Configure environment secret OPENROUTER_API_KEY or both environment secret HF_TOKEN and repository variable HF_FREE_MODELS in beta-live-model-gate. This gate intentionally does not use paid providers."
             exit 1
           fi
       - name: Build and require a real external model response
