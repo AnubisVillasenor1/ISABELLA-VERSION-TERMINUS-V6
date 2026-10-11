@@ -15,6 +15,7 @@ jobs:
     name: Verify a real open-model response
     runs-on: ubuntu-latest
     timeout-minutes: 12
+    environment: beta-live-model-gate
     env:
       ISABELLA_REQUIRE_LLM_SMOKE: "true"
       ALLOW_PAID_PROVIDER_FALLBACK: "false"
