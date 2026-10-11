@@ -105,6 +105,18 @@ try {
     signal: AbortSignal.timeout(5_000),
   });
   assert.equal(destructiveRequest.status, 403, "public viewer sessions must not execute destructive operations");
+  const explicitGemini = await fetch(`${baseUrl}/api/v1/cognition/route`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ input: "Responde brevemente.", modelEngine: "gemini", focusLens: "general", history: [] }),
+    signal: AbortSignal.timeout(10_000),
+  });
+  const explicitGeminiBody = await explicitGemini.json();
+  assert.equal(explicitGemini.status, 200, "explicit Gemini selection must safely fall back when paid inference is disabled");
+  if (process.env.ALLOW_PAID_PROVIDER_FALLBACK !== "true") {
+    assert.notEqual(explicitGeminiBody.responseEngine, "gemini", "Gemini must not be invoked without explicit paid-provider opt-in");
+    assert.notEqual(explicitGeminiBody.responseEngine, "open-science", "paid AI Gateway must not be invoked without explicit paid-provider opt-in");
+  }
   console.log("PUBLIC_API_GUARDRAILS_OK", JSON.stringify({ blankInput: emptyInput.status, oversizedInput: oversizedInput.status, unscopedMemory: unscopedMemory.status, destructiveRequest: destructiveRequest.status }));
   console.log("LOCAL_CONVERSATION_SMOKE_OK", JSON.stringify({ health: health.status, chat: chat.status, followUp: followUp.status, responseEngine: chatBody.responseEngine }));
   const gatewayCredentialsAvailable = Boolean(process.env.OPENROUTER_API_KEY || (process.env.HF_TOKEN && process.env.HF_FREE_MODELS));
