@@ -3229,13 +3229,13 @@ app.get("/", (_req, res) => {
           <div class="p-3.5 rounded-2xl bg-[#0c1322] border border-white/10 text-xs font-mono text-slate-400 space-y-2 animate-pulse crystal-card">
             <div class="flex items-center gap-2 text-cyan-300 font-semibold">
               <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
-              <span>Pro Search C.R.O.W.N. & Epistemología IKES (esLatina)</span>
+              <span>Protección y política de solicitud</span>
             </div>
             <div class="pl-3.5 space-y-1 text-slate-400 text-[11px]">
-              <div>1. Deconstrucción de intención y actor principal...</div>
-              <div>2. Verificación de salvaguarda AEGIS contra 10 familias de ataque...</div>
-              <div>3. Recuperación de fuentes canónicas en Real del Monte (2,660 msnm)...</div>
-              <div>4. Arbitraje constitucional bajo el Invariante Supremo...</div>
+              <div>1. Validando entrada y contexto...</div>
+              <div>2. Aplicando salvaguardas de entrada...</div>
+              <div>3. Seleccionando motor de respuesta disponible...</div>
+              <div>4. Preparando respuesta con límites de autoridad...</div>
             </div>
           </div>
         \` : ''}
@@ -3276,6 +3276,8 @@ app.get("/", (_req, res) => {
 
       // Never inject model output or memory text as HTML. Escape the complete narrative before rendering.
       const safeNarrativeHtml = escapeHtml(narrative);
+      const engineLabels = { gemini: "GEMINI · modelo externo", "open-science": "OPEN SCIENCE · modelo externo", sovereign: "SOVEREIGN · motor local", "sovereign-fallback": "FALLBACK LOCAL · no generado por LLM", blocked: "BLOQUEADO" };
+      const engineLabel = engineLabels[data.responseEngine] || "MOTOR NO REPORTADO";
       container.innerHTML = \`
         <!-- Turn Header & Performance Telemetry -->
         <div class="flex items-center justify-between text-xs">
@@ -3287,6 +3289,7 @@ app.get("/", (_req, res) => {
             <span class="text-[10px] font-mono \${isBlocked ? 'text-rose-400' : 'text-emerald-400'}">
               \${isBlocked ? 'REFUSAL / FAIL-CLOSED' : 'INTENT ADMITTED · ' + d.crown.responseMode.toUpperCase()}
             </span>
+            <span class="text-[10px] font-mono text-cyan-300">\${escapeHtml(engineLabel)}</span>
           </div>
 
           <div class="flex items-center gap-3">
