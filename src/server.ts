@@ -53,7 +53,7 @@ app.use(
     verify: (req, _res, buf) => {
       // Preserve raw bytes only for the signed webhook route; duplicating every
       // request body adds avoidable allocations and GC pressure on the hot path.
-      if (req.originalUrl.split("?")[0] === "/api/v1/connectors/ingest") {
+      if ((req.url ?? "").split("?")[0] === "/api/v1/connectors/ingest") {
         connectorRawBodies.set(req, buf.toString("utf8"));
       }
     },
@@ -1075,7 +1075,7 @@ app.post("/api/v1/audio-overview/generate", (req, res) => {
     {
       speaker: "Mateo Morales",
       role: "Ingeniero de Sistemas Soberanos",
-      text: "Ese es el Invariante Operativo de AGENTS.md. La procedencia debe registrarse por afirmación y fuente; la cadena hash local no prueba por sí sola autenticidad, veracidad ni anclaje poscuántico.",
+      text: "Ese es el Invariante Operativo de AGENTS.md. La procedencia debe registrarse por afirmación y fuente; la cadena hash local no prueba por sí sola autenticidad, veracidad ni anclaje poscu��ntico.",
     },
     {
       speaker: "Dra. Elena Ramos",

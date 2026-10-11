@@ -5,11 +5,12 @@ describe("IKES Epistemic Evaluator", () => {
   it("defines all 7 levels E0 through E6 in the canonical ladder", () => {
     const levels = ["E0", "E1", "E2", "E3", "E4", "E5", "E6"];
     for (const lvl of levels) {
-      expect(EPISTEMIC_LADDER_SPEC[lvl]).toBeDefined();
-      expect(EPISTEMIC_LADDER_SPEC[lvl].level).toBe(lvl);
-      expect(EPISTEMIC_LADDER_SPEC[lvl].state).toBeDefined();
-      expect(typeof EPISTEMIC_LADDER_SPEC[lvl].rank).toBe("number");
-      expect(EPISTEMIC_LADDER_SPEC[lvl].description).toBeTruthy();
+      const step = EPISTEMIC_LADDER_SPEC[lvl];
+      expect(step).toBeDefined();
+      expect(step?.level).toBe(lvl);
+      expect(step?.state).toBeDefined();
+      expect(typeof step?.rank).toBe("number");
+      expect(step?.description).toBeTruthy();
     }
   });
 

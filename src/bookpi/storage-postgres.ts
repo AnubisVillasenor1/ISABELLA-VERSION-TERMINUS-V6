@@ -33,8 +33,10 @@ function isUniqueViolation(error: unknown): boolean {
 export function createPostgresStorage(pool: PostgresLike, table = BOOKPI_TABLE): BookPiStorage {
   const quote = (ident: string): string => `"${ident.replaceAll('"', '""')}"`;
 
+  const eventColumns = "id, type, sequence, prev_hash, timestamp, actor_id, payload, schema_version, meta, header, hash, integrity, canonical";
+
   async function getLastEvent(): Promise<BookPiEventRecord | null> {
-    const { rows } = await pool.query(`SELECT * FROM ${quote(table)} ORDER BY sequence DESC LIMIT 1`);
+    const { rows } = await pool.query(`SELECT ${eventColumns} FROM ${quote(table)} ORDER BY sequence DESC LIMIT 1`);
     const row = rows[0] as PostgresBookPiRow | undefined;
     return row ? rowToRecord(row) : null;
   }

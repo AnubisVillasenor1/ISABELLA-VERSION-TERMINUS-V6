@@ -312,10 +312,12 @@ export function evaluateEpistemicState(input: EpistemicEvaluationInput): Epistem
   }
 
   const spec = EPISTEMIC_LADDER_SPEC[assignedLevel];
+  if (!spec) throw new Error(`IKES: nivel epistemológico desconocido: ${assignedLevel}`);
 
   // Build the complete 7-step ladder state
   const ladder = (["E0", "E1", "E2", "E3", "E4", "E5", "E6"] as const).map((lvl) => {
     const s = EPISTEMIC_LADDER_SPEC[lvl];
+    if (!s) throw new Error(`IKES: especificación ausente para ${lvl}`);
     return {
       ...s,
       active: lvl === assignedLevel,
