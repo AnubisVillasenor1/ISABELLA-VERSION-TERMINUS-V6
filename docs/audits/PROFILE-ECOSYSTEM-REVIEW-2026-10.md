@@ -100,3 +100,11 @@ A repository can contain substantial code and still lack a reproducible release 
 - The optional real-model smoke test then attempted the AI Gateway path. It did not generate an LLM response; AI Gateway returned `GatewayInternalServerError` with the explicit account-level reason that a valid credit card must be on file to service requests and unlock free credits. The route correctly fell back to `sovereign-fallback`, but this is not generative LLM conversation.
 - Build policy: basic runtime/chat smoke remains blocking; the provider smoke reports failure non-blockingly for preview unless `ISABELLA_REQUIRE_LLM_SMOKE=true` is set. This allows the interface to deploy without falsely certifying external inference. Before a user-facing LLM trial, the account owner must complete AI Gateway billing setup or configure a valid provider key and run the required-model smoke test.
 - The selected `inclusionai/ling-3.1-flash-free` model is currently listed as free through October 13, 2026, after which the free model ID stops serving. Long-term operation needs an approved fallback model and billing policy; do not silently switch to a billable model without authorization.
+
+
+## Latest preview verification — 2026-10-11 16:36 UTC
+
+- Vercel deployment `dpl_FzeX3saUeqiEubCJ8chv44Nuj9XY` is `READY` on commit `0e8cc5393288603fca903666d0d0f326823b423c`.
+- Live `GET /health` returned HTTP 200 (`status: healthy`); live `GET /api/v1/isabella/status` returned HTTP 200; live homepage `/` returned HTTP 200 on the immediately preceding deployment that used the same explicit root `server.js` entrypoint.
+- Build smoke test reported `RUNTIME_SMOKE_OK` with HTTP 200 for health and a successful POST to `/api/v1/cognition/route` in sovereign mode. The real AI Gateway smoke did not generate an LLM response because Vercel AI Gateway requires a valid credit card on file to service requests. The app therefore falls back to the local deterministic engine; the preview is reachable, but real model-powered chat is not yet verified or available under the current billing state.
+- The LLM smoke is now non-blocking for preview builds, but can be made a hard release gate with `ISABELLA_REQUIRE_LLM_SMOKE=true` after AI Gateway billing or a provider key is configured. This distinction must be preserved in release notes and status claims.
