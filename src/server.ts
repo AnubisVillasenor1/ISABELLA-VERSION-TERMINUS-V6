@@ -1,4 +1,4 @@
-import express, { type Request, type Response } from "express";
+import express, { type Application, type Request, type Response } from "express";
 import { randomUUID } from "node:crypto";
 import fs from "fs";
 import path from "path";
@@ -28,7 +28,7 @@ import type { ProviderConfig, SignatureScheme, TenantMapping } from "./commerce/
 import { LatencyRegistry } from "./deployment/latency-metrics";
 import { TtlSingleFlight } from "./deployment/ttl-single-flight";
 
-const app = express();
+const app: Application = express();
 const latencyRegistry = new LatencyRegistry(100, 512);
 const atlasHealthCache = new TtlSingleFlight<{ healthy: boolean; reason: string }>(1_000);
 const port = 3000;
