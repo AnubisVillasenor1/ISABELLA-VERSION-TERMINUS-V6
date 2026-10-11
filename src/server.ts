@@ -674,7 +674,7 @@ app.post("/api/v1/cognition/route", async (req, res) => {
     }
     res.status(decision.admitted ? 200 : 403).json({
       success: decision.admitted, decision, principal, generativeNarrative, responseEngine,
-      modelConfigured: Boolean(genAi), conversationContextTurns: history.length,
+      modelConfigured: Boolean(genAi || process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN), conversationContextTurns: history.length,
       requestedRiskIgnored: true, publicAuthority: "VIEWER_ONLY",
     });
   } catch {
@@ -2181,6 +2181,8 @@ app.get("/", (_req, res) => {
         <div class="p-4 sm:p-5 border-t border-white/[0.09] bg-[#070c18]/90 backdrop-blur-2xl shrink-0">
           <div id="promptOuterContainer" class="chat-focus-mode max-w-3xl mx-auto space-y-2.5">
             
+            <p class="px-1 text-[10px] leading-relaxed text-slate-400">Privacidad de prueba: en modo Auto, tu mensaje y hasta 8 turnos previos pueden enviarse a un proveedor externo de IA. No incluyas contraseñas, secretos ni datos personales sensibles. El historial sólo vive en esta pestaña y se pierde al recargar. Si falla el proveedor, Isabella identifica el fallback local.</p>
+
             <!-- Dynamic Follow-Up Inquiry Chips (Perplexity Style) -->
             <div id="followUpBar" class="hidden flex items-center gap-2 overflow-x-auto text-[11px] py-1 text-slate-400 custom-scrollbar">
               <span class="text-slate-500 shrink-0 font-medium font-editorial italic">Consultas sugeridas:</span>
