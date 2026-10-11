@@ -25,7 +25,7 @@ try {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
-      input: "Hola Isabella. Responde brevemente y confirma que puedes conversar.",
+      input: "Hola",
       modelEngine: "sovereign",
       focusLens: "general",
       history: [],
@@ -38,7 +38,28 @@ try {
   assert.equal(typeof chatBody.generativeNarrative, "string", "chat must return a user-facing narrative");
   assert.ok(chatBody.generativeNarrative.trim().length > 0, "chat narrative must not be empty");
   assert.equal(chatBody.responseEngine, "sovereign", "explicit sovereign mode must disclose the local engine");
-  console.log("RUNTIME_SMOKE_OK", JSON.stringify({ health: health.status, chat: chat.status, responseEngine: chatBody.responseEngine }));
+  assert.match(chatBody.generativeNarrative, /Soy Isabella Villaseñor AI/, "local fallback must answer greetings conversationally");
+
+  const followUp = await fetch(`${baseUrl}/api/v1/cognition/route`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      input: "¿Quién eres?",
+      modelEngine: "sovereign",
+      focusLens: "general",
+      history: [
+        { role: "user", content: "Hola" },
+        { role: "assistant", content: chatBody.generativeNarrative },
+      ],
+      methodId: "A.TWINS.E15_MEMORY.recall.synthesize.v1.0.0.LOW.AUTONOMOUS",
+    }),
+    signal: AbortSignal.timeout(10_000),
+  });
+  const followUpBody = await followUp.json();
+  assert.equal(followUp.status, 200, `follow-up returned HTTP ${followUp.status}: ${JSON.stringify(followUpBody)}`);
+  assert.match(followUpBody.generativeNarrative, /Soy Isabella Villaseñor AI/, "fallback must answer identity questions");
+  assert.equal(followUpBody.conversationContextTurns, 2, "conversation history must be preserved within the request");
+  console.log("LOCAL_CONVERSATION_SMOKE_OK", JSON.stringify({ health: health.status, chat: chat.status, followUp: followUp.status, responseEngine: chatBody.responseEngine }));
   const gatewayCredentialsAvailable = Boolean(process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN);
   if (gatewayCredentialsAvailable) {
     try {
