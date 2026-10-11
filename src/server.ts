@@ -127,7 +127,16 @@ async function generateGatewayNarrative(systemPrompt: string, input: string, his
       providerOptions: { gateway: { disallowPromptTraining: true, sort: "tps" } },
     });
     return result.text.trim() || null;
-  } catch { return null; }
+  } catch (error) {
+    const name = error instanceof Error ? error.name : "UnknownError";
+    const rawMessage = error instanceof Error ? error.message : String(error);
+    const safeMessage = rawMessage
+      .replace(/Bearer\\s+[^\\s]+/gi, "Bearer [REDACTED]")
+      .replace(/(api[_-]?key|token|authorization)(["\\s:=]+)[^\\s,;]+/gi, "$1$2[REDACTED]")
+      .slice(0, 400);
+    console.error("[Isabella] AI Gateway generation failed", { name, message: safeMessage });
+    return null;
+  }
 }
 
 /** Server-side bearer-token gate for mutating or privileged API routes. */
