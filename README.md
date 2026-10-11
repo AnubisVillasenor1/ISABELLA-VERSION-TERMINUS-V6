@@ -193,7 +193,7 @@ En modo `Auto` y `Open Science`, Isabella intenta proveedores gratuitos/abiertos
 
 1. **OpenRouter Free Router** — activa `OPENROUTER_API_KEY`; por defecto utiliza `openrouter/free`, que enruta hacia modelos gratuitos disponibles en ese momento.
 2. **Hugging Face Inference Providers** — opcional: configura `HF_TOKEN` y `HF_FREE_MODELS` como lista separada por comas de identificadores de modelos que hayas comprobado para tu cuenta.
-3. **Gemini / Vercel AI Gateway** — no se seleccionan automáticamente en modo `Auto`/`Open Science`. El fallback de pago requiere `ALLOW_PAID_PROVIDER_FALLBACK=true`; seleccionar `Gemini` explícitamente es una acción deliberada y puede generar cargos según la cuenta.
+3. **Gemini / Vercel AI Gateway** — todas las rutas de pago, incluida la selección explícita de Gemini, requieren `ALLOW_PAID_PROVIDER_FALLBACK=true`. En caso contrario, la solicitud continúa por proveedores abiertos configurados o por el fallback local. OpenRouter también rechaza un ID de modelo sin `:free` (salvo `openrouter/free`) mientras el opt-in de pago esté desactivado.
 4. **Fallback soberano local** — siempre transparente; no se presenta como LLM.
 
 Variables opcionales: `OPENROUTER_FREE_MODEL` (predeterminado `openrouter/free`), `PROVIDER_FAILURE_COOLDOWN_MS` (10 000–300 000 ms) y `INFERENCE_TIMEOUT_MS` (3 000–30 000 ms). No guardes claves en el repositorio; configúralas como secretos de Vercel Preview o GitHub Actions, según el entorno. Para exigir evidencia real de inferencia, usa el workflow manual [Beta Live Model Gate](.github/workflows/beta-live-model-gate.yml) y su [runbook](docs/runbooks/BETA-LIVE-MODEL-GATE.md).
