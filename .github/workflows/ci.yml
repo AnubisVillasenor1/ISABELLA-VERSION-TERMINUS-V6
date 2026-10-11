@@ -1,0 +1,90 @@
+name: Isabella Genesis CI
+
+on:
+  push:
+    branches: ["main", "genesis-v6-sovereign-evolution", "feature/canonical-libraries-governance", "evolution/**"]
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Test
+        run: pnpm test
+      - name: Build
+        run: pnpm build
+
+  security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout with full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Secret scan (gitleaks)
+        uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Run security suite
+        run: pnpm run security:suite
+      - name: Upload security suite (same SHA, consumed by deploy-production.yml)
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-suite-${{ github.sha }}
+          path: evidence/security-suite.json
+          if-no-files-found: error
+
+  production-evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [verify, security]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Generate production evidence
+        env:
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+        run: node scripts/production-evidence.mjs
+      - name: Upload production evidence (same SHA)
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-evidence-${{ github.sha }}
+          path: evidence/
+          if-no-files-found: error

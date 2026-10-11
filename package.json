@@ -1,0 +1,39 @@
+{
+  "name": "isabella-villase-or-genesisai",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Isabella Villaseñor AI — Genesis TINA v40.0.0. Cognitive Orchestrator & Civilizational Memory OS.",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "tsx src/server.ts",
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "build": "tsc -p tsconfig.build.json",
+    "lint": "tsc --noEmit",
+    "reconcile:pids": "tsx src/cli/reconcilePids.ts",
+    "quantum:bridge": "python services/pennylane_bridge.py",
+    "validate": "npm run typecheck && npm test && npm run build",
+    "ingest:atlas": "tsx scripts/atlas-ingest.ts",
+    "security:suite": "node scripts/security-suite.mjs",
+    "production:evidence": "node scripts/production-evidence.mjs"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^22.10.2",
+    "@types/ws": "^8.18.2",
+    "typescript": "^5.7.2",
+    "vitest": "^5.0.3"
+  },
+  "dependencies": {
+    "@google/genai": "^2.28.0",
+    "express": "^5.2.1",
+    "firebase": "^13.0.0",
+    "tsx": "^4.23.15",
+    "ws": "^8.22.0"
+  }
+}

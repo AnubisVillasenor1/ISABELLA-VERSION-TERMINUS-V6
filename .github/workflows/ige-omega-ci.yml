@@ -1,0 +1,59 @@
+name: IGE-Ω Rust MVP CI
+
+on:
+  push:
+    branches: ["main", "feat/**", "evolution/**", "fix/**"]
+    paths:
+      - "ige-omega/**"
+      - ".github/workflows/ige-omega-ci.yml"
+  pull_request:
+    paths:
+      - "ige-omega/**"
+      - ".github/workflows/ige-omega-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ige-omega-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rust-mvp:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ige_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ige_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    defaults:
+      run:
+        working-directory: ige-omega
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ige-omega -> target
+      - name: Format Rust sources
+        run: cargo fmt --all -- --check
+      - name: Compile and lint
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Unit, contract, and PostgreSQL integration tests
+        env:
+          IGE_TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/ige_test
+        run: cargo test --workspace -- --include-ignored
+      - name: Release build
+        run: cargo build --release -p gateway
