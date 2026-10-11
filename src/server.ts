@@ -94,6 +94,8 @@ void runtime.initPersistence().catch((error) => {
 const apiKey = process.env.GEMINI_API_KEY || process.env.MODEL_API_KEY;
 const genAi = apiKey ? new GoogleGenAI({ apiKey }) : null;
 const providerTimeoutMs = Math.min(30_000, Math.max(3_000, Number(process.env.INFERENCE_TIMEOUT_MS) || 15_000));
+const providerCooldownMs = Math.min(300_000, Math.max(10_000, Number(process.env.PROVIDER_FAILURE_COOLDOWN_MS) || 60_000));
+let gatewayCooldownUntil = 0;
 
 type PublicChatTurn = { role: "user" | "assistant"; content: string };
 
@@ -148,6 +150,7 @@ function generateSovereignFallback(input: string, history: PublicChatTurn[], foc
 }
 
 async function generateGatewayNarrative(systemPrompt: string, input: string, history: PublicChatTurn[] = []): Promise<string | null> {
+  if (Date.now() < gatewayCooldownUntil) return null;
   try {
     const result = await generateText({
       model: gateway("inclusionai/ling-3.1-flash-free"),
@@ -166,7 +169,8 @@ async function generateGatewayNarrative(systemPrompt: string, input: string, his
       .replace(/Bearer\s+[^\s]+/gi, "Bearer [REDACTED]")
       .replace(/(api[_-]?key|token|authorization)(["\s:=]+)[^\s,;]+/gi, "$1$2[REDACTED]")
       .slice(0, 400);
-    console.error("[Isabella] AI Gateway generation failed", { name, message: safeMessage });
+    gatewayCooldownUntil = Date.now() + providerCooldownMs;
+    console.error("[Isabella] AI Gateway generation failed; provider cooldown activated", { name, message: safeMessage, cooldownMs: providerCooldownMs });
     return null;
   }
 }
