@@ -154,6 +154,7 @@ export class CircuitBreaker {
   private state: CircuitState = "CLOSED";
   private failures = 0;
   private openedAt = 0;
+  private halfOpenProbeInFlight = false;
   private readonly failureThreshold: number;
   private readonly openMs: number;
 
@@ -174,9 +175,15 @@ export class CircuitBreaker {
     if (this.state === "OPEN") {
       if (now - this.openedAt >= this.openMs) {
         this.state = "HALF_OPEN";
+        this.halfOpenProbeInFlight = true;
         return true;
       }
       return false;
+    }
+    if (this.state === "HALF_OPEN") {
+      // Only one request may probe a recovering dependency at a time.
+      if (this.halfOpenProbeInFlight) return false;
+      this.halfOpenProbeInFlight = true;
     }
     return true;
   }
@@ -184,6 +191,7 @@ export class CircuitBreaker {
   recordSuccess(): void {
     this.failures = 0;
     this.state = "CLOSED";
+    this.halfOpenProbeInFlight = false;
   }
 
   recordFailure(now = Date.now()): void {
@@ -193,6 +201,7 @@ export class CircuitBreaker {
       this.state = "OPEN";
       this.openedAt = now;
     }
+    this.halfOpenProbeInFlight = false;
   }
 
   get currentState(): CircuitState {
