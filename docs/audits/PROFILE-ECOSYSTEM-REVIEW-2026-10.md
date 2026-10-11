@@ -77,3 +77,11 @@ A repository can contain substantial code and still lack a reproducible release 
 - Updated the UI default to `auto`, sends ephemeral in-page history, and clears that history on refresh. The user can explicitly choose the local sovereign fallback.
 - Vercel had completed a build for the earlier conversation commit `fd223b2`; later changes for system-instruction isolation, provider timeouts, and the documentation refresh were still building/queued during this update. Do not claim the latest SHA is deployed or that a live conversation test has passed until its deployment is `READY` and a real request is tested.
 - `ige-omega/Cargo.lock` remains absent; the Rust verification gate is intentionally blocked pending a genuine lockfile and full Rust CI.
+
+
+## Serverless runtime gate — 2026-10-11
+
+- Live HTTP probes against the previously `READY` preview returned `500 FUNCTION_INVOCATION_FAILED` for both `/health` and `/api/v1/isabella/status`; runtime logs were unavailable through the current retention window. A ready build therefore was not equivalent to a working HTTP application.
+- Added a default export for the Express app and guarded `app.listen()` so a Vercel serverless cold start does not open a separate listening socket. The first deployment of that change failed TypeScript with `TS2742` because the inferred Express application type was not portable; corrected it with an explicit `Application` annotation.
+- The deployment for the type-annotation fix was still building at the time of this audit update. The serverless handler change must be considered unverified until the newest deployment reaches `READY` and `/health` returns HTTP 200. Then test the chat route with a real POST and verify provider response metadata.
+- Critical release gates remain: no verified Rust `Cargo.lock`/Rust CI, no successful live chat POST test, and no verified latest-SHA test suite. Keep the PR in draft and do not promote to production.
