@@ -615,6 +615,13 @@ app.post("/api/v1/cognition/route", async (req, res) => {
       } catch {
         generativeNarrative = null;
       }
+    } else if (decision.admitted) {
+      // Sovereign mode must answer through the local Isabella engine, not leave the UI blank.
+      const mediation = runtime.mediateIsabella({ input, profile: "general" });
+      generativeNarrative = mediation.answer;
+    }
+    if (decision.admitted && !generativeNarrative) {
+      generativeNarrative = runtime.mediateIsabella({ input, profile: "general" }).answer;
     }
     res.status(decision.admitted ? 200 : 403).json({
       success: decision.admitted,
@@ -3104,7 +3111,7 @@ app.get("/", (_req, res) => {
     });
 
     document.getElementById('mainInput').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && e.keyCode !== 229) {
+      if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && e.keyCode !== 229) {
         e.preventDefault();
         document.getElementById('mainPromptForm').requestSubmit();
       }
