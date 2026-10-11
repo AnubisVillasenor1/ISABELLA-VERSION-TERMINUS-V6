@@ -648,10 +648,14 @@ app.post("/api/v1/cognition/route", async (req, res) => {
       if ((modelEngine === "gemini" || modelEngine === "auto") && genAi) {
         try {
           const contents = [
-            ...history.map((turn) => ({ role: turn.role === "assistant" ? "model" : "user", parts: [{ text: turn.content }] })),
-            { role: "user", parts: [{ text: systemPrompt + "\n\nMensaje actual del usuario:\n" + input }] },
+            ...history.map((turn) => ({ role: (turn.role === "assistant" ? "model" : "user") as "model" | "user", parts: [{ text: turn.content }] })),
+            { role: "user" as const, parts: [{ text: input }] },
           ];
-          const resp = await genAi.models.generateContent({ model: "gemini-2.5-flash", contents });
+          const resp = await genAi.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents,
+            config: { systemInstruction: systemPrompt },
+          });
           generativeNarrative = resp.text?.trim() || null;
           if (generativeNarrative) responseEngine = "gemini";
         } catch { generativeNarrative = null; }
