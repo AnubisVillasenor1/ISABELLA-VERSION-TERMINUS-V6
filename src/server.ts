@@ -498,7 +498,7 @@ app.get("/api/v1/health", (_req, res) => {
     version: "v40.0.0",
     node: "Nodo Cero (Real del Monte, Hidalgo, México)",
     invariants: invariantViewModel,
-    hasGeminiKey: Boolean(apiKey),
+    inferenceMode: "external-if-configured-otherwise-local-fallback",
   });
 });
 
@@ -525,7 +525,7 @@ app.get("/api/v1/status", (_req, res) => {
       contract: "isabella.hsf.v1",
       capabilities: runtime.capabilities.list(),
     },
-      geminiEngine: apiKey ? "CONNECTED" : "SOVEREIGN_FALLBACK",
+      geminiEngine: "EXPLICIT_SELECTION_ONLY",
     },
     experts: {
       count: GENESIS_EXPERTS.length,
