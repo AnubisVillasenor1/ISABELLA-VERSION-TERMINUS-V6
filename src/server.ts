@@ -162,7 +162,7 @@ async function generateFreeOpenRouterNarrative(systemPrompt: string, input: stri
       body: JSON.stringify({ model: process.env.OPENROUTER_FREE_MODEL || "openrouter/free", messages: [{ role: "system", content: systemPrompt }, ...history.map((turn) => ({ role: turn.role === "assistant" ? "assistant" : "user", content: turn.content })), { role: "user", content: input }], max_tokens: 900, temperature: 0.35 }),
       signal: AbortSignal.timeout(providerTimeoutMs),
     });
-    if (!response.ok) throw new Error(`OpenRouter HTTP ${response.status}: ${(await response.text()).slice(0, 250)}`);
+    if (!response.ok) throw new Error(`OpenRouter HTTP ${response.status}`);
     const body = await response.json() as { choices?: Array<{ message?: { content?: unknown } }> };
     const text = body.choices?.[0]?.message?.content;
     if (typeof text !== "string" || !text.trim()) throw new Error("OpenRouter returned empty content");
@@ -188,7 +188,7 @@ async function generateHuggingFaceNarrative(systemPrompt: string, input: string,
         body: JSON.stringify({ model, messages: [{ role: "system", content: systemPrompt }, ...history.map((turn) => ({ role: turn.role, content: turn.content })), { role: "user", content: input }], max_tokens: 900, temperature: 0.35 }),
         signal: AbortSignal.timeout(providerTimeoutMs),
       });
-      if (!response.ok) throw new Error(`Hugging Face model ${model} HTTP ${response.status}: ${(await response.text()).slice(0, 200)}`);
+      if (!response.ok) throw new Error(`Hugging Face model ${model} HTTP ${response.status}`);
       const body = await response.json() as { choices?: Array<{ message?: { content?: unknown } }> };
       const text = body.choices?.[0]?.message?.content;
       if (typeof text === "string" && text.trim()) return text.trim();
@@ -801,7 +801,7 @@ app.post("/api/v1/cognition/route", async (req, res) => {
     }
     res.status(decision.admitted ? 200 : 403).json({
       success: decision.admitted, decision, principal, generativeNarrative, responseEngine,
-      modelConfigured: Boolean(genAi || process.env.OPENROUTER_API_KEY || (process.env.HF_TOKEN && process.env.HF_FREE_MODELS) || process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN), conversationContextTurns: history.length,
+      modelConfigured: Boolean(genAi || process.env.OPENROUTER_API_KEY || (process.env.HF_TOKEN && process.env.HF_FREE_MODELS) || process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN),\n      openModelConfigured: Boolean(process.env.OPENROUTER_API_KEY || (process.env.HF_TOKEN && process.env.HF_FREE_MODELS)),\n      paidProviderConfigured: Boolean(genAi || process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN),\n      conversationContextTurns: history.length,
       requestedRiskIgnored: true, publicAuthority: "VIEWER_ONLY",
     });
   } catch {
