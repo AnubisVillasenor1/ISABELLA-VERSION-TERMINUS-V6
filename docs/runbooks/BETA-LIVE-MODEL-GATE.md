@@ -4,12 +4,12 @@ This gate checks the real provider path; the ordinary build smoke test alone is 
 
 ## Configure once in GitHub
 
-In **Settings → Secrets and variables → Actions** for this repository:
+In **Settings → Environments**, create an environment named `beta-live-model-gate`. Add required reviewers/protection rules if available, then store provider credentials as **environment secrets** (not repository-wide secrets):
 
-- Add secret `OPENROUTER_API_KEY`, using a key created in the OpenRouter account; **or**
-- Add secret `HF_TOKEN` and repository variable `HF_FREE_MODELS` with one or more comma-separated model IDs that the account can actually access.
+- Add environment secret `OPENROUTER_API_KEY`, using a key created in the OpenRouter account; **or**
+- Add environment secret `HF_TOKEN` and repository variable `HF_FREE_MODELS` with one or more comma-separated model IDs that the account can actually access.
 
-Optional variables:
+Keep the workflow restricted to reviewed branch commits. The environment boundary ensures the job does not receive provider secrets until its environment protection is satisfied. Optional variables:
 
 - `OPENROUTER_FREE_MODEL`: defaults to `openrouter/free`. Use a specific eligible free model only if the account and provider support it.
 
