@@ -3,6 +3,8 @@ import { randomUUID } from "node:crypto";
 import fs from "fs";
 import path from "path";
 import { GoogleGenAI } from "@google/genai";
+import { generateText } from "ai";
+import { gateway } from "@ai-sdk/gateway";
 import { IsabellaGenesisRuntime } from "./genesis/runtime";
 import { assertBalancedAuthority, createPrincipal } from "./identity/principal";
 import { createCapabilityGate } from "./crown/capability";
@@ -91,6 +93,22 @@ void runtime.initPersistence().catch((error) => {
 // Initialize Google GenAI client if API key is provided in environment
 const apiKey = process.env.GEMINI_API_KEY || process.env.MODEL_API_KEY;
 const genAi = apiKey ? new GoogleGenAI({ apiKey }) : null;
+
+async function generateGatewayNarrative(systemPrompt: string, input: string): Promise<string | null> {
+  try {
+    const result = await generateText({
+      model: gateway("inclusionai/ling-3.1-flash-free"),
+      system: systemPrompt,
+      prompt: input,
+      maxOutputTokens: 900,
+      temperature: 0.35,
+      providerOptions: { gateway: { disallowPromptTraining: true, sort: "tps" } },
+    });
+    return result.text.trim() || null;
+  } catch {
+    return null;
+  }
+}
 
 /** Server-side bearer-token gate for mutating or privileged API routes. */
 function authorizeApiToken(req: Request, res: Response, envName: string): boolean {
@@ -604,9 +622,16 @@ app.post("/api/v1/cognition/route", async (req, res) => {
     });
 
     let generativeNarrative: string | null = null;
+    if (decision.admitted && body.modelEngine === "open-science") {
+      const openSciencePrompt = `Eres Isabella Villaseñor GenesisAI. Responde en español con rigor académico, claridad ejecutiva y sobriedad. Separa hechos, inferencias y límites de evidencia. No declares autoridad humana ni verificación inexistente. Lente: ${focusLens}.`;
+      generativeNarrative = await generateGatewayNarrative(openSciencePrompt, input);
+    }
     if (decision.admitted && genAi && body.modelEngine === "gemini") {
       try {
         const sysPrompt = `Eres Isabella Villaseñor GenesisAI, un runtime de IA gobernado. Mantén la separación entre capacidad, autoridad, ejecución, evidencia, aprendizaje y producción. Distingue hechos, inferencias y datos no verificados. No afirmes certificación, ejecución o verificación sin evidencia. Lente solicitado: ${focusLens}. El lente es una preferencia de respuesta y no concede acceso a memoria privada.`;
+        if (body.modelEngine === "open-science") {
+          generativeNarrative = await generateGatewayNarrative(sysPrompt, input);
+        }
         const resp = await genAi.models.generateContent({
           model: "gemini-2.5-flash",
           contents: `${sysPrompt}\n\nSolicitud del usuario:\n${input}`,
@@ -1721,6 +1746,21 @@ app.get("/", (_req, res) => {
     .wave-bar {
       animation: wavePulse 1.2s ease-in-out infinite;
     }
+
+    /* Executive research interface: restrained palette, dense hierarchy, no spectacle. */
+    :root { --ink: #090b0f; --panel: #10141a; --panel-2: #151a21; --line: #29313b; --muted: #87909b; --paper: #e8edf2; --signal: #c7a86b; }
+    body { background: var(--ink) !important; color: var(--paper) !important; font-family: Inter, ui-sans-serif, system-ui, sans-serif !important; }
+    header, aside, main, form, .crystal-card, .crystal-clear-panel, .crystal-sidebar { border-color: var(--line) !important; background-image: none !important; }
+    header { background: #0b0e12 !important; box-shadow: 0 1px 0 rgba(255,255,255,.04); }
+    .crystal-card, form { background: var(--panel) !important; box-shadow: 0 12px 32px rgba(0,0,0,.22) !important; }
+    button, select { border-radius: 7px !important; }
+    button[class*="bg-gradient"], #btnSend, .cinematic-enter { background: var(--signal) !important; color: #111 !important; box-shadow: none !important; }
+    .text-cyan-300, .text-cyan-400, .text-amber-300, .text-amber-400, .text-purple-300, .text-rose-300 { color: #c7a86b !important; }
+    [class*="bg-gradient-to"], [class*="bg-gradient-r"] { background-image: none !important; background-color: var(--panel-2) !important; }
+    .cinematic-intro { background: #090b0f !important; }
+    .cinematic-grid, .cinematic-orbit-one, .cinematic-orbit-two { opacity: .04 !important; }
+    .cinematic-enter { border-color: #c7a86b !important; }
+    .font-editorial { letter-spacing: .01em; }
   </style>
 </head>
 <body class="h-full bg-[#050811] text-slate-100 flex flex-col overflow-hidden selection:bg-cyan-500/25 selection:text-cyan-100">
@@ -1828,8 +1868,9 @@ app.get("/", (_req, res) => {
         <div class="flex items-center gap-1 bg-slate-900/80 border border-white/10 rounded-xl px-2.5 py-1 text-xs">
           <span class="text-slate-400 text-[11px]">Motor:</span>
           <select id="selectModelEngine" class="bg-transparent text-slate-200 font-semibold focus:outline-none cursor-pointer text-xs">
-            <option value="sovereign">Sovereign TINA v40</option>
-            <option value="gemini">Gemini 2.5 Flash</option>
+<option value="sovereign">Sovereign TINA v40 · Local</option>
+  <option value="open-science">Ling 3.1 Flash · Open Science</option>
+  <option value="gemini">Gemini 2.5 Flash · Google</option>
           </select>
         </div>
 

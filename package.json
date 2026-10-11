@@ -30,7 +30,9 @@
     "vitest": "^5.0.3"
   },
   "dependencies": {
+    "@ai-sdk/gateway": "^4.0.110",
     "@google/genai": "^2.28.0",
+    "ai": "^7.0.137",
     "express": "^5.2.1",
     "firebase": "^13.0.0",
     "tsx": "^4.23.15",
