@@ -1,0 +1,59 @@
+# Isabella / TAMV GitHub portfolio review
+
+**Review date:** 2026-10-11  
+**Scope:** repository inventory visible to the connected GitHub integration, targeted review of the Isabella-related repositories, and implementation work on `isabella-V6-TINA-h6`.  
+**Evidence rule:** this is a repository-level engineering review, not a claim that every file in every repository has been exhaustively reviewed or that any system is production-certified.
+
+## Executive assessment
+
+The portfolio contains multiple generations and surfaces of Isabella: a public TINA runtime, a separate detailed `isabella-ai-tina` repository, `isabella-s-crown`, `isabella-s-genesis-ai`, `isabella-villasenor-ai`, `isabella-s-core-intelligence`, `isabella-sovereign-ai`, and TAMV-facing documentation and prototypes. This creates useful research breadth, but the canonical implementation boundary is not consistently obvious from repository documentation.
+
+The target `isabella-V6-TINA-h6` is a private repository whose README largely mirrors the public `Isabella-V6-TINA` runtime documentation. Some badges and links still point at the public repository. The target has a distinct name but no visible evidence in its README of a documented fork/derivation policy, source-of-truth declaration, or synchronization contract.
+
+## Cross-repository findings
+
+| Repository | Evidence reviewed | Finding | Recommended disposition |
+|---|---|---|---|
+| `Isabella-V6-TINA` | README and project identity | Most complete reviewed runtime narrative: explicit maturity limits, security, readiness, latency, IGE and release gates. It also references PRs #18/#19 in that repository. | Treat as an upstream reference only if that is the intended source of truth; do not assume PRs or branch state transfer to h6. |
+| `isabella-V6-TINA-h6` | README, package manifest, CI, assurance scripts, ops module and tests | Private derivative with TypeScript runtime and IGE-Ω documentation. CI requires pnpm frozen installation, but the reviewed branch has no pnpm lockfile and no `packageManager` declaration. | Keep isolated on a review branch, repair dependency reproducibility before release, and define whether h6 is upstream, downstream, or a release candidate. |
+| `isabella-ai-tina` | README and version/status section | Detailed architecture and governance document; identifies package version 4.3.3 and describes a local TESTED status dated 2026-10-08. The document itself cautions that local tests do not imply production certification. | Reconcile its contracts, release status and capabilities with the selected canonical runtime using code-level diffs, not README similarity alone. |
+| `isabella-s-crown` | README | README is primarily a research prompt and Lovable starter instructions, rather than a reproducible module contract or release record. | Extract actual CROWN implementation only after inspecting source, dependencies, tests and license; do not treat its README as proof of a production-ready subsystem. |
+| `genesis-digytamv-nexus` | README | README remains generic Lovable project scaffolding and does not establish a technical integration contract with the TINA runtime. | Classify as a prototype/UI surface unless source and tests prove a deeper role. |
+| `DOCUMENTACION-TAMV-DM-X4-e-ISABELLA-AI` | Profile inventory and repository identity | Large documentation repository that appears central to the TAMV/Isabella architecture narrative. Its claims must be mapped to implementation evidence. | Use it as a specification source only after mapping each claim to a code path, test and deployment artifact. |
+| `isabella-s-genesis-ai`, `isabella-s-core-intelligence`, `isabella-villasenor-ai`, `isabella-sovereign-ai`, `isabella-mexa` | Repository inventory/search results | Multiple related implementation surfaces exist; names alone do not establish code overlap, maturity or compatibility. | Perform a license-aware source/API/dependency comparison before copying or merging code. |
+
+## Target repository: confirmed engineering gaps
+
+1. **Dependency reproducibility — release blocker.** CI runs `pnpm install --frozen-lockfile`, but the reviewed target has no `pnpm-lock.yaml`. The package manifest also does not declare `packageManager`. A generated lockfile must be produced by the selected package manager and committed; it must not be fabricated or replaced by disabling frozen installs.
+2. **Rust workspace verification — release blocker.** The `ige-omega/` workspace manifest exists and declares eight crates, but `ige-omega/Cargo.lock` was not found. Rust formatting, clippy, tests, PostgreSQL integration tests and release build must run in CI against the exact release SHA.
+3. **Repository identity drift.** README badges and upstream PR references point to `OsoPanda1/Isabella-V6-TINA`, not the h6 repository. That can mislead maintainers about which repository's checks and pull requests apply.
+4. **Runtime input validation.** The production-ops module accepted non-finite rate-limiter values and did not prevent time rollback from moving the refill watermark backward. Circuit-breaker half-open state did not serialize the recovery probe. Invalid maintenance-window timestamps were silently treated as inactive.
+5. **Evidence semantics.** The assurance scripts are structural checks. Their PASS result does not prove runtime security, provider connectivity, PostgreSQL persistence, PQC operation, model training, production health or certification. Keep this distinction explicit.
+6. **ML scope.** Genesis routing consumes externally supplied scores and ranks them deterministically. That is not evidence of learned weights, local model training, native GPU serving or a proprietary foundation model.
+7. **Canonical ownership and license provenance.** Related repositories should not be merged solely because they share a brand. Compare licenses, code origins, public APIs, schemas, tests and secret-handling boundaries before reusing code.
+
+## Implemented in this review branch
+
+- Validated token-bucket capacity, refill rate, costs and timestamps as finite and within explicit bounds.
+- Prevented clock regressions from rewinding the token-bucket refill watermark.
+- Validated circuit-breaker thresholds, recovery duration and timestamps.
+- Serialized the half-open circuit-breaker probe so only one request tests recovery at a time.
+- Rejected invalid timeout values.
+- Made malformed or inverted maintenance windows fail explicitly rather than silently appearing inactive.
+- Added regression tests for each of these boundary conditions.
+
+These changes are committed to `evolution/runtime-hardening-2026-10`. They are not considered verified until CI reports a successful run on the resulting commit.
+
+## Required next gates
+
+1. Generate and commit a real pnpm lockfile and declare the approved package manager/version.
+2. Generate and commit `ige-omega/Cargo.lock`; run `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace`, and release build.
+3. Run TypeScript typecheck, full Vitest suite, build, security suite and production-evidence gate on the same SHA.
+4. Test PostgreSQL integration and tenant/session isolation with a disposable database; test backup/restore and migrations.
+5. Inspect actual callers of CROWN, AEGIS, IKES, VERITAS, BookPI and HSF to prove fail-closed behavior at every privileged boundary.
+6. Reconcile the target README and API contracts with the chosen upstream and record the relationship in a versioned architecture decision.
+7. Do not merge or deploy while required checks are missing, inconclusive or red.
+
+## Release principle
+
+A repository can contain substantial code and still lack a reproducible release path. Isabella's readiness must be measured from executable behavior, tests, configuration and evidence tied to the exact commit—not from architecture diagrams, repository size, naming, or aspirational documentation.
