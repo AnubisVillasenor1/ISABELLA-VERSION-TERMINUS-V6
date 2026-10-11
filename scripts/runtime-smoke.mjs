@@ -20,6 +20,10 @@ try {
   assert.equal(health.status, 200, "GET /health must return HTTP 200");
   const healthBody = await health.json();
   assert.equal(healthBody.status, "healthy");
+  assert.equal(health.headers.get("x-content-type-options"), "nosniff", "API must set MIME sniffing protection");
+  assert.equal(health.headers.get("x-frame-options"), "DENY", "API must reject framing");
+  assert.equal(health.headers.get("referrer-policy"), "strict-origin-when-cross-origin", "API must set a conservative referrer policy");
+  assert.equal(health.headers.get("x-powered-by"), null, "Express fingerprint header must be disabled");
   const publicHealth = await fetch(`${baseUrl}/api/v1/health`, { signal: AbortSignal.timeout(5_000) });
   assert.equal(publicHealth.status, 200, "public API health must remain available");
   const publicHealthBody = await publicHealth.json();
