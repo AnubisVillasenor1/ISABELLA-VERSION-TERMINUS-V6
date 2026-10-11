@@ -2,16 +2,15 @@
 
 > **Trusted Intelligence, Native & Adaptive.** Runtime de IA modular con separación explícita entre capacidad, autoridad, ejecución, evidencia y despliegue.
 
-[![Repository Assurance](https://github.com/OsoPanda1/Isabella-V6-TINA/actions/workflows/repository-assurance.yml/badge.svg)](https://github.com/OsoPanda1/Isabella-V6-TINA/actions/workflows/repository-assurance.yml)
-[![Genesis CI](https://github.com/OsoPanda1/Isabella-V6-TINA/actions/workflows/ci.yml/badge.svg)](https://github.com/OsoPanda1/Isabella-V6-TINA/actions/workflows/ci.yml)
+[![Repository Assurance](https://github.com/OsoPanda1/isabella-V6-TINA-h6/actions/workflows/repository-assurance.yml/badge.svg)](https://github.com/OsoPanda1/isabella-V6-TINA-h6/actions/workflows/repository-assurance.yml)
+[![Genesis CI](https://github.com/OsoPanda1/isabella-V6-TINA-h6/actions/workflows/ci.yml/badge.svg)](https://github.com/OsoPanda1/isabella-V6-TINA-h6/actions/workflows/ci.yml)
 
 **Proyecto:** Isabella Villaseñor AI — Genesis TINA V6  
-**Repositorio:** [OsoPanda1/Isabella-V6-TINA](https://github.com/OsoPanda1/Isabella-V6-TINA)  
+**Repositorio:** [OsoPanda1/isabella-V6-TINA-h6](https://github.com/OsoPanda1/isabella-V6-TINA-h6)  
 **Lenguaje principal:** TypeScript · Node.js  
 **Estado de ingeniería:** evolución activa; no declarar listo para producción hasta superar los gates de validación y despliegue.  
 **Rama de integración IGE-Ω:** `feat/ige-omega-rust-mvp-2026-10`  
-**Pull request de integración:** [#18](https://github.com/OsoPanda1/Isabella-V6-TINA/pull/18)  
-**Pull request de endurecimiento IGE-Ω:** [#19](https://github.com/OsoPanda1/Isabella-V6-TINA/pull/19)
+**Repositorio de referencia upstream:** [OsoPanda1/Isabella-V6-TINA](https://github.com/OsoPanda1/Isabella-V6-TINA). Las ramas, PRs y checks de upstream no se consideran parte de este repositorio; valida siempre el SHA y CI propios de h6.
 
 > **Contrato de veracidad:** `SPECIFIED ≠ IMPLEMENTED ≠ TESTED ≠ INTEGRATED ≠ VERIFIED ≠ DEPLOYED ≠ CERTIFIED`. Un contrato, fixture, simulación o adaptador sin configurar no demuestra una integración real. Los estados de salud deben derivarse de probes reales; no de valores fijos.
 
@@ -234,6 +233,7 @@ Las fases pueden desarrollarse en paralelo cuando no compitan por los mismos arc
 - [Puente de PennyLane](docs/ISABELLA_PENNYLANE_BRIDGE.md)
 - [Configuración de entorno](docs/ENVIRONMENT.md)
 - [Política de seguridad](SECURITY.md)
+- [Auditoría del ecosistema GitHub Isabella/TAMV y bloqueos de release](docs/audits/PROFILE-ECOSYSTEM-REVIEW-2026-10.md)
 
 Los documentos de arquitectura describen tanto capacidades existentes como objetivos. Cuando exista una discrepancia, el código, las pruebas y la evidencia del SHA desplegable determinan qué puede afirmarse como implementado.
 
