@@ -13,7 +13,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "build": "tsc -p tsconfig.build.json && esbuild src/server.ts --bundle --platform=node --format=esm --packages=external --target=node24 --outfile=dist/server.js && node scripts/runtime-smoke.mjs",
+    "build": "tsc -p tsconfig.build.json && vitest run && esbuild src/server.ts --bundle --platform=node --format=esm --packages=external --target=node24 --outfile=dist/server.js && node scripts/runtime-smoke.mjs",
     "lint": "tsc --noEmit",
     "reconcile:pids": "tsx src/cli/reconcilePids.ts",
     "quantum:bridge": "python services/pennylane_bridge.py",
