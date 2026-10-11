@@ -117,6 +117,36 @@ try {
     assert.notEqual(explicitGeminiBody.responseEngine, "gemini", "Gemini must not be invoked without explicit paid-provider opt-in");
     assert.notEqual(explicitGeminiBody.responseEngine, "open-science", "paid AI Gateway must not be invoked without explicit paid-provider opt-in");
   }
+  const savedProviderEnv = {
+    openRouterKey: process.env.OPENROUTER_API_KEY,
+    openRouterModel: process.env.OPENROUTER_FREE_MODEL,
+    hfToken: process.env.HF_TOKEN,
+    hfModels: process.env.HF_FREE_MODELS,
+    paidOptIn: process.env.ALLOW_PAID_PROVIDER_FALLBACK,
+  };
+  try {
+    process.env.OPENROUTER_API_KEY = "smoke-test-placeholder";
+    process.env.OPENROUTER_FREE_MODEL = "vendor/paid-model";
+    delete process.env.HF_TOKEN;
+    delete process.env.HF_FREE_MODELS;
+    process.env.ALLOW_PAID_PROVIDER_FALLBACK = "false";
+    const paidModelGuard = await fetch(`${baseUrl}/api/v1/cognition/route`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ input: "Verifica la política de modelo.", modelEngine: "open-science", focusLens: "general", history: [] }),
+      signal: AbortSignal.timeout(5_000),
+    });
+    const paidModelGuardBody = await paidModelGuard.json();
+    assert.equal(paidModelGuard.status, 200);
+    assert.equal(paidModelGuardBody.responseEngine, "sovereign-fallback", "paid OpenRouter model IDs must be refused when paid opt-in is disabled");
+    console.log("OPENROUTER_PAID_ID_BLOCK_OK", JSON.stringify({ responseEngine: paidModelGuardBody.responseEngine }));
+  } finally {
+    if (savedProviderEnv.openRouterKey === undefined) delete process.env.OPENROUTER_API_KEY; else process.env.OPENROUTER_API_KEY = savedProviderEnv.openRouterKey;
+    if (savedProviderEnv.openRouterModel === undefined) delete process.env.OPENROUTER_FREE_MODEL; else process.env.OPENROUTER_FREE_MODEL = savedProviderEnv.openRouterModel;
+    if (savedProviderEnv.hfToken === undefined) delete process.env.HF_TOKEN; else process.env.HF_TOKEN = savedProviderEnv.hfToken;
+    if (savedProviderEnv.hfModels === undefined) delete process.env.HF_FREE_MODELS; else process.env.HF_FREE_MODELS = savedProviderEnv.hfModels;
+    if (savedProviderEnv.paidOptIn === undefined) delete process.env.ALLOW_PAID_PROVIDER_FALLBACK; else process.env.ALLOW_PAID_PROVIDER_FALLBACK = savedProviderEnv.paidOptIn;
+  }
   console.log("PUBLIC_API_GUARDRAILS_OK", JSON.stringify({ blankInput: emptyInput.status, oversizedInput: oversizedInput.status, unscopedMemory: unscopedMemory.status, destructiveRequest: destructiveRequest.status }));
   console.log("LOCAL_CONVERSATION_SMOKE_OK", JSON.stringify({ health: health.status, chat: chat.status, followUp: followUp.status, responseEngine: chatBody.responseEngine }));
   const gatewayCredentialsAvailable = Boolean(process.env.OPENROUTER_API_KEY || (process.env.HF_TOKEN && process.env.HF_FREE_MODELS));
