@@ -3295,7 +3295,7 @@ app.get("/", (_req, res) => {
             <span class="text-[10px] font-mono \${isBlocked ? 'text-rose-400' : 'text-emerald-400'}">
               \${isBlocked ? 'REFUSAL / FAIL-CLOSED' : 'INTENT ADMITTED · ' + d.crown.responseMode.toUpperCase()}
             </span>
-            <span class="text-[10px] font-mono text-cyan-300">${escapeHtml(engineLabel)}</span>
+            <span class="text-[10px] font-mono text-cyan-300">\${escapeHtml(engineLabel)}</span>
           </div>
 
           <div class="flex items-center gap-3">
