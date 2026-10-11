@@ -187,6 +187,19 @@ La rama contiene `pnpm-lock.yaml` (formato 9) y fija `packageManager: pnpm@10.28
 
 La ruta web `/api/v1/cognition/route` ofrece ahora selección automática del motor disponible, historial conversacional efímero y fallback local explícitamente identificado. El build empaqueta el entrypoint con esbuild para que Node ESM resuelva correctamente los módulos internos; además, ejecuta un smoke test de arranque, `/health` y POST conversacional en modo local. La interacción con modelo externo depende de que los secretos de proveedor estén configurados en el entorno de prueba. Si ningún proveedor responde, el fallback local no debe confundirse con una respuesta generada por un LLM. La vista previa más reciente tiene `/health` HTTP 200 y el smoke test local confirma que el POST conversacional responde en modo soberano. La prueba real de AI Gateway está bloqueada por cuenta: Vercel solicita registrar una tarjeta válida para procesar solicitudes y desbloquear créditos. Hasta resolverlo, Isabella responde con el motor local determinista y la interfaz lo identifica; no se certifica chat generativo. El fallback local ahora responde a saludos, identidad, capacidades, privacidad y temas TAMV/RDM, y solicita contexto para preguntas generales que no puede resolver con fiabilidad. Tras un error del proveedor se aplica un cooldown local para evitar repetir esperas largas. La conversación local está probada; el LLM externo sigue pendiente.
 
+### Pool de modelos abiertos con coste controlado
+
+En modo `Auto` y `Open Science`, Isabella intenta proveedores externos en secuencia y vuelve al motor local si ninguno responde:
+
+1. **OpenRouter Free Router** — activa `OPENROUTER_API_KEY`; por defecto utiliza `openrouter/free`, que enruta hacia modelos que el proveedor publica como gratuitos en ese momento.
+2. **Hugging Face Inference Providers** — opcional: configura `HF_TOKEN` y `HF_FREE_MODELS` como lista separada por comas de identificadores de modelos que hayas comprobado como gratuitos para tu cuenta.
+3. **Vercel AI Gateway** — última alternativa existente; puede estar bloqueada por la facturación de la cuenta.
+4. **Fallback soberano local** — siempre transparente; no se presenta como LLM.
+
+Variables opcionales: `OPENROUTER_FREE_MODEL` (predeterminado `openrouter/free`), `PROVIDER_FAILURE_COOLDOWN_MS` (10 000–300 000 ms) y `INFERENCE_TIMEOUT_MS` (3 000–30 000 ms). No guardes claves en el repositorio; configúralas como secretos de Vercel en Preview.
+
+**Importante sobre “gratuito”:** la selección de modelos gratuitos depende de la disponibilidad, límites, políticas y cuotas del proveedor; no garantiza capacidad ilimitada ni disponibilidad permanente. Hugging Face documenta créditos gratuitos limitados y facturación adicional según modalidad. Mantén `HF_FREE_MODELS` vacío hasta verificar el precio efectivo de cada modelo. No se ha habilitado deliberadamente ningún modelo de pago.
+
 IGE-Ω sigue bloqueado para validación Rust mientras falte `ige-omega/Cargo.lock`. No se debe inventar ese archivo ni desactivar la instalación congelada. Cada release debe asociarse al SHA exacto y superar typecheck, pruebas, build y suite de seguridad.
 
 ## 8. Desarrollo local
