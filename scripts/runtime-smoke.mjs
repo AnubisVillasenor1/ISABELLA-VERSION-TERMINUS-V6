@@ -60,7 +60,7 @@ try {
   assert.match(followUpBody.generativeNarrative, /Soy Isabella Villaseñor AI/, "fallback must answer identity questions");
   assert.equal(followUpBody.conversationContextTurns, 2, "conversation history must be preserved within the request");
   console.log("LOCAL_CONVERSATION_SMOKE_OK", JSON.stringify({ health: health.status, chat: chat.status, followUp: followUp.status, responseEngine: chatBody.responseEngine }));
-  const gatewayCredentialsAvailable = Boolean(process.env.OPENROUTER_API_KEY || (process.env.HF_TOKEN && process.env.HF_FREE_MODELS) || process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN);
+  const gatewayCredentialsAvailable = Boolean(process.env.OPENROUTER_API_KEY || (process.env.HF_TOKEN && process.env.HF_FREE_MODELS));
   if (gatewayCredentialsAvailable) {
     try {
       const llm = await fetch(`${baseUrl}/api/v1/cognition/route`, {
@@ -87,7 +87,7 @@ try {
       console.warn("LLM_GATEWAY_SMOKE_FAILED_NONBLOCKING", message);
     }
   } else {
-    const message = "No external-model credentials are available in this build environment (OPENROUTER_API_KEY, HF_TOKEN + HF_FREE_MODELS, or AI Gateway credentials).";
+    const message = "No free/open provider credentials are available for this smoke test. Configure OPENROUTER_API_KEY or both HF_TOKEN and HF_FREE_MODELS. Paid AI Gateway credentials do not count because paid fallback is opt-in.";
     if (process.env.ISABELLA_REQUIRE_LLM_SMOKE === "true") throw new Error(message);
     console.warn("LLM_GATEWAY_SMOKE_SKIPPED", message);
   }
