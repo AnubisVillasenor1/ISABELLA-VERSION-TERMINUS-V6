@@ -60,7 +60,7 @@ try {
   assert.match(followUpBody.generativeNarrative, /Soy Isabella Villaseñor AI/, "fallback must answer identity questions");
   assert.equal(followUpBody.conversationContextTurns, 2, "conversation history must be preserved within the request");
   console.log("LOCAL_CONVERSATION_SMOKE_OK", JSON.stringify({ health: health.status, chat: chat.status, followUp: followUp.status, responseEngine: chatBody.responseEngine }));
-  const gatewayCredentialsAvailable = Boolean(process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN);
+  const gatewayCredentialsAvailable = Boolean(process.env.OPENROUTER_API_KEY || (process.env.HF_TOKEN && process.env.HF_FREE_MODELS) || process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN);
   if (gatewayCredentialsAvailable) {
     try {
       const llm = await fetch(`${baseUrl}/api/v1/cognition/route`, {
@@ -77,17 +77,17 @@ try {
       });
       const llmBody = await llm.json();
       assert.equal(llm.status, 200, `gateway chat returned HTTP ${llm.status}: ${JSON.stringify(llmBody)}`);
-      assert.equal(llmBody.responseEngine, "open-science", `gateway must generate a real model response, got ${llmBody.responseEngine}`);
+      assert.ok(["open-science", "openrouter-free", "huggingface-free", "gemini"].includes(llmBody.responseEngine), `a real external model must answer; got ${llmBody.responseEngine}`);
       assert.equal(typeof llmBody.generativeNarrative, "string");
       assert.ok(llmBody.generativeNarrative.trim().length > 0);
-      console.log("LLM_GATEWAY_SMOKE_OK", JSON.stringify({ responseEngine: llmBody.responseEngine }));
+      console.log("EXTERNAL_MODEL_SMOKE_OK", JSON.stringify({ responseEngine: llmBody.responseEngine }));
     } catch (error) {
       const message = error instanceof Error ? error.message.slice(0, 500) : String(error).slice(0, 500);
       if (process.env.ISABELLA_REQUIRE_LLM_SMOKE === "true") throw error;
       console.warn("LLM_GATEWAY_SMOKE_FAILED_NONBLOCKING", message);
     }
   } else {
-    const message = "AI_GATEWAY_API_KEY and VERCEL_OIDC_TOKEN are unavailable in this build environment.";
+    const message = "No external-model credentials are available in this build environment (OPENROUTER_API_KEY, HF_TOKEN + HF_FREE_MODELS, or AI Gateway credentials).";
     if (process.env.ISABELLA_REQUIRE_LLM_SMOKE === "true") throw new Error(message);
     console.warn("LLM_GATEWAY_SMOKE_SKIPPED", message);
   }
