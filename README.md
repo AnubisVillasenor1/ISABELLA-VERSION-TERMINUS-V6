@@ -28,6 +28,10 @@ La arquitectura contempla CROWN, AEGIS, IKES, VERITAS, BookPI, YUN, TINA, Atlas,
 
 **Isabella no se presenta aquí como un modelo fundacional propio, AGI, un motor de entrenamiento nativo ni una plataforma certificada.** El runtime puede gobernar adaptadores de inferencia, pero eso no equivale a entrenar o servir un modelo neuronal propio.
 
+## Documentación canónica C.R.O.W.N. / Isabella VΩ
+
+La especificación operativa, límites de implementación, contrato de eventos YUN, seguridad, licenciamiento, monetización y criterios de aceptación están en [`docs/CROWN-ISABELLA-VOMEGA-OPERATING-SPEC.md`](docs/CROWN-ISABELLA-VOMEGA-OPERATING-SPEC.md). El contrato de evento local se expone desde `src/federation`; calcula un hash de contenido, pero no constituye un bus federado, una firma digital ni almacenamiento inmutable.
+
 ## 2. Arquitectura de alto nivel
 
 ```text
