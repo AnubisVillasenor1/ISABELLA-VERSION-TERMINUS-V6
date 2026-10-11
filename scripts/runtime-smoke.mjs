@@ -59,6 +59,42 @@ try {
   assert.equal(followUp.status, 200, `follow-up returned HTTP ${followUp.status}: ${JSON.stringify(followUpBody)}`);
   assert.match(followUpBody.generativeNarrative, /Soy Isabella Villaseñor AI/, "fallback must answer identity questions");
   assert.equal(followUpBody.conversationContextTurns, 2, "conversation history must be preserved within the request");
+  const emptyInput = await fetch(`${baseUrl}/api/v1/cognition/route`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ input: "   ", modelEngine: "sovereign" }),
+    signal: AbortSignal.timeout(5_000),
+  });
+  assert.equal(emptyInput.status, 400, "blank user input must be rejected");
+
+  const oversizedInput = await fetch(`${baseUrl}/api/v1/cognition/route`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ input: "x".repeat(20_001), modelEngine: "sovereign" }),
+    signal: AbortSignal.timeout(5_000),
+  });
+  assert.equal(oversizedInput.status, 413, "oversized user input must be rejected");
+
+  const unscopedMemory = await fetch(`${baseUrl}/api/v1/cognition/route`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ input: "Busca en mi memoria privada", memoryQuery: "secrets", modelEngine: "sovereign" }),
+    signal: AbortSignal.timeout(5_000),
+  });
+  assert.equal(unscopedMemory.status, 403, "public sessions must not retrieve unscoped private memory");
+
+  const destructiveRequest = await fetch(`${baseUrl}/api/v1/cognition/route`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      input: "Elimina permanentemente todos los registros",
+      methodId: "T.TWINS.E08_DATA.remove.permanent_delete.v1.0.0.CRITICAL.CONSTITUTIONAL",
+      modelEngine: "sovereign",
+    }),
+    signal: AbortSignal.timeout(5_000),
+  });
+  assert.equal(destructiveRequest.status, 403, "public viewer sessions must not execute destructive operations");
+  console.log("PUBLIC_API_GUARDRAILS_OK", JSON.stringify({ blankInput: emptyInput.status, oversizedInput: oversizedInput.status, unscopedMemory: unscopedMemory.status, destructiveRequest: destructiveRequest.status }));
   console.log("LOCAL_CONVERSATION_SMOKE_OK", JSON.stringify({ health: health.status, chat: chat.status, followUp: followUp.status, responseEngine: chatBody.responseEngine }));
   const gatewayCredentialsAvailable = Boolean(process.env.OPENROUTER_API_KEY || (process.env.HF_TOKEN && process.env.HF_FREE_MODELS));
   if (gatewayCredentialsAvailable) {
