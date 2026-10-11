@@ -180,11 +180,13 @@ npm run security:suite
 npm run production:evidence
 ```
 
-### Bloqueo de instalación reproducible
+### Reproducibilidad y validación de despliegue
 
-En la rama de evolución auditada no se encontró `pnpm-lock.yaml`, `package-lock.json` ni `yarn.lock`, mientras que el workflow CI usa `pnpm install --frozen-lockfile`. Además, `package.json` no fija `packageManager`. Esta combinación debe resolverse generando y validando un lockfile real con la versión de gestor aprobada; no se debe inventar un lockfile ni eliminar el modo congelado para aparentar reproducibilidad.
+La rama contiene `pnpm-lock.yaml` (formato 9) y fija `packageManager: pnpm@10.28.0` y Node `24.x`; CI y Vercel deben usar el mismo toolchain con instalación congelada. Vercel completó builds para commits anteriores de esta rama, pero el build por sí solo no demuestra la interacción conversacional en runtime ni la aprobación de los gates de CI.
 
-Por esa razón, no se afirma que las pruebas, el typecheck o el build hayan pasado en el SHA actual. La validación de liberación debe ejecutarse después de resolver el bloqueo y debe asociarse al commit exacto.
+La ruta web `/api/v1/cognition/route` ofrece ahora selección automática del motor disponible, historial conversacional efímero y fallback local explícitamente identificado. La interacción con modelo externo depende de que los secretos de proveedor estén configurados en el entorno de prueba. Si ningún proveedor responde, el fallback local no debe confundirse con una respuesta generada por un LLM.
+
+IGE-Ω sigue bloqueado para validación Rust mientras falte `ige-omega/Cargo.lock`. No se debe inventar ese archivo ni desactivar la instalación congelada. Cada release debe asociarse al SHA exacto y superar typecheck, pruebas, build y suite de seguridad.
 
 ## 8. Desarrollo local
 
