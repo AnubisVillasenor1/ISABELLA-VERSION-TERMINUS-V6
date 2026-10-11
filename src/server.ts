@@ -803,7 +803,8 @@ app.post("/api/v1/cognition/route", async (req, res) => {
       success: decision.admitted, decision, principal, generativeNarrative, responseEngine,
       modelConfigured: Boolean(genAi || process.env.OPENROUTER_API_KEY || (process.env.HF_TOKEN && process.env.HF_FREE_MODELS) || process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN),
       openModelConfigured: Boolean(process.env.OPENROUTER_API_KEY || (process.env.HF_TOKEN && process.env.HF_FREE_MODELS)),
-      paidProviderConfigured: Boolean(genAi || process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN),\n      conversationContextTurns: history.length,
+      paidProviderConfigured: Boolean(genAi || process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN),
+      conversationContextTurns: history.length,
       requestedRiskIgnored: true, publicAuthority: "VIEWER_ONLY",
     });
   } catch {
