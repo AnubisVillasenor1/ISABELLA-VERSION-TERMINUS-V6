@@ -17,6 +17,8 @@ Do not paste provider keys into issues, commits, workflow inputs, or chat. The w
 
 ## Run the gate
 
+The `workflow_dispatch` workflow must first be present on the repository's default branch. Merge/release this workflow file through the normal reviewed PR process before using the manual trigger.
+
 1. Open **Actions → Isabella Beta Live Model Gate**.
 2. Select **Run workflow** on the branch being evaluated.
 3. Require the step **Build and require a real external model response** to pass.
