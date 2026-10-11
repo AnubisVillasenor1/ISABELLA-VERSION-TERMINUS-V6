@@ -29,6 +29,14 @@ import { LatencyRegistry } from "./deployment/latency-metrics";
 import { TtlSingleFlight } from "./deployment/ttl-single-flight";
 
 const app: Application = express();
+app.disable("x-powered-by");
+app.use((_req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader("Permissions-Policy", "camera=(), microphone=()");
+  next();
+});
 const latencyRegistry = new LatencyRegistry(100, 512);
 const atlasHealthCache = new TtlSingleFlight<{ healthy: boolean; reason: string }>(1_000);
 const port = 3000;
