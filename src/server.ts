@@ -1729,6 +1729,7 @@ app.get("/", (_req, res) => {
     .cinematic-status { margin-top: 18px; color: rgba(214,226,240,.68); font: 10px 'JetBrains Mono', monospace; }
     .cinematic-trailer { display: none; }
     .cinematic-intro.is-trailer .cinematic-intro-content { display: none; }
+  .cinematic-intro.is-exiting { pointer-events: none; opacity: 0; visibility: hidden; transition: opacity .25s ease, visibility 0s linear .25s; }
     .cinematic-intro.is-trailer .cinematic-trailer { display: block; animation: trailerReveal .8s ease both; }
     .cinematic-trailer h2 { margin: 0; color: #fffdf5; font: 600 clamp(2rem, 5vw, 4rem) 'Newsreader', serif; }
     .cinematic-trailer p:not(.cinematic-chapter) { margin: 18px auto 0; max-width: 570px; color: #d6e2f0; font-size: 16px; line-height: 1.7; }
@@ -1776,7 +1777,7 @@ app.get("/", (_req, res) => {
       <h1 id="introTitle">Bienvenido a Isabella Villaseñor</h1>
       <p class="cinematic-lede">Inteligencia gobernada, memoria civilizatoria y orgullo latinoamericano desde Real del Monte, Hidalgo.</p>
       <p class="cinematic-origin">Un proyecto nacido del pueblo y para el pueblo. Innovación con raíz, rigor y responsabilidad.</p>
-      <button id="enterIsabella" class="cinematic-enter" type="button" onclick="enterIsabellaExperience()">Ingresar</button>
+      <button id="enterIsabella" class="cinematic-enter" type="button" onclick="skipCinematicIntro(); initializeCollapsedNavbars(); document.getElementById('mainInput')?.focus()">Ingresar</button>
       <p class="cinematic-consent">Al presionar ingresar, el usuario acepta y autoriza los permisos de visualización y audio para una inmersión completa dentro de Isabella Villaseñor AI.</p>
       <p id="introStatus" class="cinematic-status" role="status">Experiencia preparada · duración narrativa aproximada: 60 segundos</p>
     </div>
@@ -1915,7 +1916,7 @@ app.get("/", (_req, res) => {
       <!-- =================================================================================== -->
       <!-- TRES (3) NAVBARS LATERALES IZQUIERDAS DESPLEGABLES EN ACORDEÓN (3D CRYSTAL CLEAR) -->
       <!-- =================================================================================== -->
-      <aside id="leftNavbarsColumn" class="crystal-sidebar crystal-sidebar-left crystal-clear-panel border-r border-white/[0.09] flex flex-col shrink-0 overflow-y-auto crystal-clear-scrollbar z-30">
+      <aside id="leftNavbarsColumn" class="collapsed crystal-sidebar crystal-sidebar-left crystal-clear-panel border-r border-white/[0.09] flex flex-col shrink-0 overflow-y-auto crystal-clear-scrollbar z-30">
         
         <!-- Accordion 1: Identidad TINA esLatina & Territorio Biocultural -->
         <div class="border-b border-white/[0.08]">
@@ -2169,7 +2170,7 @@ app.get("/", (_req, res) => {
               <div class="flex items-start gap-2.5">
                 <textarea id="mainInput" rows="2" class="flex-1 bg-transparent border-0 text-sm text-slate-100 placeholder-slate-500 focus:outline-none resize-none leading-relaxed font-mono" placeholder="Formula una consulta, comando de herramienta o análisis soberano... (Shift+Enter para nueva línea)"></textarea>
 
-                <button type="submit" id="btnSend" class="p-2.5 rounded-xl bg-gradient-to-r from-cyan-500 via-indigo-600 to-amber-500 hover:opacity-95 text-slate-950 font-bold transition shadow-lg shadow-cyan-500/25 disabled:opacity-40 disabled:cursor-not-allowed shrink-0">
+                <button type="submit" id="btnSend" aria-label="Enviar mensaje a Isabella" title="Enviar mensaje (Enter)" class="p-2.5 rounded-xl bg-gradient-to-r from-cyan-500 via-indigo-600 to-amber-500 hover:opacity-95 text-slate-950 font-bold transition shadow-lg shadow-cyan-500/25 disabled:opacity-40 disabled:cursor-not-allowed shrink-0">
                   <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 12h14M12 5l7 7-7 7"/></svg>
                 </button>
               </div>
@@ -2221,7 +2222,7 @@ app.get("/", (_req, res) => {
       <!-- =================================================================================== -->
       <!-- TRES (3) NAVBARS LATERALES DERECHAS DESPLEGABLES EN ACORDEÓN (3D CRYSTAL CLEAR) -->
       <!-- =================================================================================== -->
-      <aside id="rightNavbarsColumn" class="crystal-sidebar crystal-sidebar-right crystal-clear-panel border-l border-white/[0.09] flex flex-col shrink-0 overflow-y-auto crystal-clear-scrollbar z-30">
+      <aside id="rightNavbarsColumn" class="collapsed crystal-sidebar crystal-sidebar-right crystal-clear-panel border-l border-white/[0.09] flex flex-col shrink-0 overflow-y-auto crystal-clear-scrollbar z-30">
         
         <!-- Accordion 4: Motor de Gobernanza & C.R.O.W.N. (Veritas Engine) -->
         <div class="border-b border-white/[0.08]">
@@ -2778,18 +2779,19 @@ app.get("/", (_req, res) => {
   let cinematicSceneIndex = 0;
 
   function enterIsabellaExperience() {
-    const intro = document.getElementById('cinematicIntro');
-    if (!intro) return;
-    intro.classList.add('is-trailer');
-    intro.setAttribute('aria-hidden', 'false');
-    document.getElementById('introStatus').textContent = 'Permisos aceptados por el usuario · iniciando presentación';
-    cinematicSceneIndex = 0;
-    renderCinematicScene();
-    cinematicTimer = window.setInterval(() => {
-      cinematicSceneIndex += 1;
-      if (cinematicSceneIndex >= cinematicScenes.length) { skipCinematicIntro(); return; }
-      renderCinematicScene();
-    }, 3750);
+  // The chat must be usable immediately after consent; the cinematic layer never blocks input.
+  skipCinematicIntro();
+  document.body.classList.add('isabella-ready');
+  initializeCollapsedNavbars();
+  const input = document.getElementById('mainInput');
+  if (input) window.setTimeout(() => input.focus(), 50);
+  }
+
+  function initializeCollapsedNavbars() {
+  isLeftNavsOpen = true;
+  isRightNavsOpen = true;
+  toggleLeftNavbars();
+  toggleRightNavbars();
   }
 
   function renderCinematicScene() {
@@ -2807,8 +2809,8 @@ app.get("/", (_req, res) => {
     intro.classList.add('is-exiting');
     window.setTimeout(() => intro.remove(), 850);
   }
-    let isLeftNavsOpen = true;
-    let isRightNavsOpen = true;
+    let isLeftNavsOpen = false;
+    let isRightNavsOpen = false;
     let currentLastDecision = null;
     let isPodcastPlaying = false;
     let podcastTimerInterval = null;
@@ -3135,8 +3137,17 @@ app.get("/", (_req, res) => {
           })
         });
 
-        const data = await res.json();
-        const durationMs = Math.round(performance.now() - startTime);
+  const responseText = await res.text();
+  let data;
+  try {
+    data = JSON.parse(responseText);
+  } catch {
+    throw new Error(\`Respuesta inválida del servidor (\${res.status})\`);
+  }
+  if (!res.ok && !data?.generativeNarrative) {
+    throw new Error(data?.error || \`La solicitud fue rechazada (\${res.status})\`);
+  }
+  const durationMs = Math.round(performance.now() - startTime);
         currentLastDecision = data;
 
         renderBotTurnResponse(turnId, text, data, isDeepThink, durationMs);
