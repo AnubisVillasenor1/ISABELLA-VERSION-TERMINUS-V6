@@ -93,7 +93,7 @@ void runtime.initPersistence().catch((error) => {
 // Initialize Google GenAI client if API key is provided in environment
 const apiKey = process.env.GEMINI_API_KEY || process.env.MODEL_API_KEY;
 const genAi = apiKey ? new GoogleGenAI({ apiKey }) : null;
-const providerTimeoutMs = Math.min(30_000, Math.max(3_000, Number(process.env.INFERENCE_TIMEOUT_MS) || 15_000));
+const providerTimeoutMs = Math.min(30_000, Math.max(3_000, Number(process.env.INFERENCE_TIMEOUT_MS) || 8_000));
 const providerCooldownMs = Math.min(300_000, Math.max(10_000, Number(process.env.PROVIDER_FAILURE_COOLDOWN_MS) || 60_000));
 let gatewayCooldownUntil = 0;
 
@@ -1939,7 +1939,7 @@ app.get("/", (_req, res) => {
         <div class="flex items-center gap-1 bg-slate-900/80 border border-white/10 rounded-xl px-2.5 py-1 text-xs">
           <span class="text-slate-400 text-[11px]">Motor:</span>
           <select id="selectModelEngine" class="bg-transparent text-slate-200 font-semibold focus:outline-none cursor-pointer text-xs">
-<option value="auto" selected>Isabella Auto · modelo disponible</option>
+<option value="auto" selected>Auto · modelo externo si está disponible</option>
   <option value="sovereign">Sovereign TINA v40 · Local</option>
   <option value="open-science">Ling 3.1 Flash · Open Science</option>
   <option value="gemini">Gemini 2.5 Flash · Google</option>
