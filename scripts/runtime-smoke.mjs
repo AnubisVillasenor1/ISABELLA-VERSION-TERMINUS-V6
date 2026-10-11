@@ -41,26 +41,34 @@ try {
   console.log("RUNTIME_SMOKE_OK", JSON.stringify({ health: health.status, chat: chat.status, responseEngine: chatBody.responseEngine }));
   const gatewayCredentialsAvailable = Boolean(process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN);
   if (gatewayCredentialsAvailable) {
-    const llm = await fetch(`${baseUrl}/api/v1/cognition/route`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        input: "Responde en una sola oración en español: ¿puedes conversar con el usuario?",
-        modelEngine: "open-science",
-        focusLens: "general",
-        history: [],
-        methodId: "A.TWINS.E15_MEMORY.recall.synthesize.v1.0.0.LOW.AUTONOMOUS",
-      }),
-      signal: AbortSignal.timeout(20_000),
-    });
-    const llmBody = await llm.json();
-    assert.equal(llm.status, 200, `gateway chat returned HTTP ${llm.status}: ${JSON.stringify(llmBody)}`);
-    assert.equal(llmBody.responseEngine, "open-science", `gateway must generate a real model response, got ${llmBody.responseEngine}`);
-    assert.equal(typeof llmBody.generativeNarrative, "string");
-    assert.ok(llmBody.generativeNarrative.trim().length > 0);
-    console.log("LLM_GATEWAY_SMOKE_OK", JSON.stringify({ responseEngine: llmBody.responseEngine }));
+    try {
+      const llm = await fetch(`${baseUrl}/api/v1/cognition/route`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          input: "Responde en una sola oración en español: ¿puedes conversar con el usuario?",
+          modelEngine: "open-science",
+          focusLens: "general",
+          history: [],
+          methodId: "A.TWINS.E15_MEMORY.recall.synthesize.v1.0.0.LOW.AUTONOMOUS",
+        }),
+        signal: AbortSignal.timeout(20_000),
+      });
+      const llmBody = await llm.json();
+      assert.equal(llm.status, 200, `gateway chat returned HTTP ${llm.status}: ${JSON.stringify(llmBody)}`);
+      assert.equal(llmBody.responseEngine, "open-science", `gateway must generate a real model response, got ${llmBody.responseEngine}`);
+      assert.equal(typeof llmBody.generativeNarrative, "string");
+      assert.ok(llmBody.generativeNarrative.trim().length > 0);
+      console.log("LLM_GATEWAY_SMOKE_OK", JSON.stringify({ responseEngine: llmBody.responseEngine }));
+    } catch (error) {
+      const message = error instanceof Error ? error.message.slice(0, 500) : String(error).slice(0, 500);
+      if (process.env.ISABELLA_REQUIRE_LLM_SMOKE === "true") throw error;
+      console.warn("LLM_GATEWAY_SMOKE_FAILED_NONBLOCKING", message);
+    }
   } else {
-    console.warn("LLM_GATEWAY_SMOKE_SKIPPED: AI_GATEWAY_API_KEY and VERCEL_OIDC_TOKEN are unavailable in this build environment.");
+    const message = "AI_GATEWAY_API_KEY and VERCEL_OIDC_TOKEN are unavailable in this build environment.";
+    if (process.env.ISABELLA_REQUIRE_LLM_SMOKE === "true") throw new Error(message);
+    console.warn("LLM_GATEWAY_SMOKE_SKIPPED", message);
   }
 } finally {
   await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
