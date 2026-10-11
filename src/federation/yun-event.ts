@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 export const YUN_EVENT_SCHEMA_VERSION = "1.0.0" as const;
 
@@ -131,5 +131,5 @@ function deepFreeze<T>(value: T): T {
 
 function cryptoRandomId(): string {
   // UUID generation uses the Node runtime's cryptographic source.
-  return globalThis.crypto.randomUUID();
+  return randomUUID();
 }
