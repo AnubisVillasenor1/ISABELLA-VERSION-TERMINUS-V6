@@ -103,7 +103,10 @@ mod tests {
 
     #[test]
     fn critical_english_and_spanish_operations_escalate() {
-        assert_eq!(classify_risk("drop database production"), RiskTier::Critical);
+        assert_eq!(
+            classify_risk("drop database production"),
+            RiskTier::Critical
+        );
         assert_eq!(classify_risk("borrar la base de datos"), RiskTier::Critical);
         assert_eq!(classify_risk("publicar en producción"), RiskTier::High);
     }

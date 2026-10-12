@@ -1,5 +1,4 @@
 use abx::{Crown, CrownDecision};
-use bookpix::{BookPiEvent, BookPiLedger};
 use axum::{
     extract::{DefaultBodyLimit, Extension, Path, Query, Request, State},
     http::header::AUTHORIZATION,
@@ -8,16 +7,25 @@ use axum::{
     routing::{delete, get, post},
     Json, Router,
 };
+use bookpix::{BookPiEvent, BookPiLedger};
 use chrono::{DateTime, Utc};
-use cognition::{planner::RiskTier, simulation::{simulate, Scenario}, ReasoningEngine};
+use cognition::{
+    planner::RiskTier,
+    simulation::{simulate, Scenario},
+    ReasoningEngine,
+};
 use memory::MemoryRepository;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::collections::HashMap;
 use sha2::{Digest, Sha256};
 use shared::{EpistemicState, MemoryRecord, MemoryScope};
 use sqlx::{postgres::PgPoolOptions, PgPool, Postgres, Transaction};
-use std::{env, sync::{Arc, Mutex}, time::{Duration, Instant}};
+use std::collections::HashMap;
+use std::{
+    env,
+    sync::{Arc, Mutex},
+    time::{Duration, Instant},
+};
 use uuid::Uuid;
 use worldmodel::{CausalEdge, Entity, Relation, WorldModelRepository};
 
@@ -67,7 +75,13 @@ impl RateLimiter {
                 return true;
             }
         }
-        windows.insert(key, RateWindow { started_at: now, requests: 1 });
+        windows.insert(
+            key,
+            RateWindow {
+                started_at: now,
+                requests: 1,
+            },
+        );
         true
     }
 }
@@ -171,16 +185,13 @@ async fn main() -> anyhow::Result<()> {
     dotenvy::dotenv().ok();
     tracing_subscriber::fmt()
         .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "info".into()),
+            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()),
         )
         .init();
 
     let database_url = env::var("DATABASE_URL")?;
     let api_tokens = parse_api_tokens(&env::var("IGE_API_TOKENS").map_err(|_| {
-        anyhow::anyhow!(
-            "IGE_API_TOKENS must map each bearer token to a tenant and user identity"
-        )
+        anyhow::anyhow!("IGE_API_TOKENS must map each bearer token to a tenant and user identity")
     })?)?;
     let rate_limit = env::var("IGE_RATE_LIMIT_PER_MINUTE")
         .unwrap_or_else(|_| "120".into())
@@ -211,15 +222,15 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/v1/world/relations", post(create_relation))
         .route("/api/v1/world/causal-edges", post(create_causal_edge))
         .route("/api/v1/world/causes/{effect}", get(causes_of))
-        .route("/api/v1/world/components/{entity_id}", get(connected_component))
+        .route(
+            "/api/v1/world/components/{entity_id}",
+            get(connected_component),
+        )
         .route("/api/v1/memory", post(save_memory).get(list_memory))
         .route("/api/v1/memory/{memory_id}", delete(delete_memory))
         .route("/api/v1/ops/audit/verify", get(verify_audit))
         .route("/api/v1/ops/abx/decisions", get(list_abx_decisions))
-        .route_layer(middleware::from_fn_with_state(
-            state.clone(),
-            authenticate,
-        ));
+        .route_layer(middleware::from_fn_with_state(state.clone(), authenticate));
     let app = Router::new()
         .route("/health", get(health))
         .route("/ready", get(ready))
@@ -241,8 +252,8 @@ async fn shutdown_signal() {
     {
         use tokio::signal::unix::{signal, SignalKind};
 
-        let mut terminate = signal(SignalKind::terminate())
-            .expect("installing SIGTERM handler must succeed");
+        let mut terminate =
+            signal(SignalKind::terminate()).expect("installing SIGTERM handler must succeed");
         tokio::select! {
             result = tokio::signal::ctrl_c() => {
                 if let Err(error) = result {
@@ -298,7 +309,10 @@ fn parse_api_tokens(raw: &str) -> anyhow::Result<Vec<ApiToken>> {
         });
     }
     anyhow::ensure!(!result.is_empty(), "IGE_API_TOKENS cannot be empty");
-    anyhow::ensure!(result.len() <= 1_000, "IGE_API_TOKENS supports at most 1000 principals");
+    anyhow::ensure!(
+        result.len() <= 1_000,
+        "IGE_API_TOKENS supports at most 1000 principals"
+    );
     Ok(result)
 }
 
@@ -481,8 +495,8 @@ async fn simulate_scenarios(
         return Err(axum::http::StatusCode::BAD_REQUEST);
     }
 
-    let result = simulate(&input.scenarios, input.requested_iterations, input.budget)
-        .map_err(|error| {
+    let result =
+        simulate(&input.scenarios, input.requested_iterations, input.budget).map_err(|error| {
             tracing::debug!(%error, "simulation input rejected");
             axum::http::StatusCode::BAD_REQUEST
         })?;
@@ -752,7 +766,9 @@ fn decision_label(decision: CrownDecision) -> &'static str {
 fn map_world_error(error: shared::IgeError) -> axum::http::StatusCode {
     match error {
         shared::IgeError::InvalidInput(_) => axum::http::StatusCode::BAD_REQUEST,
-        shared::IgeError::MemoryNotFound(_) | shared::IgeError::WorldEntityNotFound(_) => axum::http::StatusCode::NOT_FOUND,
+        shared::IgeError::MemoryNotFound(_) | shared::IgeError::WorldEntityNotFound(_) => {
+            axum::http::StatusCode::NOT_FOUND
+        }
         _ => axum::http::StatusCode::INTERNAL_SERVER_ERROR,
     }
 }
@@ -848,12 +864,7 @@ async fn delete_memory(
     })?;
     let deleted = state
         .memory
-        .delete_in_transaction(
-            &mut tx,
-            principal.tenant_id,
-            principal.user_id,
-            memory_id,
-        )
+        .delete_in_transaction(&mut tx, principal.tenant_id, principal.user_id, memory_id)
         .await
         .map_err(|error| {
             tracing::error!(error = %error, "memory erasure failed");
@@ -895,7 +906,9 @@ async fn list_memory(
             axum::http::StatusCode::INTERNAL_SERVER_ERROR
         })?;
     let count = records.len();
-    Ok(Json(serde_json::json!({ "records": records, "count": count })))
+    Ok(Json(
+        serde_json::json!({ "records": records, "count": count }),
+    ))
 }
 
 async fn list_abx_decisions(

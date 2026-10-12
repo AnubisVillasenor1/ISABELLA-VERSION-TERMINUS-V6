@@ -78,7 +78,8 @@ async fn memory_visibility_respects_tenant_user_and_session_scope(
     assert!(!visible_ids.contains(&user_b_record.id));
 
     let visible_without_session = repository.list_by_user(tenant, user_a, 100, None).await?;
-    let ids_without_session: Vec<Uuid> = visible_without_session.iter().map(|item| item.id).collect();
+    let ids_without_session: Vec<Uuid> =
+        visible_without_session.iter().map(|item| item.id).collect();
     assert!(ids_without_session.contains(&tenant_record.id));
     assert!(ids_without_session.contains(&user_a_record.id));
     assert!(!ids_without_session.contains(&session_a_record.id));

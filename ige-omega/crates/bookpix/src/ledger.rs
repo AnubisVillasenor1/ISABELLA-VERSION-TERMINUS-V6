@@ -68,13 +68,14 @@ impl BookPiLedger {
             .execute(&mut **tx)
             .await?;
 
-        let previous: Option<String> =
-            sqlx::query_scalar("SELECT event_hash FROM bookpi_events ORDER BY sequence DESC LIMIT 1")
-                .fetch_optional(&mut **tx)
-                .await?;
+        let previous: Option<String> = sqlx::query_scalar(
+            "SELECT event_hash FROM bookpi_events ORDER BY sequence DESC LIMIT 1",
+        )
+        .fetch_optional(&mut **tx)
+        .await?;
         event.previous_hash = previous.unwrap_or_else(|| "GENESIS".into());
-        event.event_hash = Self::digest(&event)
-            .map_err(|error| sqlx::Error::Protocol(error.to_string()))?;
+        event.event_hash =
+            Self::digest(&event).map_err(|error| sqlx::Error::Protocol(error.to_string()))?;
 
         sqlx::query(
             "INSERT INTO bookpi_events(event_id,trace_id,event_type,world_state_hash,expert_set_hash,reasoning_hash,outcome_hash,previous_hash,event_hash,payload,created_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)",
@@ -117,9 +118,9 @@ impl BookPiLedger {
                 payload: row.try_get("payload")?,
                 created_at: row.try_get("created_at")?,
             };
-            if event.previous_hash != previous || Self::digest(&event)
-                .map_err(|error| sqlx::Error::Protocol(error.to_string()))?
-                != event.event_hash
+            if event.previous_hash != previous
+                || Self::digest(&event).map_err(|error| sqlx::Error::Protocol(error.to_string()))?
+                    != event.event_hash
             {
                 return Ok(false);
             }

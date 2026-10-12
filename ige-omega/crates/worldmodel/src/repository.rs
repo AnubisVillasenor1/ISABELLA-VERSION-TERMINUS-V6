@@ -17,7 +17,8 @@ impl WorldModelRepository {
 
     pub async fn add_entity(&self, tenant_id: Uuid, entity: &Entity) -> IgeResult<()> {
         let mut tx = self.pool.begin().await.map_err(db)?;
-        self.add_entity_in_transaction(&mut tx, tenant_id, entity).await?;
+        self.add_entity_in_transaction(&mut tx, tenant_id, entity)
+            .await?;
         tx.commit().await.map_err(db)?;
         Ok(())
     }
@@ -163,11 +164,7 @@ impl WorldModelRepository {
         Ok(())
     }
 
-    pub async fn causes_of(
-        &self,
-        tenant_id: Uuid,
-        effect: Uuid,
-    ) -> IgeResult<Vec<CausalEdge>> {
+    pub async fn causes_of(&self, tenant_id: Uuid, effect: Uuid) -> IgeResult<Vec<CausalEdge>> {
         let effect_exists = sqlx::query_scalar::<_, bool>(
             "SELECT EXISTS(SELECT 1 FROM world_entities WHERE tenant_id=$1 AND entity_id=$2)",
         )
@@ -204,11 +201,7 @@ impl WorldModelRepository {
             .collect()
     }
 
-    pub async fn connected_component(
-        &self,
-        tenant_id: Uuid,
-        start: Uuid,
-    ) -> IgeResult<Vec<Uuid>> {
+    pub async fn connected_component(&self, tenant_id: Uuid, start: Uuid) -> IgeResult<Vec<Uuid>> {
         let exists = sqlx::query_scalar::<_, bool>(
             "SELECT EXISTS(SELECT 1 FROM world_entities WHERE tenant_id=$1 AND entity_id=$2)",
         )

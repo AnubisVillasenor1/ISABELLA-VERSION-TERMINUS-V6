@@ -1,5 +1,5 @@
-use sqlx::{postgres::PgPoolOptions, Row};
 use shared::IgeError;
+use sqlx::{postgres::PgPoolOptions, Row};
 use uuid::Uuid;
 use worldmodel::{Entity, Relation, WorldModelRepository};
 
@@ -62,7 +62,10 @@ async fn graph_repository_and_database_reject_cross_tenant_edges(
     .bind(1.0_f32)
     .execute(&pool)
     .await;
-    assert!(direct_insert.is_err(), "database trigger must reject cross-tenant edges");
+    assert!(
+        direct_insert.is_err(),
+        "database trigger must reject cross-tenant edges"
+    );
 
     let source_row = sqlx::query("SELECT tenant_id FROM world_entities WHERE entity_id=$1")
         .bind(source.entity_id)
