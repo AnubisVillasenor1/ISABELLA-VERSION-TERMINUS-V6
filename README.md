@@ -1,235 +1,194 @@
 # Isabella V6 · TINA — Genesis Runtime
 
-> **Trusted Intelligence, Native & Adaptive.** Runtime modular de asistencia y orquestación de IA con separación explícita entre capacidad, autoridad, ejecución, evidencia y producción.
+> **Trusted Intelligence, Native & Adaptive.** Runtime modular de asistencia conversacional, orquestación y gobernanza. Separa explícitamente capacidad, autoridad, ejecución, evidencia y producción.
 
 [![Repository Assurance](https://github.com/OsoPanda1/isabella-V6-TINA-h6/actions/workflows/repository-assurance.yml/badge.svg)](https://github.com/OsoPanda1/isabella-V6-TINA-h6/actions/workflows/repository-assurance.yml)
 [![Genesis CI](https://github.com/OsoPanda1/isabella-V6-TINA-h6/actions/workflows/ci.yml/badge.svg)](https://github.com/OsoPanda1/isabella-V6-TINA-h6/actions/workflows/ci.yml)
 
-- **Proyecto:** Isabella Villaseñor AI — Genesis TINA V6
-- **Repositorio:** [OsoPanda1/isabella-V6-TINA-h6](https://github.com/OsoPanda1/isabella-V6-TINA-h6)
-- **Rama de evolución:** \`evolution/runtime-hardening-2026-10\`
-- **Stack principal:** TypeScript, Node.js 24, Express, Vitest, esbuild y pnpm.
-- **Workspace experimental adicional:** IGE-Ω en Rust, separado del runtime TypeScript.
-- **Estado:** beta de ingeniería / Preview; **no declarar listo para producción** hasta superar todos los gates de esta documentación.
+## Ficha del proyecto
 
-> **Contrato de veracidad:** \`SPECIFIED ≠ IMPLEMENTED ≠ TESTED ≠ INTEGRATED ≠ VERIFIED ≠ DEPLOYED ≠ CERTIFIED\`. Un esquema, mock, hash o endpoint no demuestra por sí solo una integración de extremo a extremo.
+- **Sistema:** Isabella Villaseñor AI — Genesis TINA V6.
+- **Repositorio:** [OsoPanda1/isabella-V6-TINA-h6](https://github.com/OsoPanda1/isabella-V6-TINA-h6) (privado).
+- **Rama principal:** `main`.
+- **Runtime:** Node.js 24, TypeScript, Express 5, pnpm, Vitest y esbuild.
+- **Interfaz:** HTML/CSS/JavaScript servido por el runtime Express; navegación por anclas, menú móvil, chat, reconocimiento y síntesis de voz del navegador.
+- **Núcleo adicional:** `ige-omega/`, workspace Rust experimental con crates de cognición, memoria, world model, ABX, BookPI, kernel y gateway.
+- **Despliegue:** Vercel (entrypoint `server.js` que importa `dist/server.js` generado por el build); hay manifiestos Docker/Kubernetes para escenarios separados.
+- **Madurez declarada:** beta de ingeniería. No promocionar a producción basándose únicamente en un build o un Preview.
 
-## Estado global para producción y despliegue
+> **Contrato de veracidad:** `SPECIFIED ≠ IMPLEMENTED ≠ TESTED ≠ INTEGRATED ≠ VERIFIED ≠ DEPLOYED ≠ CERTIFIED`. Un esquema, mock, hash, endpoint o manifiesto no demuestra por sí solo una integración end-to-end.
 
-**Estimación de readiness de producción: 44% (evaluación ponderada).** Es una puntuación de preparación de ingeniería, no el porcentaje de código escrito ni una certificación. Se actualizó tras el Preview del SHA d71f89ca296552d90fa80f39adad7ead5f0caaca: build completado, 519 pruebas en 100 archivos aprobadas, smoke local y guardrails aprobados y endpoints de salud HTTP 200. El smoke de inferencia externa fue omitido por falta de credenciales gratuitas elegibles; GitHub Actions y el workspace Rust siguen bloqueados.
+## Estado operativo y readiness
 
-| Dimensión ponderada | Peso | Evaluación actual | Aporte |
-|---|---:|---:|---:|
-| Runtime HTTP y flujo local | 20% | 75% | 15.0 |
-| Pruebas y validación automatizada | 20% | 75% | 15.0 |
-| Seguridad y guardrails | 15% | 45% | 6.75 |
-| Inferencia externa real verificada | 15% | 0% | 0.0 |
-| Persistencia durable y recuperación | 10% | 20% | 2.0 |
-| CI reproducible y workspace Rust | 10% | 20% | 2.0 |
-| Operación, observabilidad y rollback | 10% | 35% | 3.5 |
-| **Total ponderado** | **100%** |  | **44.25% (≈44%)** |
+La última línea base cuantificada en documentación fue **44.25% (≈44%) de preparación ponderada**, basada en un Preview anterior que reportó 519 pruebas aprobadas en 100 archivos, smoke local y guardrails correctos. Esa cifra **no es una medición científica ni el porcentaje de funcionalidades** y no debe presentarse como validación del SHA actual hasta repetir el pipeline completo después de estos cambios de UI.
 
-La puntuación se basa en gates ponderados explícitos y en la evidencia disponible, no en una medición científica. El Preview del SHA d71f89ca296552d90fa80f39adad7ead5f0caaca completó el script de build: TypeScript compiló, Vitest reportó 519 pruebas aprobadas en 100 archivos y los smoke markers LOCAL_CONVERSATION_SMOKE_OK, PUBLIC_API_GUARDRAILS_OK y OPENROUTER_PAID_ID_BLOCK_OK aparecieron en los logs. /health y /api/v1/health devolvieron HTTP 200 y las cabeceras de seguridad estaban presentes. El smoke de inferencia externa fue omitido por falta de credenciales elegibles. GitHub Actions devolvió startup_failure sin jobs y ige-omega/Cargo.lock no existe en la rama inspeccionada. Preview READY no equivale a producción lista.
+| Dimensión de readiness | Peso | Última evaluación documentada | Evidencia/gate |
+|---|---:|---:|---|
+| Runtime HTTP y flujo local | 20% | 75% | Smoke HTTP en Preview; repetir en el SHA de liberación |
+| Pruebas y validación automatizada | 20% | 75% | Línea base anterior: 519 pruebas / 100 archivos |
+| Seguridad y guardrails | 15% | 45% | Guardrails de API y rutas; requiere revisión de producción |
+| Inferencia externa real | 15% | 0% verificado | Falta demostrar respuesta real con proveedor configurado |
+| Persistencia durable y recuperación | 10% | 20% | Adaptadores disponibles; backup/restore y aislamiento requieren evidencia |
+| CI reproducible y workspace Rust | 10% | 20% | Confirmar CI verde y validar Rust con `--locked` |
+| Operación, observabilidad y rollback | 10% | 35% | Instrumentación y artefactos existen; probar procedimientos en entorno objetivo |
 
 ### Bloqueadores de liberación
 
-1. Conseguir una ejecución válida y verde de GitHub Actions para el SHA de liberación.
-2. Generar y revisar \`ige-omega/Cargo.lock\` con Cargo; después ejecutar fmt, Clippy, tests y build release con \`--locked\`.
-3. Configurar un proveedor externo elegible en Preview y demostrar una respuesta real. Nunca pegar secretos en el repositorio ni en conversaciones.
-4. Probar timeout, HTTP 429, HTTP 5xx, contenido vacío, modelo no permitido y fallback al siguiente proveedor / motor local.
+1. Obtener una ejecución verde de GitHub Actions sobre el SHA exacto de liberación.
+2. Generar y revisar `ige-omega/Cargo.lock` con Cargo; ejecutar `cargo fmt --check`, Clippy, pruebas y build release con `--locked`.
+3. Configurar un proveedor externo elegible en Preview y comprobar una respuesta generativa real; no introducir secretos en código, commits ni conversaciones.
+4. Probar timeout, HTTP 429/5xx, respuesta vacía, modelo no permitido, cooldown y fallback.
 5. Demostrar persistencia durable, aislamiento por workspace, backup, restauración y comportamiento fail-closed.
-6. Completar revisión de seguridad, observabilidad, límites de coste, rollback y validación de runtime en el entorno objetivo.
-7. Revisar manualmente el diff y los resultados del SHA exacto antes de cualquier promoción.
+6. Completar revisión de seguridad, observabilidad, límites de coste, rollback y validación de runtime en el entorno de destino.
+7. Revisar el diff y las pruebas del SHA exacto antes de cualquier promoción.
 
-## 1. Propósito y límites
+## Propósito y límites
 
-Isabella Genesis es un runtime/plano de control que coordina asistencia conversacional y adaptadores de IA bajo políticas, identidad, seguridad, herramientas y evidencia. El objetivo es que la presencia de una capacidad técnica no implique automáticamente permiso para ejecutarla ni autoridad para presentar un resultado como verdad.
+Isabella Genesis coordina asistencia conversacional y adaptadores de IA bajo políticas, identidad, seguridad, herramientas y evidencia. El objetivo es impedir que una capacidad técnica implique automáticamente permiso para ejecutarla o autoridad para presentar una salida como verdad.
 
-Invariante central:
+```text
+CAPABILITY ≠ AUTHORITY ≠ EXECUTION ≠ EVIDENCE ≠ LEARNING ≠ PRODUCTION
+```
 
-\`CAPABILITY ≠ AUTHORITY ≠ EXECUTION ≠ EVIDENCE ≠ LEARNING ≠ PRODUCTION\`
+Este repositorio no se presenta como modelo fundacional propio, AGI, sistema certificado ni motor neuronal entrenado nativamente. El enrutamiento entre proveedores no equivale a entrenamiento propio. El fallback local es determinista y no sustituye a un LLM.
 
-**No se afirma** que este repositorio sea un modelo fundacional propio, AGI, un motor neuronal entrenado nativamente, una plataforma certificada o un sistema federado completo. El routing entre proveedores no equivale a entrenamiento de ML propio.
+## Arquitectura implementada y contratos
 
-## 2. Arquitectura de referencia
+```text
+Navegador (src/ui)
+  ├─ navegación por secciones y menú adaptable
+  ├─ conversación /api/v1/cognition/route
+  ├─ voz del navegador (SpeechRecognition / SpeechSynthesis, si existe)
+  └─ estado de salud /api/v1/health
+             │
+             ▼
+Express + TypeScript (src/server.ts)
+  ├─ validación de entrada y límites
+  ├─ identidad, scopes, consentimiento y autoridad
+  ├─ C.R.O.W.N. / AEGIS: admisión y guardrails
+  ├─ runtime cognitivo y gateway de inferencia
+  ├─ fallback local cuando el proveedor no responde
+  ├─ VERITAS / BookPI según integración y configuración
+  └─ métricas de latencia y endpoints operativos
+             │
+             ▼
+Adaptadores / servicios opcionales
+  ├─ OpenRouter (modelo gratuito por defecto; disponibilidad variable)
+  ├─ Hugging Face (solo modelos configurados explícitamente)
+  ├─ Gemini / AI Gateway (sujeto a configuración y política de coste)
+  ├─ Supabase/Atlas (si las variables y permisos están configurados)
+  └─ IGE-Ω Rust (workspace separado; no asumir integrado end-to-end)
+```
 
-\`\`\`text
-Cliente / API
-    |
-    v
-Validación de entrada y límites
-    |
-    v
-Identidad, scopes, consentimiento y autoridad
-    |
-    v
-C.R.O.W.N. — admisión, política y riesgo
-    |
-    v
-AEGIS — inspección de seguridad
-    |
-    v
-ISA / runtime conversacional / adaptador de inferencia
-    |
-    v
-VERITAS — comprobaciones deterministas disponibles
-    |
-    v
-BookPI — evidencia cuando el almacenamiento está configurado
-    |
-    v
-Respuesta + correlación + telemetría
-    |
-    v
-YUN — contrato de eventos; bus y persistencia requieren integración
-\`\`\`
+C.R.O.W.N., YUN, AEGIS, ISA, VERITAS, BookPI e IGE-Ω son dominios y módulos con distintos niveles de implementación. Consulta [mapa de arquitectura](docs/ARCHITECTURE-OPERATING-MAP.md), [especificación C.R.O.W.N./VΩ](docs/CROWN-ISABELLA-VOMEGA-OPERATING-SPEC.md), [estado real](docs/ESTADO-REAL-ACTUAL.md) y [gates de IGE-Ω](ige-omega/docs/OPERATIONS-AND-RELEASE-GATES.md). La documentación diferencia contratos de componentes realmente conectados.
 
-El diagrama representa separación de responsabilidades; no significa que cada componente esté conectado de extremo a extremo en todas las rutas.
+## Interfaz, navegación y voz
 
-## 3. Estado real por subsistema
+La interfaz de `src/ui/index.html`, `src/ui/cinematic.css` y `src/ui/app.js` contiene:
 
-| Área | Estado actual | Lo que falta para declarar producción |
+- Anclas funcionales para Inicio, Conversar, Tools, Skills, Monetización y Gobernanza; el smoke verifica que cada destino exista.
+- Menú móvil accesible con `aria-expanded`, cierre por Escape/clic fuera y cierre después de seleccionar una sección.
+- Estado de API consultado a `/api/v1/health`; “API disponible” solo indica que el endpoint de salud respondió, no que la inferencia externa esté activa.
+- Conversación contra la ruta real `POST /api/v1/cognition/route`, con historial limitado a ocho turnos previos y sin duplicar el mensaje actual.
+- Manejo de respuestas HTTP no exitosas, cuerpo JSON inválido, solicitudes duplicadas y estados de carga.
+- Reconocimiento y síntesis de voz del navegador cuando estén disponibles y autorizados; los navegadores y sistemas operativos pueden ofrecer voces distintas. No se garantiza una voz femenina específica ni soporte universal.
+- Preferencia de movimiento reducido, foco visible y enlace para saltar al chat.
+
+La interfaz **no** crea herramientas productivas por el hecho de mostrar tarjetas de “Tools”, ni activa cobros, campañas o automatizaciones comerciales. Esas acciones requieren endpoints, permisos, proveedores y pruebas independientes.
+
+## API y rutas
+
+El inventario estático de endpoints se mantiene en [docs/api/route-inventory.json](docs/api/route-inventory.json), junto con [guía de API](docs/api/README.md) y [OpenAPI](docs/api/openapi.yaml). El inventario es una ayuda de revisión; su marca de “verified” debe apoyarse en pruebas reales, no solo en que la ruta exista.
+
+Rutas de referencia para la interfaz y diagnóstico:
+
+| Método | Ruta | Uso |
 |---|---|---|
-| Runtime HTTP | Express y rutas de runtime en TypeScript | Pruebas integrales por ruta y entorno |
-| Conversación local | Fallback determinista; no es un LLM | No sustituye inferencia generativa |
-| OpenRouter | Adaptador opcional; router gratuito por defecto | Credencial de Preview y respuesta externa observada |
-| Hugging Face | Adaptador opcional para modelos configurados explícitamente | Verificar coste, disponibilidad y permisos de cada modelo |
-| AI Gateway / Gemini | Sujeto a configuración; fallback de pago requiere opt-in | Prueba de coste y autorización explícita |
-| Política de proveedor | Guardas de ID de modelo, timeout, cooldown y extracción de texto | Pruebas de fallos reales y contract tests de red |
-| C.R.O.W.N. | Módulos de política/autoridad en el repositorio | Confirmar cobertura efectiva de cada endpoint |
-| AEGIS | Reglas y guardrails existentes | No equivale a clasificador ML adversarial completo |
-| IKES / memoria | Implementación parcial y contexto acotado | Persistencia, scopes, retención y recuperación probadas |
-| BookPI | Huellas/eventos parciales | Almacenamiento durable, retención, backup y restore |
-| YUN | Constructor/validador local de eventos con hash SHA-256 | Bus real, firma digital, persistencia y entrega distribuida |
-| IGE-Ω Rust | Workspace preproducción y crates iniciales | Lockfile, CI verde, pruebas y gateway release |
-| ML nativo / GPU | No acreditado como serving de producción en esta rama | Modelo/pesos, entrenamiento o serving y benchmark reproducible |
-| Criptografía poscuántica | No declarar activa sin evidencia de implementación | Biblioteca, parámetros, formato, pruebas y revisión |
-| Operación | Preview y smoke tests en commits previos | CI verde, alertas, SLO, rollback y pruebas de recuperación |
+| GET | `/` | Interfaz principal |
+| GET | `/styles/cinematic.css` | Estilos de la interfaz |
+| GET | `/ui/app.js` | Lógica del navegador |
+| GET | `/health` | Salud básica del runtime |
+| GET | `/api/v1/health` | Salud pública de API |
+| GET | `/api/v1/status` | Estado resumido |
+| POST | `/api/v1/cognition/route` | Conversación/orquestación |
+| GET | `/api/v1/readyz` | Readiness operativa |
 
-## 4. Gateway de inferencia y costes
+Para rutas sensibles, consultar el handler y los controles de autorización antes de habilitarlas a usuarios externos. No se deben inferir permisos a partir del nombre de una ruta.
 
-El runtime admite proveedores externos opcionales. Las credenciales se configuran en el entorno de ejecución; nunca se guardan en el repositorio.
+## Requisitos y ejecución local
 
-| Variable | Función | Regla |
-|---|---|---|
-| \`OPENROUTER_API_KEY\` | Habilita OpenRouter | Guardar como secreto del entorno |
-| \`OPENROUTER_FREE_MODEL\` | ID de modelo de OpenRouter | Predeterminado: \`openrouter/free\`; un ID con \`:free\` se acepta como explícitamente gratuito |
-| \`HF_TOKEN\` | Habilita Hugging Face | No implica cuota ilimitada |
-| \`HF_FREE_MODELS\` | Lista de modelos de HF configurados | No incluir un modelo hasta verificar el coste efectivo |
-| \`INFERENCE_TIMEOUT_MS\` | Timeout del proveedor | Limitado a 3–30 segundos; predeterminado 8 segundos |
-| \`PROVIDER_FAILURE_COOLDOWN_MS\` | Enfriamiento tras fallos | Limitado a 10–300 segundos; predeterminado 60 segundos |
-| \`ALLOW_PAID_PROVIDER_FALLBACK\` | Autoriza rutas sujetas a pago | Debe ser \`true\` sólo tras aprobación explícita |
+- Node.js **24.x**.
+- pnpm **10.28.x** (recomendado por el campo `packageManager`).
+- Rust toolchain fijado en `ige-omega/rust-toolchain.toml` para el workspace Rust.
+- Python solo para los bridges que lo requieran.
 
-La disponibilidad y el precio de los modelos gratuitos pueden cambiar. El código de enrutamiento no demuestra que una credencial exista, que el modelo esté disponible ni que el proveedor devuelva una respuesta.
-
-### Comportamiento de fallo
-
-- Si falta configuración elegible, el runtime vuelve al fallback local.
-- El fallback local informa sus límites y no se presenta como LLM.
-- Se aplican timeout y cooldown para limitar esperas repetidas.
-- Se rechazan IDs de OpenRouter que no parezcan gratuitos mientras no exista opt-in de pago.
-- El parser de respuesta sólo acepta contenido textual no vacío en formatos compatibles.
-- Las pruebas unitarias cubren reglas de configuración y extracción de contenido; no sustituyen pruebas de red contra un proveedor real.
-
-## 5. Contrato de eventos YUN
-
-\`src/federation/yun-event.ts\` define un contrato local con:
-
-- Identificador de evento y versión de esquema.
-- Campos obligatorios validados y timestamp UTC.
-- Severidad limitada a valores enumerados.
-- Payload JSON con límite de tamaño.
-- Canonicalización determinista por orden de claves.
-- Digest SHA-256 para detectar modificaciones al contenido canonizado.
-- Congelación del objeto en memoria para evitar mutaciones accidentales.
-
-**Límites:** el hash no es una firma digital, no identifica al autor, no prueba la verdad del evento, no almacena de forma durable y no publica a un bus. Es una primitiva local de integridad que debe integrarse con identidad, claves, ledger y persistencia para ampliar sus garantías.
-
-## 6. Endpoints y observabilidad
-
-Consulta el inventario de rutas en \`scripts/route-inventory.mjs\` y la implementación en \`src/server.ts\`. Entre los endpoints documentados en el runtime están:
-
-| Endpoint | Función | Límite |
-|---|---|---|
-| \`GET /health\` | Liveness del proceso | No demuestra readiness integral |
-| \`GET /api/v1/readyz\` | Estado de dependencias | Puede devolver 503 si falta evidencia obligatoria |
-| \`GET /api/v1/ops/snapshot\` | Estado operativo evaluado | Depende de los probes configurados |
-| \`GET /api/v1/ops/latency\` | Latencias p50/p95/p99 y errores por ruta | Requiere \`OPS_API_TOKEN\` |
-| \`GET /api/v1/hsf/status\` | Estado del Hyper Skill Fabric | No implica que proveedores externos estén conectados |
-| \`POST /api/v1/hsf/invoke\` | Invocación gobernada de una capacidad | Requiere autorización y configuración |
-
-No se deben declarar rutas adicionales como disponibles sin verificar el registro real en el servidor.
-
-## 7. Seguridad
-
-- Mantener secretos fuera de Git y del frontend.
-- No confiar en roles, scopes o identidades enviados sin verificación por el cliente.
-- Tratar mensajes externos, documentos recuperados y resultados de herramientas como datos no confiables.
-- Requerir consentimiento y autoridad contextual para operaciones privilegiadas.
-- Mantener separación entre liveness, readiness, disponibilidad de inferencia y persistencia.
-- Evitar que errores de proveedor registren claves, tokens o cuerpos sensibles.
-- No afirmar procedencia remota verificada si sólo se calculó un hash local.
-- No declarar certificaciones, cumplimiento normativo o criptografía poscuántica activa sin auditoría y evidencia independientes.
-
-Referencias: [SECURITY.md](SECURITY.md), [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md).
-
-## 8. Stack y comandos
-
-- Node.js 24.x (según \`package.json\`).
-- pnpm 10.28.0 con \`pnpm-lock.yaml\`.
-- TypeScript, Express, Vitest y esbuild.
-- Workspace Rust IGE-Ω independiente.
-
-\`\`\`bash
+```bash
+corepack enable
 pnpm install --frozen-lockfile
-pnpm typecheck
+pnpm run dev
+```
+
+La aplicación escucha en el puerto 3000 por defecto. Para validar antes de enviar cambios:
+
+```bash
+pnpm run typecheck
 pnpm test
-pnpm build
+pnpm run smoke:ui
+pnpm run smoke:runtime
 pnpm run security:suite
-pnpm run production:evidence
-pnpm run validate
-\`\`\`
+pnpm run build
+```
 
-Estos comandos son el procedimiento de validación; sólo los logs con código de salida cero prueban que pasaron en el entorno correspondiente. CI debe usar el mismo SHA que se pretende liberar.
+`pnpm run build` ejecuta compilación TypeScript, Vitest, bundle de esbuild, comprobación sintáctica del JS de interfaz, smoke de navegación/UI y smoke de runtime. Los resultados del comando deben guardarse por SHA; no se deben copiar resultados de un commit previo como evidencia del nuevo.
 
-## 9. IGE-Ω Rust MVP
+## Configuración de proveedores
 
-El workspace \`ige-omega/\` contiene crates para shared, neurokernel, cognition, memory, worldmodel, ABX, BookPI y gateway Axum. Está clasificado como preproducción y no debe confundirse con un sistema cognitivo autónomo validado.
+Las claves son variables de entorno de servidor; nunca deben exponerse en el frontend.
 
-El CI de Rust exige \`Cargo.lock\` y utiliza \`--locked\`. El lockfile no estaba presente en la rama al iniciar este incremento. Debe generarse con Cargo real, revisarse y subirse; no se debe inventar manualmente ni eliminar la guarda de CI.
+| Variable | Propósito |
+|---|---|
+| `OPENROUTER_API_KEY` | Habilita adaptador OpenRouter |
+| `OPENROUTER_FREE_MODEL` | Modelo OpenRouter elegido; `openrouter/free` es el valor predeterminado |
+| `HF_TOKEN` / `HF_FREE_MODELS` | Habilita los modelos Hugging Face configurados explícitamente |
+| `GEMINI_API_KEY` / `MODEL_API_KEY` | Cliente Gemini cuando está configurado |
+| `ALLOW_PAID_PROVIDER_FALLBACK` | Debe ser `true` para permitir rutas de pago donde se exige consentimiento de configuración |
+| `INFERENCE_TIMEOUT_MS` | Timeout acotado de proveedores |
+| `PROVIDER_FAILURE_COOLDOWN_MS` | Cooldown tras fallos del proveedor |
+| `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` | Inicialización de persistencia Atlas opcional; la clave de servicio solo en backend |
+| `APP_PUBLIC_URL` | URL pública declarada al proveedor OpenRouter |
 
-- [Especificación IGE-Ω](ige-omega/docs/IGE-OMEGA-v2.0.0.md)
-- [Auditoría criptográfica](ige-omega/docs/CRYPTOGRAPHIC-AUDIT.md)
-- [Simulación y arbitraje](ige-omega/docs/SIMULATION-ARBITRATION.md)
+Consultar [.env.example](.env.example) y [guía de entorno](docs/ENVIRONMENT.md). Los modelos gratuitos tienen límites, cambian de disponibilidad y no deben tratarse como SLA. Si no existe proveedor operativo, el sistema puede responder mediante fallback local con capacidades limitadas.
 
-## 10. Documentación operativa
+## Seguridad y operación
 
-- [Especificación C.R.O.W.N. e Isabella VΩ](docs/CROWN-ISABELLA-VOMEGA-OPERATING-SPEC.md)
-- [Estado real y gates de liberación](docs/ESTADO-REAL-ACTUAL.md)
-- [Auditoría del plano de aseguramiento](docs/ASSURANCE-CONTROL-PLANE.md)
-- [Integración Genesis + MAGPIE-X](docs/architecture/GENESIS-MAGPIE-INTEGRATION.md)
-- [Hyper Skill Fabric](docs/ISABELLA_HYPER_SKILL_FABRIC.md)
-- [Configuración de entorno](docs/ENVIRONMENT.md)
-- [Política de seguridad](SECURITY.md)
-- [Auditoría de repositorios y bloqueos](docs/audits/PROFILE-ECOSYSTEM-REVIEW-2026-10.md)
-- [Gate manual de inferencia externa](.github/workflows/beta-live-model-gate.yml)
-- [Runbook del gate de inferencia](docs/runbooks/BETA-LIVE-MODEL-GATE.md)
+- No guardar secretos en frontend, README, commits, fixtures o logs.
+- Mantener CORS, autenticación, scopes, límites, validación y controles de tenant explícitos para cada ruta sensible.
+- Rechazar por defecto acciones sin consentimiento, identidad o autoridad requerida.
+- Tratar historial y texto de usuario como entrada no confiable.
+- No registrar payloads sensibles ni cuerpos completos de error de proveedores.
+- Verificar firma e idempotencia de webhooks antes de procesarlos.
+- Ejecutar [suite de seguridad](scripts/security-suite.mjs), [smoke runtime](scripts/runtime-smoke.mjs) y [repository assurance](.github/workflows/repository-assurance.yml).
+- Usar [modelo de amenazas](docs/security/GENESIS-V6-THREAT-MODEL.md) y [runbook del gate de modelo](docs/runbooks/BETA-LIVE-MODEL-GATE.md) antes de habilitar capacidades externas.
 
-## 11. Plan de liberación
+## Estructura del repositorio
 
-1. **Reproducibilidad:** instalar con lockfiles y fijar Node/pnpm/Rust.
-2. **CI:** resolver \`startup_failure\`, ejecutar typecheck, pruebas, build y suite de seguridad en un SHA.
-3. **Proveedores:** probar respuesta externa real, timeout, 429, 5xx, cuerpo vacío, cooldown y fallback.
-4. **Persistencia:** probar aislamiento, escritura/lectura, backup y restore.
-5. **Seguridad:** revisar autorización por ruta, secretos, RLS, rate limiting y amenazas de prompt injection.
-6. **Operaciones:** configurar logs redactados, métricas, alertas, límites de gasto y rollback.
-7. **Release candidate:** validar Preview con datos no sensibles y registrar evidencia asociada al SHA.
-8. **Producción:** sólo después de que los gates obligatorios estén verdes y exista aprobación explícita de release.
+| Ruta | Responsabilidad |
+|---|---|
+| `src/server.ts` | Runtime HTTP, rutas, políticas y adaptadores |
+| `src/ui/` | HTML, CSS y JS de interfaz |
+| `src/inference/` | Router, adaptadores y políticas de proveedor |
+| `src/cognition/`, `src/genesis/`, `src/isabella/` | Orquestación y contratos cognitivos |
+| `src/crown/`, `src/security/`, `src/identity/` | Gobernanza, identidad y seguridad |
+| `src/memory/`, `src/atlas/`, `src/bookpi/` | Memoria, persistencia y evidencia |
+| `src/federation/`, `src/observability/`, `src/deployment/` | Eventos, telemetría y operación |
+| `src/commerce/` | Contratos de comercio, riesgo y conectores |
+| `ige-omega/` | Workspace Rust separado |
+| `test/` | Pruebas automatizadas |
+| `scripts/` | Smokes, seguridad, inventarios y evidencia |
+| `docs/` | Especificaciones, auditorías, runbooks y contratos |
 
-## 12. Licencia y procedencia
+## Licencia y responsabilidad
 
-El repositorio declara MIT mediante \`LICENSE\`. Revisar cada dependencia, dataset, marca y activo antes de redistribuirlo. Los documentos canónicos del ecosistema no sustituyen las licencias aplicables ni conceden automáticamente derechos sobre código de terceros.
+El repositorio declara licencia MIT. La licencia no constituye certificación de seguridad, cumplimiento legal, capacidad comercial ni garantía de disponibilidad. Las integraciones de terceros quedan sujetas a sus propios términos y configuración.
 
-## Principio de liberación
-
-La arquitectura sólo se considera operativa en el grado que demuestren el código, las pruebas, la integración y la evidencia reproducible del commit exacto. Una compilación de Preview es un resultado útil, pero no certifica seguridad, persistencia, inferencia externa ni readiness de producción.
+**Regla de liberación:** no fusionar ni desplegar a producción por narrativa o por un porcentaje aislado. Exigir evidencia reproducible del SHA, pruebas integrales, revisión humana y rollback comprobado.

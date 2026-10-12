@@ -13,15 +13,16 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "build": "tsc -p tsconfig.build.json && vitest run && esbuild src/server.ts --bundle --platform=node --format=esm --packages=external --target=node24 --outfile=dist/server.js && node scripts/runtime-smoke.mjs",
+    "build": "tsc -p tsconfig.build.json && vitest run && esbuild src/server.ts --bundle --platform=node --format=esm --packages=external --target=node24 --outfile=dist/server.js && node --check src/ui/app.js && node scripts/ui-smoke.mjs && node scripts/runtime-smoke.mjs",
     "lint": "tsc --noEmit",
     "reconcile:pids": "tsx src/cli/reconcilePids.ts",
     "quantum:bridge": "python services/pennylane_bridge.py",
-    "validate": "npm run typecheck && npm test && npm run build",
+    "validate": "pnpm run typecheck && pnpm test && pnpm run build && pnpm run security:suite",
     "ingest:atlas": "tsx scripts/atlas-ingest.ts",
     "security:suite": "node scripts/security-suite.mjs",
     "production:evidence": "node scripts/production-evidence.mjs",
-    "smoke:runtime": "node scripts/runtime-smoke.mjs"
+    "smoke:runtime": "node scripts/runtime-smoke.mjs",
+    "smoke:ui": "node --check src/ui/app.js && node scripts/ui-smoke.mjs"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
