@@ -200,3 +200,50 @@ Documentación: `docs/GAME_OVER_UAGP1_CANONICAL.md`; citación: `CITATION.cff`.
   verificación es de presencia/coincidencia, no criptográfica).
 - Registro externo del DOI/organización en Zenodo/Figshare (acción humana).
 - Persistir passports del plugin (hoy `PassportAuthority` es in-memory).
+
+## Lote 5 — HyperCore Ω² + HyperPredict Ω (runtime de hiperaceleración cognitiva)
+
+Nuevo módulo `src/hypercore/` (13 archivos, `state: draft | engine-generated`):
+`types`, `canonical`, `energy`, `context-compiler`, `micro-moe`,
+`adaptive-model-router`, `governed-semantic-cache`, `speculative-draft-engine`,
+`veritas-omega`, `cee`, `hyperpredict`, `hypercore` (orquestador), `index` (barril).
+
+- Pipeline fail-closed: `predict → cache → compress → route → execute experts
+  (paralelo, con timeout) → speculative draft → Veritas Ω → CROWN → audit →
+  deliver`. `timeout`, salida malformada, fallo de verificador y **auditoría
+  ausente** (`MISSING_AUDIT`) → `DENIED`.
+- Invariante: HyperCore **no autoriza** (CROWN-only) y **no ejecuta** efectos;
+  la caché reutiliza pero **nunca otorga autoridad**; un draft especulativo
+  **nunca** es final sin verificación.
+- Veritas Ω: consenso por clases de riesgo (`low 2 / medium 3 / high 4 /
+  critical 4`); fallo duro en `safety`/`policy`/`financial` → DENY; verificadores
+  ausentes → RETRY_SAFE (nunca ALLOW).
+- Energy Governor: modos `ECO/CRUISE/BOOST/HYPERBOOST/OMEGA` (Ω no es consumo
+  ilimitado; es gobernanza máxima). Router por objetivo declarado
+  `cost + λ·latency + μ·energy`.
+- HyperPredict Ω: `OBSERVE/PREFETCH/DEFER/DENY`; prepara solo si
+  `E[V] > E[C]` ∧ confianza ≥ umbral ∧ intent permitido por CROWN; deniega
+  intenciones prohibidas; emite evidencia a BookPI.
+- Endpoints: `GET /api/v1/hypercore/modes`,
+  `POST /api/v1/hypercore/run`, `POST /api/v1/hypercore/predict` (gated
+  `GENESIS_ADMIN_API_TOKEN`). Barril re-exportado en `src/index.ts` con alias
+  para colisiones (`hyperCoreCanonicalJson`, `hyperCoreSha256Hex`,
+  `hyperCoreSoftmax`, `HYPERCORE_OMEGA_MODES`).
+- Interfaz (`src/ui/`): capa visual elegante en el hero — malla cuántica en
+  `<canvas>` 2D autocontenida (sin CDN ni dependencias), aurora CSS y
+  degradados de acento; respeta `prefers-reduced-motion` y **no publica
+  métricas no verificadas**.
+
+Pruebas: `test/hypercore/*.test.ts` (11 archivos, 51 pruebas).
+
+### Pendiente del lote 5 (honesto)
+
+- Router/affinity es heurístico por palabras clave, **no** un router aprendido;
+  la similitud de caché es **léxica (Jaccard)**, no embeddings.
+- La compresión de contexto es **extracción determinista**, no destilación
+  neuronal; el CEE y el speedup son **modelos declarados**, no mediciones.
+- El `Energy Governor` no tiene telemetría de hardware real (vatios/térmica).
+- Los modos y prefetch leen policy/metadata **en proceso**; falta persistencia
+  durable del estado de caché/prefetch entre reinicios.
+- Falta prueba E2E del canvas del hero en navegadores reales (el smoke UI solo
+  valida cableado estático).
