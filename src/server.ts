@@ -4,6 +4,7 @@ import fs from "fs";
 import path from "path";
 import { GoogleGenAI } from "@google/genai";
 import { generateText } from "ai";
+import { boundedMilliseconds, extractAssistantText, isOpenRouterModelAllowed } from "./inference/provider-policy";
 import { gateway } from "@ai-sdk/gateway";
 import { IsabellaGenesisRuntime } from "./genesis/runtime";
 import { assertBalancedAuthority, createPrincipal } from "./identity/principal";
@@ -101,8 +102,8 @@ void runtime.initPersistence().catch((error) => {
 // Initialize Google GenAI client if API key is provided in environment
 const apiKey = process.env.GEMINI_API_KEY || process.env.MODEL_API_KEY;
 const genAi = apiKey ? new GoogleGenAI({ apiKey }) : null;
-const providerTimeoutMs = Math.min(30_000, Math.max(3_000, Number(process.env.INFERENCE_TIMEOUT_MS) || 8_000));
-const providerCooldownMs = Math.min(300_000, Math.max(10_000, Number(process.env.PROVIDER_FAILURE_COOLDOWN_MS) || 60_000));
+const providerTimeoutMs = boundedMilliseconds(process.env.INFERENCE_TIMEOUT_MS, 8_000, 3_000, 30_000);
+const providerCooldownMs = boundedMilliseconds(process.env.PROVIDER_FAILURE_COOLDOWN_MS, 60_000, 10_000, 300_000);
 let gatewayCooldownUntil = 0;
 let openRouterCooldownUntil = 0;
 let huggingFaceCooldownUntil = 0;
@@ -164,9 +165,8 @@ async function generateFreeOpenRouterNarrative(systemPrompt: string, input: stri
   const key = process.env.OPENROUTER_API_KEY;
   const model = (process.env.OPENROUTER_FREE_MODEL || "openrouter/free").trim();
   const paidFallbackEnabled = process.env.ALLOW_PAID_PROVIDER_FALLBACK === "true";
-  const explicitlyFreeModel = model === "openrouter/free" || model.endsWith(":free");
   if (!key || Date.now() < openRouterCooldownUntil) return null;
-  if (!paidFallbackEnabled && !explicitlyFreeModel) {
+  if (!isOpenRouterModelAllowed(model, paidFallbackEnabled)) {
     console.warn("[Isabella] refusing OpenRouter model without an explicit free suffix while paid fallback is disabled", { model });
     return null;
   }
@@ -179,9 +179,9 @@ async function generateFreeOpenRouterNarrative(systemPrompt: string, input: stri
     });
     if (!response.ok) throw new Error(`OpenRouter HTTP ${response.status}`);
     const body = await response.json() as { choices?: Array<{ message?: { content?: unknown } }> };
-    const text = body.choices?.[0]?.message?.content;
-    if (typeof text !== "string" || !text.trim()) throw new Error("OpenRouter returned empty content");
-    return text.trim();
+    const text = extractAssistantText(body);
+    if (!text) throw new Error("OpenRouter returned empty content");
+    return text;
   } catch (error) {
     openRouterCooldownUntil = Date.now() + providerCooldownMs;
     const message = error instanceof Error ? error.message : String(error);
@@ -205,8 +205,8 @@ async function generateHuggingFaceNarrative(systemPrompt: string, input: string,
       });
       if (!response.ok) throw new Error(`Hugging Face model ${model} HTTP ${response.status}`);
       const body = await response.json() as { choices?: Array<{ message?: { content?: unknown } }> };
-      const text = body.choices?.[0]?.message?.content;
-      if (typeof text === "string" && text.trim()) return text.trim();
+      const text = extractAssistantText(body);
+      if (text) return text;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       console.warn("[Isabella] Hugging Face candidate unavailable", { model, message: message.slice(0, 250) });
