@@ -1,3 +1,15 @@
+const intro = document.querySelector('#cinematicIntro');
+const introScenes = [...document.querySelectorAll('.intro-scene')];
+const introProgressBar = document.querySelector('#introProgressBar');
+const introSceneLabel = document.querySelector('#introSceneLabel');
+const skipIntro = document.querySelector('#skipIntro');
+const introLabels = ['SECUENCIA 01 · DESPERTAR', 'SECUENCIA 02 · PRESENCIA', 'SECUENCIA 03 · VÍNCULO'];
+let introStartedAt = performance.now();
+let introTimer;
+const dismissIntro = () => { window.clearInterval(introTimer); intro?.classList.add('is-dismissed'); document.body.classList.remove('intro-lock'); };
+const advanceIntro = (elapsed = performance.now() - introStartedAt) => { const sceneIndex = Math.min(2, Math.floor(elapsed / 20000)); introScenes.forEach((scene, index) => scene.classList.toggle('is-active', index === sceneIndex)); if (introSceneLabel) introSceneLabel.textContent = introLabels[sceneIndex]; if (introProgressBar) introProgressBar.style.width = `${Math.min(100, elapsed / 600)}%`; if (elapsed >= 60000) dismissIntro(); };
+if (intro) { document.body.classList.add('intro-lock'); skipIntro?.addEventListener('click', dismissIntro); introTimer = window.setInterval(() => advanceIntro(), 120); advanceIntro(0); }
+
 const messages = document.querySelector('#messages');
 const form = document.querySelector('#chatForm');
 const prompt = document.querySelector('#prompt');

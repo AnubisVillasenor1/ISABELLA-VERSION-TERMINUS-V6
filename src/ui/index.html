@@ -8,6 +8,15 @@
   <link rel="stylesheet" href="/styles/cinematic.css" />
 </head>
 <body>
+  <section id="cinematicIntro" class="cinematic-intro" aria-labelledby="intro-title">
+    <div class="intro-backdrop" aria-hidden="true"><span class="intro-grid"></span><span class="intro-sun"></span><span class="intro-scan"></span></div>
+    <div class="intro-progress" aria-hidden="true"><span id="introProgressBar"></span></div>
+    <div class="intro-meta"><span>GENESIS TINA / V6</span><span id="introSceneLabel">SECUENCIA 01 · DESPERTAR</span><span>00:00 / 01:00</span></div>
+    <div class="intro-scene intro-scene-one is-active" data-scene="0"><p class="intro-kicker">UNA NUEVA PRESENCIA</p><h1 id="intro-title">ISABELLA</h1><p class="intro-subtitle">Memoria. Voz. Propósito.</p></div>
+    <div class="intro-scene intro-scene-two" data-scene="1"><p class="intro-kicker">NO ES UNA RESPUESTA</p><h2>Es una inteligencia<br><em>que permanece.</em></h2><p>Escucha el contexto. Sostiene la conversación. Actúa con límites.</p></div>
+    <div class="intro-scene intro-scene-three" data-scene="2"><p class="intro-kicker">UN SOLO NÚCLEO · UNA SOLA VOZ</p><h2>Habla con<br><em>Isabella.</em></h2><p>Texto y voz nativa, unidos en una presencia coherente.</p></div>
+    <button id="skipIntro" class="intro-skip" type="button">SALTAR INTRO <span>↗</span></button>
+  </section>
   <div class="grain" aria-hidden="true"></div>
   <main class="stage">
     <nav class="topbar" aria-label="Navegación principal"><a class="wordmark" href="#top">ISABELLA<span>/GENESIS</span></a><div class="nav-links"><a href="#chat">Conversar</a><a href="#tools">Tools</a><a href="#skills">Skills</a><a href="#economy">Monetización</a><a href="#protocols">Gobernanza</a></div><span class="status"><i></i> NODO CERO · EN LÍNEA</span><button id="soundToggle" class="quiet" type="button" aria-pressed="false">SONIDO: OFF</button></nav>
