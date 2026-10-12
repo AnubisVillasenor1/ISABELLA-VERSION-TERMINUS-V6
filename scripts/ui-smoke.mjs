@@ -6,7 +6,7 @@ const js = fs.readFileSync('src/ui/app.js', 'utf8');
 const css = fs.readFileSync('src/ui/cinematic.css', 'utf8');
 const server = fs.readFileSync('src/server.ts', 'utf8');
 
-const ids = new Set([...html.matchAll(/\\bid="([^"]+)"/g)].map((match) => match[1]));
+const ids = new Set([...html.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]));
 const navLinks = [...html.matchAll(/<a\\b[^>]*href="#([^"]+)"[^>]*>/g)].map((match) => match[1]);
 for (const target of navLinks) assert.ok(ids.has(target), `Navigation target #${target} must exist`);
 for (const id of ['top', 'chat', 'tools', 'skills', 'economy', 'protocols']) assert.ok(ids.has(id), `Missing section id #${id}`);
