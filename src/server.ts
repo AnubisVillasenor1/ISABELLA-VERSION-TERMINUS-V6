@@ -80,6 +80,31 @@ try {
 } catch {
   console.warn("[Genesis] Crystal Clear CSS is unavailable at startup.");
 }
+const uiPath = path.join(process.cwd(), "src", "ui");
+let cinematicHtml: string | null = null;
+let cinematicCss: string | null = null;
+let cinematicJs: string | null = null;
+try {
+  cinematicHtml = fs.readFileSync(path.join(uiPath, "index.html"), "utf-8");
+  cinematicCss = fs.readFileSync(path.join(uiPath, "cinematic.css"), "utf-8");
+  cinematicJs = fs.readFileSync(path.join(uiPath, "app.js"), "utf-8");
+} catch {
+  console.warn("[Genesis] Cinematic UI assets are unavailable at startup.");
+}
+app.get("/", (_req, res) => {
+  if (!cinematicHtml) { res.status(404).send("Isabella UI unavailable"); return; }
+  res.type("html").send(cinematicHtml);
+});
+app.get("/styles/cinematic.css", (_req, res) => {
+  if (!cinematicCss) { res.status(404).type("text/css").send(""); return; }
+  res.setHeader("Cache-Control", "public, max-age=300, stale-while-revalidate=60");
+  res.type("css").send(cinematicCss);
+});
+app.get("/ui/app.js", (_req, res) => {
+  if (!cinematicJs) { res.status(404).type("text/javascript").send(""); return; }
+  res.setHeader("Cache-Control", "public, max-age=300, stale-while-revalidate=60");
+  res.type("js").send(cinematicJs);
+});
 app.get("/styles/crystal-clear.css", (_req, res) => {
   if (crystalClearCss === null) {
     res.status(404).type("text/css").send("/* CSS module not found */");
@@ -1700,6 +1725,10 @@ app.post("/api/v1/isa/act", (req, res) => {
 
 // --- MAIN WEB INTERFACE (IMMERSIVE 3D CRYSTAL CLEAR + IRIDESCENT NEON GLOW + 3 LEFT ACCORDIONS + 3 RIGHT ACCORDIONS) ---
 app.get("/", (_req, res) => {
+  if (cinematicHtml) {
+    res.type("html").send(cinematicHtml);
+    return;
+  }
   res.setHeader("Content-Type", "text/html; charset=utf-8");
   res.send(`<!DOCTYPE html>
 <html lang="es" class="h-full bg-[#050811]">
