@@ -89,7 +89,7 @@ La interfaz de `src/ui/index.html`, `src/ui/cinematic.css` y `src/ui/app.js` con
 - Anclas funcionales para Inicio, Conversar, Tools, Skills, Monetización y Gobernanza; el smoke verifica que cada destino exista.
 - Menú móvil accesible con `aria-expanded`, cierre por Escape/clic fuera y cierre después de seleccionar una sección.
 - Estado de API consultado a `/api/v1/health`; “API disponible” solo indica que el endpoint de salud respondió, no que la inferencia externa esté activa.
-- Conversación contra la ruta real `POST /api/v1/cognition/route`, con historial limitado a ocho turnos previos y sin duplicar el mensaje actual.
+- Conversación contra la ruta real `POST /api/v1/cognition/route`, con historial limitado a ocho mensajes previos y sin duplicar el mensaje actual.
 - Manejo de respuestas HTTP no exitosas, cuerpo JSON inválido, solicitudes duplicadas y estados de carga.
 - Reconocimiento y síntesis de voz del navegador cuando estén disponibles y autorizados; los navegadores y sistemas operativos pueden ofrecer voces distintas. No se garantiza una voz femenina específica ni soporte universal.
 - Preferencia de movimiento reducido, foco visible y enlace para saltar al chat.

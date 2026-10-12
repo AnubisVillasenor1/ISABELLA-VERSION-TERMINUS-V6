@@ -251,16 +251,22 @@ soundToggle?.addEventListener('click', () => {
 const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 if (Recognition && mic) {
   const recognition = new Recognition();
+  let recognitionActive = false;
   recognition.lang = 'es-MX';
   recognition.interimResults = false;
   recognition.continuous = false;
   recognition.onstart = () => {
+    recognitionActive = true;
     mic.textContent = '…';
     mic.setAttribute('aria-label', 'Escuchando; activar para detener');
     mic.setAttribute('aria-pressed', 'true');
   };
   mic.addEventListener('click', () => {
     try {
+      if (recognitionActive) {
+        recognition.stop();
+        return;
+      }
       recognition.start();
     } catch {
       addMessage('El micrófono ya está activo o el navegador rechazó el inicio. Revisa los permisos e inténtalo de nuevo.', 'isabella');
@@ -280,6 +286,7 @@ if (Recognition && mic) {
     addMessage(reason, 'isabella');
   };
   recognition.onend = () => {
+    recognitionActive = false;
     mic.textContent = '◉';
     mic.setAttribute('aria-label', 'Activar micrófono');
     mic.setAttribute('aria-pressed', 'false');
