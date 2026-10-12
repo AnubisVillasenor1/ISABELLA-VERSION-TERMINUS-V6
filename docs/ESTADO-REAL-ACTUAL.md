@@ -39,7 +39,7 @@
 
 ## Evidencia de Preview — SHA ff2ed47
 
-- Vercel deployment del SHA `ff2ed475163dc4949b6c13dabf63cd2e1200b8f0`: **READY**.
+- Vercel deployment del SHA `cccaede3c21c2516ec8ec6a61c1d69d72d106875`: **READY**.
 - `pnpm run build` completó TypeScript, Vitest, bundle esbuild, `node --check src/ui/app.js`, smoke de UI y smoke de runtime.
 - Vitest: **519 pruebas aprobadas, 100 archivos de prueba aprobados**.
 - `UI_NAVIGATION_SMOKE_OK`, `LOCAL_CONVERSATION_SMOKE_OK`, `PUBLIC_API_GUARDRAILS_OK` y `OPENROUTER_PAID_ID_BLOCK_OK` presentes.

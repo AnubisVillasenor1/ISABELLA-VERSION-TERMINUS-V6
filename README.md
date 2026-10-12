@@ -20,7 +20,7 @@
 
 ## Estado operativo y readiness
 
-**Último SHA validado en Preview: `ff2ed475163dc4949b6c13dabf63cd2e1200b8f0` — Vercel READY.** El build de ese SHA completó TypeScript, Vitest (**519 pruebas aprobadas en 100 archivos**), esbuild, `node --check src/ui/app.js`, `UI_NAVIGATION_SMOKE_OK` y los smoke tests del runtime. La conversación local y los guardrails HTTP pasaron; la prueba de inferencia externa se omitió por ausencia de credenciales gratuitas elegibles. La estimación ponderada se mantiene en **44.25% (≈44%)**: no es una medición científica ni porcentaje de funcionalidades, y no se incrementa mientras los gates de inferencia externa, CI, Rust y recuperación durable sigan abiertos.
+**Último SHA validado en Preview: `cccaede3c21c2516ec8ec6a61c1d69d72d106875` — Vercel READY.** El build del SHA `cccaede3c21c2516ec8ec6a61c1d69d72d106875` completó TypeScript, Vitest (**519 pruebas aprobadas en 100 archivos**), esbuild, `node --check src/ui/app.js`, `UI_NAVIGATION_SMOKE_OK` y los smoke tests del runtime. La conversación local y los guardrails HTTP pasaron; la prueba de inferencia externa se omitió por ausencia de credenciales gratuitas elegibles. La estimación ponderada se mantiene en **44.25% (≈44%)**: no es una medición científica ni porcentaje de funcionalidades, y no se incrementa mientras los gates de inferencia externa, CI, Rust y recuperación durable sigan abiertos.
 
 | Dimensión de readiness | Peso | Última evaluación documentada | Evidencia/gate |
 |---|---:|---:|---|

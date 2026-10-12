@@ -2,8 +2,8 @@
 
 **Fecha:** 12 de octubre de 2026  
 **Repositorio:** `OsoPanda1/isabella-V6-TINA-h6`  
-**SHA validado en Preview:** `ff2ed475163dc4949b6c13dabf63cd2e1200b8f0`  
-**Deployment:** [Vercel READY](https://isabella-v6-tina-4z8m4n24k-isabella-mexa.vercel.app/)  
+**SHA validado en Preview:** `cccaede3c21c2516ec8ec6a61c1d69d72d106875`  
+**Deployment:** [Vercel READY](https://isabella-v6-tina-4jp7lerbg-isabella-mexa.vercel.app/)  
 **Alcance:** interfaz servida por Express (`src/ui/index.html`, `src/ui/app.js`, `src/ui/cinematic.css`), flujo de chat asociado y documentación de usuario.
 
 ## Resumen ejecutivo
@@ -21,6 +21,7 @@ Se encontraron defectos funcionales y de veracidad de estado en la navegación y
 | Media | El modo de voz habilitaba TTS, pero no enviaba automáticamente el dictado. | En modo voz, el resultado de reconocimiento se envía; captura admite inicio/parada y manejo de errores/permisos. | Corregido en código; depende del navegador |
 | Media | La interfaz afirmaba “NODO CERO · EN LÍNEA” sin comprobar el runtime. | El indicador consulta `/api/v1/health` y diferencia API disponible de estado limitado. | Verificado por HTTP; no afirma que el proveedor LLM esté activo |
 | Media | La visualización afirmaba latencia fija de 12 ms sin medición. | Se reemplazó por etiquetas de contexto de sesión y runtime observable. | Corregido |
+| Media | Las rutas de la interfaz repetían lecturas síncronas de archivos en cada petición y el primer handler de `/` impedía usar el fallback registrado después. | El HTML/CSS se sirven desde assets cargados en el arranque; si el HTML no está disponible, el handler continúa al fallback. El smoke verifica las rutas cacheadas. | Corregido y validado por build |
 | Media | La introducción y animaciones no respetaban el ajuste de movimiento reducido. | Se añadió una ruta de salida inmediata para `prefers-reduced-motion` y CSS de movimiento reducido. | Corregido en código |
 
 ## Pruebas observadas en el SHA
@@ -29,7 +30,7 @@ Se encontraron defectos funcionales y de veracidad de estado en la navegación y
 - TypeScript build y bundle esbuild completados.
 - Vitest: **519 pruebas aprobadas en 100 archivos**.
 - Sintaxis de `src/ui/app.js`: comprobada mediante `node --check`.
-- `UI_NAVIGATION_SMOKE_OK`: enlaces/anclas con destino, controles requeridos, rutas de API, CSS del menú móvil y ausencia de latencia fija sin evidencia.
+- `UI_NAVIGATION_SMOKE_OK`: enlaces/anclas con destino, controles requeridos, rutas de API, CSS del menú móvil, rutas de assets cacheados y ausencia de latencia fija sin evidencia.
 - `LOCAL_CONVERSATION_SMOKE_OK`: health/chat/follow-up HTTP 200 en el smoke.
 - `PUBLIC_API_GUARDRAILS_OK`: entrada vacía 400, entrada excesiva 413, memoria sin scope 403 y solicitud destructiva pública 403.
 - `OPENROUTER_PAID_ID_BLOCK_OK`: modelo OpenRouter no gratuito bloqueado sin opt-in.
