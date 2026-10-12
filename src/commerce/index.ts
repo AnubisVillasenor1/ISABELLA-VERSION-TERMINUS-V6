@@ -8,3 +8,6 @@ export * from "./revenue";
 export * from "./webhook";
 export * from "./connector";
 export * from "./guards";
+export * from "./subscriptions";
+export * from "./entitlements";
+export * from "./metering";

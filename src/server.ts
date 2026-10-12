@@ -32,6 +32,7 @@ import { MetricsRegistry } from "./observability/metrics";
 import { SessionMemory, formatSessionContext, deriveSessionId } from "./memory/session-memory";
 import { VerifiedKnowledgeStore, formatVerifiedKnowledgeContext } from "./memory/verified-knowledge";
 import { osirisSentinel } from "./osiris";
+import { SubscriptionStore, UsageMeter, checkFeature, checkQuota, planEntitlements, PLANS, type PlanId, type QuotaKey, type SubscriptionRecord } from "./commerce";
 
 const app: Application = express();
 app.disable("x-powered-by");
@@ -44,6 +45,8 @@ app.use((_req, res, next) => {
 });
 const latencyRegistry = new LatencyRegistry(100, 512);
 const metricsRegistry = new MetricsRegistry();
+const subscriptionStore = new SubscriptionStore();
+const usageMeter = new UsageMeter();
 const atlasHealthCache = new TtlSingleFlight<{ healthy: boolean; reason: string }>(1_000);
 const port = 3000;
 const host = "0.0.0.0";
@@ -4335,6 +4338,214 @@ app.post("/api/v1/osiris/inspect", (req, res) => {
   } catch (error) {
     res.status(400).json({ success: false, error: error instanceof Error ? error.message : "OSIRIS_INSPECT_FAILED" });
   }
+});
+
+// ---------------------------------------------------------------------------
+// BILLING & COMMERCE — entitlement engine (state: draft | engine-generated).
+//
+// The server RECORDS the verified subscription state reported by an external
+// payment provider and enforces plan features/quotas. It does NOT process
+// payments, does NOT store card data, and does NOT infer a paid state without a
+// provider reference. Money movement stays with the external provider.
+// ---------------------------------------------------------------------------
+
+const COMMERCE_METHOD_IDS = {
+  subscribe: "TINA.YUN.COMMERCE.record_subscription.v0.1.0.MEDIUM.HUMAN_IN_THE_LOOP",
+  cancel: "TINA.YUN.COMMERCE.cancel_subscription.v0.1.0.LOW.HUMAN_IN_THE_LOOP",
+  offer: "TINA.YUN.COMMERCE.open_offer.v0.1.0.MEDIUM.HUMAN_IN_THE_LOOP",
+} as const;
+
+function commerceStringField(body: Record<string, unknown>, key: string): string | undefined {
+  const value = body[key];
+  return typeof value === "string" && value.trim() ? value.trim().slice(0, 256) : undefined;
+}
+
+function isPlanCode(value: string): value is PlanId {
+  return value === "free" || value === "premium" || value === "vip" || value === "enterprise";
+}
+
+function effectiveEntitlements(record: SubscriptionRecord | null): {
+  plan: PlanId;
+  status: string;
+  features: readonly string[];
+  quotas: Readonly<Record<QuotaKey, number>>;
+} {
+  const plan: PlanId = record?.planCode ?? "free";
+  const entitlements = planEntitlements(plan);
+  return {
+    plan,
+    status: record?.status ?? "active",
+    features: entitlements.features,
+    quotas: entitlements.quotas,
+  };
+}
+
+app.get("/api/v1/billing/plans", (_req, res) => {
+  const plans = Object.values(PLANS).map((plan) => ({
+    id: plan.id,
+    label: plan.label,
+    description: plan.description,
+    features: plan.features,
+    quotas: plan.quotas,
+    contract_required: plan.contractRequired,
+  }));
+  res.json({ success: true, plans, payment_processing: "external_provider", disclaimer: "Isabella records verified subscription state; it does not process payments." });
+});
+
+app.get("/api/v1/billing/entitlements", (req, res) => {
+  const plan = typeof req.query.plan === "string" ? req.query.plan.trim() : "";
+  if (!isPlanCode(plan)) {
+    res.status(400).json({ success: false, error: "PLAN_UNKNOWN" });
+    return;
+  }
+  const entitlements = planEntitlements(plan);
+  res.json({ success: true, plan: plan, features: entitlements.features, quotas: entitlements.quotas });
+});
+
+app.get("/api/v1/billing/subscription", async (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  const workspaceId = typeof req.query.workspaceId === "string" ? req.query.workspaceId.trim() : "";
+  if (!workspaceId) {
+    res.status(400).json({ success: false, error: "WORKSPACE_ID_REQUIRED" });
+    return;
+  }
+  const record = await subscriptionStore.get(workspaceId);
+  const effective = effectiveEntitlements(record);
+  res.json({ success: true, subscription: record, effective });
+});
+
+app.post("/api/v1/billing/subscribe", async (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  try {
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const workspaceId = commerceStringField(body, "workspaceId");
+    const planCode = commerceStringField(body, "planCode");
+    const provider = commerceStringField(body, "provider");
+    const externalRef = commerceStringField(body, "externalRef");
+    if (!workspaceId || !planCode || !provider || !externalRef) {
+      res.status(400).json({ success: false, error: "workspaceId, planCode, provider y externalRef son requeridos" });
+      return;
+    }
+    if (!isPlanCode(planCode)) {
+      res.status(400).json({ success: false, error: "PLAN_CODE_INVALID" });
+      return;
+    }
+    const record = await subscriptionStore.subscribe({
+      workspaceId,
+      planCode,
+      provider,
+      externalRef,
+      status: body.status === "trialing" ? "trialing" : "active",
+      currentPeriodEnd: commerceStringField(body, "currentPeriodEnd"),
+      contract: body.contract === true,
+    });
+    bookPiLedger.append({
+      id: `commerce-sub-${randomUUID()}`,
+      timestamp: new Date().toISOString(),
+      type: "commerce.subscription.recorded",
+      methodId: COMMERCE_METHOD_IDS.subscribe,
+      principal: provider,
+      riskTier: "MEDIUM",
+      status: `SUBSCRIPTION_${record.status.toUpperCase()}`,
+    });
+    res.status(201).json({ success: true, subscription: record, effective: effectiveEntitlements(record) });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "SUBSCRIPTION_FAILED";
+    const status = message.includes("NOT_FOUND") ? 404 : 400;
+    res.status(status).json({ success: false, error: message });
+  }
+});
+
+app.post("/api/v1/billing/cancel", async (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  try {
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const workspaceId = commerceStringField(body, "workspaceId");
+    if (!workspaceId) {
+      res.status(400).json({ success: false, error: "workspaceId es requerido" });
+      return;
+    }
+    const record = await subscriptionStore.cancel(workspaceId, commerceStringField(body, "reason") ?? "canceled");
+    bookPiLedger.append({
+      id: `commerce-cancel-${randomUUID()}`,
+      timestamp: new Date().toISOString(),
+      type: "commerce.subscription.canceled",
+      methodId: COMMERCE_METHOD_IDS.cancel,
+      principal: record.provider,
+      riskTier: "LOW",
+      status: "SUBSCRIPTION_CANCELED",
+    });
+    res.json({ success: true, subscription: record });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "CANCEL_FAILED";
+    res.status(message.includes("NOT_FOUND") ? 404 : 400).json({ success: false, error: message });
+  }
+});
+
+app.get("/api/v1/billing/usage", async (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  const workspaceId = typeof req.query.workspaceId === "string" ? req.query.workspaceId.trim() : "";
+  if (!workspaceId) {
+    res.status(400).json({ success: false, error: "workspaceId es requerido" });
+    return;
+  }
+  const record = await subscriptionStore.get(workspaceId);
+  const plan: PlanId = record?.planCode ?? "free";
+  const status = record?.status ?? "active";
+  const usage = usageMeter.snapshot(workspaceId);
+  const decisions: Record<string, unknown> = {};
+  for (const key of Object.keys(PLANS[plan].quotas) as QuotaKey[]) {
+    decisions[key] = checkQuota(plan, status, key, usageMeter.getUsage(workspaceId, key));
+  }
+  res.json({ success: true, workspaceId, plan, status, usage, decisions });
+});
+
+app.post("/api/v1/commerce/offers", async (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  const body = (req.body ?? {}) as Record<string, unknown>;
+  const workspaceId = commerceStringField(body, "workspaceId");
+  if (!workspaceId) {
+    res.status(400).json({ success: false, error: "workspaceId es requerido" });
+    return;
+  }
+  const record = await subscriptionStore.get(workspaceId);
+  const plan: PlanId = record?.planCode ?? "free";
+  const status = record?.status ?? "active";
+  const featureDecision = checkFeature(plan, status, "offer");
+  if (!featureDecision.allowed) {
+    res.status(402).json({ success: false, error: "ENTITLEMENT_DENIED", entitlement: featureDecision });
+    return;
+  }
+  const used = usageMeter.getUsage(workspaceId, "active_offers");
+  const quotaDecision = checkQuota(plan, status, "active_offers", used);
+  if (!quotaDecision.allowed) {
+    res.status(402).json({ success: false, error: "QUOTA_DENIED", entitlement: quotaDecision });
+    return;
+  }
+  const createdAt = new Date().toISOString();
+  usageMeter.increment(workspaceId, "active_offers");
+  const offerId = commerceStringField(body, "offerId") ?? randomUUID();
+  bookPiLedger.append({
+    id: `commerce-offer-${randomUUID()}`,
+    timestamp: new Date().toISOString(),
+    type: "commerce.offer.opened",
+    methodId: COMMERCE_METHOD_IDS.offer,
+    principal: workspaceId,
+    riskTier: "MEDIUM",
+    status: "OFFER_OPENED",
+  });
+  res.status(201).json({
+    success: true,
+    offer: {
+      id: offerId,
+      title: commerceStringField(body, "title") ?? null,
+      workspaceId,
+      status: "RECORDED_NOT_PUBLISHED",
+      createdAt: new Date().toISOString(),
+    },
+    entitlement: featureDecision,
+    quota: { ...quotaDecision, used: used + 1 },
+  });
 });
 
 if (!process.env.VERCEL) app.listen(port, host, () => {
