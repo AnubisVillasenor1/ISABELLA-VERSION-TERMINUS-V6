@@ -17,6 +17,8 @@ for (const id of ['navToggle', 'primaryLinks', 'runtimeStatus', 'soundToggle', '
 assert.ok(js.includes("fetch('/api/v1/cognition/route'"), 'Chat must call the existing cognition route');
 assert.ok(js.includes("fetch('/api/v1/health'"), 'UI must check the health endpoint');
 assert.ok(server.includes('app.get("/api/v1/health"'), 'The runtime health endpoint must exist');
+assert.ok(server.includes('res.type("html").send(cinematicHtml)'), 'The root UI must use the startup-cached HTML asset');
+assert.ok(server.includes('res.type("css").send(cinematicCss)'), 'The stylesheet route must use the startup-cached CSS asset');
 assert.ok(css.includes('.nav-links.is-open'), 'Responsive menu open state must be styled');
 assert.ok(css.includes('position:sticky;top:0;z-index:30'), 'Navbar must remain sticky without a later position override');
 assert.ok(!html.includes('LATENCIA<br><b>12ms</b>'), 'UI must not publish an unverified fixed latency');

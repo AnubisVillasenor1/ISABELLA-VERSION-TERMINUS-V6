@@ -91,13 +91,22 @@ try {
 } catch {
   console.warn("[Genesis] Cinematic UI assets are unavailable at startup.");
 }
-app.get("/", (_req, res) => {
-  const html = fs.readFileSync(path.join(uiPath, "index.html"), "utf-8");
-  res.type("html").send(html);
+app.get("/", (_req, res, next) => {
+  if (cinematicHtml) {
+    res.setHeader("Cache-Control", "no-cache");
+    res.type("html").send(cinematicHtml);
+    return;
+  }
+  // Continue to the fallback landing page registered below if static UI assets failed at startup.
+  next();
 });
 app.get("/styles/cinematic.css", (_req, res) => {
-  res.setHeader("Cache-Control", "no-store");
-  res.type("css").send(fs.readFileSync(path.join(uiPath, "cinematic.css"), "utf-8"));
+  if (!cinematicCss) {
+    res.status(404).type("css").send("/* Cinematic stylesheet unavailable */");
+    return;
+  }
+  res.setHeader("Cache-Control", "public, max-age=300, stale-while-revalidate=60");
+  res.type("css").send(cinematicCss);
 });
 app.get("/ui/app.js", (_req, res) => {
   if (!cinematicJs) { res.status(404).type("text/javascript").send(""); return; }
