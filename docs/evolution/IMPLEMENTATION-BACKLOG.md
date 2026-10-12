@@ -62,11 +62,15 @@ Reconocimiento ejecutado sobre `src/`, `docs/`, `test/` y scripts:
    `BOOKPI_LEDGER_PATH`. Falta E2E con Postgres/Supabase y simulacro de
    recuperación. Ver `docs/bookpi/DURABLE-LEDGER.md`.
 3. **CI con jobs verdes** (typecheck, test, build, security suite) sobre `main`.
-   Estado: `specified`.
+   Estado: workflow `verify`/`security`/`production-evidence` implementado
+   (`.github/workflows/ci.yml`); el job `rust-verify` sigue bloqueado porque
+   `ige-omega/Cargo.lock` no existe y no hay toolchain Rust local para generarlo.
+   "Verde" requiere ejecución en GitHub; no se afirma desde local.
 4. **Inferencia externa real** con credenciales (sin inventar disponibilidad).
-   Estado: `specified`.
-5. **Aislamiento multi-tenant verificado**.
-   Estado: `specified`.
+   Estado: `specified` (bloqueado: sin credenciales).
+5. **Aislamiento multi-tenant verificado** (nivel aplicación).
+   Estado: `wired` en módulo + tool; tests verdes. No verifica RLS de base de
+   datos. Ver `docs/tenancy/ISOLATION.md`.
 
 ### P1 — Endurecimiento
 
@@ -105,11 +109,6 @@ Pruebas: `test/commerce/subscriptions.test.ts`, `entitlements.test.ts`, `meterin
 - Autenticación de usuario final (hoy las rutas usan token de servicio
   `GENESIS_ADMIN_API_TOKEN`; no hay login de usuario).
 - Recepción de webhooks del proveedor de pagos que actualicen el store.
-### Pendiente del lote 1 (honesto)
-
-- Autenticación de usuario final (hoy las rutas usan token de servicio
-  `GENESIS_ADMIN_API_TOKEN`; no hay login de usuario).
-- Recepción de webhooks del proveedor de pagos que actualicen el store.
 - Persistencia durable del `SubscriptionStore` y del `UsageMeter`.
 - UI de billing.
 
@@ -132,3 +131,25 @@ Documentación: `docs/bookpi/DURABLE-LEDGER.md`.
 - Cableado E2E Postgres/Supabase (`createPostgresStorage`) con rol append-only.
 - Simulacro de recuperación con RTO/RPO medidos.
 - Cifrado en reposo y sellado externo (WORM real).
+
+## Lote 3 — Aislamiento multi-tenant a nivel de aplicación (implementado)
+
+- `src/tenancy/isolation.ts`: `verifyTenantIsolation(principal, records)`
+  compara el tenant de cada registro provisto contra el tenant del principal
+  verificado y clasifica `ISOLATED | VIOLATION_DETECTED | NOT_ASSESSED`.
+  `coerceTenantRecords` normaliza entradas no confiables; `assertTenantScope`
+  falla cerrado ante acceso cruzado.
+- `src/tools/catalog.ts`: el tool `tenant_isolation_verify` dejó de ser un stub
+  `NOT_ASSESSED`; ahora ejecuta la verificación sobre los registros de entrada y
+  declara explícitamente `coverage: "APPLICATION_LEVEL_RECORD_TENANT_CHECK"`,
+  `databaseRlsVerified: false`, `tamperProofBoundary: false`.
+
+Pruebas: `test/tenancy/isolation.test.ts` (12). Documentación:
+`docs/tenancy/ISOLATION.md`.
+
+### Pendiente del lote 3 (honesto)
+
+- Verificación real de RLS/políticas a nivel de base de datos (requiere Postgres
+  con roles y dataset multi-tenant).
+- Política de identidad verificada end-to-end en rutas HTTP (hoy el tenant del
+  principal se resuelve fuera del request de billing).

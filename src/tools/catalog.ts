@@ -2,6 +2,7 @@ import type { ToolDescriptor } from "./registry";
 import type { Principal } from "../identity/principal";
 import { createHash } from "node:crypto";
 import { bookPiLedger } from "../bookpi";
+import { coerceTenantRecords, verifyTenantIsolation } from "../tenancy/isolation";
 
 function sha256(data: unknown): string {
   return createHash("sha256").update(JSON.stringify(data) ?? "").digest("hex");
@@ -212,17 +213,14 @@ export const CANONICAL_TOOLS: readonly ToolDescriptor[] = [
     owner: "pdp-controller",
     riskTier: "MEDIUM",
     scopes: ["audit:governance", "read:identity"],
-    description: "Verificación de aislamiento estricto multi-tenant y prevención de fugas entre organizaciones",
-    execute: async (input: unknown) => {
-      const tenant = typeof input === "object" && input !== null && "tenantId" in input ? String((input as { tenantId: unknown }).tenantId) : "tamv-sovereign-root";
+    description: "Verificación de aislamiento multi-tenant a nivel de aplicación sobre registros provistos; no verifica RLS de base de datos ni una frontera a prueba de manipulación",
+    execute: async (input: unknown, principal: Principal) => {
+      const records = coerceTenantRecords(input);
+      const report = verifyTenantIsolation(principal, records);
       return {
-        tenantId: tenant,
-        isolationState: "NOT_ASSESSED",
-        crossTenantLeaksDetected: null,
-        tamperProofBoundary: false,
-        verificationPerformed: false,
-        reason: "NO_LIVE_DATABASE_OR_RLS_POLICY_VERIFIER_CONFIGURED",
-        verifiedAt: new Date().toISOString(),
+        ...report,
+        isolationState: report.state,
+        verificationPerformed: true,
       };
     },
   },
