@@ -92,13 +92,12 @@ try {
   console.warn("[Genesis] Cinematic UI assets are unavailable at startup.");
 }
 app.get("/", (_req, res) => {
-  if (!cinematicHtml) { res.status(404).send("Isabella UI unavailable"); return; }
-  res.type("html").send(cinematicHtml);
+  const html = fs.readFileSync(path.join(uiPath, "index.html"), "utf-8");
+  res.type("html").send(html);
 });
 app.get("/styles/cinematic.css", (_req, res) => {
-  if (!cinematicCss) { res.status(404).type("text/css").send(""); return; }
-  res.setHeader("Cache-Control", "public, max-age=300, stale-while-revalidate=60");
-  res.type("css").send(cinematicCss);
+  res.setHeader("Cache-Control", "no-store");
+  res.type("css").send(fs.readFileSync(path.join(uiPath, "cinematic.css"), "utf-8"));
 });
 app.get("/ui/app.js", (_req, res) => {
   if (!cinematicJs) { res.status(404).type("text/javascript").send(""); return; }
