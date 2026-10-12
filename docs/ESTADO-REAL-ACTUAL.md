@@ -7,18 +7,18 @@
 
 ## Readiness estimada
 
-**40% ponderado de preparación para producción.** Esta cifra es una evaluación de gates, no una métrica científica ni porcentaje de funcionalidades. Se calculó con los siguientes pesos y estimaciones de evidencia del estado anterior a este commit.
+**44.25% ponderado (≈44%) de preparación para producción.** Esta cifra es una evaluación de gates, no una métrica científica ni porcentaje de funcionalidades. Se calculó con los siguientes pesos y estimaciones de evidencia del estado anterior a este commit.
 
 | Dimensión | Peso | Puntaje | Aporte |
 |---|---:|---:|---:|
-| Runtime HTTP y flujo local | 20 | 70 | 14 |
-| Pruebas y validación automatizada | 20 | 65 | 13 |
-| Seguridad y guardrails | 15 | 40 | 6 |
+| Runtime HTTP y flujo local | 20 | 75 | 15 |
+| Pruebas y validación automatizada | 20 | 75 | 15 |
+| Seguridad y guardrails | 15 | 45 | 6.75 |
 | Inferencia externa real verificada | 15 | 0 | 0 |
 | Persistencia durable y recuperación | 10 | 20 | 2 |
 | CI reproducible y workspace Rust | 10 | 20 | 2 |
-| Operación, observabilidad y rollback | 10 | 30 | 3 |
-| **Total** | **100** |  | **40** |
+| Operación, observabilidad y rollback | 10 | 35 | 3.5 |
+| **Total** | **100** |  | **44.25** |
 
 ## Evidencia observada
 
@@ -36,6 +36,18 @@
 - Pruebas unitarias para límites de timeout/cooldown, guardas de modelos de OpenRouter y extracción de contenido textual.
 - Integración de esas funciones compartidas en el runtime HTTP.
 - Reescritura del README para diferenciar componentes ejecutables, objetivos arquitectónicos y bloqueos de producción.
+
+## Evidencia de Preview — SHA d71f89c
+
+- Vercel deployment: **READY**.
+- El script `pnpm run build` completó correctamente; incluye TypeScript build, Vitest, bundle esbuild y smoke test de runtime.
+- Vitest: **519 pruebas aprobadas, 100 archivos de prueba aprobados**.
+- `test/provider-policy.test.ts`: siete pruebas aprobadas.
+- Smoke markers `LOCAL_CONVERSATION_SMOKE_OK`, `PUBLIC_API_GUARDRAILS_OK` y `OPENROUTER_PAID_ID_BLOCK_OK` presentes.
+- `GET /health` y `GET /api/v1/health`: HTTP 200; cabeceras de seguridad presentes.
+- `LLM_GATEWAY_SMOKE_SKIPPED`: no hay credenciales gratuitas elegibles; la inferencia externa no está demostrada.
+- GitHub Actions sigue devolviendo `startup_failure` sin jobs.
+- `ige-omega/Cargo.lock` sigue ausente.
 
 ## Gates pendientes
 

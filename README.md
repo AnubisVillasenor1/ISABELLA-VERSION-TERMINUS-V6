@@ -16,20 +16,20 @@
 
 ## Estado global para producción y despliegue
 
-**Estimación de readiness de producción: 40%.** Es una puntuación de preparación de ingeniería, no el porcentaje de código escrito ni una certificación. Resume la evidencia disponible al iniciar este incremento; debe recalcularse después de que CI y las pruebas de proveedor se ejecuten sobre el nuevo SHA.
+**Estimación de readiness de producción: 44% (evaluación ponderada).** Es una puntuación de preparación de ingeniería, no el porcentaje de código escrito ni una certificación. Se actualizó tras el Preview del SHA d71f89ca296552d90fa80f39adad7ead5f0caaca: build completado, 519 pruebas en 100 archivos aprobadas, smoke local y guardrails aprobados y endpoints de salud HTTP 200. El smoke de inferencia externa fue omitido por falta de credenciales gratuitas elegibles; GitHub Actions y el workspace Rust siguen bloqueados.
 
 | Dimensión ponderada | Peso | Evaluación actual | Aporte |
 |---|---:|---:|---:|
-| Runtime HTTP y flujo local | 20% | 70% | 14.0 |
-| Pruebas y validación automatizada | 20% | 65% | 13.0 |
-| Seguridad y guardrails | 15% | 40% | 6.0 |
+| Runtime HTTP y flujo local | 20% | 75% | 15.0 |
+| Pruebas y validación automatizada | 20% | 75% | 15.0 |
+| Seguridad y guardrails | 15% | 45% | 6.75 |
 | Inferencia externa real verificada | 15% | 0% | 0.0 |
 | Persistencia durable y recuperación | 10% | 20% | 2.0 |
 | CI reproducible y workspace Rust | 10% | 20% | 2.0 |
-| Operación, observabilidad y rollback | 10% | 30% | 3.0 |
-| **Total ponderado** | **100%** |  | **40.0%** |
+| Operación, observabilidad y rollback | 10% | 35% | 3.5 |
+| **Total ponderado** | **100%** |  | **44.25% (≈44%)** |
 
-La puntuación se basa en gates ponderados explícitos y en la evidencia disponible, no en una medición científica. El endpoint local y el build de Preview han sido probados en commits anteriores. GitHub Actions ha devuelto \`startup_failure\` sin jobs para ejecuciones recientes; no existe evidencia suficiente para marcar CI verde. No hay evidencia de una respuesta de modelo externo en el entorno actual, y \`ige-omega/Cargo.lock\` no existe en la rama inspeccionada. Por eso, un Preview \`READY\` no equivale a producción lista.
+La puntuación se basa en gates ponderados explícitos y en la evidencia disponible, no en una medición científica. El Preview del SHA d71f89ca296552d90fa80f39adad7ead5f0caaca completó el script de build: TypeScript compiló, Vitest reportó 519 pruebas aprobadas en 100 archivos y los smoke markers LOCAL_CONVERSATION_SMOKE_OK, PUBLIC_API_GUARDRAILS_OK y OPENROUTER_PAID_ID_BLOCK_OK aparecieron en los logs. /health y /api/v1/health devolvieron HTTP 200 y las cabeceras de seguridad estaban presentes. El smoke de inferencia externa fue omitido por falta de credenciales elegibles. GitHub Actions devolvió startup_failure sin jobs y ige-omega/Cargo.lock no existe en la rama inspeccionada. Preview READY no equivale a producción lista.
 
 ### Bloqueadores de liberación
 
