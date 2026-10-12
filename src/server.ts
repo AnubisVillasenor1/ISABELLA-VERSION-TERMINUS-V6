@@ -80,6 +80,31 @@ try {
 } catch {
   console.warn("[Genesis] Crystal Clear CSS is unavailable at startup.");
 }
+const uiPath = path.join(process.cwd(), "src", "ui");
+let cinematicHtml: string | null = null;
+let cinematicCss: string | null = null;
+let cinematicJs: string | null = null;
+try {
+  cinematicHtml = fs.readFileSync(path.join(uiPath, "index.html"), "utf-8");
+  cinematicCss = fs.readFileSync(path.join(uiPath, "cinematic.css"), "utf-8");
+  cinematicJs = fs.readFileSync(path.join(uiPath, "app.js"), "utf-8");
+} catch {
+  console.warn("[Genesis] Cinematic UI assets are unavailable at startup.");
+}
+app.get("/", (_req, res) => {
+  if (!cinematicHtml) { res.status(404).send("Isabella UI unavailable"); return; }
+  res.type("html").send(cinematicHtml);
+});
+app.get("/styles/cinematic.css", (_req, res) => {
+  if (!cinematicCss) { res.status(404).type("text/css").send(""); return; }
+  res.setHeader("Cache-Control", "public, max-age=300, stale-while-revalidate=60");
+  res.type("css").send(cinematicCss);
+});
+app.get("/ui/app.js", (_req, res) => {
+  if (!cinematicJs) { res.status(404).type("text/javascript").send(""); return; }
+  res.setHeader("Cache-Control", "public, max-age=300, stale-while-revalidate=60");
+  res.type("js").send(cinematicJs);
+});
 app.get("/styles/crystal-clear.css", (_req, res) => {
   if (crystalClearCss === null) {
     res.status(404).type("text/css").send("/* CSS module not found */");
@@ -1700,6 +1725,10 @@ app.post("/api/v1/isa/act", (req, res) => {
 
 // --- MAIN WEB INTERFACE (IMMERSIVE 3D CRYSTAL CLEAR + IRIDESCENT NEON GLOW + 3 LEFT ACCORDIONS + 3 RIGHT ACCORDIONS) ---
 app.get("/", (_req, res) => {
+  if (cinematicHtml) {
+    res.type("html").send(cinematicHtml);
+    return;
+  }
   res.setHeader("Content-Type", "text/html; charset=utf-8");
   res.send(`<!DOCTYPE html>
 <html lang="es" class="h-full bg-[#050811]">
@@ -1924,10 +1953,25 @@ app.get("/", (_req, res) => {
     button[class*="bg-gradient"], #btnSend, .cinematic-enter { background: var(--signal) !important; color: #111 !important; box-shadow: none !important; }
     .text-cyan-300, .text-cyan-400, .text-amber-300, .text-amber-400, .text-purple-300, .text-rose-300 { color: #c7a86b !important; }
     [class*="bg-gradient-to"], [class*="bg-gradient-r"] { background-image: none !important; background-color: var(--panel-2) !important; }
-    .cinematic-intro { background: #090b0f !important; }
-    .cinematic-grid, .cinematic-orbit-one, .cinematic-orbit-two { opacity: .04 !important; }
-    .cinematic-enter { border-color: #c7a86b !important; }
-    .font-editorial { letter-spacing: .01em; }
+  .cinematic-intro {
+    background: radial-gradient(circle at 50% 14%, rgba(90, 78, 220, .24), transparent 28%), radial-gradient(circle at 18% 76%, rgba(22, 190, 214, .14), transparent 30%), #05070d !important;
+  }
+  .cinematic-intro::before { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(115deg, transparent 0 46%, rgba(255,255,255,.055) 46.1%, transparent 46.25%), linear-gradient(180deg, transparent 0 72%, rgba(141,243,255,.08), transparent 86%); }
+  .cinematic-grid { opacity: .22 !important; background-size: 68px 68px; filter: drop-shadow(0 0 14px rgba(38,185,255,.2)); }
+  .cinematic-orbit-one { opacity: .75 !important; border-color: rgba(141,243,255,.38); box-shadow: 0 0 65px rgba(38,185,255,.2); }
+  .cinematic-orbit-two { opacity: .7 !important; border-color: rgba(157,140,255,.42); box-shadow: 0 0 65px rgba(157,140,255,.18); }
+  .cinematic-intro-content, .cinematic-trailer { width: min(820px, calc(100% - 44px)); }
+  .cinematic-mark { width: 86px; height: 86px; margin-bottom: 28px; border-radius: 50%; color: #8df3ff; border-color: rgba(141,243,255,.65); background: radial-gradient(circle at 35% 25%, #a4f8ff, #174363 28%, #090d16 70%); box-shadow: 0 0 55px rgba(141,243,255,.36), inset 0 0 24px rgba(157,140,255,.7); animation: markPulse 4s ease-in-out infinite; }
+  .cinematic-eyebrow, .cinematic-chapter { color: #8df3ff; letter-spacing: .28em; }
+  .cinematic-intro h1 { font-size: clamp(3rem, 8vw, 7.5rem); line-height: .88; letter-spacing: -.08em; text-shadow: 0 0 45px rgba(141,243,255,.18); }
+  .cinematic-lede { max-width: 650px; color: rgba(231,239,248,.78); font-size: 17px; }
+  .cinematic-origin { color: rgba(238,242,247,.64); }
+  .cinematic-enter { padding: 16px 34px; border-radius: 0; color: #061018; background: #8df3ff; border-color: #8df3ff; box-shadow: 0 0 36px rgba(141,243,255,.32); }
+  .cinematic-enter:hover { box-shadow: 0 0 62px rgba(141,243,255,.55); }
+  .cinematic-status { color: rgba(141,243,255,.7); }
+  .font-editorial { letter-spacing: .01em; }
+  @keyframes markPulse { 50% { transform: scale(1.06); box-shadow: 0 0 80px rgba(141,243,255,.48), inset 0 0 30px rgba(157,140,255,.85); } }
+  @media (max-width: 700px) { .cinematic-intro h1 { font-size: clamp(2.9rem, 15vw, 5rem); } .cinematic-mark { width: 70px; height: 70px; } }
   </style>
 </head>
 <body class="h-full bg-[#050811] text-slate-100 flex flex-col overflow-hidden selection:bg-cyan-500/25 selection:text-cyan-100">
