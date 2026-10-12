@@ -15,7 +15,25 @@ export {
 export { createJsonlStorage } from "./storage-jsonl";
 export { createPostgresStorage, BOOKPI_TABLE, type PostgresLike, type PostgresBookPiRow } from "./storage-postgres";
 export { BOOKPI_PROTOCOL } from "./types";
-export { InMemoryBookPiLedger, bookPiLedger, type BookPiEvent, type BookPiEventInput, type BookPiVerification } from "./ledger";
+export {
+  InMemoryBookPiLedger,
+  DurableBookPiLedger,
+  createAuditLedger,
+  bookPiLedger,
+  type BookPiEvent,
+  type BookPiEventInput,
+  type BookPiVerification,
+  type BookPiSummary,
+  type BookPiSnapshot,
+  type BookPiStorageKind,
+  type DurableLedgerCheckpoint,
+} from "./ledger";
+export {
+  planRetention,
+  type RetentionPolicy,
+  type RetentionPlan,
+  type RetentionCheckpoint,
+} from "./retention";
 export {
   BOOKPI_CHUNK_SIZE,
   chunkBuffer,

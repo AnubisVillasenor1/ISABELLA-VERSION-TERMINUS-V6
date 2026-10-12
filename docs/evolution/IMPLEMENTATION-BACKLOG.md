@@ -57,7 +57,10 @@ Reconocimiento ejecutado sobre `src/`, `docs/`, `test/` y scripts:
    Estado: `wired` en módulo + endpoints; tests verdes. Ver
    `docs/commerce/BILLING-ENGINE.md`.
 2. **Persistencia durable de BookPI** + retención + backup/restore.
-   Estado: `specified`.
+   Estado: `wired` en módulo (ledger durable JSONL + retención + backup/restore)
+   y CLI `pnpm bookpi:maintenance`; el runtime selecciona durable con
+   `BOOKPI_LEDGER_PATH`. Falta E2E con Postgres/Supabase y simulacro de
+   recuperación. Ver `docs/bookpi/DURABLE-LEDGER.md`.
 3. **CI con jobs verdes** (typecheck, test, build, security suite) sobre `main`.
    Estado: `specified`.
 4. **Inferencia externa real** con credenciales (sin inventar disponibilidad).
@@ -102,5 +105,30 @@ Pruebas: `test/commerce/subscriptions.test.ts`, `entitlements.test.ts`, `meterin
 - Autenticación de usuario final (hoy las rutas usan token de servicio
   `GENESIS_ADMIN_API_TOKEN`; no hay login de usuario).
 - Recepción de webhooks del proveedor de pagos que actualicen el store.
+### Pendiente del lote 1 (honesto)
+
+- Autenticación de usuario final (hoy las rutas usan token de servicio
+  `GENESIS_ADMIN_API_TOKEN`; no hay login de usuario).
+- Recepción de webhooks del proveedor de pagos que actualicen el store.
 - Persistencia durable del `SubscriptionStore` y del `UsageMeter`.
 - UI de billing.
+
+## Lote 2 — Persistencia durable del BookPI (implementado)
+
+Nuevos/actualizados módulos (`state: draft | engine-generated`):
+
+- `src/bookpi/ledger.ts`: se añade `DurableBookPiLedger` (JSONL append-only,
+  recarga y reverificación en arranque, checkpoint) y `createAuditLedger()`. El
+  singleton `bookPiLedger` selecciona durable con `BOOKPI_LEDGER_PATH`.
+- `src/bookpi/retention.ts`: `planRetention` (planeación pura).
+- `src/cli/bookpiMaintenance.ts`: CLI `verify | summary | backup | restore |
+  retention` (script `pnpm bookpi:maintenance`).
+
+Pruebas: `test/bookpi/durable-ledger.test.ts`, `test/bookpi/retention.test.ts`.
+Documentación: `docs/bookpi/DURABLE-LEDGER.md`.
+
+### Pendiente del lote 2 (honesto)
+
+- Cableado E2E Postgres/Supabase (`createPostgresStorage`) con rol append-only.
+- Simulacro de recuperación con RTO/RPO medidos.
+- Cifrado en reposo y sellado externo (WORM real).

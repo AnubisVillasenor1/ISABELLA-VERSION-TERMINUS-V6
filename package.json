@@ -16,6 +16,7 @@
     "build": "tsc -p tsconfig.build.json && vitest run && esbuild src/server.ts --bundle --platform=node --format=esm --packages=external --target=node24 --outfile=dist/server.js && node --check src/ui/app.js && node scripts/ui-smoke.mjs && node scripts/runtime-smoke.mjs",
     "lint": "tsc --noEmit",
     "reconcile:pids": "tsx src/cli/reconcilePids.ts",
+    "bookpi:maintenance": "tsx src/cli/bookpiMaintenance.ts",
     "quantum:bridge": "python services/pennylane_bridge.py",
     "validate": "pnpm run typecheck && pnpm test && pnpm run build && pnpm run security:suite",
     "ingest:atlas": "tsx scripts/atlas-ingest.ts",
