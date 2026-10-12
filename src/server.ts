@@ -35,6 +35,17 @@ import { VerifiedKnowledgeStore, formatVerifiedKnowledgeContext } from "./memory
 import { osirisSentinel } from "./osiris";
 import { SubscriptionStore, UsageMeter, checkFeature, checkQuota, planEntitlements, PLANS, type PlanId, type QuotaKey, type SubscriptionRecord } from "./commerce";
 import { GAMEOVER_CONSTITUTION, passportAuthority, uagpGateway, type UagpRequestInput } from "./gameover";
+import {
+  HYPERCORE_DISCLAIMER,
+  HYPERCORE_ID,
+  HYPERCORE_OMEGA_MODES,
+  HYPERCORE_VERSION,
+  hyperCore,
+  hyperPredict,
+  type HyperCoreTask,
+  type HyperPredictSession,
+  type RiskClass,
+} from "./hypercore";
 
 const app: Application = express();
 app.disable("x-powered-by");
@@ -4660,6 +4671,86 @@ app.post("/api/v1/gameover/govern", (req, res) => {
     res.status(status).json({ success: result.allowed, ...result });
   } catch (error) {
     res.status(400).json({ success: false, error: error instanceof Error ? error.message : "GOVERNANCE_FAILED" });
+  }
+});
+
+const HYPERCORE_ADMIN_PRINCIPAL = "genesis-admin";
+const HYPERCORE_RISK_CLASSES: readonly RiskClass[] = ["low", "medium", "high", "critical"];
+
+function parseHyperCoreRisk(body: Record<string, unknown>): RiskClass {
+  const raw = (commerceStringField(body, "risk") ?? "low").toLowerCase();
+  return HYPERCORE_RISK_CLASSES.includes(raw as RiskClass) ? (raw as RiskClass) : "low";
+}
+
+function stringArrayField(body: Record<string, unknown>, key: string): string[] {
+  const value = body[key];
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+}
+
+app.get("/api/v1/hypercore/modes", (_req, res) => {
+  res.json({
+    success: true,
+    id: HYPERCORE_ID,
+    version: HYPERCORE_VERSION,
+    modes: HYPERCORE_OMEGA_MODES,
+    disclaimer: HYPERCORE_DISCLAIMER,
+  });
+});
+
+app.post("/api/v1/hypercore/run", async (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  try {
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const intent = commerceStringField(body, "intent");
+    const domain = commerceStringField(body, "domain");
+    const prompt = commerceStringField(body, "prompt");
+    if (!intent || !domain || !prompt) {
+      res.status(400).json({ success: false, error: "intent, domain y prompt son requeridos" });
+      return;
+    }
+    const task: HyperCoreTask = {
+      taskId: commerceStringField(body, "taskId") ?? `task-${Date.now()}`,
+      intent,
+      domain,
+      risk: parseHyperCoreRisk(body),
+      prompt,
+      contextTokens: typeof body.contextTokens === "number" ? body.contextTokens : 0,
+      userScope: commerceStringField(body, "userScope"),
+      territoryScope: commerceStringField(body, "territoryScope"),
+      requiresAuthorization: body.requiresAuthorization === true,
+    };
+    const result = await hyperCore.run(task, { authenticatedPrincipal: HYPERCORE_ADMIN_PRINCIPAL });
+    const delivered = result.status === "COMPLETED" || result.status === "CACHE_HIT";
+    const status = delivered ? 200 : result.status === "ESCALATED" ? 202 : 403;
+    res.status(status).json({ success: delivered, ...result });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error instanceof Error ? error.message : "HYPERCORE_RUN_FAILED" });
+  }
+});
+
+app.post("/api/v1/hypercore/predict", (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  try {
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const session: HyperPredictSession = {
+      subject: commerceStringField(body, "subject") ?? HYPERCORE_ADMIN_PRINCIPAL,
+      role: commerceStringField(body, "role") ?? "guardian",
+      deviceTrusted: body.deviceTrusted === true,
+      openArtifacts: stringArrayField(body, "openArtifacts"),
+      currentIntent: commerceStringField(body, "currentIntent") ?? "",
+      recentIntents: stringArrayField(body, "recentIntents"),
+      risk: parseHyperCoreRisk(body),
+      territory: commerceStringField(body, "territory") ?? "global",
+    };
+    const predictions = hyperPredict.predict(session);
+    res.json({
+      success: true,
+      predictions,
+      stats: hyperPredict.stats(),
+      disclaimer: HYPERCORE_DISCLAIMER,
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error instanceof Error ? error.message : "HYPERCORE_PREDICT_FAILED" });
   }
 });
 

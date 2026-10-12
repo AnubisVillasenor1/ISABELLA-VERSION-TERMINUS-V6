@@ -297,3 +297,79 @@ if (Recognition && mic) {
     addMessage('Este navegador no expone reconocimiento de voz nativo. Puedes usar el canal de texto.', 'isabella');
   });
 }
+
+// HyperCore Ω² — malla cuántica decorativa del hero (canvas 2D autocontenido,
+// sin dependencias externas). No publica métricas: es ornamento visual honesto.
+(() => {
+  const canvas = byId('quantumMesh');
+  if (!canvas || typeof canvas.getContext !== 'function') return;
+  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  const palette = ['#38bdf8', '#a855f7', '#34d399', '#8df3ff'];
+  let width = 0;
+  let height = 0;
+  let nodes = [];
+  let frame = 0;
+  const resize = () => {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const rect = canvas.getBoundingClientRect();
+    width = Math.max(1, rect.width);
+    height = Math.max(1, rect.height);
+    canvas.width = Math.floor(width * dpr);
+    canvas.height = Math.floor(height * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const density = Math.max(16, Math.min(54, Math.floor((width * height) / 26000)));
+    nodes = Array.from({ length: density }, (_, index) => ({
+      x: Math.random() * width,
+      y: Math.random() * height,
+      vx: (Math.random() - 0.5) * 0.22,
+      vy: (Math.random() - 0.5) * 0.22,
+      r: 0.7 + Math.random() * 1.5,
+      color: palette[index % palette.length]
+    }));
+  };
+  const draw = () => {
+    ctx.clearRect(0, 0, width, height);
+    for (const node of nodes) {
+      node.x += node.vx;
+      node.y += node.vy;
+      if (node.x < 0 || node.x > width) node.vx *= -1;
+      if (node.y < 0 || node.y > height) node.vy *= -1;
+    }
+    for (let i = 0; i < nodes.length; i += 1) {
+      for (let j = i + 1; j < nodes.length; j += 1) {
+        const dx = nodes[i].x - nodes[j].x;
+        const dy = nodes[i].y - nodes[j].y;
+        const distance = Math.hypot(dx, dy);
+        if (distance > 132) continue;
+        ctx.globalAlpha = (1 - distance / 132) * 0.16;
+        ctx.strokeStyle = nodes[i].color;
+        ctx.lineWidth = 0.6;
+        ctx.beginPath();
+        ctx.moveTo(nodes[i].x, nodes[i].y);
+        ctx.lineTo(nodes[j].x, nodes[j].y);
+        ctx.stroke();
+      }
+    }
+    ctx.globalAlpha = 1;
+    for (const node of nodes) {
+      ctx.fillStyle = node.color;
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, node.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    frame = window.requestAnimationFrame(draw);
+  };
+  resize();
+  frame = window.requestAnimationFrame(draw);
+  window.addEventListener('resize', resize);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && frame) {
+      window.cancelAnimationFrame(frame);
+      frame = 0;
+    } else if (!document.hidden && !frame) {
+      frame = window.requestAnimationFrame(draw);
+    }
+  });
+})();

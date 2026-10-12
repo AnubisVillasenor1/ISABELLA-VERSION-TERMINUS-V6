@@ -48,6 +48,7 @@ export * from "./plugins";
 export * from "./commerce";
 export * from "./tenancy/isolation";
 export * from "./gameover";
+export * from "./hypercore";
 // Desambiguación de barril: crown/intent y gameover exportan `RiskLevel` con
 // semánticas distintas; cognition/explainability y gameover exportan
 // `explainDecision`. El re-export explícito fija el canónico y los alias
