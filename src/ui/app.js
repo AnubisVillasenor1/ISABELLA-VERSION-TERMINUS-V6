@@ -4,34 +4,67 @@ const intro = byId('cinematicIntro');
 const introScenes = [...document.querySelectorAll('.intro-scene')];
 const introProgressBar = byId('introProgressBar');
 const introSceneLabel = byId('introSceneLabel');
+const introTimecode = byId('introTimecode');
 const skipIntro = byId('skipIntro');
-const introLabels = ['SECUENCIA 01 · DESPERTAR', 'SECUENCIA 02 · PRESENCIA', 'SECUENCIA 03 · VÍNCULO'];
-let introStartedAt = performance.now();
-let introTimer;
-
+const INTRO_SCENE_MS = 4_200;
+const INTRO_TOTAL_MS = INTRO_SCENE_MS * introScenes.length;
+const introLabels = [
+  'SECUENCIA 01 · APERTURA', 'SECUENCIA 02 · EL ORIGEN', 'SECUENCIA 03 · LA CALLE',
+  'SECUENCIA 04 · NUESTRA GENTE', 'SECUENCIA 05 · RESILIENCIA', 'SECUENCIA 06 · IDENTIDAD',
+  'SECUENCIA 07 · EL NÚCLEO', 'SECUENCIA 08 · ARQUITECTURA', 'SECUENCIA 09 · MEMORIA VIVA',
+  'SECUENCIA 10 · PROPÓSITO', 'SECUENCIA 11 · COMPROMISO', 'SECUENCIA 12 · ACCESO'
+];
+let introStartedAt = 0;
+let introTimer = 0;
+let introPausedAt = 0;
+const formatIntroTime = (milliseconds) => {
+  const seconds = Math.floor(Math.max(0, milliseconds) / 1000);
+  return `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
+};
 const dismissIntro = () => {
   window.clearInterval(introTimer);
   intro?.classList.add('is-dismissed');
   document.body.classList.remove('intro-lock');
 };
 const advanceIntro = (elapsed = performance.now() - introStartedAt) => {
-  const sceneIndex = Math.min(2, Math.floor(elapsed / 20_000));
-  introScenes.forEach((scene, index) => scene.classList.toggle('is-active', index === sceneIndex));
-  if (introSceneLabel) introSceneLabel.textContent = introLabels[sceneIndex];
-  if (introProgressBar) introProgressBar.style.width = `${Math.min(100, elapsed / 600)}%`;
-  if (elapsed >= 60_000) dismissIntro();
+  if (!intro || !introScenes.length) return;
+  const boundedElapsed = Math.max(0, Math.min(elapsed, INTRO_TOTAL_MS));
+  const sceneIndex = Math.min(introScenes.length - 1, Math.floor(boundedElapsed / INTRO_SCENE_MS));
+  intro.dataset.scene = String(sceneIndex);
+  introScenes.forEach((scene, index) => {
+    const active = index === sceneIndex;
+    scene.classList.toggle('is-active', active);
+    scene.setAttribute('aria-hidden', String(!active));
+  });
+  if (introSceneLabel) introSceneLabel.textContent = introLabels[sceneIndex] || `SECUENCIA ${String(sceneIndex + 1).padStart(2, '0')}`;
+  if (introProgressBar) introProgressBar.style.width = `${(boundedElapsed / INTRO_TOTAL_MS) * 100}%`;
+  if (introTimecode) introTimecode.textContent = `${formatIntroTime(boundedElapsed)} / ${formatIntroTime(INTRO_TOTAL_MS)}`;
+  if (boundedElapsed >= INTRO_TOTAL_MS) dismissIntro();
 };
 if (intro) {
-  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+  const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  if (reducedMotion) {
     dismissIntro();
   } else {
     document.body.classList.add('intro-lock');
+    introScenes.forEach((scene, index) => scene.setAttribute('aria-hidden', String(index !== 0)));
     skipIntro?.addEventListener('click', dismissIntro);
-    introTimer = window.setInterval(() => advanceIntro(), 120);
+    intro.querySelector('.intro-enter')?.addEventListener('click', dismissIntro);
+    introStartedAt = performance.now();
+    introTimer = window.setInterval(() => {
+      if (document.hidden) {
+        if (!introPausedAt) introPausedAt = performance.now();
+        return;
+      }
+      if (introPausedAt) {
+        introStartedAt += performance.now() - introPausedAt;
+        introPausedAt = 0;
+      }
+      advanceIntro();
+    }, 80);
     advanceIntro(0);
   }
 }
-
 const messages = byId('messages');
 const form = byId('chatForm');
 const prompt = byId('prompt');
