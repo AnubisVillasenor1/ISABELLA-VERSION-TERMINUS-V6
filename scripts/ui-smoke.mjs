@@ -23,3 +23,12 @@ assert.ok(css.includes('.nav-links.is-open'), 'Responsive menu open state must b
 assert.ok(css.includes('position:sticky;top:0;z-index:30'), 'Navbar must remain sticky without a later position override');
 assert.ok(!html.includes('LATENCIA<br><b>12ms</b>'), 'UI must not publish an unverified fixed latency');
 console.log('UI_NAVIGATION_SMOKE_OK');
+
+assert.equal((html.match(/class="intro-scene(?: is-active)?"/g) || []).length, 12, 'Cinematic intro must contain exactly 12 scenes');
+assert.ok(html.includes('class="intro-world"'), 'Intro must include the 3D Genesis world');
+assert.ok(html.includes('intro-enter'), 'Final intro scene must provide a direct entrance to chat');
+assert.ok(js.includes('INTRO_SCENE_MS = 4_200'), 'Intro timing must be scene-based and bounded');
+assert.ok(js.includes("intro.dataset.scene = String(sceneIndex)"), 'Scene changes must drive camera angles');
+assert.ok(css.includes('.cinematic-intro[data-scene="11"] .intro-world'), 'Every scene camera pose must be defined through scene 12');
+assert.ok(css.includes('@media(prefers-reduced-motion:reduce)'), 'Cinematic effects must respect reduced motion');
+console.log('CINEMATIC_INTRO_12_SCENES_OK');
