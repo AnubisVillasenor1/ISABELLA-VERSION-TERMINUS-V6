@@ -25,6 +25,7 @@ import { createDiffObservatory, sanitizeDiffSnapshot, snapshotMetadataHash } fro
 import { MemoryProposalQueue } from "./memory/proposals";
 import { AckOutcome, createIdempotencyRegistry, redactSecret } from "./commerce/webhook";
 import { handleConnectorEvent } from "./commerce/connector";
+import { applyProviderSubscriptionEvent } from "./commerce/provider-events";
 import type { ProviderConfig, SignatureScheme, TenantMapping } from "./commerce/webhook";
 import { LatencyRegistry } from "./deployment/latency-metrics";
 import { TtlSingleFlight } from "./deployment/ttl-single-flight";
@@ -4261,12 +4262,42 @@ app.post("/api/v1/connectors/ingest", async (req, res) => {
         now: () => Math.floor(Date.now() / 1000),
       },
     );
+    let subscription: { outcome: string; intent: string } | null = null;
+    if (decision.code === AckOutcome.ACCEPTED && decision.tenantId) {
+      const planCandidate = connectorFirstString(req, body, [], ["planCode", "plan_code", "plan"]);
+      const planCode = planCandidate && isPlanCode(planCandidate) ? planCandidate : undefined;
+      const externalRef =
+        connectorFirstString(req, body, [], ["subscriptionId", "subscription_id", "externalRef"]) ?? externalEventId;
+      const currentPeriodEnd = connectorFirstString(req, body, [], ["currentPeriodEnd", "current_period_end"]);
+      const applied = await applyProviderSubscriptionEvent(subscriptionStore, {
+        workspaceId: decision.tenantId,
+        provider,
+        externalRef,
+        eventType,
+        planCode,
+        currentPeriodEnd,
+        contract: body.contract === true,
+      });
+      subscription = { outcome: applied.outcome, intent: applied.intent };
+      if (applied.record) {
+        bookPiLedger.append({
+          id: `commerce-webhook-${randomUUID()}`,
+          timestamp: new Date().toISOString(),
+          type: "commerce.subscription.webhook_applied",
+          methodId: COMMERCE_METHOD_IDS.webhookSubscription,
+          principal: decision.tenantId,
+          riskTier: "MEDIUM",
+          status: `SUBSCRIPTION_${applied.record.status.toUpperCase()}`,
+        });
+      }
+    }
     res.status(decision.status).json({
       success: decision.code === AckOutcome.ACCEPTED || decision.code === AckOutcome.DUPLICATE,
       code: decision.code,
       retryable: decision.retryable,
       tenant_id: decision.tenantId ?? null,
       event_id: decision.dedupeKey ?? null,
+      subscription,
     });
   } catch (err) {
     console.error("[Connectors] ingest failed:", redactSecret(err instanceof Error ? err.message : String(err)));
@@ -4353,6 +4384,7 @@ const COMMERCE_METHOD_IDS = {
   subscribe: "TINA.YUN.COMMERCE.record_subscription.v0.1.0.MEDIUM.HUMAN_IN_THE_LOOP",
   cancel: "TINA.YUN.COMMERCE.cancel_subscription.v0.1.0.LOW.HUMAN_IN_THE_LOOP",
   offer: "TINA.YUN.COMMERCE.open_offer.v0.1.0.MEDIUM.HUMAN_IN_THE_LOOP",
+  webhookSubscription: "TINA.YUN.COMMERCE.apply_provider_event.v0.1.0.MEDIUM.HUMAN_IN_THE_LOOP",
 } as const;
 
 function commerceStringField(body: Record<string, unknown>, key: string): string | undefined {

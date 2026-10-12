@@ -11,3 +11,4 @@ export * from "./guards";
 export * from "./subscriptions";
 export * from "./entitlements";
 export * from "./metering";
+export * from "./provider-events";

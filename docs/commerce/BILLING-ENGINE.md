@@ -15,6 +15,7 @@ compara un token/estado que el proveedor ya confirmó.
 | `src/commerce/subscriptions.ts` | `SubscriptionStore`: máquina de estados + auditoría. |
 | `src/commerce/entitlements.ts` | Decisiones de función y cuota (puras). |
 | `src/commerce/metering.ts` | `UsageMeter`: contadores por workspace/cuota/día. |
+| `src/commerce/provider-events.ts` | Puente evento-de-proveedor → `SubscriptionStore`. |
 | `src/commerce/plans.ts` | Configuración de planes FREE/PREMIUM/VIP/ENTERPRISE. |
 | `src/commerce/guards.ts` | Guards de servicio, roles y errores tipados. |
 
@@ -29,6 +30,7 @@ compara un token/estado que el proveedor ya confirmó.
 | POST | `/api/v1/billing/cancel` | admin | Cancela la suscripción registrada. |
 | GET | `/api/v1/billing/usage?workspaceId=` | admin | Uso del día vs cuota por clave. |
 | POST | `/api/v1/commerce/offers` | admin | Puerta real: exige `offer` + cuota `active_offers`. |
+| POST | `/api/v1/connectors/ingest` | firma | Webhook firmado del proveedor; aplica la suscripción. |
 
 Auth `admin` = bearer `GENESIS_ADMIN_API_TOKEN` (auth de servicio). No hay login de
 usuario final todavía; esa es la brecha pendiente.
@@ -56,6 +58,27 @@ Reglas duras:
   `QUOTA_EXCEEDED`.
 - El estado de la suscripción manda: un plan PREMIUM `canceled` no habilita nada.
 
+## Webhooks del proveedor → suscripción
+
+`POST /api/v1/connectors/ingest` verifica la firma HMAC del proveedor y resuelve el
+tenant (ver `src/commerce/connector.ts`). Si el evento se **ACEPTA**, se aplica al
+`SubscriptionStore` vía `applyProviderSubscriptionEvent`:
+
+- `defaultResolveIntent(eventType)` clasifica por palabras clave en orden de
+  prioridad (terminales antes que activadores): `suspend`, `cancel`, `past_due`,
+  `trial`, `activate`; desconocido → `ignore` (no se inventa transición).
+- El **evento no es autoridad**: solo aplica después de firma válida + tenant
+  resuelto. El plan se toma del cuerpo (`planCode`/`plan_code`/`plan`) o del
+  registro existente. ENTERPRISE exige `contract: true`.
+- Resultados de negocio no lanzan; se devuelven como `outcome`: `APPLIED`,
+  `IGNORED_UNMAPPED_EVENT`, `REJECTED_NO_SUBSCRIPTION`,
+  `REJECTED_PLAN_UNRESOLVED`, `REJECTED_CONTRACT_REQUIRED`, `REJECTED_TRANSITION`.
+- Cada suscripción aplicada se registra en BookPI
+  (`commerce.subscription.webhook_applied`).
+
+Se requiere `CONNECTOR_WEBHOOK_SECRET` (y opcional `CONNECTOR_TENANT_MAP`) para que
+el endpoint atienda; sin esa configuración responde `CONNECTOR_NOT_CONFIGURED`.
+
 ## Persistencia
 
 `SubscriptionStore` usa por defecto persistencia en memoria
@@ -66,7 +89,10 @@ día por diseño; su persistencia durable es trabajo pendiente.
 ## Pendiente (no presentar como terminado)
 
 1. Auth de usuario final + sesiones.
-2. Webhooks del proveedor de pagos → `subscriptionStore`.
-3. Persistencia durable de suscripciones y metering.
-4. UI de billing.
-5. Tarifas/precios y facturación (invoices).
+2. Persistencia durable de suscripciones y metering.
+3. UI de billing.
+4. Tarifas/precios y facturación (invoices).
+5. Mapeo de planes específico por proveedor (hoy heurístico por cuerpo/registro).
+
+> Nota: el puente webhooks → `SubscriptionStore` ya está implementado y probado
+> (ver arriba); no se declara verificado hasta revisión humana.

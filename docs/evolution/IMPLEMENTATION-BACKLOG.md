@@ -111,9 +111,21 @@ Pruebas: `test/commerce/subscriptions.test.ts`, `entitlements.test.ts`, `meterin
 
 - Autenticación de usuario final (hoy las rutas usan token de servicio
   `GENESIS_ADMIN_API_TOKEN`; no hay login de usuario).
-- Recepción de webhooks del proveedor de pagos que actualicen el store.
 - Persistencia durable del `SubscriptionStore` y del `UsageMeter`.
 - UI de billing.
+
+### Lote 1.b — Webhooks del proveedor → suscripción (implementado)
+
+- `src/commerce/provider-events.ts`: `applyProviderSubscriptionEvent` +
+  `defaultResolveIntent` mapean un evento firmado a transiciones del
+  `SubscriptionStore` (`activate|trial|past_due|cancel|suspend`), con resultados
+  de negocio como `outcome` (no lanza) y ENTERPRISE exigiendo `contract: true`.
+- `src/server.ts`: `POST /api/v1/connectors/ingest` aplica el evento aceptado al
+  store y lo registra en BookPI (`commerce.subscription.webhook_applied`).
+
+Pruebas: `test/commerce/provider-events.test.ts` (12). Documentación:
+`docs/commerce/BILLING-ENGINE.md`.
+
 
 ## Lote 2 — Persistencia durable del BookPI (implementado)
 
