@@ -37,17 +37,17 @@
 - Integración de esas funciones compartidas en el runtime HTTP.
 - Reescritura del README para diferenciar componentes ejecutables, objetivos arquitectónicos y bloqueos de producción.
 
-## Evidencia de Preview — SHA d71f89c
+## Evidencia de Preview — SHA ff2ed47
 
-- Vercel deployment: **READY**.
-- El script `pnpm run build` completó correctamente; incluye TypeScript build, Vitest, bundle esbuild y smoke test de runtime.
+- Vercel deployment del SHA `ff2ed475163dc4949b6c13dabf63cd2e1200b8f0`: **READY**.
+- `pnpm run build` completó TypeScript, Vitest, bundle esbuild, `node --check src/ui/app.js`, smoke de UI y smoke de runtime.
 - Vitest: **519 pruebas aprobadas, 100 archivos de prueba aprobados**.
-- `test/provider-policy.test.ts`: siete pruebas aprobadas.
-- Smoke markers `LOCAL_CONVERSATION_SMOKE_OK`, `PUBLIC_API_GUARDRAILS_OK` y `OPENROUTER_PAID_ID_BLOCK_OK` presentes.
-- `GET /health` y `GET /api/v1/health`: HTTP 200; cabeceras de seguridad presentes.
+- `UI_NAVIGATION_SMOKE_OK`, `LOCAL_CONVERSATION_SMOKE_OK`, `PUBLIC_API_GUARDRAILS_OK` y `OPENROUTER_PAID_ID_BLOCK_OK` presentes.
+- `GET /`, `/ui/app.js`, `/styles/cinematic.css` y `/api/v1/health`: HTTP 200; cabeceras de seguridad presentes en API.
 - `LLM_GATEWAY_SMOKE_SKIPPED`: no hay credenciales gratuitas elegibles; la inferencia externa no está demostrada.
 - GitHub Actions sigue devolviendo `startup_failure` sin jobs.
 - `ige-omega/Cargo.lock` sigue ausente.
+- El smoke UI valida enlaces/anclas, elementos de control y cableado estático; no sustituye una prueba E2E real en navegadores móviles y de escritorio.
 
 ## Gates pendientes
 

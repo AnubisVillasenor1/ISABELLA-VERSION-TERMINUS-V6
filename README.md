@@ -20,7 +20,7 @@
 
 ## Estado operativo y readiness
 
-La última línea base cuantificada en documentación fue **44.25% (≈44%) de preparación ponderada**, basada en un Preview anterior que reportó 519 pruebas aprobadas en 100 archivos, smoke local y guardrails correctos. Esa cifra **no es una medición científica ni el porcentaje de funcionalidades** y no debe presentarse como validación del SHA actual hasta repetir el pipeline completo después de estos cambios de UI.
+**Último SHA validado en Preview: `ff2ed475163dc4949b6c13dabf63cd2e1200b8f0` — Vercel READY.** El build de ese SHA completó TypeScript, Vitest (**519 pruebas aprobadas en 100 archivos**), esbuild, `node --check src/ui/app.js`, `UI_NAVIGATION_SMOKE_OK` y los smoke tests del runtime. La conversación local y los guardrails HTTP pasaron; la prueba de inferencia externa se omitió por ausencia de credenciales gratuitas elegibles. La estimación ponderada se mantiene en **44.25% (≈44%)**: no es una medición científica ni porcentaje de funcionalidades, y no se incrementa mientras los gates de inferencia externa, CI, Rust y recuperación durable sigan abiertos.
 
 | Dimensión de readiness | Peso | Última evaluación documentada | Evidencia/gate |
 |---|---:|---:|---|
@@ -80,7 +80,7 @@ Adaptadores / servicios opcionales
   └─ IGE-Ω Rust (workspace separado; no asumir integrado end-to-end)
 ```
 
-C.R.O.W.N., YUN, AEGIS, ISA, VERITAS, BookPI e IGE-Ω son dominios y módulos con distintos niveles de implementación. Consulta [mapa de arquitectura](docs/ARCHITECTURE-OPERATING-MAP.md), [especificación C.R.O.W.N./VΩ](docs/CROWN-ISABELLA-VOMEGA-OPERATING-SPEC.md), [estado real](docs/ESTADO-REAL-ACTUAL.md) y [gates de IGE-Ω](ige-omega/docs/OPERATIONS-AND-RELEASE-GATES.md). La documentación diferencia contratos de componentes realmente conectados.
+C.R.O.W.N., YUN, AEGIS, ISA, VERITAS, BookPI e IGE-Ω son dominios y módulos con distintos niveles de implementación. Consulta [mapa de arquitectura](docs/ARCHITECTURE-OPERATING-MAP.md), [especificación C.R.O.W.N./VΩ](docs/CROWN-ISABELLA-VOMEGA-OPERATING-SPEC.md), [auditoría de navegación y chat](docs/audits/UI-NAVIGATION-AND-CHAT-AUDIT-2026-10-12.md), [estado real](docs/ESTADO-REAL-ACTUAL.md) y [gates de IGE-Ω](ige-omega/docs/OPERATIONS-AND-RELEASE-GATES.md). La documentación diferencia contratos de componentes realmente conectados.
 
 ## Interfaz, navegación y voz
 
