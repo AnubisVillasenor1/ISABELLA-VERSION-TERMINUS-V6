@@ -53,12 +53,12 @@ La visión es el **norte**; abajo se reporta, sin adornos, cuánto de ella exist
 
 ## 2. Estado real hoy (lo que ya tenemos)
 
-**SHA local validado: `e68397c`** (incremento de aislamiento multi-tenant sobre `origin/main`). El árbol pasa, de forma reproducible en local:
+**SHA local validado: `9ef6d7d`** (incremento de webhooks de proveedor sobre `origin/main`). El árbol pasa, de forma reproducible en local:
 
-| Gate | Comando | Resultado en `e68397c` |
+| Gate | Comando | Resultado en `9ef6d7d` |
 |---|---|---|
 | Tipos estrictos | `pnpm typecheck` | exit 0 |
-| Pruebas | `pnpm test` | **617 aprobadas / 114 archivos** |
+| Pruebas | `pnpm test` | **629 aprobadas / 115 archivos** |
 | Build completo | `pnpm build` | exit 0 (tsc + vitest + esbuild + `node --check src/ui/app.js` + smoke UI + smoke runtime) |
 | Suite de seguridad | `pnpm run security:suite` | **14 passed / 0 failed** |
 
@@ -77,7 +77,7 @@ La visión es el **norte**; abajo se reporta, sin adornos, cuánto de ella exist
 - **Federación:** eventos YUN (`src/federation/yun-event.ts`) con validación y detección de alteración.
 - **Seguridad criptográfica:** comparaciones en tiempo constante (`timingSafeEqual`), nonces anti-replay, firma de webhooks HMAC-SHA256, ISA-X con Ed25519 y PQC fail-closed.
 - **Ciberdefensa (OSIRIS):** capa de **observación** (`src/osiris/`): detección heurística determinista, postura defensiva honesta (`active/inactive/unknown`) y registro append-only de hallazgos en BookPI; endpoints gated `GET /api/v1/osiris/status` y `POST /api/v1/osiris/inspect`. **No bloquea ni certifica**; ver [docs/osiris](docs/osiris/ARCHITECTURE.md).
-- **Monetización (comercio):** motor de entitlements + suscripciones + metering (`src/commerce/subscriptions.ts`, `entitlements.ts`, `metering.ts`) con endpoints `/api/v1/billing/*` y una puerta real `POST /api/v1/commerce/offers`. **Registra** estado verificado del proveedor y **aplica** planes/cuotas; **no procesa pagos ni almacena datos de tarjeta**. Ver [docs/commerce](docs/commerce/BILLING-ENGINE.md) y el [backlog](docs/evolution/IMPLEMENTATION-BACKLOG.md).
+- **Monetización (comercio):** motor de entitlements + suscripciones + metering (`src/commerce/subscriptions.ts`, `entitlements.ts`, `metering.ts`) con endpoints `/api/v1/billing/*` y una puerta real `POST /api/v1/commerce/offers`. Los **webhooks firmados** del proveedor se aplican al `SubscriptionStore` vía `src/commerce/provider-events.ts` (`POST /api/v1/connectors/ingest`). **Registra** estado verificado del proveedor y **aplica** planes/cuotas; **no procesa pagos ni almacena datos de tarjeta**. Ver [docs/commerce](docs/commerce/BILLING-ENGINE.md) y el [backlog](docs/evolution/IMPLEMENTATION-BACKLOG.md).
 - **Identidad y aislamiento (tenancy):** verificador de aislamiento multi-tenant **a nivel de aplicación** (`src/tenancy/isolation.ts`): compara el tenant de los registros contra el del principal verificado y falla cerrado ante acceso cruzado; cableado al tool `tenant_isolation_verify`. **No verifica RLS de base de datos**. Ver [docs/tenancy](docs/tenancy/ISOLATION.md).
 - **Interfaz** (`src/ui/`): navegación por anclas, menú móvil accesible, chat real contra `POST /api/v1/cognition/route`, voz del navegador (si existe), estados de carga y error.
 - **Operación:** readiness, canary, latency-metrics, TTL single-flight, adaptadores de production-ops.
@@ -90,7 +90,7 @@ La visión es el **norte**; abajo se reporta, sin adornos, cuánto de ella exist
 | Dimensión | Peso | Evaluación | Evidencia / gate |
 |---|---:|---:|---|
 | Runtime HTTP y flujo local | 20% | 75% | Smoke HTTP local verde en el SHA |
-| Pruebas y validación automatizada | 20% | 75% | 617 pruebas / 114 archivos |
+| Pruebas y validación automatizada | 20% | 75% | 629 pruebas / 115 archivos |
 | Seguridad y guardrails | 15% | 45% | Suite de seguridad 14/14; falta revisión de producción |
 | Inferencia externa real | 15% | 0% verificado | Sin credenciales elegibles; no demostrada |
 | Persistencia durable y recuperación | 10% | 40% | Ledger durable JSONL + backup/restore/retención con tests; falta E2E Postgres/Supabase y simulacro de recuperación |
@@ -290,7 +290,7 @@ Consultar [.env.example](.env.example) y [guía de entorno](docs/ENVIRONMENT.md)
 | `src/federation/`, `src/observability/`, `src/deployment/` | Eventos, telemetría y operación |
 | `src/commerce/` | Comercio: planes, candados, conectores + motor de entitlements/suscripciones/metering |
 | `ige-omega/` | Workspace Rust separado |
-| `test/` | Pruebas automatizadas (114 archivos) |
+| `test/` | Pruebas automatizadas (115 archivos) |
 | `scripts/` | Smokes, seguridad, inventarios y evidencia |
 | `docs/` | Especificaciones, auditorías, runbooks y contratos |
 
