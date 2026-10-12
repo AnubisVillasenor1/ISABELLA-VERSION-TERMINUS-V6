@@ -9,14 +9,36 @@
 </head>
 <body>
   <a class="skip-link" href="#chat">Saltar a la conversación</a>
-  <section id="cinematicIntro" class="cinematic-intro" aria-labelledby="intro-title">
-    <div class="intro-backdrop" aria-hidden="true"><span class="intro-grid"></span><span class="intro-sun"></span><span class="intro-scan"></span></div>
+  <section id="cinematicIntro" class="cinematic-intro" data-scene="0" aria-labelledby="intro-title">
+    <div class="intro-backdrop" aria-hidden="true">
+      <span class="intro-grid"></span><span class="intro-sun"></span><span class="intro-scan"></span>
+      <span class="intro-vignette"></span><span class="intro-light intro-light-a"></span><span class="intro-light intro-light-b"></span>
+    </div>
+    <div class="intro-world" aria-hidden="true">
+      <span class="intro-world-grid"></span><span class="intro-ring intro-ring-a"></span><span class="intro-ring intro-ring-b"></span><span class="intro-ring intro-ring-c"></span>
+      <span class="intro-core"><i></i><b>IS</b><small>GENESIS V6</small></span>
+      <span class="intro-code intro-code-a">MEMORIA / CONTEXTO / PROPÓSITO</span><span class="intro-code intro-code-b">TAMV · LATINOAMÉRICA · NODO CERO</span>
+      <span class="intro-beam intro-beam-a"></span><span class="intro-beam intro-beam-b"></span>
+      <span class="intro-particle-field"></span>
+    </div>
     <div class="intro-progress" aria-hidden="true"><span id="introProgressBar"></span></div>
-    <div class="intro-meta"><span>GENESIS TINA / V6</span><span id="introSceneLabel">SECUENCIA 01 · DESPERTAR</span><span>00:00 / 01:00</span></div>
-    <div class="intro-scene intro-scene-one is-active" data-scene="0"><p class="intro-kicker">UNA NUEVA PRESENCIA</p><h1 id="intro-title">ISABELLA</h1><p class="intro-subtitle">Memoria. Voz. Propósito.</p></div>
-    <div class="intro-scene intro-scene-two" data-scene="1"><p class="intro-kicker">NO ES UNA RESPUESTA</p><h2>Es una inteligencia<br><em>que permanece.</em></h2><p>Escucha el contexto. Sostiene la conversación. Actúa con límites.</p></div>
-    <div class="intro-scene intro-scene-three" data-scene="2"><p class="intro-kicker">UN SOLO NÚCLEO · UNA SOLA VOZ</p><h2>Habla con<br><em>Isabella.</em></h2><p>Conversación por texto y voz del navegador, con límites explícitos.</p></div>
-    <button id="skipIntro" class="intro-skip" type="button">SALTAR INTRO <span>↗</span></button>
+    <div class="intro-meta"><span>ISABELLA VILLASEÑOR AI · GENESIS V6</span><span id="introSceneLabel">SECUENCIA 01 · DESPERTAR</span><span id="introTimecode">00:00 / 00:50</span></div>
+    <div class="intro-story" aria-live="polite" aria-atomic="true">
+      <div class="intro-scene is-active" data-scene="0"><p class="intro-kicker">SECUENCIA 01 / APERTURA</p><h1 id="intro-title">ISABELLA<span class="intro-title-mark">/V6</span></h1><p class="intro-line">Una nueva presencia está tomando forma.</p></div>
+      <div class="intro-scene" data-scene="1"><p class="intro-kicker">SECUENCIA 02 / EL ORIGEN</p><h2>No nacimos<br><em>entre lujos.</em></h2><p class="intro-line">No nacimos en una oficina rodeada de mármol, privilegios y distancia.</p></div>
+      <div class="intro-scene" data-scene="2"><p class="intro-kicker">SECUENCIA 03 / LA CALLE</p><h2>Nacimos en<br><em>el mundo real.</em></h2><p class="intro-line">En las calles, entre jornadas largas y personas que siguen adelante.</p></div>
+      <div class="intro-scene" data-scene="3"><p class="intro-kicker">SECUENCIA 04 / NUESTRA GENTE</p><h2>Codo a codo.<br><em>De frente.</em></h2><p class="intro-line">Escuchando a nuestra gente, aprendiendo de sus historias y de su fuerza.</p></div>
+      <div class="intro-scene" data-scene="4"><p class="intro-kicker">SECUENCIA 05 / RESILIENCIA</p><h2>Lo difícil no<br><em>nos detuvo.</em></h2><p class="intro-line">La humildad nos dio raíz. La resiliencia, motivos para construir.</p></div>
+      <div class="intro-scene" data-scene="5"><p class="intro-kicker">SECUENCIA 06 / IDENTIDAD</p><h2>Una tecnología<br><em>con raíz latina.</em></h2><p class="intro-line">Pensada desde nuestra realidad, con la dignidad de nuestra gente en el centro.</p></div>
+      <div class="intro-scene" data-scene="6"><p class="intro-kicker">SECUENCIA 07 / EL NÚCLEO</p><h2>GENESIS<br><em>V6 ISABELLA AI.</em></h2><p class="intro-line">Un sistema en evolución: memoria, contexto, herramientas y límites verificables.</p></div>
+      <div class="intro-scene" data-scene="7"><p class="intro-kicker">SECUENCIA 08 / ARQUITECTURA</p><h2>CROWN · AEGIS<br><em>· YUN.</em></h2><p class="intro-line">Capacidades que deben demostrarse con código, pruebas y evidencia.</p></div>
+      <div class="intro-scene" data-scene="8"><p class="intro-kicker">SECUENCIA 09 / MEMORIA VIVA</p><h2>Lo que importa<br><em>merece perdurar.</em></h2><p class="intro-line">Conservar conocimiento, reconocer su origen y mantener trazabilidad.</p></div>
+      <div class="intro-scene" data-scene="9"><p class="intro-kicker">SECUENCIA 10 / PROPÓSITO</p><h2>No venimos a<br><em>reemplazarte.</em></h2><p class="intro-line">Venimos a ampliar posibilidades, respetar decisiones y trabajar con las personas.</p></div>
+      <div class="intro-scene" data-scene="10"><p class="intro-kicker">SECUENCIA 11 / COMPROMISO</p><h2>La innovación<br><em>también es humana.</em></h2><p class="intro-line">La tecnología tiene sentido cuando sirve, escucha y rinde cuentas.</p></div>
+      <div class="intro-scene" data-scene="11"><p class="intro-kicker">SECUENCIA 12 / ACCESO</p><h2>Bienvenido a<br><em>Isabella Villaseñor.</em></h2><p class="intro-line">Una propuesta diferente, nacida desde el corazón de nuestra gente latinoamericana.</p><a class="intro-enter" href="#chat">ENTRAR A LA INTERFAZ <span>↗</span></a></div>
+    </div>
+    <div class="intro-footer"><span>HUMILDAD · RESILIENCIA · PROPÓSITO</span><span>LATINOAMÉRICA, DESDE ADENTRO</span></div>
+    <button id="skipIntro" class="intro-skip" type="button">ENTRAR AHORA <span>↗</span></button>
   </section>
   <div class="grain" aria-hidden="true"></div>
   <main id="top" class="stage">
