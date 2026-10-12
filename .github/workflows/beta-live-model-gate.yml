@@ -1,0 +1,47 @@
+name: Isabella Beta Live Model Gate
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: isabella-beta-live-model-gate
+  cancel-in-progress: false
+
+jobs:
+  live-open-model-smoke:
+    name: Verify a real open-model response
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    environment: beta-live-model-gate
+    env:
+      ISABELLA_REQUIRE_LLM_SMOKE: "true"
+      ALLOW_PAID_PROVIDER_FALLBACK: "false"
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      OPENROUTER_FREE_MODEL: ${{ vars.OPENROUTER_FREE_MODEL }}
+      HF_TOKEN: ${{ secrets.HF_TOKEN }}
+      HF_FREE_MODELS: ${{ vars.HF_FREE_MODELS }}
+    steps:
+      - name: Checkout exact branch revision
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.0
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Require at least one eligible free provider
+        shell: bash
+        run: |
+          if [[ -z "$OPENROUTER_API_KEY" && ( -z "$HF_TOKEN" || -z "$HF_FREE_MODELS" ) ]]; then
+            echo "::error::Configure environment secret OPENROUTER_API_KEY or both environment secret HF_TOKEN and repository variable HF_FREE_MODELS in beta-live-model-gate. This gate intentionally does not use paid providers."
+            exit 1
+          fi
+      - name: Build and require a real external model response
+        run: pnpm build

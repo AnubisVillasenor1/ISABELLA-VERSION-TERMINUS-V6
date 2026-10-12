@@ -97,14 +97,25 @@ export class TokenBucket {
     private readonly refillPerMs: number,
     now = Date.now(),
   ) {
-    if (capacity < 1) throw new Error("OPS: token bucket capacity must be >= 1");
-    if (refillPerMs <= 0) throw new Error("OPS: refill rate must be > 0");
+    if (!Number.isSafeInteger(capacity) || capacity < 1) {
+      throw new RangeError("OPS: token bucket capacity must be a positive safe integer");
+    }
+    if (!Number.isFinite(refillPerMs) || refillPerMs <= 0) {
+      throw new RangeError("OPS: refill rate must be finite and > 0");
+    }
+    if (!Number.isFinite(now)) throw new RangeError("OPS: initial time must be finite");
     this.tokens = capacity;
     this.lastRefill = now;
   }
 
   tryConsume(cost = 1, now = Date.now()): RateLimitDecision {
-    if (cost < 1) throw new Error("OPS: cost must be >= 1");
+    if (!Number.isFinite(cost) || cost < 1) {
+      throw new RangeError("OPS: cost must be finite and >= 1");
+    }
+    if (cost > this.capacity) {
+      throw new RangeError("OPS: cost cannot exceed token bucket capacity");
+    }
+    if (!Number.isFinite(now)) throw new RangeError("OPS: time must be finite");
     this.refill(now);
     if (this.tokens >= cost) {
       this.tokens -= cost;
@@ -115,7 +126,10 @@ export class TokenBucket {
   }
 
   private refill(now: number): void {
-    const elapsed = Math.max(0, now - this.lastRefill);
+    // Clock regressions must not move the refill watermark backwards: doing so
+    // would allow a later timestamp to count the same interval twice.
+    if (now <= this.lastRefill) return;
+    const elapsed = now - this.lastRefill;
     this.tokens = Math.min(this.capacity, this.tokens + elapsed * this.refillPerMs);
     this.lastRefill = now;
   }
@@ -140,22 +154,36 @@ export class CircuitBreaker {
   private state: CircuitState = "CLOSED";
   private failures = 0;
   private openedAt = 0;
+  private halfOpenProbeInFlight = false;
   private readonly failureThreshold: number;
   private readonly openMs: number;
 
   constructor(opts: CircuitBreakerOptions = {}) {
     this.failureThreshold = opts.failureThreshold ?? 5;
     this.openMs = opts.openMs ?? 30_000;
+    if (!Number.isSafeInteger(this.failureThreshold) || this.failureThreshold < 1) {
+      throw new RangeError("OPS: circuit breaker failureThreshold must be a positive safe integer");
+    }
+    if (!Number.isFinite(this.openMs) || this.openMs <= 0) {
+      throw new RangeError("OPS: circuit breaker openMs must be finite and > 0");
+    }
   }
 
   /** ¿Se permite intentar la llamada? Abre el circuito tras N fallos. */
   allow(now = Date.now()): boolean {
+    if (!Number.isFinite(now)) throw new RangeError("OPS: circuit breaker time must be finite");
     if (this.state === "OPEN") {
       if (now - this.openedAt >= this.openMs) {
         this.state = "HALF_OPEN";
+        this.halfOpenProbeInFlight = true;
         return true;
       }
       return false;
+    }
+    if (this.state === "HALF_OPEN") {
+      // Only one request may probe a recovering dependency at a time.
+      if (this.halfOpenProbeInFlight) return false;
+      this.halfOpenProbeInFlight = true;
     }
     return true;
   }
@@ -163,14 +191,17 @@ export class CircuitBreaker {
   recordSuccess(): void {
     this.failures = 0;
     this.state = "CLOSED";
+    this.halfOpenProbeInFlight = false;
   }
 
   recordFailure(now = Date.now()): void {
+    if (!Number.isFinite(now)) throw new RangeError("OPS: circuit breaker time must be finite");
     this.failures += 1;
     if (this.state === "HALF_OPEN" || this.failures >= this.failureThreshold) {
       this.state = "OPEN";
       this.openedAt = now;
     }
+    this.halfOpenProbeInFlight = false;
   }
 
   get currentState(): CircuitState {
@@ -180,7 +211,9 @@ export class CircuitBreaker {
 
 /** Ejecuta con timeout; un timeout nunca se reporta como éxito. */
 export async function withTimeout<T>(fn: () => Promise<T>, timeoutMs: number, label = "operation"): Promise<T> {
-  if (timeoutMs <= 0) throw new Error("OPS: timeoutMs must be > 0");
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+    throw new RangeError("OPS: timeoutMs must be finite and > 0");
+  }
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     return await Promise.race([
@@ -229,7 +262,16 @@ export interface MaintenanceWindow {
 /** ¿Está activa la ventana de mantenimiento en `now`? */
 export function isMaintenanceActive(windows: readonly MaintenanceWindow[], now = new Date()): boolean {
   const t = now.getTime();
-  return windows.some((w) => t >= new Date(w.startsAt).getTime() && t <= new Date(w.endsAt).getTime());
+  if (!Number.isFinite(t)) throw new RangeError("OPS: current maintenance-check time must be valid");
+
+  return windows.some((window) => {
+    const startsAt = new Date(window.startsAt).getTime();
+    const endsAt = new Date(window.endsAt).getTime();
+    if (!Number.isFinite(startsAt) || !Number.isFinite(endsAt) || startsAt > endsAt) {
+      throw new RangeError("OPS: maintenance windows must contain valid dates with startsAt <= endsAt");
+    }
+    return t >= startsAt && t <= endsAt;
+  });
 }
 
 export interface OpsSnapshot {

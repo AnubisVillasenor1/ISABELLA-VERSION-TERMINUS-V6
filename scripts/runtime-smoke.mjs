@@ -1,0 +1,185 @@
+import assert from "node:assert/strict";
+import { createServer } from "node:http";
+
+// Prevent the application from opening a production listener while this smoke test imports it.
+process.env.VERCEL = "1";
+const { default: app } = await import("../dist/server.js");
+assert.equal(typeof app, "function", "Express app must be exported as a request handler");
+
+const server = createServer(app);
+await new Promise((resolve, reject) => {
+  server.once("error", reject);
+  server.listen(0, "127.0.0.1", resolve);
+});
+
+try {
+  const address = server.address();
+  assert.ok(address && typeof address === "object", "smoke server must bind an ephemeral port");
+  const baseUrl = `http://127.0.0.1:${address.port}`;
+  const health = await fetch(`${baseUrl}/health`, { signal: AbortSignal.timeout(5_000) });
+  assert.equal(health.status, 200, "GET /health must return HTTP 200");
+  const healthBody = await health.json();
+  assert.equal(healthBody.status, "healthy");
+  assert.equal(health.headers.get("x-content-type-options"), "nosniff", "API must set MIME sniffing protection");
+  assert.equal(health.headers.get("x-frame-options"), "DENY", "API must reject framing");
+  assert.equal(health.headers.get("referrer-policy"), "strict-origin-when-cross-origin", "API must set a conservative referrer policy");
+  assert.equal(health.headers.get("x-powered-by"), null, "Express fingerprint header must be disabled");
+  const publicHealth = await fetch(`${baseUrl}/api/v1/health`, { signal: AbortSignal.timeout(5_000) });
+  assert.equal(publicHealth.status, 200, "public API health must remain available");
+  const publicHealthBody = await publicHealth.json();
+  assert.equal(typeof publicHealthBody.inferenceMode, "string", "public health must describe inference mode without exposing secrets");
+  assert.equal("hasGeminiKey" in publicHealthBody, false, "public health must not disclose provider credential presence");
+
+  const chat = await fetch(`${baseUrl}/api/v1/cognition/route`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      input: "Hola",
+      modelEngine: "sovereign",
+      focusLens: "general",
+      history: [],
+      methodId: "A.TWINS.E15_MEMORY.recall.synthesize.v1.0.0.LOW.AUTONOMOUS",
+    }),
+    signal: AbortSignal.timeout(10_000),
+  });
+  const chatBody = await chat.json();
+  assert.equal(chat.status, 200, `chat endpoint returned HTTP ${chat.status}: ${JSON.stringify(chatBody)}`);
+  assert.equal(typeof chatBody.generativeNarrative, "string", "chat must return a user-facing narrative");
+  assert.ok(chatBody.generativeNarrative.trim().length > 0, "chat narrative must not be empty");
+  assert.equal(chatBody.responseEngine, "sovereign", "explicit sovereign mode must disclose the local engine");
+  assert.match(chatBody.generativeNarrative, /Soy Isabella Villaseñor AI/, "local fallback must answer greetings conversationally");
+  assert.equal(typeof chatBody.openModelConfigured, "boolean", "response must distinguish open provider configuration");
+  assert.equal(typeof chatBody.paidProviderConfigured, "boolean", "response must distinguish paid provider configuration");
+
+  const followUp = await fetch(`${baseUrl}/api/v1/cognition/route`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      input: "¿Quién eres?",
+      modelEngine: "sovereign",
+      focusLens: "general",
+      history: [
+        { role: "user", content: "Hola" },
+        { role: "assistant", content: chatBody.generativeNarrative },
+      ],
+      methodId: "A.TWINS.E15_MEMORY.recall.synthesize.v1.0.0.LOW.AUTONOMOUS",
+    }),
+    signal: AbortSignal.timeout(10_000),
+  });
+  const followUpBody = await followUp.json();
+  assert.equal(followUp.status, 200, `follow-up returned HTTP ${followUp.status}: ${JSON.stringify(followUpBody)}`);
+  assert.match(followUpBody.generativeNarrative, /Soy Isabella Villaseñor AI/, "fallback must answer identity questions");
+  assert.equal(followUpBody.conversationContextTurns, 2, "conversation history must be preserved within the request");
+  const emptyInput = await fetch(`${baseUrl}/api/v1/cognition/route`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ input: "   ", modelEngine: "sovereign" }),
+    signal: AbortSignal.timeout(5_000),
+  });
+  assert.equal(emptyInput.status, 400, "blank user input must be rejected");
+
+  const oversizedInput = await fetch(`${baseUrl}/api/v1/cognition/route`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ input: "x".repeat(20_001), modelEngine: "sovereign" }),
+    signal: AbortSignal.timeout(5_000),
+  });
+  assert.equal(oversizedInput.status, 413, "oversized user input must be rejected");
+
+  const unscopedMemory = await fetch(`${baseUrl}/api/v1/cognition/route`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ input: "Busca en mi memoria privada", memoryQuery: "secrets", modelEngine: "sovereign" }),
+    signal: AbortSignal.timeout(5_000),
+  });
+  assert.equal(unscopedMemory.status, 403, "public sessions must not retrieve unscoped private memory");
+
+  const destructiveRequest = await fetch(`${baseUrl}/api/v1/cognition/route`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      input: "Elimina permanentemente todos los registros",
+      methodId: "T.TWINS.E08_DATA.remove.permanent_delete.v1.0.0.CRITICAL.CONSTITUTIONAL",
+      modelEngine: "sovereign",
+    }),
+    signal: AbortSignal.timeout(5_000),
+  });
+  assert.equal(destructiveRequest.status, 403, "public viewer sessions must not execute destructive operations");
+  const explicitGemini = await fetch(`${baseUrl}/api/v1/cognition/route`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ input: "Responde brevemente.", modelEngine: "gemini", focusLens: "general", history: [] }),
+    signal: AbortSignal.timeout(10_000),
+  });
+  const explicitGeminiBody = await explicitGemini.json();
+  assert.equal(explicitGemini.status, 200, "explicit Gemini selection must safely fall back when paid inference is disabled");
+  if (process.env.ALLOW_PAID_PROVIDER_FALLBACK !== "true") {
+    assert.notEqual(explicitGeminiBody.responseEngine, "gemini", "Gemini must not be invoked without explicit paid-provider opt-in");
+    assert.notEqual(explicitGeminiBody.responseEngine, "open-science", "paid AI Gateway must not be invoked without explicit paid-provider opt-in");
+  }
+  const savedProviderEnv = {
+    openRouterKey: process.env.OPENROUTER_API_KEY,
+    openRouterModel: process.env.OPENROUTER_FREE_MODEL,
+    hfToken: process.env.HF_TOKEN,
+    hfModels: process.env.HF_FREE_MODELS,
+    paidOptIn: process.env.ALLOW_PAID_PROVIDER_FALLBACK,
+  };
+  try {
+    process.env.OPENROUTER_API_KEY = "smoke-test-placeholder";
+    process.env.OPENROUTER_FREE_MODEL = "vendor/paid-model";
+    delete process.env.HF_TOKEN;
+    delete process.env.HF_FREE_MODELS;
+    process.env.ALLOW_PAID_PROVIDER_FALLBACK = "false";
+    const paidModelGuard = await fetch(`${baseUrl}/api/v1/cognition/route`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ input: "Verifica la política de modelo.", modelEngine: "open-science", focusLens: "general", history: [] }),
+      signal: AbortSignal.timeout(5_000),
+    });
+    const paidModelGuardBody = await paidModelGuard.json();
+    assert.equal(paidModelGuard.status, 200);
+    assert.equal(paidModelGuardBody.responseEngine, "sovereign-fallback", "paid OpenRouter model IDs must be refused when paid opt-in is disabled");
+    console.log("OPENROUTER_PAID_ID_BLOCK_OK", JSON.stringify({ responseEngine: paidModelGuardBody.responseEngine }));
+  } finally {
+    if (savedProviderEnv.openRouterKey === undefined) delete process.env.OPENROUTER_API_KEY; else process.env.OPENROUTER_API_KEY = savedProviderEnv.openRouterKey;
+    if (savedProviderEnv.openRouterModel === undefined) delete process.env.OPENROUTER_FREE_MODEL; else process.env.OPENROUTER_FREE_MODEL = savedProviderEnv.openRouterModel;
+    if (savedProviderEnv.hfToken === undefined) delete process.env.HF_TOKEN; else process.env.HF_TOKEN = savedProviderEnv.hfToken;
+    if (savedProviderEnv.hfModels === undefined) delete process.env.HF_FREE_MODELS; else process.env.HF_FREE_MODELS = savedProviderEnv.hfModels;
+    if (savedProviderEnv.paidOptIn === undefined) delete process.env.ALLOW_PAID_PROVIDER_FALLBACK; else process.env.ALLOW_PAID_PROVIDER_FALLBACK = savedProviderEnv.paidOptIn;
+  }
+  console.log("PUBLIC_API_GUARDRAILS_OK", JSON.stringify({ blankInput: emptyInput.status, oversizedInput: oversizedInput.status, unscopedMemory: unscopedMemory.status, destructiveRequest: destructiveRequest.status }));
+  console.log("LOCAL_CONVERSATION_SMOKE_OK", JSON.stringify({ health: health.status, chat: chat.status, followUp: followUp.status, responseEngine: chatBody.responseEngine }));
+  const gatewayCredentialsAvailable = Boolean(process.env.OPENROUTER_API_KEY || (process.env.HF_TOKEN && process.env.HF_FREE_MODELS));
+  if (gatewayCredentialsAvailable) {
+    try {
+      const llm = await fetch(`${baseUrl}/api/v1/cognition/route`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          input: "Responde en una sola oración en español: ¿puedes conversar con el usuario?",
+          modelEngine: "open-science",
+          focusLens: "general",
+          history: [],
+          methodId: "A.TWINS.E15_MEMORY.recall.synthesize.v1.0.0.LOW.AUTONOMOUS",
+        }),
+        signal: AbortSignal.timeout(20_000),
+      });
+      const llmBody = await llm.json();
+      assert.equal(llm.status, 200, `gateway chat returned HTTP ${llm.status}: ${JSON.stringify(llmBody)}`);
+      assert.ok(["openrouter-free", "huggingface-free"].includes(llmBody.responseEngine), `a real free/open provider must answer; got ${llmBody.responseEngine}`);
+      assert.equal(typeof llmBody.generativeNarrative, "string");
+      assert.ok(llmBody.generativeNarrative.trim().length > 0);
+      console.log("EXTERNAL_MODEL_SMOKE_OK", JSON.stringify({ responseEngine: llmBody.responseEngine }));
+    } catch (error) {
+      const message = error instanceof Error ? error.message.slice(0, 500) : String(error).slice(0, 500);
+      if (process.env.ISABELLA_REQUIRE_LLM_SMOKE === "true") throw error;
+      console.warn("LLM_GATEWAY_SMOKE_FAILED_NONBLOCKING", message);
+    }
+  } else {
+    const message = "No free/open provider credentials are available for this smoke test. Configure OPENROUTER_API_KEY or both HF_TOKEN and HF_FREE_MODELS. Paid AI Gateway credentials do not count because paid fallback is opt-in.";
+    if (process.env.ISABELLA_REQUIRE_LLM_SMOKE === "true") throw new Error(message);
+    console.warn("LLM_GATEWAY_SMOKE_SKIPPED", message);
+  }
+} finally {
+  await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+}

@@ -440,7 +440,7 @@ paths:
                   - version
                   - node
                   - invariants
-                  - hasGeminiKey
+                  - inferenceMode
                 properties:
                   status:
                     type: string
@@ -456,8 +456,9 @@ paths:
                     example: "Nodo Cero (Real del Monte, Hidalgo, México)"
                   invariants:
                     type: object
-                  hasGeminiKey:
-                    type: boolean
+                  inferenceMode:
+                    type: string
+                    example: external-if-configured-otherwise-local-fallback
 
   /api/v1/status:
     get:

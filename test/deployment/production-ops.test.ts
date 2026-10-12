@@ -71,9 +71,36 @@ describe("token bucket rate limiting", () => {
     expect(bucket.tryConsume(1, 0).allowed).toBe(false);
     expect(bucket.tryConsume(1, 2000).allowed).toBe(true);
   });
+
+  it("rejects non-finite configuration, costs, and timestamps", () => {
+    expect(() => new TokenBucket(Number.NaN, 0.1)).toThrow(/capacity/);
+    expect(() => new TokenBucket(1, Number.POSITIVE_INFINITY)).toThrow(/refill rate/);
+    expect(() => new TokenBucket(1, 0.1, Number.NaN)).toThrow(/time/);
+    const bucket = new TokenBucket(2, 0.1, 0);
+    expect(() => bucket.tryConsume(Number.NaN, 1)).toThrow(/cost/);
+    expect(() => bucket.tryConsume(3, 1)).toThrow(/capacity/);
+    expect(() => bucket.tryConsume(1, Number.POSITIVE_INFINITY)).toThrow(/time/);
+  });
+
+  it("does not double-count elapsed time when the clock moves backwards", () => {
+    const bucket = new TokenBucket(3, 0.001, 1000);
+    expect(bucket.tryConsume(2, 1000).remaining).toBe(1);
+    expect(bucket.tryConsume(1, 500).allowed).toBe(true);
+    expect(bucket.tryConsume(1, 1500).allowed).toBe(false);
+    expect(bucket.tryConsume(1, 2000).allowed).toBe(true);
+  });
 });
 
 describe("circuit breaker", () => {
+  it("rejects invalid thresholds, durations, and timestamps", () => {
+    expect(() => new CircuitBreaker({ failureThreshold: 0 })).toThrow(/failureThreshold/);
+    expect(() => new CircuitBreaker({ failureThreshold: 1.5 })).toThrow(/failureThreshold/);
+    expect(() => new CircuitBreaker({ openMs: Number.NaN })).toThrow(/openMs/);
+    const breaker = new CircuitBreaker();
+    expect(() => breaker.allow(Number.NaN)).toThrow(/time/);
+    expect(() => breaker.recordFailure(Number.POSITIVE_INFINITY)).toThrow(/time/);
+  });
+
   it("opens after threshold and recovers via half-open", () => {
     const breaker = new CircuitBreaker({ failureThreshold: 2, openMs: 100 });
     expect(breaker.allow(0)).toBe(true);
@@ -83,12 +110,18 @@ describe("circuit breaker", () => {
     expect(breaker.allow(50)).toBe(false);
     expect(breaker.allow(150)).toBe(true);
     expect(breaker.currentState).toBe("HALF_OPEN");
+    expect(breaker.allow(151)).toBe(false);
     breaker.recordSuccess();
     expect(breaker.currentState).toBe("CLOSED");
   });
 });
 
 describe("timeouts, correlation and maintenance", () => {
+  it("rejects invalid timeout values", async () => {
+    await expect(withTimeout(async () => "unused", Number.NaN)).rejects.toThrow(/finite and > 0/);
+    await expect(withTimeout(async () => "unused", Number.POSITIVE_INFINITY)).rejects.toThrow(/finite and > 0/);
+  });
+
   it("rejects on timeout", async () => {
     await expect(withTimeout(() => new Promise((r) => setTimeout(r, 50)), 10, "x")).rejects.toThrow(/timed out/);
     await expect(withTimeout(async () => "ok", 100)).resolves.toBe("ok");
@@ -105,6 +138,15 @@ describe("timeouts, correlation and maintenance", () => {
     const windows = [{ startsAt: "2026-01-01T00:00:00Z", endsAt: "2026-01-01T01:00:00Z", reason: "deploy" }];
     expect(isMaintenanceActive(windows, new Date("2026-01-01T00:30:00Z"))).toBe(true);
     expect(isMaintenanceActive(windows, new Date("2026-01-01T02:00:00Z"))).toBe(false);
+  });
+
+  it("rejects malformed or inverted maintenance windows", () => {
+    expect(() => isMaintenanceActive([
+      { startsAt: "not-a-date", endsAt: "2026-01-01T01:00:00Z", reason: "deploy" },
+    ])).toThrow(/valid dates/);
+    expect(() => isMaintenanceActive([
+      { startsAt: "2026-01-01T02:00:00Z", endsAt: "2026-01-01T01:00:00Z", reason: "deploy" },
+    ])).toThrow(/startsAt <= endsAt/);
   });
 
   it("builds a coherent ops snapshot", () => {
