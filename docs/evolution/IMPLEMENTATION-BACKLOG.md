@@ -62,10 +62,13 @@ Reconocimiento ejecutado sobre `src/`, `docs/`, `test/` y scripts:
    `BOOKPI_LEDGER_PATH`. Falta E2E con Postgres/Supabase y simulacro de
    recuperación. Ver `docs/bookpi/DURABLE-LEDGER.md`.
 3. **CI con jobs verdes** (typecheck, test, build, security suite) sobre `main`.
-   Estado: workflow `verify`/`security`/`production-evidence` implementado
-   (`.github/workflows/ci.yml`); el job `rust-verify` sigue bloqueado porque
-   `ige-omega/Cargo.lock` no existe y no hay toolchain Rust local para generarlo.
-   "Verde" requiere ejecución en GitHub; no se afirma desde local.
+   Estado: `blocked` por causa externa (cuenta). Los 6 workflows son YAML válido
+   (`js-yaml`), registrados `active`, pero **todo run termina en
+   `startup_failure` con 0 jobs y ~0-1s**; un workflow trivial (probe) en rama
+   temporal falló igual. Indica que Actions no arranca en este repo **privado**
+   (límite de gasto/facturación o política de cuenta). Requiere acción humana con
+   acceso de admin/facturación; no se puede poner verde desde el código. El job
+   `rust-verify` además requiere toolchain Rust y `ige-omega/Cargo.lock` (ausente).
 4. **Inferencia externa real** con credenciales (sin inventar disponibilidad).
    Estado: `specified` (bloqueado: sin credenciales).
 5. **Aislamiento multi-tenant verificado** (nivel aplicación).
