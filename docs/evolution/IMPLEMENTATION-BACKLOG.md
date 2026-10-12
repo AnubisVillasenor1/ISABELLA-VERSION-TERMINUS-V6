@@ -68,7 +68,11 @@ Reconocimiento ejecutado sobre `src/`, `docs/`, `test/` y scripts:
    temporal falló igual. Indica que Actions no arranca en este repo **privado**
    (límite de gasto/facturación o política de cuenta). Requiere acción humana con
    acceso de admin/facturación; no se puede poner verde desde el código. El job
-   `rust-verify` además requiere toolchain Rust y `ige-omega/Cargo.lock` (ausente).
+   `rust-verify` queda **desbloqueado a nivel de repositorio**: `ige-omega/Cargo.lock`
+   está comprometido (237 paquetes) y `cargo fmt --all -- --check` pasa;
+   `cargo metadata --locked` valida la coherencia lockfile/manifiestos. La
+   compilación local (clippy/test/build) sigue bloqueada por falta de enlazador
+   MSVC (`link.exe`) en el entorno; correrá en el runner `ubuntu-latest`.
 4. **Inferencia externa real** con credenciales (sin inventar disponibilidad).
    Estado: `specified` (bloqueado: sin credenciales).
 5. **Aislamiento multi-tenant verificado** (nivel aplicación).
@@ -80,6 +84,11 @@ Reconocimiento ejecutado sobre `src/`, `docs/`, `test/` y scripts:
    tests verdes; el plugin Jenkins (`gameover-jenkins-plugin/`) está
    **implementado como código fuente** pero **no compilado** aquí (sin JDK/Maven).
    Ver `docs/GAME_OVER_UAGP1_CANONICAL.md`.
+7. **Hiperaceleración cognitiva HyperCore Ω² + HyperPredict Ω.**
+   Estado: `wired` en el runtime TypeScript (`src/hypercore/`) + endpoints HTTP
+   gated + 51 pruebas verdes; invariante fail-closed (no autoriza, no ejecuta).
+   Router/affinity heurístico y caché léxica (no embeddings); CEE/speedup son
+   modelos declarados. Ver Lote 5.
 
 ### P1 — Endurecimiento
 
