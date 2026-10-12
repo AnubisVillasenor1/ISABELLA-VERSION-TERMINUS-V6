@@ -1,63 +1,63 @@
-# Estado real actual – Isabella Genesis TINA V6
+# Estado real de Isabella Genesis — 11 de octubre de 2026
 
-**Fecha:** 2026-10-10  
-**Commit:** 5a83d0b672c91f6f62562b55cdc3dfef2ecf0e13 (main)  
-**Repositorio remoto:** https://github.com/OsoPanda1/Isabella-V6-TINA.git  
-**Rama:** main  
+**Repositorio:** \`OsoPanda1/isabella-V6-TINA-h6\`  
+**Rama inspeccionada:** \`evolution/runtime-hardening-2026-10\`  
+**SHA de referencia previo a este incremento:** \`e1c09b6f4569b6e4d845eba8dff902f16a1c8d45\`  
+**Clasificación:** beta de ingeniería / Preview; no producción certificada.
 
-## Verificación ejecutada
+## Readiness estimada
 
-| Comando | Resultado | Evidencia |
-|---|---|---|
-| `pnpm typecheck` | OK (exit 0) | `production-evidence.json` (`typecheck.ok: true`) |
-| `vitest` | **474/474 passed** (92 test files) | `production-evidence.json` (`tests.passed: 474`, `tests.total: 474`, `tests.success: true`) |
-| `scripts/production-evidence.mjs` | **GATE OK** | `evidence/production-evidence.json` (`gateOk: true`) |
-| `scripts/security-suite.mjs` | **14/14 passed** (0 failed, 0 N/A) | `evidence/security-suite.json` (`summary.ok: true`, `summary.passed: 14`, `summary.total: 14`) |
-| `scripts/route-inventory.mjs` | Generado | `docs/api/route-inventory.json`, `docs/api/README.md` |
+**44.25% ponderado (≈44%) de preparación para producción.** Esta cifra es una evaluación de gates, no una métrica científica ni porcentaje de funcionalidades. Se calculó con los siguientes pesos y estimaciones de evidencia del estado anterior a este commit.
 
-## Auditoría 500 puntos (V6) – `docs/audit/500-POINT-REAUDIT-V6.md`
+| Dimensión | Peso | Puntaje | Aporte |
+|---|---:|---:|---:|
+| Runtime HTTP y flujo local | 20 | 75 | 15 |
+| Pruebas y validación automatizada | 20 | 75 | 15 |
+| Seguridad y guardrails | 15 | 45 | 6.75 |
+| Inferencia externa real verificada | 15 | 0 | 0 |
+| Persistencia durable y recuperación | 10 | 20 | 2 |
+| CI reproducible y workspace Rust | 10 | 20 | 2 |
+| Operación, observabilidad y rollback | 10 | 35 | 3.5 |
+| **Total** | **100** |  | **44.25** |
 
-| Veredicto | Cantidad | % |
-|---|---|---|
-| FUERTE (código + tests) | 71 | 14% |
-| MEDIO (código, sin tests suficientes / indirecto parcial) | 315 | 63% |
-| DÉBIL (sin evidencia directa) | 63 | 12.6% |
-| INDIRECTO (evidencia tangencial) | 50 | 10% |
-| SIN (sin evidencia) | 1 | 0.2% |
+## Evidencia observada
 
-- **Brechas totales (DÉBIL + INDIRECTO + SIN):** 114 ítems  
-- **P0 débiles:** **16/134** (11.9% de P0 aún sin evidencia suficiente)  
+- El Preview asociado al SHA de referencia figuraba como \`READY\` en Vercel.
+- El smoke test del runtime local y las guardas de API estaban incorporados en el proceso de build.
+- Las pruebas de YUN cubren validación, hash determinista y detección de alteración.
+- GitHub Actions devolvió ejecuciones con conclusión \`startup_failure\` y cero jobs para los run IDs inspeccionados.
+- \`ige-omega/Cargo.lock\` no existía en la rama inspeccionada.
+- No había evidencia de una respuesta real generada por un proveedor externo elegible en Preview.
+- La presencia de módulos BookPI, IKES o YUN no demuestra persistencia durable ni integración federada completa.
 
-## Readiness (rúbrica v1, 2026-10-09)
+## Cambios de este incremento
 
-| Métrica | Valor | Notas |
-|---|---|---|
-| Avance global de implementación | **~89%** | Código + tests mapeados por fase (typecheck + vitest verdes) |
-| Readiness productivo | **~18%** | Requiere persistencia operativa, CI end-to-end verificado, OTEL productivo, backups/restores, load tests, rollback automatizado, model serving real, auditoría externa |
+- Extracción de reglas de configuración de inferencia a \`src/inference/provider-policy.ts\`.
+- Pruebas unitarias para límites de timeout/cooldown, guardas de modelos de OpenRouter y extracción de contenido textual.
+- Integración de esas funciones compartidas en el runtime HTTP.
+- Reescritura del README para diferenciar componentes ejecutables, objetivos arquitectónicos y bloqueos de producción.
 
-## BLOCKED_ENVIRONMENT (postura honesta)
+## Evidencia de Preview — SHA d71f89c
 
-Los siguientes ítems **no son implementables verazmente hoy** con recursos locales y se documentan como `BLOCKED_ENVIRONMENT`:
+- Vercel deployment: **READY**.
+- El script `pnpm run build` completó correctamente; incluye TypeScript build, Vitest, bundle esbuild y smoke test de runtime.
+- Vitest: **519 pruebas aprobadas, 100 archivos de prueba aprobados**.
+- `test/provider-policy.test.ts`: siete pruebas aprobadas.
+- Smoke markers `LOCAL_CONVERSATION_SMOKE_OK`, `PUBLIC_API_GUARDRAILS_OK` y `OPENROUTER_PAID_ID_BLOCK_OK` presentes.
+- `GET /health` y `GET /api/v1/health`: HTTP 200; cabeceras de seguridad presentes.
+- `LLM_GATEWAY_SMOKE_SKIPPED`: no hay credenciales gratuitas elegibles; la inferencia externa no está demostrada.
+- GitHub Actions sigue devolviendo `startup_failure` sin jobs.
+- `ige-omega/Cargo.lock` sigue ausente.
 
-- **ML-KEM/ML-DSA/SLH-DSA** (`src/security/post-quantum.ts`, `src/security/isa-x/*`, `docs/security/ISA-X-IMPLEMENTATION.md`): requieren backend HSM/KMS externo o librería PQC nativa. **Ed25519 real** sí está implementado hoy.
-- **Pines de digest reales + egress allowlist definitivo** (`k8s/*`, `Dockerfile`, `docs/deployment/README.md`): dependen de registry real (Harbor/ECR/GHCR). No se inventarán digests.
-- **Deploy a producción Vercel**: requiere `environment: production`, aprobación y consumo correcto de artefactos `evidence/` por SHA. Workflow `deploy-production.yml` existe; pendiente validación end-to-end con `workflow_dispatch`.
+## Gates pendientes
 
-## Decisión GO/NO-GO – Despliegue cerrado (Vercel)
+- Obtener ejecución de CI con jobs y conclusión verde sobre el SHA actual.
+- Ejecutar y registrar \`pnpm typecheck\`, \`pnpm test\`, \`pnpm build\` y \`pnpm run security:suite\` sobre el SHA actual.
+- Generar \`Cargo.lock\` mediante Cargo, revisar cambios y superar fmt/Clippy/tests/build.
+- Ejecutar el gate manual de modelo con credenciales configuradas en el entorno, nunca en Git.
+- Probar fallos de proveedor simulados y reales: timeout, 429, 5xx, respuesta vacía, cooldown y fallback.
+- Validar persistencia, aislamiento multi-tenant, recuperación, observabilidad, rate limits y rollback.
 
-| Entorno | Decisión | Condiciones |
-|---|---|---|
-| **Vercel Preview (prueba cerrada)** | **GO condicional** | CI gates verdes, `production-evidence.json` + `security-suite.json` válidos por SHA, artefactos generados. |
-| **Vercel Production** | **NO-GO** | Cerrar parte crítica de los **16 P0 débiles** + validar `deploy-production.yml` (`workflow_dispatch`) descargando `production-evidence-${SHA}` y `security-suite-${SHA}`, + confirmar persistencia/RLS, secretos, observabilidad mínima y gates. |
+## Interpretación
 
-## Gates activos
-
-- **CI**: `.github/workflows/ci.yml` (pnpm --frozen-lockfile, typecheck, tests, gitleaks@v3, verify/security/production-evidence)
-- **Deploy**: `.github/workflows/deploy-production.yml` (workflow_dispatch + environment `production`, consume evidencia por SHA, sube `deploy-evidence-${{ github.sha }}`)
-- **Evidencia**: `evidence/production-evidence.json`, `evidence/security-suite.json`, `docs/api/route-inventory.json` (generados, gitignored)
-
-## Próxima acción
-
-**Cierre rápido de P0 fáciles/sencillos.** Revisar `docs/audit/500-POINT-REAUDIT-V6.md` §6 (P0 débiles) y atacar los ítems con menor superficie (aditivo), sin romper **474/474** ni `typecheck`. Mantener postura honesta (`BLOCKED_ENVIRONMENT` si requiere HSM/KMS/registry real). Tras cada grupo: `pnpm typecheck` + `vitest` + regenerar evidencia.
-
-**Tras cerrar P0 seleccionados:** validar `deploy-production.yml` end-to-end con `workflow_dispatch` manual.
+El porcentaje se debe actualizar cuando se obtenga nueva evidencia. Un build exitoso de Preview no aumenta automáticamente los puntajes de persistencia, CI, seguridad o inferencia externa. No promover a producción mientras haya gates obligatorios pendientes.

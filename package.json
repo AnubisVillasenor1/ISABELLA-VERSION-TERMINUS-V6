@@ -5,7 +5,7 @@
   "description": "Isabella Villaseñor AI — Genesis TINA v40.0.0. Cognitive Orchestrator & Civilizational Memory OS.",
   "type": "module",
   "engines": {
-    "node": ">=22"
+    "node": "24.x"
   },
   "scripts": {
     "dev": "tsx src/server.ts",
@@ -13,21 +13,23 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json && vitest run && esbuild src/server.ts --bundle --platform=node --format=esm --packages=external --target=node24 --outfile=dist/server.js && node scripts/runtime-smoke.mjs",
     "lint": "tsc --noEmit",
     "reconcile:pids": "tsx src/cli/reconcilePids.ts",
     "quantum:bridge": "python services/pennylane_bridge.py",
     "validate": "npm run typecheck && npm test && npm run build",
     "ingest:atlas": "tsx scripts/atlas-ingest.ts",
     "security:suite": "node scripts/security-suite.mjs",
-    "production:evidence": "node scripts/production-evidence.mjs"
+    "production:evidence": "node scripts/production-evidence.mjs",
+    "smoke:runtime": "node scripts/runtime-smoke.mjs"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
     "@types/node": "^22.10.2",
     "@types/ws": "^8.18.2",
     "typescript": "^5.7.2",
-    "vitest": "^5.0.3"
+    "vitest": "^5.0.3",
+    "esbuild": "0.28.2"
   },
   "dependencies": {
     "@ai-sdk/gateway": "^4.0.110",
@@ -37,5 +39,6 @@
     "firebase": "^13.0.0",
     "tsx": "^4.23.15",
     "ws": "^8.22.0"
-  }
+  },
+  "packageManager": "pnpm@10.28.0"
 }
