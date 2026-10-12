@@ -3,3 +3,5 @@ export * from "./router";
 export * from "./model-registry";
 export * from "./cache";
 export * from "./openai-compatible";
+export * from "./free-providers";
+export * from "./local-engine";

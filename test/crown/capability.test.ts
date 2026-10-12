@@ -46,6 +46,18 @@ describe("crown/capability", () => {
     expect(callGate(gate(), MEMORIA, { principal: guest, action: "memory:recall", resource: "memory" }).granted).toBe(false);
   });
 
+  it("deniega una capacidad con lista de roles vacía (fail-closed)", () => {
+    const emptyRoleGate = createCapabilityGate([{
+      methodId: MEMORIA,
+      owner: "isabella",
+      allowedRoles: [],
+      riskTier: "LOW",
+      governanceTier: "AUTONOMOUS",
+      humanApprovalRequired: false,
+    }]);
+    expect(callGate(emptyRoleGate, MEMORIA, { principal: operator, action: "memory:recall", resource: "memory" }).granted).toBe(false);
+  });
+
   it("exige aprobación humana para HIGH/CRITICAL", () => {
     const sinAprobacion = callGate(gate(), COURIER, { principal: operator, action: "transfer_asset", resource: "asset:123" });
     expect(sinAprobacion.granted).toBe(false);

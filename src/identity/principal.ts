@@ -23,10 +23,10 @@ export function createPrincipal(partial: Omit<Principal, "roles" | "attributes">
   roles?: readonly string[];
   attributes?: Record<string, string | number | boolean>;
 }): Principal {
-  return {
+  return Object.freeze({
     id: partial.id, kind: partial.kind, displayName: partial.displayName, tenantId: partial.tenantId,
     roles: partial.roles ?? [], attributes: partial.attributes ?? {}, approvalKeyId: partial.approvalKeyId,
-  };
+  }) as Principal;
 }
 
 export function isHuman(p: Principal): boolean { return p.kind === "human"; }

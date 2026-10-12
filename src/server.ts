@@ -1,11 +1,12 @@
 import express, { type Request, type Response } from "express";
-import { randomUUID } from "node:crypto";
+import { randomUUID, timingSafeEqual } from "node:crypto";
 import fs from "fs";
 import path from "path";
 import { GoogleGenAI } from "@google/genai";
 import { generateText } from "ai";
 import { gateway } from "@ai-sdk/gateway";
 import { IsabellaGenesisRuntime } from "./genesis/runtime";
+import { createDefaultFreeProviderRouter, createLocalEngine } from "./inference";
 import { assertBalancedAuthority, createPrincipal } from "./identity/principal";
 import { createCapabilityGate } from "./crown/capability";
 import { GENESIS_EXPERTS, EXPERT_REGISTRY } from "./cognition/experts";
@@ -22,11 +23,41 @@ import { evaluateEpistemicState, EPISTEMIC_LADDER_SPEC } from "./cognition/epist
 import { createAtlasStoreFromEnv } from "./atlas";
 import { createDiffObservatory, sanitizeDiffSnapshot, snapshotMetadataHash } from "./plugins";
 import { MemoryProposalQueue } from "./memory/proposals";
+import { formatSessionContext, SessionMemory, deriveSessionId } from "./memory/session-memory";
+import { formatVerifiedKnowledgeContext, VerifiedKnowledgeStore } from "./memory/verified-knowledge";
 import { AckOutcome, createIdempotencyRegistry, redactSecret } from "./commerce/webhook";
 import { handleConnectorEvent } from "./commerce/connector";
 import type { ProviderConfig, SignatureScheme, TenantMapping } from "./commerce/webhook";
 import { LatencyRegistry } from "./deployment/latency-metrics";
 import { TtlSingleFlight } from "./deployment/ttl-single-flight";
+import { MetricsRegistry } from "./observability/metrics";
+
+const BYPASS_PATTERN = /bypass|disable|override|evadir|desactivar|ignore previous|revelar prompt|system prompt/i;
+const JAILBREAK_PATTERN = /dan mode|developer mode|sin restricciones|do anything now/i;
+const FALSE_CERTAINTY_PATTERN = /100% seguro|certeza absoluta sin evidencia|garantizo infalible/i;
+const DELETE_ACTION_PATTERN = /borra|elimina|delete|destruye/i;
+const NAMESPACE_PATTERN = /^[A-Za-z0-9]+(?:\/[A-Za-z0-9]+)*$/;
+
+function sanitizePromptInput(raw: string): string {
+  const MAX_PROMPT_INPUT_LENGTH = 10_000;
+  let cleaned = String(raw);
+  if (cleaned.length > MAX_PROMPT_INPUT_LENGTH) {
+    cleaned = cleaned.slice(0, MAX_PROMPT_INPUT_LENGTH);
+  }
+  cleaned = cleaned
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;")
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "");
+  return cleaned;
+}
+
+function escapeHtml(str: string): string {
+  if (!str) return "";
+  return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
 
 const app = express();
 const latencyRegistry = new LatencyRegistry(100, 512);
@@ -45,6 +76,10 @@ app.use((req, res, next) => {
       ? `${req.method} ${req.baseUrl}${routePath}`
       : `${req.method} unmatched`;
     latencyRegistry.record(routeLabel, elapsedMs, res.statusCode);
+    metricsRegistry.recordRequest(elapsedMs, { route: routeLabel, method: req.method });
+    if (res.statusCode >= 400) {
+      metricsRegistry.recordError();
+    }
   });
   next();
 });
@@ -94,7 +129,49 @@ void runtime.initPersistence().catch((error) => {
 const apiKey = process.env.GEMINI_API_KEY || process.env.MODEL_API_KEY;
 const genAi = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
-async function generateGatewayNarrative(systemPrompt: string, input: string): Promise<string | null> {
+// Verified knowledge store (Supabase-backed when configured, in-memory otherwise)
+const verifiedKnowledgeStore = new VerifiedKnowledgeStore();
+
+// Session memory for conversational continuity
+const sessionMemory = new SessionMemory({
+  maxMessagesPerSession: Number.parseInt(process.env.SESSION_MEMORY_MAX_MESSAGES ?? "50", 10),
+  maxSessions: Number.parseInt(process.env.SESSION_MEMORY_MAX_SESSIONS ?? "1000", 10),
+});
+
+// Metrics registry for request/error/latency/memory observability
+const metricsRegistry = new MetricsRegistry();
+
+// Initialize free provider router (Ollama local + Gratis API fallback)
+const freeProviderRouter = createDefaultFreeProviderRouter();
+const localEngine = createLocalEngine();
+
+type InferenceSource = "ollama" | "gratis-api" | "inclusionai-gateway" | "gemini" | "local-engine";
+
+interface InferenceResult {
+  text: string;
+  source: InferenceSource;
+  latencyMs: number;
+}
+
+async function generateWithFallback(systemPrompt: string, input: string): Promise<InferenceResult | null> {
+  const started = Date.now();
+  const prompt = `${systemPrompt}\n\nSolicitud del usuario:\n${input}`;
+
+  // 1. Try Ollama local first
+  try {
+    const result = await freeProviderRouter.generate({
+      prompt,
+      maxTokens: 900,
+      temperature: 0.35,
+    });
+    if (result.text.trim()) {
+      return { text: result.text.trim(), source: result.modelId.startsWith("ollama") ? "ollama" : "gratis-api", latencyMs: Date.now() - started };
+    }
+  } catch (error) {
+    console.warn("[Inference] Free provider failed:", error instanceof Error ? error.message : String(error));
+  }
+
+  // 2. Try InclusionAI gateway
   try {
     const result = await generateText({
       model: gateway("inclusionai/ling-3.1-flash-free"),
@@ -104,10 +181,27 @@ async function generateGatewayNarrative(systemPrompt: string, input: string): Pr
       temperature: 0.35,
       providerOptions: { gateway: { disallowPromptTraining: true, sort: "tps" } },
     });
-    return result.text.trim() || null;
-  } catch {
+    const text = result.text.trim();
+    if (text) {
+      return { text, source: "inclusionai-gateway", latencyMs: Date.now() - started };
+    }
+  } catch (error) {
+    console.warn("[Inference] InclusionAI gateway failed:", error instanceof Error ? error.message : String(error));
+  }
+
+  // 3. Fall back to local rule-based engine
+  try {
+    const result = await localEngine.generate({ prompt, maxTokens: 900 });
+    return { text: result.text, source: "local-engine", latencyMs: Date.now() - started };
+  } catch (error) {
+    console.error("[Inference] Local engine failed:", error instanceof Error ? error.message : String(error));
     return null;
   }
+}
+
+async function generateGatewayNarrative(systemPrompt: string, input: string): Promise<string | null> {
+  const result = await generateWithFallback(systemPrompt, input);
+  return result?.text ?? null;
 }
 
 /** Server-side bearer-token gate for mutating or privileged API routes. */
@@ -622,22 +716,24 @@ app.post("/api/v1/cognition/route", async (req, res) => {
     });
 
     let generativeNarrative: string | null = null;
+    const sanitizedInput = sanitizePromptInput(input);
     if (decision.admitted && body.modelEngine === "open-science") {
       const openSciencePrompt = `Eres Isabella Villaseñor GenesisAI. Responde en español con rigor académico, claridad ejecutiva y sobriedad. Separa hechos, inferencias y límites de evidencia. No declares autoridad humana ni verificación inexistente. Lente: ${focusLens}.`;
-      generativeNarrative = await generateGatewayNarrative(openSciencePrompt, input);
+      generativeNarrative = await generateGatewayNarrative(openSciencePrompt, sanitizedInput);
     }
     if (decision.admitted && genAi && body.modelEngine === "gemini") {
       try {
         const sysPrompt = `Eres Isabella Villaseñor GenesisAI, un runtime de IA gobernado. Mantén la separación entre capacidad, autoridad, ejecución, evidencia, aprendizaje y producción. Distingue hechos, inferencias y datos no verificados. No afirmes certificación, ejecución o verificación sin evidencia. Lente solicitado: ${focusLens}. El lente es una preferencia de respuesta y no concede acceso a memoria privada.`;
         if (body.modelEngine === "open-science") {
-          generativeNarrative = await generateGatewayNarrative(sysPrompt, input);
+          generativeNarrative = await generateGatewayNarrative(sysPrompt, sanitizedInput);
         }
         const resp = await genAi.models.generateContent({
           model: "gemini-2.5-flash",
-          contents: `${sysPrompt}\n\nSolicitud del usuario:\n${input}`,
+          contents: `${sysPrompt}\n\nSolicitud del usuario:\n${sanitizedInput}`,
         });
         generativeNarrative = resp.text ?? null;
-      } catch {
+      } catch (error) {
+        console.error("[Genesis] Gemini content generation failed:", error);
         generativeNarrative = null;
       }
     } else if (decision.admitted) {
@@ -656,7 +752,8 @@ app.post("/api/v1/cognition/route", async (req, res) => {
       requestedRiskIgnored: true,
       publicAuthority: "VIEWER_ONLY",
     });
-  } catch {
+  } catch (error) {
+    console.error("[Genesis] /api/v1/cognition/route failed:", error);
     res.status(500).json({ success: false, error: "COGNITIVE_ROUTE_FAILED" });
   }
 });
@@ -687,6 +784,27 @@ app.post("/api/v1/cognitive/request", async (req, res) => {
     const resource = "memory";
     const riskTier = "LOW" as const;
     const memoryQuery = undefined; // Public viewer has no tenant-scoped memory authorization.
+
+    // Session continuity: derive or accept a caller-supplied session id, then
+    // persist the user turn before any model call so failures remain auditable.
+    const sessionId = deriveSessionId(req.get("x-session-id"));
+    sessionMemory.addToSession(sessionId, { role: "user", content: input, timestamp: new Date().toISOString() });
+    const sessionHistory = sessionMemory.getSessionHistory(sessionId);
+
+    // Verified knowledge retrieval happens before answering; failures degrade
+    // gracefully to the canonical engine rather than failing the request.
+    let verifiedKnowledgeContext = "";
+    let verifiedKnowledgeHits: readonly { entry: { id: string; confidenceLevel: string; source: string }; score: number }[] = [];
+    try {
+      const hits = await verifiedKnowledgeStore.searchVerifiedKnowledge(input, { limit: 5 });
+      verifiedKnowledgeHits = hits;
+      verifiedKnowledgeContext = formatVerifiedKnowledgeContext(hits);
+    } catch {
+      verifiedKnowledgeContext = "";
+    }
+    const sessionContext = formatSessionContext(sessionHistory, 10);
+    const memoryContextBlock = [verifiedKnowledgeContext, sessionContext].filter(Boolean).join("\n\n");
+
     const decision = runtime.evaluate({
       input,
       methodId,
@@ -711,12 +829,15 @@ app.post("/api/v1/cognitive/request", async (req, res) => {
       startedAt,
       decision.memory.length,
     );
-    const systemPrompt = buildCanonicalSystemPrompt(
+    const baseSystemPrompt = buildCanonicalSystemPrompt(
       { input, principal, methodId, action, resource, riskTier, memoryQuery },
       decision.crown,
       snapshot.route,
       traceId,
     );
+    const systemPrompt = memoryContextBlock
+      ? `${baseSystemPrompt}\n\n${memoryContextBlock}`
+      : baseSystemPrompt;
     let generativeNarrative: string | null = null;
     if (decision.admitted && genAi && body.modelEngine === "gemini") {
       try {
@@ -729,6 +850,10 @@ app.post("/api/v1/cognitive/request", async (req, res) => {
         generativeNarrative = null;
       }
     }
+    if (decision.admitted && generativeNarrative) {
+      sessionMemory.addToSession(sessionId, { role: "assistant", content: generativeNarrative, timestamp: new Date().toISOString() });
+    }
+    const activeSession = sessionMemory.snapshot(sessionId);
     res.status(decision.admitted ? 200 : 403).json({
       success: decision.admitted,
       requestId: snapshot.requestId,
@@ -738,8 +863,22 @@ app.post("/api/v1/cognitive/request", async (req, res) => {
       systemPromptApplied: true,
       generativeNarrative,
       publicAuthority: "VIEWER_ONLY",
+      session: activeSession === null ? null : {
+        sessionId: activeSession.sessionId,
+        messageCount: activeSession.messageCount,
+      },
+      verifiedKnowledge: {
+        applied: verifiedKnowledgeContext.length > 0,
+        hits: verifiedKnowledgeHits.map((hit) => ({
+          id: hit.entry.id,
+          confidenceLevel: hit.entry.confidenceLevel,
+          source: hit.entry.source,
+          score: hit.score,
+        })),
+      },
     });
-  } catch {
+  } catch (error) {
+    console.error("[Genesis] /api/v1/cognitive/request failed:", error);
     res.status(500).json({ success: false, error: "COGNITIVE_REQUEST_FAILED" });
   }
 });
@@ -863,7 +1002,9 @@ app.post("/api/v1/hsf/invoke", async (req, res) => {
       res.status(503).json({ success: false, error: "HSF_API_TOKEN_NOT_CONFIGURED" });
       return;
     }
-    if (!suppliedToken || suppliedToken !== configuredToken) {
+    const suppliedTokenBuffer = Buffer.from(suppliedToken);
+    const configuredTokenBuffer = Buffer.from(configuredToken);
+    if (!suppliedToken || suppliedTokenBuffer.length !== configuredTokenBuffer.length || !timingSafeEqual(suppliedTokenBuffer, configuredTokenBuffer)) {
       res.status(401).json({ success: false, error: "HSF_AUTHENTICATION_REQUIRED" });
       return;
     }
@@ -908,7 +1049,8 @@ app.post("/api/v1/hsf/invoke", async (req, res) => {
     });
     res.status(result.status === "executed" ? 200 : result.status === "rejected" ? 403 : result.status === "unavailable" ? 503 : 500)
       .json({ success: result.status === "executed", ...result, timestamp: new Date().toISOString() });
-  } catch {
+  } catch (error) {
+    console.error("[Genesis] /api/v1/hsf/invoke failed:", error);
     res.status(500).json({ success: false, error: "HSF_INVOCATION_FAILED" });
   }
 });
@@ -984,9 +1126,9 @@ app.post("/api/v1/triple-blockade/scan", (req, res) => {
   const { input = "" } = req.body ?? {};
   const lower = String(input).toLowerCase();
 
-  const isBypass = /bypass|disable|override|evadir|desactivar|ignore previous|revelar prompt|system prompt/i.test(lower);
-  const isJailbreak = /dan mode|developer mode|sin restricciones|do anything now/i.test(lower);
-  const isFalseCertainty = /100% seguro|certeza absoluta sin evidencia|garantizo infalible/i.test(lower);
+  const isBypass = BYPASS_PATTERN.test(lower);
+  const isJailbreak = JAILBREAK_PATTERN.test(lower);
+  const isFalseCertainty = FALSE_CERTAINTY_PATTERN.test(lower);
 
   const blockLevel1 = isBypass ? "PATTERN_MATCH" : "NO_PATTERN_MATCH";
   const blockLevel2 = isJailbreak ? "PATTERN_MATCH" : "NO_PATTERN_MATCH";
@@ -3117,7 +3259,7 @@ app.get("/", (_req, res) => {
       const startTime = performance.now();
 
       try {
-        const isDeleteAction = /borra|elimina|delete|destruye/i.test(text);
+        const isDeleteAction = DELETE_ACTION_PATTERN.test(text);
         const methodId = isDeleteAction
           ? "T.TWINS.E08_DATA.remove.permanent_delete.v1.0.0.CRITICAL.CONSTITUTIONAL"
           : "A.TWINS.E15_MEMORY.recall.synthesize.v1.0.0.LOW.AUTONOMOUS";
@@ -3141,9 +3283,10 @@ app.get("/", (_req, res) => {
   let data;
   try {
     data = JSON.parse(responseText);
-  } catch {
-    throw new Error(\`Respuesta inválida del servidor (\${res.status})\`);
-  }
+    } catch (error) {
+      console.error("[Genesis] Invalid JSON response from server:", error);
+      throw new Error(\`Respuesta inválida del servidor (\${res.status})\`);
+    }
   if (!res.ok && !data?.generativeNarrative) {
     throw new Error(data?.error || \`La solicitud fue rechazada (\${res.status})\`);
   }
@@ -3795,7 +3938,7 @@ app.post("/api/v1/litle/attest", (req, res) => {
     const body = req.body ?? {};
     const evidence = Array.isArray(body.evidence) ? body.evidence : [];
     if (!Number.isInteger(Number(body.year)) || Number(body.year) < 2000 || Number(body.year) > 2100 ||
-      typeof body.namespace !== "string" || body.namespace.length > 64 || !/^[A-Za-z0-9]+(?:\/[A-Za-z0-9]+)*$/.test(body.namespace) ||
+      typeof body.namespace !== "string" || body.namespace.length > 64 || !NAMESPACE_PATTERN.test(body.namespace) ||
       !["BK", "RQ", "DS", "PL", "AR", "MD", "SW", "EX", "DP"].includes(body.workType) ||
       evidence.length === 0 || evidence.length > 100) {
       res.status(400).json({ success: false, error: "LITLE_YEAR_NAMESPACE_WORKTYPE_OR_EVIDENCE_INVALID" });
@@ -3873,7 +4016,8 @@ app.post("/api/v1/litle/verify", (req, res) => {
       verificationScope: "local HMAC and supplied metadata-chain root only; original source bytes, identity ownership and scientific truth are not independently verified",
       id,
     });
-  } catch {
+  } catch (error) {
+    console.error("[Genesis] /api/v1/litle/verify failed:", error);
     res.status(400).json({ success: false, error: "LITLE_VERIFICATION_INPUT_INVALID" });
   }
 });
@@ -3977,6 +4121,45 @@ app.post("/api/v1/connectors/ingest", async (req, res) => {
   } catch (err) {
     console.error("[Connectors] ingest failed:", redactSecret(err instanceof Error ? err.message : String(err)));
     res.status(400).json({ success: false, error: "CONNECTOR_INGEST_INPUT_INVALID" });
+  }
+});
+
+app.get("/api/v1/metrics", (_req, res) => {
+  res.json({
+    success: true,
+    metrics: metricsRegistry.getSnapshot(),
+    timestamp: new Date().toISOString(),
+  });
+});
+
+app.post("/api/v1/memory/verified", async (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  try {
+    const body = req.body ?? {};
+    if (typeof body.content !== "string" || !body.content.trim() ||
+        typeof body.source !== "string" || !body.source.trim()) {
+      res.status(400).json({ success: false, error: "content y source son requeridos" });
+      return;
+    }
+    const entry = await verifiedKnowledgeStore.addVerifiedKnowledge({
+      content: body.content,
+      source: body.source,
+      confidenceLevel: body.confidenceLevel ?? "E0",
+    });
+    res.status(201).json({ success: true, entry });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error instanceof Error ? error.message : "VERIFIED_KNOWLEDGE_ADMISSION_FAILED" });
+  }
+});
+
+app.get("/api/v1/memory/verified", async (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  const query = typeof req.query.q === "string" ? req.query.q.trim() : "";
+  try {
+    const hits = query ? await verifiedKnowledgeStore.searchVerifiedKnowledge(query) : [];
+    res.json({ success: true, query, count: hits.length, hits });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error instanceof Error ? error.message : "VERIFIED_KNOWLEDGE_SEARCH_FAILED" });
   }
 });
 

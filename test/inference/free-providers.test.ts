@@ -1,0 +1,61 @@
+import { describe, expect, it, vi } from "vitest";
+import type { GenerationRequest, GenerationResult, InferenceAdapter, ModelDescriptor } from "../../src/inference/types";
+import { FreeProviderRouter, OllamaAdapter, createDefaultFreeProviderRouter } from "../../src/inference/free-providers";
+
+function failingAdapter(name: string): InferenceAdapter {
+  const descriptor: ModelDescriptor = { id: `fake-${name}`, version: "test", provider: name, capabilities: ["chat"], contextWindow: 1, maxOutputTokens: 1, latencyClass: "FAST" };
+  return {
+    descriptor,
+    async generate(_request: GenerationRequest): Promise<GenerationResult> {
+      throw new Error(`${name}_DOWN`);
+    },
+  };
+}
+
+function successfulAdapter(name: string): InferenceAdapter {
+  const descriptor: ModelDescriptor = { id: `ok-${name}`, version: "test", provider: name, capabilities: ["chat"], contextWindow: 1, maxOutputTokens: 1, latencyClass: "FAST" };
+  return {
+    descriptor,
+    async generate(request: GenerationRequest): Promise<GenerationResult> {
+      return { modelId: descriptor.id, text: `${name}:${request.prompt}`, inputTokens: 1, outputTokens: 1, latencyMs: 1, finishReason: "stop" };
+    },
+  };
+}
+
+describe("free provider router", () => {
+  it("fails closed when every provider is unavailable", async () => {
+    const router = new FreeProviderRouter();
+    router.register(failingAdapter("a"));
+    router.register(failingAdapter("b"));
+    await expect(router.generate({ prompt: "x", maxTokens: 10 })).rejects.toThrow("ALL_PROVIDERS_FAILED");
+  });
+
+  it("returns the first provider that succeeds, in registration order", async () => {
+    const router = new FreeProviderRouter();
+    router.register(failingAdapter("first"));
+    router.register(successfulAdapter("second"));
+    const result = await router.generate({ prompt: "hola", maxTokens: 10 });
+    expect(result.modelId).toBe("ok-second");
+    expect(result.text).toBe("second:hola");
+  });
+
+  it("skips the gratis adapter when no API key is configured", () => {
+    const previousKey = process.env.GRATIS_API_KEY;
+    delete process.env.GRATIS_API_KEY;
+    const spy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    try {
+      createDefaultFreeProviderRouter();
+      expect(spy).toHaveBeenCalledWith(expect.stringContaining("GRATIS_API_KEY not set"));
+    } finally {
+      spy.mockRestore();
+      if (previousKey === undefined) delete process.env.GRATIS_API_KEY;
+      else process.env.GRATIS_API_KEY = previousKey;
+    }
+  });
+
+  it("declares a local ollama descriptor without network calls", () => {
+    const adapter = new OllamaAdapter({ baseUrl: "http://127.0.0.1:1" });
+    expect(adapter.descriptor.provider).toBe("ollama");
+    expect(adapter.descriptor.id).toContain("ollama-");
+  });
+});

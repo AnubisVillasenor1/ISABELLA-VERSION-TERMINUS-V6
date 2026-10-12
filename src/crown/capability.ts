@@ -28,7 +28,7 @@ export interface CapabilityRequest {
 export function callGate(gate: CapabilityGate, methodId: string, req: CapabilityRequest): CapabilityVerdict {
   const descriptor = gate.descriptors.get(methodId);
   if (!descriptor) return { granted: false, reason: "capacidad no registrada (DENY)" };
-  const hasRole = descriptor.allowedRoles.length === 0 || req.principal.roles.some((r) => descriptor.allowedRoles.includes(r));
+  const hasRole = descriptor.allowedRoles.length > 0 && req.principal.roles.some((r) => descriptor.allowedRoles.includes(r));
   if (!hasRole) return { granted: false, reason: "el principal no tiene rol autorizado para esta capacidad" };
   if (descriptor.humanApprovalRequired || descriptor.riskTier === "HIGH" || descriptor.riskTier === "CRITICAL") {
     if (

@@ -59,3 +59,9 @@ export type { VerificationResult as HsfVerificationResult } from "./capabilities
 export type { RateLimitDecision } from "./security/rate-limit";
 export type { RateLimitDecision as FixedWindowRateLimitDecision } from "./security/rate-limit";
 export type { RateLimitDecision as TokenBucketRateLimitDecision } from "./deployment/production-ops";
+// `ConfidenceLevel` existe en commerce (low|medium|high) y en memory/verified-knowledge
+// (nivel epistemológico E0-E6). Se conservan ambos con alias y se fija el canónico
+// de commerce para resolver la ambigüedad del barril.
+export type { ConfidenceLevel } from "./commerce";
+export type { ConfidenceLevel as CommerceConfidenceLevel } from "./commerce";
+export type { ConfidenceLevel as VerifiedConfidenceLevel } from "./memory/verified-knowledge";

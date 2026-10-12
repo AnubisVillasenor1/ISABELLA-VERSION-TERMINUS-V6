@@ -3,3 +3,5 @@ export * from "./vector";
 export * from "./retrieval";
 export * from "./persistence";
 export * from "./knowledge-entry";
+export * from "./verified-knowledge";
+export * from "./session-memory";
