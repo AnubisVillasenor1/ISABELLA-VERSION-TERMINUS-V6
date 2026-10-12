@@ -53,12 +53,12 @@ La visión es el **norte**; abajo se reporta, sin adornos, cuánto de ella exist
 
 ## 2. Estado real hoy (lo que ya tenemos)
 
-**SHA local validado: `c763060`** (incremento OSIRIS sobre `origin/main`). El árbol pasa, de forma reproducible en local:
+**SHA local validado: `7a14bc4`** (incremento de monetización sobre `origin/main`). El árbol pasa, de forma reproducible en local:
 
-| Gate | Comando | Resultado en `4ea5e85` |
+| Gate | Comando | Resultado en `7a14bc4` |
 |---|---|---|
 | Tipos estrictos | `pnpm typecheck` | exit 0 |
-| Pruebas | `pnpm test` | **564 aprobadas / 108 archivos** |
+| Pruebas | `pnpm test` | **590 aprobadas / 111 archivos** |
 | Build completo | `pnpm build` | exit 0 (tsc + vitest + esbuild + `node --check src/ui/app.js` + smoke UI + smoke runtime) |
 | Suite de seguridad | `pnpm run security:suite` | **14 passed / 0 failed** |
 
@@ -77,6 +77,7 @@ La visión es el **norte**; abajo se reporta, sin adornos, cuánto de ella exist
 - **Federación:** eventos YUN (`src/federation/yun-event.ts`) con validación y detección de alteración.
 - **Seguridad criptográfica:** comparaciones en tiempo constante (`timingSafeEqual`), nonces anti-replay, firma de webhooks HMAC-SHA256, ISA-X con Ed25519 y PQC fail-closed.
 - **Ciberdefensa (OSIRIS):** capa de **observación** (`src/osiris/`): detección heurística determinista, postura defensiva honesta (`active/inactive/unknown`) y registro append-only de hallazgos en BookPI; endpoints gated `GET /api/v1/osiris/status` y `POST /api/v1/osiris/inspect`. **No bloquea ni certifica**; ver [docs/osiris](docs/osiris/ARCHITECTURE.md).
+- **Monetización (comercio):** motor de entitlements + suscripciones + metering (`src/commerce/subscriptions.ts`, `entitlements.ts`, `metering.ts`) con endpoints `/api/v1/billing/*` y una puerta real `POST /api/v1/commerce/offers`. **Registra** estado verificado del proveedor y **aplica** planes/cuotas; **no procesa pagos ni almacena datos de tarjeta**. Ver [docs/commerce](docs/commerce/BILLING-ENGINE.md) y el [backlog](docs/evolution/IMPLEMENTATION-BACKLOG.md).
 - **Interfaz** (`src/ui/`): navegación por anclas, menú móvil accesible, chat real contra `POST /api/v1/cognition/route`, voz del navegador (si existe), estados de carga y error.
 - **Operación:** readiness, canary, latency-metrics, TTL single-flight, adaptadores de production-ops.
 - **Workspace Rust separado** (`ige-omega/`): crates de cognición, memoria, world model, ABX, BookPI, kernel y gateway (ver gates abajo).
@@ -88,7 +89,7 @@ La visión es el **norte**; abajo se reporta, sin adornos, cuánto de ella exist
 | Dimensión | Peso | Evaluación | Evidencia / gate |
 |---|---:|---:|---|
 | Runtime HTTP y flujo local | 20% | 75% | Smoke HTTP local verde en el SHA |
-| Pruebas y validación automatizada | 20% | 75% | 564 pruebas / 108 archivos |
+| Pruebas y validación automatizada | 20% | 75% | 590 pruebas / 111 archivos |
 | Seguridad y guardrails | 15% | 45% | Suite de seguridad 14/14; falta revisión de producción |
 | Inferencia externa real | 15% | 0% verificado | Sin credenciales elegibles; no demostrada |
 | Persistencia durable y recuperación | 10% | 20% | Adaptadores existen; backup/restore sin evidencia |
@@ -197,6 +198,12 @@ Rutas de referencia para la interfaz y diagnóstico:
 | GET | `/api/v1/memory/verified` | Búsqueda de conocimiento verificado (requiere token admin) |
 | GET | `/api/v1/osiris/status` | Postura y métricas OSIRIS (requiere token admin) |
 | POST | `/api/v1/osiris/inspect` | Inspección de señal OSIRIS, advisory (requiere token admin) |
+| GET | `/api/v1/billing/plans` | Planes, funciones y cuotas (público) |
+| GET | `/api/v1/billing/entitlements` | Funciones y cuotas del plan (público) |
+| POST | `/api/v1/billing/subscribe` | Registra suscripción verificada por proveedor (token admin) |
+| POST | `/api/v1/billing/cancel` | Cancela la suscripción registrada (token admin) |
+| GET | `/api/v1/billing/usage` | Uso del día vs cuota por clave (token admin) |
+| POST | `/api/v1/commerce/offers` | Puerta real: exige función `offer` + cuota `active_offers` (token admin) |
 | GET | `/api/v1/readyz` | Readiness operativa |
 
 Para rutas sensibles, consultar el handler y los controles de autorización antes de habilitarlas a usuarios externos. No se deben inferir permisos a partir del nombre de una ruta.
@@ -280,9 +287,9 @@ Consultar [.env.example](.env.example) y [guía de entorno](docs/ENVIRONMENT.md)
 | `src/osiris/` | Ciberdefensa observacional (detección, postura, registro) |
 | `src/memory/`, `src/atlas/`, `src/bookpi/`, `src/veritas/` | Memoria, persistencia y evidencia |
 | `src/federation/`, `src/observability/`, `src/deployment/` | Eventos, telemetría y operación |
-| `src/commerce/` | Contratos de comercio, riesgo y conectores |
+| `src/commerce/` | Comercio: planes, candados, conectores + motor de entitlements/suscripciones/metering |
 | `ige-omega/` | Workspace Rust separado |
-| `test/` | Pruebas automatizadas (105 archivos) |
+| `test/` | Pruebas automatizadas (111 archivos) |
 | `scripts/` | Smokes, seguridad, inventarios y evidencia |
 | `docs/` | Especificaciones, auditorías, runbooks y contratos |
 
