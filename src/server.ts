@@ -1992,9 +1992,72 @@ app.get("/", (_req, res) => {
     }
     .cinematic-intro.is-exiting { opacity: 0; visibility: hidden; pointer-events: none; }
     .cinematic-grid { position: absolute; inset: 0; opacity: .18; background-image: linear-gradient(rgba(214,226,240,.12) 1px, transparent 1px), linear-gradient(90deg, rgba(214,226,240,.12) 1px, transparent 1px); background-size: 56px 56px; transform: perspective(500px) rotateX(58deg) scale(1.8) translateY(24%); transform-origin: center bottom; }
-    .cinematic-orbit { position: absolute; border: 1px solid rgba(38,185,255,.3); border-radius: 50%; box-shadow: 0 0 45px rgba(38,185,255,.14); animation: orbitFloat 12s ease-in-out infinite; }
-    .cinematic-orbit-one { width: 72vw; height: 72vw; max-width: 780px; max-height: 780px; }
-    .cinematic-orbit-two { width: 42vw; height: 42vw; max-width: 460px; max-height: 460px; border-color: rgba(33,150,83,.32); animation-delay: -4s; }
+    /* GENESIS ATOM: three orbital bands with Matrix-style system labels */
+    .genesis-atom {
+      position: absolute; z-index: 1; left: 50%; top: 49%; width: min(88vmin, 820px); aspect-ratio: 1;
+      transform: translate(-50%, -50%); pointer-events: none; opacity: .82; isolation: isolate;
+      filter: drop-shadow(0 0 28px rgba(38,185,255,.12));
+    }
+    .genesis-atom::before {
+      content: ""; position: absolute; inset: 18%; border-radius: 50%;
+      background: radial-gradient(circle, rgba(38,185,255,.12), rgba(38,185,255,.035) 42%, transparent 72%);
+      animation: genesisCoreBreath 4s ease-in-out infinite;
+    }
+    .genesis-orbit {
+      position: absolute; border: 1px solid rgba(38,185,255,.5); border-radius: 50%;
+      transform-style: preserve-3d; transform-origin: center; will-change: transform;
+      box-shadow: 0 0 22px rgba(38,185,255,.08), inset 0 0 18px rgba(38,185,255,.035);
+      animation: genesisOrbitSpin 24s linear infinite;
+    }
+    .genesis-orbit::after {
+      content: ""; position: absolute; inset: -1px; border-radius: inherit;
+      border: 1px solid rgba(38,185,255,.12); filter: blur(3px);
+    }
+    .genesis-orbit-label {
+      position: absolute; left: 50%; top: -10px; transform: translateX(-50%);
+      display: block; width: max-content; max-width: 88vw; padding: 4px 10px;
+      color: #75ffc2; border: 1px solid rgba(70,255,180,.25); border-radius: 3px;
+      background: rgba(2,13,22,.82); box-shadow: 0 0 16px rgba(70,255,180,.15);
+      font: 700 clamp(7px, 1.05vmin, 10px)/1.25 'JetBrains Mono', monospace;
+      letter-spacing: .12em; text-align: center; text-shadow: 0 0 8px rgba(70,255,180,.85);
+      white-space: nowrap;
+    }
+    .genesis-orbit--outer { inset: 5%; border-color: rgba(38,185,255,.42); animation-duration: 32s; }
+    .genesis-orbit--outer .genesis-orbit-label { color: #79eaff; border-color: rgba(38,185,255,.34); text-shadow: 0 0 8px rgba(38,185,255,.9); }
+    .genesis-orbit--middle { inset: 19%; border-color: rgba(70,255,180,.55); animation-duration: 23s; animation-direction: reverse; }
+    .genesis-orbit--inner { inset: 32%; border-color: rgba(157,140,255,.62); animation-duration: 16s; }
+    .genesis-orbit--inner .genesis-orbit-label { color: #d2c8ff; border-color: rgba(157,140,255,.36); text-shadow: 0 0 8px rgba(157,140,255,.85); }
+    .genesis-atom-core {
+      position: absolute; left: 50%; top: 50%; width: clamp(54px, 10vmin, 92px); aspect-ratio: 1;
+      transform: translate(-50%, -50%); display: grid; place-items: center; border-radius: 50%;
+      border: 1px solid rgba(141,243,255,.85);
+      color: #e8fcff; font: 800 clamp(9px, 1.3vmin, 12px)/1 'JetBrains Mono', monospace;
+      letter-spacing: .08em; text-align: center;
+      background: radial-gradient(circle at 35% 28%, rgba(255,255,255,.94), rgba(38,185,255,.5) 13%, rgba(7,34,62,.96) 48%, rgba(3,9,20,.98) 72%);
+      box-shadow: 0 0 16px rgba(38,185,255,.85), 0 0 54px rgba(38,185,255,.35), inset 0 0 18px rgba(141,243,255,.42);
+      animation: genesisCorePulse 3.2s ease-in-out infinite;
+    }
+    .genesis-atom-core::after {
+      content: ""; position: absolute; inset: -10px; border: 1px solid rgba(141,243,255,.28);
+      border-radius: 50%; box-shadow: 0 0 20px rgba(38,185,255,.18);
+    }
+    @keyframes genesisOrbitSpin {
+      from { transform: perspective(900px) rotateX(68deg) rotateZ(0deg); }
+      to { transform: perspective(900px) rotateX(68deg) rotateZ(360deg); }
+    }
+    @keyframes genesisCorePulse {
+      0%, 100% { box-shadow: 0 0 16px rgba(38,185,255,.7), 0 0 42px rgba(38,185,255,.28), inset 0 0 14px rgba(141,243,255,.32); }
+      50% { box-shadow: 0 0 24px rgba(38,185,255,1), 0 0 68px rgba(38,185,255,.48), inset 0 0 24px rgba(141,243,255,.58); }
+    }
+    @keyframes genesisCoreBreath { 0%,100% { opacity: .45; transform: scale(.94); } 50% { opacity: 1; transform: scale(1.06); } }
+    @media (max-width: 700px) {
+      .genesis-atom { width: min(108vw, 620px); top: 43%; opacity: .68; }
+      .genesis-orbit-label { top: -8px; padding: 3px 5px; letter-spacing: .04em; font-size: 7px; max-width: 91vw; }
+      .genesis-atom-core { width: 54px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .genesis-orbit, .genesis-atom-core, .genesis-atom::before { animation: none !important; }
+    }
     .cinematic-intro-content, .cinematic-trailer { position: relative; z-index: 2; width: min(680px, calc(100% - 40px)); text-align: center; }
     .cinematic-mark { width: 64px; height: 64px; margin: 0 auto 22px; display: grid; place-items: center; border: 1px solid rgba(214,226,240,.45); border-radius: 20px; color: #d6e2f0; font: 700 14px 'JetBrains Mono', monospace; letter-spacing: .18em; background: linear-gradient(145deg, rgba(255,255,255,.22), rgba(38,185,255,.1)); box-shadow: 0 0 36px rgba(38,185,255,.26), inset 0 1px rgba(255,255,255,.5); }
     .cinematic-eyebrow, .cinematic-chapter { margin: 0 0 12px; color: #26b9ff; font: 600 11px 'JetBrains Mono', monospace; letter-spacing: .16em; text-transform: uppercase; }
@@ -2062,8 +2125,18 @@ app.get("/", (_req, res) => {
   <!-- CINEMATIC ONBOARDING: explicit consent before visual/audio immersion -->
   <section id="cinematicIntro" class="cinematic-intro" aria-labelledby="introTitle">
     <div class="cinematic-grid" aria-hidden="true"></div>
-    <div class="cinematic-orbit cinematic-orbit-one" aria-hidden="true"></div>
-    <div class="cinematic-orbit cinematic-orbit-two" aria-hidden="true"></div>
+    <div class="genesis-atom" aria-hidden="true">
+      <div class="genesis-orbit genesis-orbit--outer">
+        <span class="genesis-orbit-label">NUCLEO GENESIS V6 ISABELLA AI</span>
+      </div>
+      <div class="genesis-orbit genesis-orbit--middle">
+        <span class="genesis-orbit-label">SISTEMA CROWN AEGIS YUN ACTIVOS</span>
+      </div>
+      <div class="genesis-orbit genesis-orbit--inner">
+        <span class="genesis-orbit-label">QUANTUM BRIDGE PENY LANE ENCRIPTADO Y BLINDADO</span>
+      </div>
+      <div class="genesis-atom-core">ISABELLA</div>
+    </div>
     <div class="cinematic-intro-content">
       <div class="cinematic-mark" aria-hidden="true"><img src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/logo-isav6-h8D664HhoUaMbFaEXOx0vIupxB3DL4.jpeg" alt="Isabella Villaseñor AI" class="h-full w-full rounded-[18px] object-cover" /></div>
       <p class="cinematic-eyebrow">TAMV · Tecnología Avanzada Mexicana Versátil</p>
