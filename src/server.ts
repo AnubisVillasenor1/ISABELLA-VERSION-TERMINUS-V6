@@ -31,6 +31,7 @@ import { TtlSingleFlight } from "./deployment/ttl-single-flight";
 import { MetricsRegistry } from "./observability/metrics";
 import { SessionMemory, formatSessionContext, deriveSessionId } from "./memory/session-memory";
 import { VerifiedKnowledgeStore, formatVerifiedKnowledgeContext } from "./memory/verified-knowledge";
+import { osirisSentinel } from "./osiris";
 
 const app: Application = express();
 app.disable("x-powered-by");
@@ -4306,6 +4307,33 @@ app.get("/api/v1/memory/verified", async (req, res) => {
     res.json({ success: true, query, count: hits.length, hits });
   } catch (error) {
     res.status(400).json({ success: false, error: error instanceof Error ? error.message : "VERIFIED_KNOWLEDGE_SEARCH_FAILED" });
+  }
+});
+
+// OSIRIS — observation-only cyber-defense. It records and advises; it never
+// blocks or executes a response. Both routes require the admin token because
+// posture/findings are operational information, not public.
+app.get("/api/v1/osiris/status", (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  res.json({ success: true, snapshot: osirisSentinel.getSnapshot() });
+});
+
+app.post("/api/v1/osiris/inspect", (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  try {
+    const body = req.body ?? {};
+    const features = body.features && typeof body.features === "object" && !Array.isArray(body.features) ? body.features : {};
+    const signal = {
+      id: typeof body.id === "string" && body.id.trim() ? body.id : randomUUID(),
+      timestamp: typeof body.timestamp === "string" ? body.timestamp : new Date().toISOString(),
+      source: typeof body.source === "string" && body.source.trim() ? body.source : "api",
+      actorId: typeof body.actorId === "string" && body.actorId.trim() ? body.actorId : undefined,
+      features,
+    };
+    const result = osirisSentinel.inspect(signal);
+    res.json({ success: true, result });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error instanceof Error ? error.message : "OSIRIS_INSPECT_FAILED" });
   }
 });
 

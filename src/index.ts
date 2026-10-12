@@ -38,6 +38,7 @@ export * from "./isabella";
 export * from "./quantum";
 export * from "./protocols";
 export * from "./modules";
+export * from "./osiris";
 
 export * from "./capabilities";
 export * from "./sanitization";
