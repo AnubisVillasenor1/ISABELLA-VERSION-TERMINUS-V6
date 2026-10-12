@@ -53,12 +53,12 @@ La visión es el **norte**; abajo se reporta, sin adornos, cuánto de ella exist
 
 ## 2. Estado real hoy (lo que ya tenemos)
 
-**SHA local validado: `9ef6d7d`** (incremento de webhooks de proveedor sobre `origin/main`). El árbol pasa, de forma reproducible en local:
+**SHA local validado: `a5ce0a1`** (GAME OVER / UAGP-1: motor TypeScript + plugin Jenkins como código fuente + doc canónica + `CITATION.cff`). El árbol pasa, de forma reproducible en local:
 
-| Gate | Comando | Resultado en `9ef6d7d` |
+| Gate | Comando | Resultado en `a5ce0a1` |
 |---|---|---|
 | Tipos estrictos | `pnpm typecheck` | exit 0 |
-| Pruebas | `pnpm test` | **629 aprobadas / 115 archivos** |
+| Pruebas | `pnpm test` | **672 aprobadas / 124 archivos** |
 | Build completo | `pnpm build` | exit 0 (tsc + vitest + esbuild + `node --check src/ui/app.js` + smoke UI + smoke runtime) |
 | Suite de seguridad | `pnpm run security:suite` | **14 passed / 0 failed** |
 
@@ -79,6 +79,7 @@ La visión es el **norte**; abajo se reporta, sin adornos, cuánto de ella exist
 - **Ciberdefensa (OSIRIS):** capa de **observación** (`src/osiris/`): detección heurística determinista, postura defensiva honesta (`active/inactive/unknown`) y registro append-only de hallazgos en BookPI; endpoints gated `GET /api/v1/osiris/status` y `POST /api/v1/osiris/inspect`. **No bloquea ni certifica**; ver [docs/osiris](docs/osiris/ARCHITECTURE.md).
 - **Monetización (comercio):** motor de entitlements + suscripciones + metering (`src/commerce/subscriptions.ts`, `entitlements.ts`, `metering.ts`) con endpoints `/api/v1/billing/*` y una puerta real `POST /api/v1/commerce/offers`. Los **webhooks firmados** del proveedor se aplican al `SubscriptionStore` vía `src/commerce/provider-events.ts` (`POST /api/v1/connectors/ingest`). **Registra** estado verificado del proveedor y **aplica** planes/cuotas; **no procesa pagos ni almacena datos de tarjeta**. Ver [docs/commerce](docs/commerce/BILLING-ENGINE.md) y el [backlog](docs/evolution/IMPLEMENTATION-BACKLOG.md).
 - **Identidad y aislamiento (tenancy):** verificador de aislamiento multi-tenant **a nivel de aplicación** (`src/tenancy/isolation.ts`): compara el tenant de los registros contra el del principal verificado y falla cerrado ante acceso cruzado; cableado al tool `tenant_isolation_verify`. **No verifica RLS de base de datos**. Ver [docs/tenancy](docs/tenancy/ISOLATION.md).
+- **Gobernanza de agentes (GAME OVER / UAGP-1):** meta-capa de gobernanza cognitiva (`src/gameover/`): valida AI Passport, confianza, riesgo, ética, aprobación humana y auditoría antes de habilitar una acción; endpoints gated `/api/v1/gameover/*` y step Jenkins `gameOverGovernance` (fuente en `gameover-jenkins-plugin/`). **Decide, puntúa y registra; no ejecuta ni certifica**. Ver [docs/GAME_OVER_UAGP1_CANONICAL.md](docs/GAME_OVER_UAGP1_CANONICAL.md).
 - **Interfaz** (`src/ui/`): navegación por anclas, menú móvil accesible, chat real contra `POST /api/v1/cognition/route`, voz del navegador (si existe), estados de carga y error.
 - **Operación:** readiness, canary, latency-metrics, TTL single-flight, adaptadores de production-ops.
 - **Workspace Rust separado** (`ige-omega/`): crates de cognición, memoria, world model, ABX, BookPI, kernel y gateway (ver gates abajo).
@@ -90,7 +91,7 @@ La visión es el **norte**; abajo se reporta, sin adornos, cuánto de ella exist
 | Dimensión | Peso | Evaluación | Evidencia / gate |
 |---|---:|---:|---|
 | Runtime HTTP y flujo local | 20% | 75% | Smoke HTTP local verde en el SHA |
-| Pruebas y validación automatizada | 20% | 75% | 629 pruebas / 115 archivos |
+| Pruebas y validación automatizada | 20% | 75% | 672 pruebas / 124 archivos |
 | Seguridad y guardrails | 15% | 45% | Suite de seguridad 14/14; falta revisión de producción |
 | Inferencia externa real | 15% | 0% verificado | Sin credenciales elegibles; no demostrada |
 | Persistencia durable y recuperación | 10% | 40% | Ledger durable JSONL + backup/restore/retención con tests; falta E2E Postgres/Supabase y simulacro de recuperación |
@@ -205,6 +206,11 @@ Rutas de referencia para la interfaz y diagnóstico:
 | POST | `/api/v1/billing/cancel` | Cancela la suscripción registrada (token admin) |
 | GET | `/api/v1/billing/usage` | Uso del día vs cuota por clave (token admin) |
 | POST | `/api/v1/commerce/offers` | Puerta real: exige función `offer` + cuota `active_offers` (token admin) |
+| GET | `/api/v1/gameover/constitution` | Constitución UAGP-1 (token admin) |
+| GET | `/api/v1/gameover/passports` | Lista de AI Passports registrados (token admin) |
+| POST | `/api/v1/gameover/passports` | Emite un AI Passport (token admin) |
+| POST | `/api/v1/gameover/passports/revoke` | Revoca un AI Passport (token admin) |
+| POST | `/api/v1/gameover/govern` | Adjudica una solicitud de gobernanza UAGP-1 (token admin) |
 | GET | `/api/v1/readyz` | Readiness operativa |
 
 Para rutas sensibles, consultar el handler y los controles de autorización antes de habilitarlas a usuarios externos. No se deben inferir permisos a partir del nombre de una ruta.
@@ -289,8 +295,10 @@ Consultar [.env.example](.env.example) y [guía de entorno](docs/ENVIRONMENT.md)
 | `src/memory/`, `src/atlas/`, `src/bookpi/`, `src/veritas/` | Memoria, persistencia y evidencia |
 | `src/federation/`, `src/observability/`, `src/deployment/` | Eventos, telemetría y operación |
 | `src/commerce/` | Comercio: planes, candados, conectores + motor de entitlements/suscripciones/metering |
+| `src/gameover/` | Gobernanza de agentes GAME OVER / UAGP-1 (passport, trust, riesgo, ética, corte, auditoría) |
+| `gameover-jenkins-plugin/` | Plugin Jenkins `gameover-governance` (fuente; step `gameOverGovernance`) |
 | `ige-omega/` | Workspace Rust separado |
-| `test/` | Pruebas automatizadas (115 archivos) |
+| `test/` | Pruebas automatizadas (124 archivos) |
 | `scripts/` | Smokes, seguridad, inventarios y evidencia |
 | `docs/` | Especificaciones, auditorías, runbooks y contratos |
 

@@ -74,19 +74,25 @@ Reconocimiento ejecutado sobre `src/`, `docs/`, `test/` y scripts:
 5. **Aislamiento multi-tenant verificado** (nivel aplicación).
    Estado: `wired` en módulo + tool; tests verdes. No verifica RLS de base de
    datos. Ver `docs/tenancy/ISOLATION.md`.
+6. **Gobernanza de agentes GAME OVER / UAGP-1** (passport + trust + riesgo +
+   ética + aprobación humana + auditoría).
+   Estado: `wired` en el motor TypeScript (`src/gameover/`) + endpoints HTTP +
+   tests verdes; el plugin Jenkins (`gameover-jenkins-plugin/`) está
+   **implementado como código fuente** pero **no compilado** aquí (sin JDK/Maven).
+   Ver `docs/GAME_OVER_UAGP1_CANONICAL.md`.
 
 ### P1 — Endurecimiento
 
-6. Hardening de seguridad de producción (rate-limit distribuido, secretos, rotación).
-7. Recuperación con objetivos RTO/RPO medidos.
-8. Observabilidad productiva (trazas, alertas, dashboards).
-9. Verificación VERITAS real (no simulada).
+7. Hardening de seguridad de producción (rate-limit distribuido, secretos, rotación).
+8. Recuperación con objetivos RTO/RPO medidos.
+9. Observabilidad productiva (trazas, alertas, dashboards).
+10. Verificación VERITAS real (no simulada).
 
 ### P2 — Escala
 
-10. Dedupe de módulos homónimos.
-11. E2E en navegadores.
-12. Heptafederación.
+11. Dedupe de módulos homónimos.
+12. E2E en navegadores.
+13. Heptafederación.
 
 ## Lote 1 — Motor de monetización (implementado)
 
@@ -168,3 +174,29 @@ Pruebas: `test/tenancy/isolation.test.ts` (12). Documentación:
   con roles y dataset multi-tenant).
 - Política de identidad verificada end-to-end en rutas HTTP (hoy el tenant del
   principal se resuelve fuera del request de billing).
+
+## Lote 4 — GAME OVER / UAGP-1 (gobernanza de agentes)
+
+Nuevo módulo `src/gameover/` (13 archivos, `state: draft | engine-generated`):
+`types`, `constitution`, `trust-engine`, `risk-engine`, `ethics-engine`,
+`explainability-engine`, `cognitive-court`, `passport-authority`, `validator`,
+`human-approval-gate`, `audit`, `gateway`, `index` (barril).
+
+- Pipeline: validación → passport → ética → trust → riesgo → corte →
+  aprobación humana → explicación → auditoría (BookPI).
+- Endpoints gated: `GET /api/v1/gameover/constitution`,
+  `GET/POST /api/v1/gameover/passports`, `POST /api/v1/gameover/passports/revoke`,
+  `POST /api/v1/gameover/govern` (ACCEPT→200, ESCALATE→202, REJECT→403).
+- Plugin Jenkins `gameover-governance`: step `gameOverGovernance` que falla en
+  cerrado ante outcome distinto de `ACCEPT`.
+
+Pruebas: `test/gameover/*.test.ts` (43) + JUnit 5 en el plugin (fuente).
+Documentación: `docs/GAME_OVER_UAGP1_CANONICAL.md`; citación: `CITATION.cff`.
+
+### Pendiente del lote 4 (honesto)
+
+- Compilar y ejecutar `.hpi` + suite JUnit 5 (requiere JDK 17 + Maven, ausentes).
+- Firma/CA criptográfica del AI Passport (hoy el registro es en memoria y la
+  verificación es de presencia/coincidencia, no criptográfica).
+- Registro externo del DOI/organización en Zenodo/Figshare (acción humana).
+- Persistir passports del plugin (hoy `PassportAuthority` es in-memory).
