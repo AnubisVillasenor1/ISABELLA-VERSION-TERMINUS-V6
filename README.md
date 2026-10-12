@@ -53,12 +53,12 @@ La visión es el **norte**; abajo se reporta, sin adornos, cuánto de ella exist
 
 ## 2. Estado real hoy (lo que ya tenemos)
 
-**SHA local validado: `7a14bc4`** (incremento de monetización sobre `origin/main`). El árbol pasa, de forma reproducible en local:
+**SHA local validado: `f8c0740`** (incremento de persistencia durable sobre `origin/main`). El árbol pasa, de forma reproducible en local:
 
-| Gate | Comando | Resultado en `7a14bc4` |
+| Gate | Comando | Resultado en `f8c0740` |
 |---|---|---|
 | Tipos estrictos | `pnpm typecheck` | exit 0 |
-| Pruebas | `pnpm test` | **590 aprobadas / 111 archivos** |
+| Pruebas | `pnpm test` | **605 aprobadas / 113 archivos** |
 | Build completo | `pnpm build` | exit 0 (tsc + vitest + esbuild + `node --check src/ui/app.js` + smoke UI + smoke runtime) |
 | Suite de seguridad | `pnpm run security:suite` | **14 passed / 0 failed** |
 
@@ -72,7 +72,7 @@ La visión es el **norte**; abajo se reporta, sin adornos, cuánto de ella exist
 - **Runtime cognitivo** (`src/genesis/runtime.ts`) con Gateway de capacidades, skills y tools registrados con `methodId`/`riskTier`.
 - **Inferencia:** política de proveedores compartida (`src/inference/provider-policy.ts`), adaptadores OpenRouter (modelo gratuito por defecto), Hugging Face (modelos explícitos), Gemini/AI Gateway, cooldowns, timeouts acotados y **fallback local determinista** (`sovereign-fallback`).
 - **Memoria:** `SessionMemory` (continuidad conversacional acotada), `VerifiedKnowledgeStore` (backend en memoria y Supabase), memoria vectorial y provenance.
-- **BookPI:** contrato de ledger append-only con crypto/hash y adaptadores de almacenamiento (JSONL y Postgres); **el wiring E2E al almacenamiento durable sigue pendiente**.
+- **BookPI:** contrato de ledger append-only con crypto/hash y adaptadores de almacenamiento (JSONL y Postgres). El runtime usa un **ledger durable JSONL** cuando `BOOKPI_LEDGER_PATH` está definido (si no, cadena en memoria volátil, documentada); incluye retención planeada, backup/restore con validación de la cadena y CLI `pnpm bookpi:maintenance`. **No es WORM**; ver [docs/bookpi](docs/bookpi/DURABLE-LEDGER.md).
 - **Observabilidad:** `LatencyRegistry` (p50/p95) y `MetricsRegistry`, expuestos en `GET /api/v1/metrics`.
 - **Federación:** eventos YUN (`src/federation/yun-event.ts`) con validación y detección de alteración.
 - **Seguridad criptográfica:** comparaciones en tiempo constante (`timingSafeEqual`), nonces anti-replay, firma de webhooks HMAC-SHA256, ISA-X con Ed25519 y PQC fail-closed.
@@ -84,15 +84,15 @@ La visión es el **norte**; abajo se reporta, sin adornos, cuánto de ella exist
 
 ### Readiness estimada
 
-**44.25% ponderado (≈44%)** como *evaluación de gates*, no como porcentaje de funcionalidades ni medición científica. **No se incrementa** mientras sigan abiertos los gates de inferencia externa, CI, Rust y recuperación durable.
+**46.25% ponderado (≈46%)** como *evaluación de gates*, no como porcentaje de funcionalidades ni medición científica. **No se incrementa** mientras sigan abiertos los gates de inferencia externa, CI, Rust y el simulacro de recuperación durable (E2E Postgres/Supabase).
 
 | Dimensión | Peso | Evaluación | Evidencia / gate |
 |---|---:|---:|---|
 | Runtime HTTP y flujo local | 20% | 75% | Smoke HTTP local verde en el SHA |
-| Pruebas y validación automatizada | 20% | 75% | 590 pruebas / 111 archivos |
+| Pruebas y validación automatizada | 20% | 75% | 605 pruebas / 113 archivos |
 | Seguridad y guardrails | 15% | 45% | Suite de seguridad 14/14; falta revisión de producción |
 | Inferencia externa real | 15% | 0% verificado | Sin credenciales elegibles; no demostrada |
-| Persistencia durable y recuperación | 10% | 20% | Adaptadores existen; backup/restore sin evidencia |
+| Persistencia durable y recuperación | 10% | 40% | Ledger durable JSONL + backup/restore/retención con tests; falta E2E Postgres/Supabase y simulacro de recuperación |
 | CI reproducible y workspace Rust | 10% | 20% | CI sin jobs verdes; `Cargo.lock` ausente |
 | Operación, observabilidad y rollback | 10% | 35% | Instrumentación presente; procedimientos sin probar |
 
@@ -289,7 +289,7 @@ Consultar [.env.example](.env.example) y [guía de entorno](docs/ENVIRONMENT.md)
 | `src/federation/`, `src/observability/`, `src/deployment/` | Eventos, telemetría y operación |
 | `src/commerce/` | Comercio: planes, candados, conectores + motor de entitlements/suscripciones/metering |
 | `ige-omega/` | Workspace Rust separado |
-| `test/` | Pruebas automatizadas (111 archivos) |
+| `test/` | Pruebas automatizadas (113 archivos) |
 | `scripts/` | Smokes, seguridad, inventarios y evidencia |
 | `docs/` | Especificaciones, auditorías, runbooks y contratos |
 
