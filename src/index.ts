@@ -47,6 +47,15 @@ export * from "./territory/tamv-integration";
 export * from "./plugins";
 export * from "./commerce";
 export * from "./tenancy/isolation";
+export * from "./gameover";
+// Desambiguación de barril: crown/intent y gameover exportan `RiskLevel` con
+// semánticas distintas; cognition/explainability y gameover exportan
+// `explainDecision`. El re-export explícito fija el canónico y los alias
+// conservan ambos contratos (GAME OVER / UAGP-1).
+export type { RiskLevel } from "./crown";
+export type { RiskLevel as GameOverRiskLevel } from "./gameover";
+export { explainDecision } from "./cognition/explainability";
+export { explainDecision as explainGameOverDecision } from "./gameover";
 // Desambiguación de barril: crown y capabilities exportan nombres homónimos con
 // semánticas distintas (contrato de gate vs. contrato HSF). El re-export explícito
 // resuelve la ambigüedad del `export *`; los alias conservan ambos contratos.

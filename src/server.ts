@@ -34,6 +34,7 @@ import { SessionMemory, formatSessionContext, deriveSessionId } from "./memory/s
 import { VerifiedKnowledgeStore, formatVerifiedKnowledgeContext } from "./memory/verified-knowledge";
 import { osirisSentinel } from "./osiris";
 import { SubscriptionStore, UsageMeter, checkFeature, checkQuota, planEntitlements, PLANS, type PlanId, type QuotaKey, type SubscriptionRecord } from "./commerce";
+import { GAMEOVER_CONSTITUTION, passportAuthority, uagpGateway, type UagpRequestInput } from "./gameover";
 
 const app: Application = express();
 app.disable("x-powered-by");
@@ -4578,6 +4579,88 @@ app.post("/api/v1/commerce/offers", async (req, res) => {
     entitlement: featureDecision,
     quota: { ...quotaDecision, used: used + 1 },
   });
+});
+
+// GAME OVER / UAGP-1 — agent governance gateway. Every route is admin-gated and
+// treats the authenticated admin as the human-authority principal. The gateway
+// decides, scores and records; it never executes the governed action.
+const GAMEOVER_ADMIN_PRINCIPAL = "genesis-admin";
+
+app.get("/api/v1/gameover/constitution", (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  res.json({ success: true, constitution: GAMEOVER_CONSTITUTION });
+});
+
+app.get("/api/v1/gameover/passports", (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  const passports = passportAuthority.list();
+  res.json({
+    success: true,
+    count: passports.length,
+    passports,
+    disclaimer: "In-memory, application-level registry; not a cryptographic identity provider or external CA.",
+  });
+});
+
+app.post("/api/v1/gameover/passports", (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  try {
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const agent = typeof body.agent === "object" && req.body.agent !== null ? (req.body.agent as Record<string, unknown>) : null;
+    if (!agent) {
+      res.status(400).json({ success: false, error: "agent es requerido" });
+      return;
+    }
+    const passport = passportAuthority.issue({
+      agent: {
+        id: commerceStringField(agent, "id") ?? "",
+        name: commerceStringField(agent, "name") ?? "",
+        organization: commerceStringField(agent, "organization") ?? "",
+        owner: commerceStringField(agent, "owner") ?? "",
+        capabilities: Array.isArray(agent.capabilities)
+          ? (agent.capabilities as unknown[]).filter((item): item is string => typeof item === "string")
+          : [],
+        createdAt: commerceStringField(agent, "createdAt") ?? new Date().toISOString(),
+      },
+      issuer: commerceStringField(agent, "issuer") ?? GAMEOVER_ADMIN_PRINCIPAL,
+      trustScore: typeof req.body.trustScore === "number" ? (req.body.trustScore as number) : 0,
+      validityDays: typeof req.body.validityDays === "number" ? (req.body.validityDays as number) : undefined,
+      id: commerceStringField((req.body ?? {}) as Record<string, unknown>, "passportId"),
+    });
+    res.status(201).json({ success: true, passport });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error instanceof Error ? error.message : "PASSPORT_ISSUE_FAILED" });
+  }
+});
+
+app.post("/api/v1/gameover/passports/revoke", (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  try {
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const passportId = commerceStringField(body, "passportId");
+    const reason = commerceStringField(body, "reason");
+    if (!passportId || !reason) {
+      res.status(400).json({ success: false, error: "passportId y reason son requeridos" });
+      return;
+    }
+    const passport = passportAuthority.revoke(passportId, reason);
+    res.json({ success: true, passport });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "PASSPORT_REVOKE_FAILED";
+    res.status(message.includes("NOT_FOUND") ? 404 : 400).json({ success: false, error: message });
+  }
+});
+
+app.post("/api/v1/gameover/govern", (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  try {
+    const input = (req.body ?? {}) as UagpRequestInput;
+    const result = uagpGateway.govern(input, { authenticatedPrincipal: GAMEOVER_ADMIN_PRINCIPAL });
+    const status = result.outcome === "ACCEPT" ? 200 : result.outcome === "ESCALATE" ? 202 : 403;
+    res.status(status).json({ success: result.allowed, ...result });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error instanceof Error ? error.message : "GOVERNANCE_FAILED" });
+  }
 });
 
 if (!process.env.VERCEL) app.listen(port, host, () => {
