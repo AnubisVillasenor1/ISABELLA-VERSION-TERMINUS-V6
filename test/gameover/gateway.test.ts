@@ -103,6 +103,14 @@ describe("GAME OVER UagpGateway", () => {
     expect(result.allowed).toBe(false);
   });
 
+  it("does not accept a self-asserted approver without an authenticated principal", () => {
+    const { gateway } = harness();
+    const result = gateway.govern(request({ actions: ["deploy"], humanApprover: "edwin" }));
+    expect(result.outcome).toBe("ESCALATE");
+    expect(result.decision.rationale).toContain("HUMAN_AUTHENTICATED_PRINCIPAL_REQUIRED");
+    expect(result.allowed).toBe(false);
+  });
+
   it("accepts a high-risk action when a matching human approver is recorded", () => {
     const { gateway } = harness();
     const result = gateway.govern(request({ actions: ["deploy"], humanApprover: "edwin" }), { authenticatedPrincipal: "edwin" });
