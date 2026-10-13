@@ -33,6 +33,10 @@ security:
 
 components:
   securitySchemes:
+    AdminBearer:
+      type: http
+      scheme: bearer
+      description: Token de servidor GENESIS_ADMIN_API_TOKEN (comparación en tiempo constante). 503 si no está configurado.
     OAuth2Bearer:
       type: oauth2
       description: Protocolo OAuth2 / OIDC apoyado en WebAuthn, credenciales soberanas y HSM.
@@ -712,3 +716,107 @@ paths:
       responses:
         "200":
           description: Datos territoriales del Nodo Cero
+
+  /api/v1/reina/status:
+    get:
+      summary: Estado honesto de REINA (state draft | engine-generated)
+      description: Declara capacidades y límites. REINA adjudica previo a la ejecución; no ejecuta, no es conciencia ni AGI.
+      operationId: getReinaStatus
+      security: []
+      responses:
+        "200":
+          description: Estado público
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, name, state, claims, disclaimers, logSize]
+                properties:
+                  success: { type: boolean }
+                  name: { type: string, example: REINA }
+                  state: { type: string, example: "draft | engine-generated" }
+                  claims: { type: array, items: { type: string } }
+                  disclaimers: { type: array, items: { type: string } }
+                  logSize: { type: integer, minimum: 0 }
+
+  /api/v1/reina/adjudicate:
+    post:
+      summary: Adjudica una acción propuesta (no la ejecuta)
+      description: >
+        Pipeline kill switch → riesgo → autonomía A0-A5 → quórum. `humanApprovalVerified` y `quorum`
+        no se aceptan desde el cuerpo HTTP. Con `idempotencyKey`, la misma clave y petición devuelve la misma decisión.
+      operationId: adjudicateReina
+      security:
+        - AdminBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [requestId, actor, action, scope, impact, autonomyLevel, risk]
+              properties:
+                requestId: { type: string, maxLength: 128 }
+                actor: { type: string }
+                action: { type: string, maxLength: 256 }
+                scope: { type: string, pattern: "^[A-Za-z0-9_:.\\-]{1,128}$" }
+                impact: { type: string, enum: [NEGLIGIBLE, LOW, MEDIUM, HIGH, CRITICAL] }
+                autonomyLevel: { type: string, enum: [A0, A1, A2, A3, A4, A5] }
+                irreversible: { type: boolean }
+                humanConfirmed: { type: boolean }
+                dualControl: { type: boolean }
+                rollbackPlan: { type: boolean }
+                timeLimitMs: { type: number }
+                idempotencyKey: { type: string }
+                risk:
+                  type: object
+                  description: Factores C,S,F,P,U en [0,1].
+      responses:
+        "200":
+          description: Decisión sellada en el log de transparencia
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  decision:
+                    type: object
+                    properties:
+                      verdict: { type: string, enum: [PERMIT, REQUIRE_CONFIRMATION, REQUIRE_QUORUM, REQUIRE_HUMAN_APPROVAL, DENY, HALTED] }
+                      reasons: { type: array, items: { type: string } }
+                      riskScore: { type: number, nullable: true }
+                      riskTier: { type: string, nullable: true }
+                      evidence:
+                        type: object
+                        properties:
+                          logIndex: { type: integer }
+                          leafHash: { type: string }
+                          treeSize: { type: integer }
+                          rootHash: { type: string }
+        "400":
+          description: Petición inválida
+        "401":
+          description: No autorizado
+        "409":
+          description: Idempotency-Key reutilizada con otra petición
+        "503":
+          description: Token de administración no configurado
+
+  /api/v1/reina/log/proof/{index}:
+    get:
+      summary: Prueba de inclusión RFC 6962 de una decisión
+      operationId: getReinaInclusionProof
+      security:
+        - AdminBearer: []
+      parameters:
+        - { name: index, in: path, required: true, schema: { type: integer, minimum: 0 } }
+      responses:
+        "200":
+          description: Prueba verificable con `verifyInclusion`
+        "400":
+          description: Índice fuera de rango
+        "401":
+          description: No autorizado
+        "503":
+          description: Token de administración no configurado

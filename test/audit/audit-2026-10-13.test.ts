@@ -56,3 +56,13 @@ describe("audit 2026-10-13 regressions", () => {
     }
   });
 });
+
+describe("AUD-02b canonical payload hashing", () => {
+  it("key order of the payload does not change the signature", async () => {
+    const sign = PROTOCOL_CATALOG.find((p) => p.id === "isabella.security.sign_event");
+    if (!sign) throw new Error("protocol missing");
+    const a = (await sign.execute({ input: { payload: { a: 1, b: { x: 1, y: 2 } }, actorId: "u" } })) as { signature: string };
+    const b = (await sign.execute({ input: { payload: { b: { y: 2, x: 1 }, a: 1 }, actorId: "u" } })) as { signature: string };
+    expect(a.signature).toBe(b.signature);
+  });
+});

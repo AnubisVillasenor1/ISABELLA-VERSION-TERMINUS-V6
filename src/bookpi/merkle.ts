@@ -11,6 +11,7 @@
  * post-cuántica real (HSM/PQC) pertenecen a capas externas con autoridad.
  */
 import { createHash, randomBytes } from "node:crypto";
+import { TransparencyLog, verifyInclusion } from "./transparency";
 
 export const BOOKPI_CHUNK_SIZE = 64 * 1024;
 
@@ -149,4 +150,42 @@ export function registerManuscript(input: ManuscriptInput, manuscriptId: string)
     totalChunks: hashes.length,
     chunksHashes: hashes,
   };
+}
+
+/**
+ * Esquema v2 (recomendado): árbol RFC 6962 con separación de dominio y SIN duplicar hojas impares,
+ * por lo que [a,b,c] y [a,b,c,c] ya no colisionan (el esquema v1 se conserva por compatibilidad).
+ * state: draft | engine-generated.
+ */
+export interface ChunkProofV2 {
+  scheme: "RFC6962-SHA256";
+  chunkIndex: number;
+  treeSize: number;
+  leafHash: string;
+  proof: string[];
+  root: string;
+}
+
+function logFromChunkHashes(chunkHashes: readonly string[]): TransparencyLog {
+  if (chunkHashes.length === 0) throw new Error("BOOKPI: cannot build Merkle tree from empty leaves");
+  const log = new TransparencyLog();
+  for (const h of chunkHashes) {
+    if (!/^[0-9a-f]{64}$/.test(h)) throw new Error("BOOKPI: chunk hashes must be 64-char lowercase hex");
+    log.append(Buffer.from(h, "hex"));
+  }
+  return log;
+}
+
+export function merkleRootV2(chunkHashes: readonly string[]): string {
+  return logFromChunkHashes(chunkHashes).rootHash();
+}
+
+export function generateChunkProofV2(chunkHashes: readonly string[], index: number): ChunkProofV2 {
+  const log = logFromChunkHashes(chunkHashes);
+  if (!Number.isInteger(index) || index < 0 || index >= log.size) throw new Error("BOOKPI: target chunk index out of range");
+  return { scheme: "RFC6962-SHA256", chunkIndex: index, treeSize: log.size, leafHash: log.leafHash(index), proof: log.inclusionProof(index), root: log.rootHash() };
+}
+
+export function verifyChunkProofV2(proof: ChunkProofV2): boolean {
+  return proof.scheme === "RFC6962-SHA256" && verifyInclusion({ leafHash: proof.leafHash, index: proof.chunkIndex, treeSize: proof.treeSize, proof: proof.proof, rootHash: proof.root });
 }

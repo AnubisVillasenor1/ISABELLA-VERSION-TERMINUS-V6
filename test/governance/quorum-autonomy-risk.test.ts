@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { generateKeyPairSync } from "node:crypto";
+import { generateKeyPairSync, type KeyObject } from "node:crypto";
 import { QuorumSession, signVote, type QuorumProposal, type Voter } from "../../src/governance/quorum";
 import { evaluateAutonomy } from "../../src/governance/autonomy";
 import { assessRisk, riskScore, riskTier } from "../../src/governance/risk-score";
@@ -7,14 +7,14 @@ import { assessRisk, riskScore, riskTier } from "../../src/governance/risk-score
 /** state: draft | engine-generated */
 function setup(threshold = 3) {
   const feds = ["IDENTITY", "PATRIMONY", "TOURISM", "ECONOMY", "TWINS"];
-  const keys = feds.map(() => generateKeyPairSync("ed25519"));
-  const voters: Voter[] = feds.map((f, i) => ({ id: `v-${f}`, federation: f, publicKey: (keys[i] as ReturnType<typeof generateKeyPairSync<"ed25519">>).publicKey }));
+  const keys: { publicKey: KeyObject; privateKey: KeyObject }[] = feds.map(() => generateKeyPairSync("ed25519"));
+  const voters: Voter[] = feds.map((f, i) => ({ id: `v-${f}`, federation: f, publicKey: (keys[i] as { publicKey: KeyObject }).publicKey }));
   const proposal: QuorumProposal = {
     id: "p1", proposerId: "proposer", action: "deploy", payload: "payload-v1", threshold,
     createdAt: new Date("2026-10-13T00:00:00Z"), expiresAt: new Date("2026-10-14T00:00:00Z"),
   };
   const session = new QuorumSession(proposal, voters);
-  const vote = (i: number, d: "APPROVE" | "REJECT" = "APPROVE") => signVote((keys[i] as { privateKey: import("node:crypto").KeyObject }).privateKey, proposal, (voters[i] as Voter).id, d);
+  const vote = (i: number, d: "APPROVE" | "REJECT" = "APPROVE") => signVote((keys[i] as { privateKey: KeyObject }).privateKey, proposal, (voters[i] as Voter).id, d);
   return { session, vote, proposal, voters, keys };
 }
 const T = new Date("2026-10-13T12:00:00Z");

@@ -4858,7 +4858,8 @@ const reina = createReinaRuntime(process.env, (record) => {
   });
 });
 
-app.get("/api/v1/reina/status", (_req, res) => {
+app.get("/api/v1/reina/status", (req, res) => {
+  if (!enforceRateLimit(req, res, publicScanLimiter, "reina-status")) return;
   const s = reina.status();
   // Público y honesto: sin raíz interna ni estado del kill switch más allá de lo necesario.
   res.json({ success: true, name: s.name, state: s.state, claims: s.claims, disclaimers: s.disclaimers, logSize: s.logSize });

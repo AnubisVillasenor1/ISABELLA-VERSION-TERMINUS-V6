@@ -4,7 +4,7 @@
 > `state: auto_generated` — no editar a mano; requiere revisión humana para ser
 > evidencia (*CAPABILITY ≠ AUTHORITY ≠ EVIDENCE*, AGENTS.md).
 
-- **Generado:** 2026-10-13T19:23:15.529Z
+- **Generado:** 2026-10-13T19:34:00.609Z
 - **Fuente:** `src/server.ts` (parseo estático, sin ejecutar el servidor)
 - **Rutas totales:** 74 · **Sensibles:** 42 · **Con contrato verificado:** 4
 - **Contratos de tipo considerados:** `InferenceCapability`, `ModelDescriptor`, `GenerationRequest`, `GenerationResult`, `InferenceAdapter`, `EmbeddingAdapter`, `InferenceRouter`
@@ -78,9 +78,9 @@
 | `POST` | `/api/v1/gameover/passports` | `inline@src/server.ts:4754` | sí | sí | no | sí | no |
 | `POST` | `/api/v1/gameover/passports/revoke` | `inline@src/server.ts:4785` | sí | sí | no | sí | no |
 | `POST` | `/api/v1/gameover/govern` | `inline@src/server.ts:4803` | sí | sí | no | sí | no |
-| `GET` | `/api/v1/reina/status` | `inline@src/server.ts:4861` | no | no | no | no | no |
-| `POST` | `/api/v1/reina/adjudicate` | `inline@src/server.ts:4867` | sí | sí | no | sí | no |
-| `GET` | `/api/v1/reina/log/proof/:index` | `inline@src/server.ts:4895` | no | sí | no | sí | no |
+| `GET` | `/api/v1/reina/status` | `inline@src/server.ts:4861` | no | no | sí | no | no |
+| `POST` | `/api/v1/reina/adjudicate` | `inline@src/server.ts:4868` | sí | sí | no | sí | no |
+| `GET` | `/api/v1/reina/log/proof/:index` | `inline@src/server.ts:4896` | no | sí | no | sí | no |
 | `GET` | `/api/v1/hypercore/modes` | `inline@src/routes/hypercore.ts:58` | no | no | no | no | no |
 | `POST` | `/api/v1/hypercore/run` | `inline@src/routes/hypercore.ts:68` | sí | sí | no | sí | no |
 | `POST` | `/api/v1/hypercore/predict` | `inline@src/routes/hypercore.ts:99` | sí | sí | no | sí | no |

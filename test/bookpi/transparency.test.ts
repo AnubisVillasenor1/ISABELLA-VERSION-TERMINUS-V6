@@ -116,3 +116,23 @@ describe("TransparencyLog (RFC 6962/9162)", () => {
     expect(() => log.leafHash(9)).toThrow();
   });
 });
+
+import { chunkBuffer, merkleRootV2, generateChunkProofV2, verifyChunkProofV2, buildMerkleTree } from "../../src/bookpi/merkle";
+
+describe("merkle v2 (anti duplicate-leaf ambiguity)", () => {
+  const h = (s: string) => chunkBuffer(Buffer.from(s)).hashes[0] as string;
+  it("v1 collides on duplicated odd leaf, v2 does not", () => {
+    const [a, b, c] = [h("a"), h("b"), h("c")] as [string, string, string];
+    expect(buildMerkleTree([a, b, c]).root).toBe(buildMerkleTree([a, b, c, c]).root);
+    expect(merkleRootV2([a, b, c])).not.toBe(merkleRootV2([a, b, c, c]));
+  });
+  it("proofs verify and reject tampering", () => {
+    const leaves = ["a", "b", "c", "d", "e"].map(h);
+    for (let i = 0; i < leaves.length; i += 1) expect(verifyChunkProofV2(generateChunkProofV2(leaves, i))).toBe(true);
+    const p = generateChunkProofV2(leaves, 2);
+    expect(verifyChunkProofV2({ ...p, leafHash: h("zzz") })).toBe(false);
+    expect(() => generateChunkProofV2([], 0)).toThrow();
+    expect(() => generateChunkProofV2(leaves, 9)).toThrow();
+    expect(() => merkleRootV2(["nothex"])).toThrow();
+  });
+});

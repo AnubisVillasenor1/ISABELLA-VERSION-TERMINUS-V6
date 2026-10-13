@@ -8,13 +8,24 @@
 import type { ProtocolDescriptor } from "./registry";
 import { createHash, randomUUID } from "node:crypto";
 import { equalSecret } from "../security/secrets";
-import { chunkBuffer, buildMerkleTree, generateMerkleProof, verifyChunkProof, generateZkCommitment } from "../bookpi/merkle";
+import { canonicalJson } from "../bookpi/crypto";
+import type { JsonValue } from "../bookpi/types";
+import { chunkBuffer, buildMerkleTree, generateMerkleProof, verifyChunkProof, generateZkCommitment, merkleRootV2, generateChunkProofV2, verifyChunkProofV2 } from "../bookpi/merkle";
 import { settleRoyalties, sharesAreBalanced, type FederationShare } from "../bookpi/royalties";
 import { createCanonicalDocument, changeDocumentState, type DocumentInput, type DocumentState } from "../atlas/documents";
 import { buildAtlasEvent, isKnownAtlasEventType, type AtlasEventName, type AtlasEventPayloads } from "../atlas/events";
 
 function sha256(value: string): string {
   return createHash("sha256").update(value, "utf8").digest("hex");
+}
+
+/** Hash canónico (claves ordenadas): el orden de claves del payload ya no altera la firma. */
+function payloadDigest(payload: unknown): string {
+  try {
+    return sha256(canonicalJson((payload ?? null) as JsonValue));
+  } catch {
+    return sha256(JSON.stringify(payload ?? null));
+  }
 }
 
 export const PROTOCOL_CATALOG: readonly ProtocolDescriptor[] = [
@@ -28,7 +39,7 @@ export const PROTOCOL_CATALOG: readonly ProtocolDescriptor[] = [
       const { hashes } = chunkBuffer(Buffer.from(input.content, "utf8"));
       const { root } = buildMerkleTree(hashes);
       const { commitment, salt } = generateZkCommitment(root, input.authorId ?? "unknown", input.salt);
-      return { manuscriptId: randomUUID(), merkleRoot: root, totalChunks: hashes.length, zkCommitment: commitment, salt };
+      return { manuscriptId: randomUUID(), merkleRoot: root, merkleRootV2: merkleRootV2(hashes), rootScheme: "v1 legacy (duplica hoja impar) + v2 RFC6962 recomendado", totalChunks: hashes.length, zkCommitment: commitment, salt };
     },
   },
   {
@@ -39,7 +50,8 @@ export const PROTOCOL_CATALOG: readonly ProtocolDescriptor[] = [
       const input = (context.input ?? {}) as { content?: string; index?: number };
       const { hashes } = chunkBuffer(Buffer.from(input.content ?? "", "utf8"));
       const proof = generateMerkleProof(hashes, input.index ?? 0);
-      return { proof, valid: verifyChunkProof(proof) };
+      const proofV2 = generateChunkProofV2(hashes, input.index ?? 0);
+      return { proof, valid: verifyChunkProof(proof), proofV2, validV2: verifyChunkProofV2(proofV2) };
     },
   },
   {
@@ -85,7 +97,7 @@ export const PROTOCOL_CATALOG: readonly ProtocolDescriptor[] = [
     description: "Firma determinista de un evento (HMAC-like interno) sobre su hash canónico. No es firma PQC real.",
     execute: async (context) => {
       const input = (context.input ?? {}) as { payload?: unknown; actorId?: string };
-      const payloadHash = sha256(JSON.stringify(input.payload ?? null));
+      const payloadHash = payloadDigest(input.payload);
       const signature = sha256(`${input.actorId ?? "unknown"}:${payloadHash}`);
       return { payloadHash, signature, algorithm: "SHA-256(internal-binding)", note: "No sustituye firma PQC/HSM." };
     },
@@ -96,7 +108,7 @@ export const PROTOCOL_CATALOG: readonly ProtocolDescriptor[] = [
     description: "Verifica la firma determinista interna de un evento.",
     execute: async (context) => {
       const input = (context.input ?? {}) as { payload?: unknown; actorId?: string; signature?: string };
-      const payloadHash = sha256(JSON.stringify(input.payload ?? null));
+      const payloadHash = payloadDigest(input.payload);
       const expected = sha256(`${input.actorId ?? "unknown"}:${payloadHash}`);
       // Comparación en tiempo constante; una firma ausente o no-string es inválida (fail-closed).
       const valid = typeof input.signature === "string" && equalSecret(input.signature, expected);

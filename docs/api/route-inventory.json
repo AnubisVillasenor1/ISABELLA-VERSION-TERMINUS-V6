@@ -918,7 +918,7 @@
     "sensitive": false,
     "controls": {
       "auth": false,
-      "rateLimit": false,
+      "rateLimit": true,
       "inputValidation": false
     },
     "verificationBasis": "sin contrato de tipo, doc o prueba que lo ejercite"
@@ -926,9 +926,9 @@
   {
     "route": "/api/v1/reina/adjudicate",
     "method": "POST",
-    "handler": "inline@src/server.ts:4867",
+    "handler": "inline@src/server.ts:4868",
     "verified": false,
-    "line": 4867,
+    "line": 4868,
     "sensitive": true,
     "controls": {
       "auth": true,
@@ -940,9 +940,9 @@
   {
     "route": "/api/v1/reina/log/proof/:index",
     "method": "GET",
-    "handler": "inline@src/server.ts:4895",
+    "handler": "inline@src/server.ts:4896",
     "verified": false,
-    "line": 4895,
+    "line": 4896,
     "sensitive": false,
     "controls": {
       "auth": true,
