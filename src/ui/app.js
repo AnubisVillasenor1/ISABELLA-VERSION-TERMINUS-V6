@@ -81,7 +81,8 @@ let voiceMode = false;
 let soundOn = false;
 let isSending = false;
 const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-const sessionId = window.crypto?.randomUUID?.() || `session-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+let sessionId = window.crypto?.randomUUID?.() || `session-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+let activeAttachment = null;
 
 const addMessage = (text, role) => {
   if (!messages) return null;
@@ -122,7 +123,26 @@ const addMessage = (text, role) => {
         copyButton.disabled = false;
       }, 1800);
     });
-    content.append(copyButton);
+    const saveButton = document.createElement('button');
+    saveButton.type = 'button';
+    saveButton.className = 'message-save';
+    saveButton.textContent = 'GUARDAR';
+    saveButton.setAttribute('aria-label', 'Guardar respuesta en Studio local');
+    saveButton.addEventListener('click', () => saveDraft(paragraph.textContent || ''));
+    const readButton = document.createElement('button');
+    readButton.type = 'button';
+    readButton.className = 'message-read';
+    readButton.textContent = 'ESCUCHAR';
+    readButton.setAttribute('aria-label', 'Leer respuesta en voz alta');
+    readButton.addEventListener('click', () => {
+      soundOn = true;
+      if (soundToggle) {
+        soundToggle.textContent = 'VOZ: ON';
+        soundToggle.setAttribute('aria-pressed', 'true');
+      }
+      speak(paragraph.textContent || '');
+    });
+    content.append(copyButton, saveButton, readButton);
   }
   article.append(avatar, content);
   messages.append(article);
@@ -182,14 +202,21 @@ const speak = (text) => {
 
 const sendCurrentMessage = async () => {
   if (!form || !prompt || isSending) return;
-  const input = prompt.value.trim();
-  if (!input) {
+  const visibleInput = prompt.value.trim();
+  const attachment = activeAttachment;
+  if (!visibleInput && !attachment) {
     prompt.focus();
     return;
   }
+  const actualPrompt = visibleInput || 'Analiza el archivo adjunto y resume los puntos clave, riesgos y preguntas abiertas.';
+  const input = attachment
+    ? `${actualPrompt}\n\n[CONTEXTO DE ARCHIVO LOCAL: ${attachment.name}]\n${attachment.content}`
+    : actualPrompt;
   const history = priorHistory();
-  addMessage(input, 'user');
+  addMessage(`${actualPrompt}${attachment ? `\n\nArchivo adjunto: ${attachment.name}` : ''}`, 'user');
   prompt.value = '';
+  clearActiveAttachment();
+  resizePrompt();
   const pendingNode = addMessage('Procesando tu intención…', 'isabella');
   isSending = true;
   form.setAttribute('aria-busy', 'true');
@@ -449,3 +476,328 @@ document.querySelectorAll('[data-focus-prompt="true"]').forEach((link) => {
     }
   });
 })();
+
+
+// Workspace v2026: teclado global, borradores locales, exportación y adjuntos de texto.
+// No se crean sesiones persistentes ni se simulan proveedores externos.
+const DRAFT_STORAGE_KEY = 'isabella-genesis-local-drafts-v1';
+const localFileInput = byId('localFile');
+const attachTextButton = byId('attachText');
+const attachmentChip = byId('attachmentChip');
+const attachmentName = byId('attachmentName');
+const removeAttachmentButton = byId('removeAttachment');
+const commandPalette = byId('commandPalette');
+const commandSearch = byId('commandSearch');
+const commandList = byId('commandList');
+const commandLauncher = byId('commandLauncher');
+const closeCommandPalette = byId('closeCommandPalette');
+const draftShelf = byId('draftShelf');
+const MAX_LOCAL_FILE_BYTES = 25 * 1024;
+const MAX_LOCAL_FILE_CHARS = 22_000;
+const newSessionSeed = () => window.crypto?.randomUUID?.() || `session-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+const initialWelcomeMarkup = messages?.querySelector('.message')?.outerHTML || '';
+
+const resizePrompt = () => {
+  if (!prompt) return;
+  prompt.style.height = 'auto';
+  prompt.style.height = `${Math.min(prompt.scrollHeight, 180)}px`;
+};
+prompt?.addEventListener('input', resizePrompt);
+prompt?.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
+    event.preventDefault();
+    form?.requestSubmit();
+  }
+});
+
+const clearActiveAttachment = () => {
+  activeAttachment = null;
+  if (attachmentChip) attachmentChip.hidden = true;
+  if (attachmentName) attachmentName.textContent = '';
+  if (localFileInput) localFileInput.value = '';
+};
+attachTextButton?.addEventListener('click', () => localFileInput?.click());
+removeAttachmentButton?.addEventListener('click', clearActiveAttachment);
+localFileInput?.addEventListener('change', async () => {
+  const file = localFileInput.files?.[0];
+  if (!file) return;
+  const allowedExtension = /\.(txt|md|csv|json|log)$/i.test(file.name);
+  if (!allowedExtension || file.size > MAX_LOCAL_FILE_BYTES) {
+    clearActiveAttachment();
+    addMessage('No se adjuntó el archivo. Esta versión acepta .txt, .md, .csv, .json o .log de hasta 25 KB; los PDF y documentos binarios no están habilitados en este flujo.', 'isabella');
+    return;
+  }
+  try {
+    const content = await file.text();
+    if (!content.trim() || content.length > MAX_LOCAL_FILE_CHARS) {
+      clearActiveAttachment();
+      addMessage('El archivo está vacío o supera el límite de texto procesable de esta interfaz.', 'isabella');
+      return;
+    }
+    activeAttachment = { name: file.name.slice(0, 160), content };
+    if (attachmentName) attachmentName.textContent = activeAttachment.name;
+    if (attachmentChip) attachmentChip.hidden = false;
+    prompt?.focus();
+  } catch {
+    clearActiveAttachment();
+    addMessage('No pude leer ese archivo en este navegador. Intenta guardarlo como texto UTF-8 y volver a adjuntarlo.', 'isabella');
+  }
+});
+
+document.querySelectorAll('[data-starter]').forEach((starter) => {
+  starter.addEventListener('click', () => {
+    const template = starter.getAttribute('data-starter') || '';
+    if (prompt) {
+      prompt.value = template;
+      resizePrompt();
+    }
+    byId('chat')?.scrollIntoView({ behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+    window.setTimeout(() => prompt?.focus(), 180);
+  });
+});
+
+const readDrafts = () => {
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(DRAFT_STORAGE_KEY) || '[]');
+    return Array.isArray(parsed) ? parsed.filter((entry) => entry && typeof entry.id === 'string' && typeof entry.content === 'string').slice(0, 30) : [];
+  } catch {
+    return [];
+  }
+};
+const downloadTextFile = (filename, content, type = 'text/markdown;charset=utf-8') => {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.hidden = true;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1200);
+};
+const safeFilename = (value) => value.normalize('NFKD').replace(/[^\w.-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 72) || 'isabella';
+const copyToClipboard = async (value) => {
+  try {
+    await navigator.clipboard.writeText(value);
+    return true;
+  } catch {
+    const helper = document.createElement('textarea');
+    helper.value = value;
+    helper.setAttribute('readonly', '');
+    helper.style.position = 'fixed';
+    helper.style.opacity = '0';
+    document.body.append(helper);
+    helper.select();
+    const copied = document.execCommand?.('copy') === true;
+    helper.remove();
+    return copied;
+  }
+};
+const renderDraftShelf = () => {
+  if (!draftShelf) return;
+  const drafts = readDrafts();
+  draftShelf.replaceChildren();
+  if (!drafts.length) {
+    const empty = document.createElement('p');
+    empty.className = 'empty-shelf';
+    empty.textContent = 'Tus respuestas guardadas aparecerán aquí. Usa «Guardar» debajo de una respuesta para conservarla.';
+    draftShelf.append(empty);
+    return;
+  }
+  drafts.forEach((draft) => {
+    const article = document.createElement('article');
+    article.className = 'draft-card';
+    const heading = document.createElement('h3');
+    heading.textContent = draft.title || 'Respuesta guardada';
+    const meta = document.createElement('p');
+    meta.className = 'draft-meta';
+    meta.textContent = new Date(draft.createdAt).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' });
+    const preview = document.createElement('p');
+    preview.className = 'draft-preview';
+    preview.textContent = draft.content.length > 260 ? `${draft.content.slice(0, 260)}…` : draft.content;
+    const actions = document.createElement('div');
+    actions.className = 'draft-actions';
+    const makeAction = (label, action) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = label;
+      button.addEventListener('click', () => action(draft));
+      return button;
+    };
+    actions.append(
+      makeAction('Copiar', async (item) => {
+        const copied = await copyToClipboard(item.content);
+        if (!copied) {
+          downloadTextFile(`${safeFilename(item.title)}.md`, item.content);
+        }
+      }),
+      makeAction('Descargar', (item) => downloadTextFile(`${safeFilename(item.title)}.md`, item.content)),
+      makeAction('Eliminar', (item) => {
+        try {
+          window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(readDrafts().filter((saved) => saved.id !== item.id)));
+          renderDraftShelf();
+        } catch {
+          addMessage('El navegador no permitió modificar el almacenamiento local.', 'isabella');
+        }
+      })
+    );
+    article.append(heading, meta, preview, actions);
+    draftShelf.append(article);
+  });
+};
+const saveDraft = (content) => {
+  const normalized = String(content || '').trim();
+  if (!normalized || normalized === 'Procesando tu intención…') return;
+  const drafts = readDrafts();
+  const title = normalized.split('\n').map((line) => line.replace(/^#+\s*/, '').trim()).find(Boolean)?.slice(0, 90) || 'Respuesta guardada';
+  const entry = {
+    id: newSessionSeed(),
+    title,
+    content: normalized.slice(0, 40_000),
+    createdAt: new Date().toISOString()
+  };
+  try {
+    window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify([entry, ...drafts].slice(0, 30)));
+    renderDraftShelf();
+    byId('studio')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch {
+    addMessage('No pude guardar esta respuesta en el almacenamiento de este navegador. Puedes usar «Copiar» o «Exportar .md».', 'isabella');
+  }
+};
+const exportConversation = () => {
+  const entries = [...(messages?.querySelectorAll('.message') || [])].map((node) => {
+    const role = node.classList.contains('user') ? 'Tú' : 'Isabella';
+    const content = node.querySelector('p')?.textContent?.trim() || '';
+    return content ? `## ${role}\n\n${content}` : '';
+  }).filter(Boolean);
+  if (!entries.length) {
+    addMessage('Todavía no hay mensajes para exportar.', 'isabella');
+    return;
+  }
+  const content = `# Conversación con Isabella\n\nExportada desde esta sesión el ${new Date().toLocaleString('es-MX')}\n\n${entries.join('\n\n---\n\n')}\n`;
+  downloadTextFile(`isabella-conversacion-${new Date().toISOString().slice(0, 10)}.md`, content);
+};
+const resetConversation = () => {
+  if (!messages) return;
+  if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+  messages.innerHTML = initialWelcomeMarkup;
+  sessionId = newSessionSeed();
+  prompt && (prompt.value = '');
+  clearActiveAttachment();
+  resizePrompt();
+  prompt?.focus();
+};
+newChat?.addEventListener('click', resetConversation);
+byId('clearChat')?.addEventListener('click', resetConversation);
+byId('exportChat')?.addEventListener('click', exportConversation);
+byId('clearDrafts')?.addEventListener('click', () => {
+  if (!readDrafts().length) return;
+  if (!window.confirm('¿Eliminar todos los borradores guardados en este navegador?')) return;
+  try {
+    window.localStorage.removeItem(DRAFT_STORAGE_KEY);
+    renderDraftShelf();
+  } catch {
+    addMessage('El navegador no permitió limpiar los borradores locales.', 'isabella');
+  }
+});
+renderDraftShelf();
+
+const openCommandPalette = () => {
+  if (!commandPalette) return;
+  if (typeof commandPalette.showModal === 'function') commandPalette.showModal();
+  else commandPalette.setAttribute('open', '');
+  if (commandSearch) {
+    commandSearch.value = '';
+    filterCommands('');
+    window.setTimeout(() => commandSearch.focus(), 30);
+  }
+};
+const closePalette = () => {
+  if (!commandPalette) return;
+  if (typeof commandPalette.close === 'function') commandPalette.close();
+  else commandPalette.removeAttribute('open');
+};
+const filterCommands = (query) => {
+  if (!commandList) return;
+  const normalized = String(query || '').trim().toLocaleLowerCase('es-MX');
+  commandList.querySelectorAll('[data-command]').forEach((button) => {
+    const haystack = `${button.textContent || ''} ${button.getAttribute('data-keywords') || ''}`.toLocaleLowerCase('es-MX');
+    button.hidden = normalized.length > 0 && !haystack.includes(normalized);
+  });
+};
+commandLauncher?.addEventListener('click', openCommandPalette);
+closeCommandPalette?.addEventListener('click', closePalette);
+commandPalette?.addEventListener('click', (event) => {
+  if (event.target === commandPalette) closePalette();
+});
+commandSearch?.addEventListener('input', () => filterCommands(commandSearch.value));
+commandSearch?.addEventListener('keydown', (event) => {
+  const visible = [...(commandList?.querySelectorAll('[data-command]') || [])].filter((button) => !button.hidden);
+  if (event.key === 'ArrowDown') {
+    event.preventDefault();
+    visible[0]?.focus();
+  } else if (event.key === 'ArrowUp') {
+    event.preventDefault();
+    visible.at(-1)?.focus();
+  } else if (event.key === 'Enter') {
+    event.preventDefault();
+    visible[0]?.click();
+  }
+});
+const runCommand = (command) => {
+  const targets = {
+    'go-chat': '#chat',
+    'go-studio': '#studio',
+    'go-tools': '#tools',
+    'go-skills': '#skills',
+    'go-economy': '#economy',
+    'go-evidence': '#evidence',
+    'go-governance': '#governance'
+  };
+  closePalette();
+  if (command === 'new-chat') {
+    resetConversation();
+    byId('chat')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
+  }
+  if (command === 'export-chat') {
+    exportConversation();
+    return;
+  }
+  if (command === 'toggle-voice') {
+    soundOn = !soundOn;
+    if (soundToggle) {
+      soundToggle.textContent = `VOZ: ${soundOn ? 'ON' : 'OFF'}`;
+      soundToggle.setAttribute('aria-pressed', String(soundOn));
+    }
+    if (!soundOn && 'speechSynthesis' in window) window.speechSynthesis.cancel();
+    return;
+  }
+  if (command === 'focus-prompt') {
+    byId('chat')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    window.setTimeout(() => prompt?.focus(), 180);
+    return;
+  }
+  if (targets[command]) {
+    document.querySelector(targets[command])?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (command === 'go-chat') window.setTimeout(() => prompt?.focus(), 180);
+  }
+};
+commandList?.querySelectorAll('[data-command]').forEach((button) => {
+  button.addEventListener('click', () => runCommand(button.getAttribute('data-command') || ''));
+});
+document.addEventListener('keydown', (event) => {
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+    event.preventDefault();
+    if (commandPalette?.open) closePalette();
+    else openCommandPalette();
+  }
+  if (event.key === '/' && !event.ctrlKey && !event.metaKey && !event.altKey &&
+      !['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName || '') &&
+      !document.querySelector('dialog[open]')) {
+    event.preventDefault();
+    byId('chat')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    window.setTimeout(() => prompt?.focus(), 180);
+  }
+});
