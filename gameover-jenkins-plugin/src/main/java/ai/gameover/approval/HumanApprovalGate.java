@@ -2,8 +2,9 @@ package ai.gameover.approval;
 
 /**
  * Enforces the human-authority invariant: when policy requires human approval, a
- * named approver must be present, and if an authenticated principal is known it
- * must match. Verifies presence, does not authenticate users.
+ * named approver and authenticated principal must both be present and match.
+ * This gate compares identity claims; an upstream authentication layer must
+ * establish the principal.
  */
 public final class HumanApprovalGate {
 
@@ -22,7 +23,10 @@ public final class HumanApprovalGate {
       return new Approval(true, false, null, "HUMAN_APPROVER_REQUIRED");
     }
     String principal = (authenticatedPrincipal == null || authenticatedPrincipal.isBlank()) ? null : authenticatedPrincipal.trim();
-    if (principal != null && !principal.equals(approver)) {
+    if (principal == null) {
+      return new Approval(true, false, approver, "HUMAN_AUTHENTICATED_PRINCIPAL_REQUIRED");
+    }
+    if (!principal.equals(approver)) {
       return new Approval(true, false, approver, "HUMAN_APPROVER_MISMATCH");
     }
     return new Approval(true, true, approver, "HUMAN_APPROVED");
