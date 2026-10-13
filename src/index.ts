@@ -1,3 +1,13 @@
+/**
+ * @fileoverview Canonical Barrel Export Interface
+ * @project ISABELLA-VERSION-TERMINUS-V6
+ * @description Centralized, modularized, and strictly disambiguated export nexus 
+ *              for the Isabella Sovereign Fabric (ISVF) and TAMV Ecosystem.
+ */
+
+// ============================================================================
+// 1. CORE FOUNDATIONS, INGRESS & IDENTITY SUBSYSTEMS
+// ============================================================================
 export * from "./authority/method-id";
 export * from "./core";
 export * from "./ingress";
@@ -14,69 +24,95 @@ export * from "./federation";
 export * from "./intelligence";
 export * from "./genesis";
 export * from "./inference";
-export { DeterministicVerifier, type VerificationCandidate, type VerificationResult as VeritasVerificationResult } from "./veritas";
+
+// ============================================================================
+// 2. VERITAS VERIFICATION, EVALUATION & DEPLOYMENT
+// ============================================================================
+export * from "./veritas";
 export * from "./evaluation";
 export * from "./deployment";
+
+// ============================================================================
+// 3. COMPANION, COGNITION & EXPERT MODULES (MoE / SOPHIA)
+// ============================================================================
 export * from "./companion/safety";
 export * from "./companion/escalation";
 export * from "./cognition/explainability";
 export * from "./cognition/emotional-trace";
 export * from "./cognition/experts";
 export * from "./cognition/moe";
-export * from "./territory/context";
-export * from "./xr/safety";
-
 export * from "./cognition/consent";
 export * from "./cognition/orchestrator";
 export * from "./cognition/sophia";
-export * from "./memory/provenance";
-export * from "./inference/adapters";
-export * from "./deployment/canary";
 
-export * from "./isabella";
-
+// ============================================================================
+// 4. TERRITORY, XR, QUANTUM & SYSTEM INFRASTRUCTURE
+// ============================================================================
+export * from "./territory/context";
+export * from "./territory/tamv-integration";
+export * from "./xr/safety";
 export * from "./quantum";
 export * from "./protocols";
 export * from "./modules";
 export * from "./osiris";
-
 export * from "./capabilities";
 export * from "./sanitization";
 export * from "./governance";
-export * from "./territory/tamv-integration";
 export * from "./plugins";
 export * from "./commerce";
 export * from "./tenancy/isolation";
 export * from "./gameover";
 export * from "./hypercore";
-// Desambiguación de barril: crown/intent y gameover exportan `RiskLevel` con
-// semánticas distintas; cognition/explainability y gameover exportan
-// `explainDecision`. El re-export explícito fija el canónico y los alias
-// conservan ambos contratos (GAME OVER / UAGP-1).
+export * from "./isabella";
+
+// ============================================================================
+// 5. EXPLICIT BARREL CONFLICT RESOLUTIONS & TYPE ALIASES
+// ============================================================================
+
+/**
+ * --- Risk Level Disambiguation ---
+ * Resolves naming collisions between Crown and Game Over / UAGP-1 semmantics.
+ */
 export type { RiskLevel } from "./crown";
 export type { RiskLevel as GameOverRiskLevel } from "./gameover";
+
+/**
+ * --- Decision Explanation Disambiguation ---
+ */
 export { explainDecision } from "./cognition/explainability";
 export { explainDecision as explainGameOverDecision } from "./gameover";
-// Desambiguación de barril: crown y capabilities exportan nombres homónimos con
-// semánticas distintas (contrato de gate vs. contrato HSF). El re-export explícito
-// resuelve la ambigüedad del `export *`; los alias conservan ambos contratos.
+
+/**
+ * --- Capability Descriptor & Verification Result ---
+ * Resolves homonyms between Crown gates and HSF capability contracts.
+ */
 export type { CapabilityDescriptor, VerificationResult } from "./capabilities";
 export type { CapabilityDescriptor as CrownCapabilityDescriptor } from "./crown";
 export type { VerificationResult as CrownVerificationResult } from "./crown";
 export type { CapabilityDescriptor as HsfCapabilityDescriptor } from "./capabilities";
 export type { VerificationResult as HsfVerificationResult } from "./capabilities";
-// `RateLimitDecision` existe en security/rate-limit (fixed window) y en
-// deployment/production-ops (token bucket). Se conservan ambos con alias y se
-// fija el canónico (fixed window) para resolver la ambigüedad del barril.
+
+/**
+ * --- Rate Limit Decision Disambiguation ---
+ * Separates Security (Fixed Window) from Deployment (Token Bucket).
+ */
 export type { RateLimitDecision } from "./security/rate-limit";
 export type { RateLimitDecision as FixedWindowRateLimitDecision } from "./security/rate-limit";
 export type { RateLimitDecision as TokenBucketRateLimitDecision } from "./deployment/production-ops";
-// `ConfidenceLevel` existe en commerce (low|medium|high) y en memory/verified-knowledge
-// (nivel epistemológico E0-E6). Se conservan ambos con alias y se fija el canónico
-// de commerce para resolver la ambigüedad del barril.
+
+/**
+ * --- Confidence Level Disambiguation ---
+ * Separates Commerce metrics from Verified Knowledge epistemological tiers (E0-E6).
+ */
 export type { ConfidenceLevel } from "./commerce";
 export type { ConfidenceLevel as CommerceConfidenceLevel } from "./commerce";
 export type { ConfidenceLevel as VerifiedConfidenceLevel } from "./memory/verified-knowledge";
 
-// Namespaced export avoids collisions with the existing BookPI retention contract.
+// ============================================================================
+// 6. NAMESPACED SUBSYSTEMS
+// ============================================================================
+
+/**
+ * Namespaced export to prevent collisions with the core BookPI retention contract.
+ */
 export * as Terminus from "./terminus";
