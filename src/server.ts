@@ -34,6 +34,7 @@ import { MetricsRegistry } from "./observability/metrics";
 import { SessionMemory, formatSessionContext, deriveSessionId } from "./memory/session-memory";
 import { VerifiedKnowledgeStore, formatVerifiedKnowledgeContext } from "./memory/verified-knowledge";
 import { osirisSentinel } from "./osiris";
+import { createReinaRuntime, type ReinaRequest } from "./reina";
 import { SubscriptionStore, UsageMeter, checkFeature, checkQuota, planEntitlements, PLANS, type PlanId, type QuotaKey, type SubscriptionRecord } from "./commerce";
 import { GAMEOVER_CONSTITUTION, passportAuthority, uagpGateway, type UagpRequestInput } from "./gameover";
 import { registerHyperCoreRoutes } from "./routes/hypercore";
@@ -4842,6 +4843,64 @@ registerHyperCoreRoutes({
   rateLimiter: publicScanLimiter,
   commerceStringField,
   ...(process.env.HYPERCORE_SIGNING_KEY ? { signingKey: process.env.HYPERCORE_SIGNING_KEY } : {}),
+});
+
+// ── REINA (state: draft | engine-generated) ─ adjudicación previa a la ejecución; NO ejecuta acciones.
+const reina = createReinaRuntime(process.env, (record) => {
+  bookPiLedger.append({
+    id: `reina-${record.requestId}-${record.leafHash.slice(0, 12)}`,
+    timestamp: record.decidedAt,
+    type: "REINA_ADJUDICATION",
+    methodId: "N.IDENTITY.E03_GOVERNANCE.adjudicate_action.v1.0.0.HIGH.INSTITUTIONAL",
+    principal: "reina",
+    riskTier: record.riskTier ?? "UNASSESSED",
+    status: record.verdict,
+  });
+});
+
+app.get("/api/v1/reina/status", (_req, res) => {
+  const s = reina.status();
+  // Público y honesto: sin raíz interna ni estado del kill switch más allá de lo necesario.
+  res.json({ success: true, name: s.name, state: s.state, claims: s.claims, disclaimers: s.disclaimers, logSize: s.logSize });
+});
+
+app.post("/api/v1/reina/adjudicate", async (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  try {
+    const b = (req.body ?? {}) as Record<string, unknown>;
+    // humanApprovalVerified y quorum NUNCA se toman del cuerpo HTTP: solo código confiable del proceso.
+    const request = {
+      requestId: String(b.requestId ?? ""),
+      actor: String(b.actor ?? ""),
+      action: String(b.action ?? ""),
+      scope: String(b.scope ?? ""),
+      impact: b.impact,
+      autonomyLevel: b.autonomyLevel,
+      irreversible: b.irreversible === true,
+      humanConfirmed: b.humanConfirmed === true,
+      dualControl: b.dualControl === true,
+      rollbackPlan: b.rollbackPlan === true,
+      risk: b.risk,
+      ...(typeof b.timeLimitMs === "number" ? { timeLimitMs: b.timeLimitMs } : {}),
+      ...(typeof b.idempotencyKey === "string" ? { idempotencyKey: b.idempotencyKey } : {}),
+    } as unknown as ReinaRequest;
+    const decision = await reina.adjudicate(request);
+    res.json({ success: true, decision });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "REINA_ERROR";
+    res.status(message.includes("idempotency key reused") ? 409 : 400).json({ success: false, error: message });
+  }
+});
+
+app.get("/api/v1/reina/log/proof/:index", (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  try {
+    const index = Number(req.params.index);
+    const proof = reina.log.inclusionProof(index);
+    res.json({ success: true, index, treeSize: reina.log.size, leafHash: reina.log.leafHash(index), rootHash: reina.log.rootHash(), proof });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error instanceof Error ? error.message : "REINA_PROOF_ERROR" });
+  }
 });
 
 if (!process.env.VERCEL) app.listen(port, host, () => {
