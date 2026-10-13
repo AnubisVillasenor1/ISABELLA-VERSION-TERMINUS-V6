@@ -645,7 +645,7 @@ app.get("/api/v1/status", (_req, res) => {
       ikes: "ACTIVE",
       veritas: "ACTIVE",
       bookpi: bookPiBackend,
-      bookPiDurability,
+      bookpiDurability: bookPiDurability,
       pdp: "ACTIVE",
       litleTrustFabric: "ACTIVE",
       quantumPennyLane: runtime.quantum.describe(),

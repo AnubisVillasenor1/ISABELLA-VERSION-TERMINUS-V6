@@ -34,6 +34,19 @@ describe("BookPI bounded retention", () => {
     expect(decision.admitted).toBe(false);
   });
 
+  it("selects an eligible oldest object when the incoming object would exceed the current count cap", () => {
+    const constrained = { ...policy, maxObjects: 1, maxBytes: 100, maxAgeMs: 100_000, minimumAgeMs: 1000 };
+    const decision = checkWriteCapacity([item("eligible-old", 5000)], 10, constrained, now);
+    expect(decision).toMatchObject({
+      admitted: false,
+      requiresRetentionSweep: true,
+      reason: "RETENTION_REQUIRED_BEFORE_ADMISSION",
+      candidateIds: ["eligible-old"],
+      projectedObjects: 1,
+      projectedBytes: 10,
+    });
+  });
+
   it("rejects projected byte overflow", () => {
     const oversized = { ...policy, maxObjects: 10, maxBytes: Number.MAX_SAFE_INTEGER, maxAgeMs: 100_000, minimumAgeMs: 100_000 };
     expect(() => checkWriteCapacity([item("near-limit", 100, { byteLength: Number.MAX_SAFE_INTEGER - 3 })], 10, oversized, now))
@@ -84,6 +97,33 @@ describe("BookPI bounded retention", () => {
     expect(result.erased).toEqual(["expired"]);
     expect(deleted).toEqual(["expired"]);
     expect(auditEvents).toEqual(["bookpi.retention.requested", "bookpi.retention.completed"]);
+  });
+
+  it("audits and erases an eligible payload when the incoming object alone would exceed capacity", async () => {
+    const objects = [item("eligible-old", 5000)];
+    const auditEvents: string[] = [];
+    const erased: string[] = [];
+    const reserved: string[] = [];
+    const repository = {
+      listObjects: async () => [...objects],
+      erasePayload: async (id: string) => {
+        erased.push(id);
+        objects.splice(objects.findIndex((candidate) => candidate.id === id), 1);
+        return { physicalDeletionComplete: true };
+      },
+      reserveAdmission: async (request: { id: string; tenantFingerprint: string; byteLength: number }) => {
+        reserved.push(request.id);
+        return { commit: async () => {}, release: async () => {} };
+      },
+    };
+    const audit = { append: async (type: string) => { auditEvents.push(type); } };
+    const gatePolicy = { ...policy, maxObjects: 1, maxBytes: 100, maxAgeMs: 100_000, minimumAgeMs: 1000, batchSize: 5 };
+    const gate = createRetentionAdmissionGate(repository, audit, gatePolicy, () => now);
+    const reservation = await gate({ id: "new-object", tenantFingerprint: "tenant-hash", byteLength: 20 });
+    expect(erased).toEqual(["eligible-old"]);
+    expect(reserved).toEqual(["new-object"]);
+    expect(auditEvents).toEqual(["bookpi.retention.requested", "bookpi.retention.completed"]);
+    await reservation.release();
   });
 
   it("sweeps expired payloads with tenant scope before reserving new capacity", async () => {

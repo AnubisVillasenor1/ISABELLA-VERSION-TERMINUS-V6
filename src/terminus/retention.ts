@@ -108,9 +108,19 @@ function validateObjects(objects: readonly RetentionObject[], nowMs: number): nu
 }
 
 /** Deterministic retention plan; pinned/legal-hold/in-use objects are never evicted. */
-export function planRetention(objects: readonly RetentionObject[], policy: RetentionPolicy, nowMs = Date.now()): RetentionPlan {
+export function planRetention(
+  objects: readonly RetentionObject[],
+  policy: RetentionPolicy,
+  nowMs = Date.now(),
+  admission?: { incomingBytes: number },
+): RetentionPlan {
   validatePolicy(policy);
+  if (admission && (!Number.isSafeInteger(admission.incomingBytes) || admission.incomingBytes < 0)) {
+    throw new Error("BOOKPI_INCOMING_SIZE_INVALID");
+  }
   const totalBytes = validateObjects(objects, nowMs);
+  const incomingCount = admission ? 1 : 0;
+  const incomingBytes = admission?.incomingBytes ?? 0;
   let count = objects.length;
   let bytes = totalBytes;
   const candidates: RetentionPlan["candidates"] = [];
@@ -125,7 +135,7 @@ export function planRetention(objects: readonly RetentionObject[], policy: Reten
 
   for (const item of eligible) {
     const expired = isExpired(item, nowMs, policy);
-    const overCapacity = count > policy.maxObjects || bytes > policy.maxBytes;
+    const overCapacity = count + incomingCount > policy.maxObjects || bytes + incomingBytes > policy.maxBytes;
     if (!expired && !overCapacity) continue;
     if (candidates.length >= policy.batchSize) break;
     candidates.push({ id: item.id, reason: expired ? "EXPIRED" : "OLDEST_FIRST_CAPACITY" });
@@ -146,7 +156,7 @@ export function planRetention(objects: readonly RetentionObject[], policy: Reten
     projectedObjects: count,
     currentBytes: totalBytes,
     projectedBytes: bytes,
-    capacitySatisfied: count <= policy.maxObjects && bytes <= policy.maxBytes,
+    capacitySatisfied: count + incomingCount <= policy.maxObjects && bytes + incomingBytes <= policy.maxBytes,
     blockedBy,
   };
 }
@@ -173,9 +183,9 @@ export function checkWriteCapacity(
   nowMs = Date.now(),
 ): WriteCapacityDecision {
   if (!Number.isSafeInteger(incomingBytes) || incomingBytes < 0) throw new Error("BOOKPI_INCOMING_SIZE_INVALID");
-  const plan = planRetention(objects, policy, nowMs);
-  const projectedObjects = plan.currentObjects + 1;
-  const projectedBytes = plan.currentBytes + incomingBytes;
+  const plan = planRetention(objects, policy, nowMs, { incomingBytes });
+  const projectedObjects = plan.projectedObjects + 1;
+  const projectedBytes = plan.projectedBytes + incomingBytes;
   if (!Number.isSafeInteger(projectedBytes)) throw new Error("BOOKPI_PROJECTED_BYTES_OVERFLOW");
   if (plan.candidates.length > 0) {
     return {
@@ -189,7 +199,7 @@ export function checkWriteCapacity(
       candidateIds: plan.candidates.map((candidate) => candidate.id),
     };
   }
-  const blocked = !plan.capacitySatisfied || projectedObjects > policy.maxObjects || projectedBytes > policy.maxBytes;
+  const blocked = !plan.capacitySatisfied;
   return {
     admitted: !blocked,
     requiresRetentionSweep: false,
@@ -235,14 +245,16 @@ export async function runRetentionSweep(
   policy: RetentionPolicy,
   nowMs = Date.now(),
   tenantFingerprint?: string,
+  admission?: { incomingBytes: number },
 ): Promise<{ plan: RetentionPlan; erased: string[]; failed: Array<{ id: string; reason: string }> }> {
-  const plan = planRetention(await repository.listObjects(tenantFingerprint), policy, nowMs);
+  const plan = planRetention(await repository.listObjects(tenantFingerprint), policy, nowMs, admission);
   if (plan.candidates.length === 0) return { plan, erased: [], failed: [] };
 
   await audit.append("bookpi.retention.requested", {
     policyVersion: policy.version,
     plannedAt: plan.plannedAt,
     ...(tenantFingerprint ? { tenantFingerprint } : {}),
+    ...(admission ? { admissionIncomingBytes: admission.incomingBytes } : {}),
     candidateIds: plan.candidates.map((candidate) => candidate.id),
     candidateCount: plan.candidates.length,
     projectedObjects: plan.projectedObjects,
@@ -302,13 +314,20 @@ export function createRetentionAdmissionGate(
     let objects = await repository.listObjects(input.tenantFingerprint);
     if (objects.some((item) => item.id === input.id)) throw new Error("TERMINUS_OBJECT_ID_ALREADY_RETAINED");
     let decision = checkWriteCapacity(objects, input.byteLength, policy, clock());
-
-    if (decision.requiresRetentionSweep) {
-      const sweep = await runRetentionSweep(repository, audit, policy, clock(), input.tenantFingerprint);
+    // Each pass is bounded by the policy batch size; multiple passes handle large
+    // cleanup sets without deleting unbounded data in a single request.
+    const maxSweepPasses = Math.max(1, Math.ceil((objects.length + 1) / policy.batchSize) + 1);
+    let sweepPasses = 0;
+    while (decision.requiresRetentionSweep && sweepPasses < maxSweepPasses) {
+      const sweep = await runRetentionSweep(
+        repository, audit, policy, clock(), input.tenantFingerprint, { incomingBytes: input.byteLength },
+      );
       if (sweep.failed.length > 0) throw new Error("TERMINUS_RETENTION_SWEEP_INCOMPLETE");
+      if (sweep.erased.length === 0) throw new Error("TERMINUS_RETENTION_SWEEP_NO_PROGRESS");
       objects = await repository.listObjects(input.tenantFingerprint);
       if (objects.some((item) => item.id === input.id)) throw new Error("TERMINUS_OBJECT_ID_ALREADY_RETAINED");
       decision = checkWriteCapacity(objects, input.byteLength, policy, clock());
+      sweepPasses += 1;
     }
 
     if (!decision.admitted) throw new Error("TERMINUS_CAPACITY_BLOCKED:" + decision.reason);
