@@ -1,9 +1,11 @@
 # GAME OVER — Universal Agent Governance Protocol (UAGP-1)
 
-> **Estado:** `state: draft | engine-generated`. La capa TypeScript está
-> **implementada y probada** (gates verdes). El plugin Jenkins está
-> **implementado como código fuente** pero **no fue compilado** en este entorno
-> (sin JDK 17 / Maven). Ver la sección *Contrato de fidelidad*.
+> **Estado:** `state: draft | engine-generated`. El runtime TypeScript y su
+> suite tenían una base de validación previa; la rama recibió cambios adicionales
+> de seguridad en octubre de 2026 que **requieren volver a pasar build/CI sobre el
+> SHA actual** antes de declarar esos cambios verificados. El plugin Jenkins está
+> implementado como código fuente, pero su artefacto HPI y la suite JUnit requieren
+> compilación y ejecución con JDK 17 + Maven. Ver *Contrato de fidelidad*.
 
 ## 1. Qué es GAME OVER / UAGP-1
 
@@ -47,7 +49,10 @@ validate → passport → ethics → trust → risk → adjudicate → human app
 - Riesgo `CRITICAL` con trust `< 85` → `ESCALATE`.
 - Riesgo `HIGH` con trust `< 70` → `REJECT`.
 - En otro caso → `ACCEPT`.
-- Si se requiere aprobación humana y el aprobador falta o no coincide → `ESCALATE`.
+- Si se requiere aprobación humana y falta el nombre, el principal autenticado o la coincidencia exacta → `ESCALATE`.
+- El solicitante no puede rebajar la aprobación requerida mediante `humanApprovalRequired: false`.
+- El score declarado por el solicitante queda limitado por la puntuación asignada por el emisor del pasaporte.
+- La identidad del agente y las capacidades solicitadas deben corresponder al pasaporte; una acción no declarada como capacidad se rechaza.
 
 ### Pesos declarados (no son precisión medida)
 
@@ -65,8 +70,8 @@ Directorio `src/gameover/` (implementado y probado):
 - `constitution.ts` — constitución tipada + `riskLevelFor`.
 - `trust-engine.ts`, `risk-engine.ts`, `ethics-engine.ts`,
   `explainability-engine.ts`, `cognitive-court.ts`.
-- `passport-authority.ts` — registro en memoria de AI Passports.
-- `validator.ts`, `human-approval-gate.ts`.
+- `passport-authority.ts` — registro en memoria de AI Passports; valida score y vigencia, y rechaza IDs duplicados en vez de sobrescribirlos.
+- `validator.ts`, `human-approval-gate.ts` — validación estructural de criticidad, flags de aprobación, métricas y evidencia; una aprobación requiere un principal autenticado coincidente.
 - `audit.ts` — `AuditService` sobre el ledger append-only BookPI.
 - `gateway.ts` — `UagpGateway.govern(...)` orquesta el pipeline.
 - `index.ts` — barril; exporta `uagpGateway` y `passportAuthority` de proceso.
