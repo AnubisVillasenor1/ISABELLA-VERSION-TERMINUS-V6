@@ -2,7 +2,7 @@ import type { RiskTier } from "../authority/method-id";
 import type { ApprovalRef } from "../identity/approval";
 import { verifyHumanApproval } from "../identity/approval";
 import type { Principal } from "../identity/principal";
-import { inspectAegis } from "../security/aegis";
+import { inspectAegisValue } from "../security/aegis";
 
 export interface SkillContext {
   requestId: string;
