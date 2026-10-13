@@ -1,0 +1,68 @@
+# Isabella GenesisAI — pila desplegable completa (runtime + Postgres + migraciones).
+#
+# state: draft | auto_generated — revisar antes de produccion.
+#
+# Uso local / de un solo host:
+#     docker compose up --build
+#     docker compose exec app node -e "fetch('http://127.0.0.1:3000/api/v1/healthz').then(r=>console.log(r.status))"
+#
+# Esto NO sustituye a Kubernetes (ver k8s/ y deploy/k8s/). Es la via mas corta
+# para levantar el runtime con persistencia durable real hoy mismo.
+#
+# Las credenciales son valores de desarrollo; sobrescribir por entorno o secretos.
+name: isabella-genesis
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: isabella-genesisai:local
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      # Persistencia durable de evidencia BookPI (volumen dedicado).
+      BOOKPI_LEDGER_PATH: /data/bookpi/ledger.jsonl
+      POSTGRES_URL: postgres://isabella:${POSTGRES_PASSWORD:-isabella}@postgres:5432/isabella
+    volumes:
+      - bookpi-data:/data/bookpi
+    user: "10001:10001"
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    restart: unless-stopped
+    healthcheck:
+      # Distroless no trae shell: usamos el propio Node para el probe.
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.status===200?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: isabella
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-isabella}
+      POSTGRES_DB: isabella
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Migraciones aplicadas automaticamente en el primer arranque (initdb).
+      - ./infra/db/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U isabella -d isabella"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  bookpi-data:

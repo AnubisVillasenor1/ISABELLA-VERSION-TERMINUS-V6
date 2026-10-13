@@ -7,81 +7,79 @@
 # Nota de transparencia (AGENTS.md): archivo generado por motor; PENDIENTE de
 # revision humana antes de declarar estado "verified" o "wired".
 #
-# Decisiones documentadas:
-#   - node:22-alpine        -> LTS elegida (engines "node": ">=22"). Si a fecha de
-#                              revision humana existe una LTS mas reciente vigente,
-#                              reetiquetar la base y re-emitir el digest (ISA-349/355).
-#   - distroless runtime    -> sin shell, sin npm, sin wget/curl: superficie de
-#                              ataque minima. Usuario no-root numerico USER 10001.
-#   - Sin HEALTHCHECK       -> distroless no aporta wget/curl; la autoridad de
-#                              salud la ejerce Kubernetes (liveness/readiness en
-#                              k8s/deployment.yaml contra endpoints /health y
-#                              /api/v1/health verificados en src/server.ts).
-#   - Entrypoint real       -> el script canonico de produccion del repo es
-#                              `tsx src/server.ts` (package.json -> "start").
-#                              `node dist/server.js` NO esta verificado: tsc emite
-#                              ESM sin extensiones relativas (moduleResolution:
-#                              "Bundler") y Node ESM exige extensiones. Ver
-#                              docs/deployment/README.md (REQUIERE_VERIFICACION).
+# Correcciones respecto de la version previa:
+#   - Base Node alineada con engines ">=22 <24"? No: package.json declara
+#     engines.node = "24.x"; la base pasa de node:22-alpine a node:24-alpine.
+#   - Entrypoint real: `node dist/server.js` (bundle ESM de esbuild, verificado
+#     por scripts/runtime-smoke.mjs). El runtime ya no usa el ejecutor TypeScript.
+#   - Dependencias de runtime: `pnpm install --prod` (sin devDependencies).
+#   - No se copia el archivo de workspace de pnpm: no existe en el repositorio.
+#   - La etapa de build usa `pnpm run build:dist` (compila + bundle) y por tanto
+#     NO requiere `scripts/` ni `test/` dentro del contexto .dockerignore.
+#   - Se copian los activos leidos en runtime por process.cwd(): src/ui y src/styles.
+#   - Sin HEALTHCHECK Docker: distroless no aporta wget/curl; la autoridad de salud
+#     la ejerce Kubernetes (probes en k8s/deployment.yaml y deploy/k8s/).
+#   - BLOCKED_ENVIRONMENT (ISA-349/355): fijar digests de las bases con
+#     `crane digest` contra el registry de destino antes de promover.
 # ============================================================================
 
 # ----------------------------------------------------------------------------
-# Stage 1 — build
+# Stage 1 — build (tipos + bundle ESM)
 # ----------------------------------------------------------------------------
-FROM node:22-alpine AS build
+FROM node:24-alpine AS build
 
 ENV PNPM_HOME=/pnpm
 ENV PATH="$PNPM_HOME:$PATH"
 WORKDIR /app
 
-# Corepack: activa pnpm. El repo no declara "packageManager" en package.json
-# (archivo no tocado por Cluster E); corepack usa su pnpm por defecto.
-# REQUIERE_VERIFICACION: confirmar `pnpm --version` == 9.x (lockfileVersion 9).
-#   Fallback si corepack no coincide con el lockfile: añadir al package.json
-#   una linea `"packageManager": "pnpm@9.x.x"` (decisión humana, cambia package.json).
 RUN corepack enable
 
-# Instalacion congelada: falla si el lockfile está desincronizado con package.json.
-# El mount de cache requiere BuildKit; si se usa el builder clasico, quitar la
-# primera linea del segmente RUN.
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY package.json pnpm-lock.yaml ./
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
     pnpm install --frozen-lockfile
 
 COPY tsconfig.json tsconfig.build.json ./
 COPY src ./src
 
-# Artefacto declarado del build (tambien valida tipos/emision).
-RUN pnpm run build
+RUN pnpm run build:dist
 
 # ----------------------------------------------------------------------------
-# Stage 2 — runtime (distroless)
+# Stage 2 — production dependencies (hoisted, sin symlinks)
 # ----------------------------------------------------------------------------
-# El digest exacto de esta imagen es BLOCKED_ENVIRONMENT (ISA-349): un humano
-# debe resolverlo contra el registry de destino (crane digest / docker build
-# --reference) y fijarlo con @sha256:... Aquí se usa tag `latest` como marcador
-# de trabajo; NO promover a produccion sin el pin.
-FROM gcr.io/distroless/nodejs22-debian12:latest AS runtime
+FROM node:24-alpine AS production-deps
+
+ENV PNPM_HOME=/pnpm
+ENV PATH="$PNPM_HOME:$PATH"
+WORKDIR /app
+
+RUN corepack enable
+
+COPY package.json pnpm-lock.yaml ./
+RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
+    pnpm install --frozen-lockfile --prod --config.node-linker=hoisted
+
+# ----------------------------------------------------------------------------
+# Stage 3 — runtime (distroless)
+# ----------------------------------------------------------------------------
+# BLOCKED_ENVIRONMENT (ISA-349): resolver y fijar el digest de esta imagen contra
+# el registry de destino. Aqui se usa el tag; NO promover sin `@sha256:...`.
+FROM gcr.io/distroless/nodejs24-debian12 AS runtime
 
 ENV NODE_ENV=production
 ENV PORT=3000
 WORKDIR /app
 
-# Usuario no-root numerico (10001). La autoridad final de identidad/seguridad la
-# fija el securityContext del pod (runAsUser/runAsGroup/runAsNonRoot: 10001).
-USER 10001:10001
+# dist/ contiene dist/server.js (bundle ESM) generado por `build:dist`.
+COPY --from=build /app/dist ./dist
+# Activos leidos en runtime via process.cwd(): CSS e interfaz.
+COPY --from=build /app/src/ui ./src/ui
+COPY --from=build /app/src/styles ./src/styles
+COPY package.json ./
+# Solo dependencias de runtime (express, ws, ai, @ai-sdk/gateway, @google/genai).
+COPY --from=production-deps /app/node_modules ./node_modules
 
-# node_modules incluye devDependencies: `tsx` (entrypoint) es hoy devDependency.
-# Optimizar (mover tsx a dependencies o validar node dist/server.js) es
-# REQUIERE_VERIFICACION; no se bloquea por tamaño en este draft.
-COPY --from=build --chown=10001:10001 /app/node_modules ./node_modules
-COPY --from=build --chown=10001:10001 /app/dist ./dist
-COPY --from=build --chown=10001:10001 /app/src ./src
-COPY --from=build --chown=10001:10001 /app/package.json ./package.json
-COPY --from=build --chown=10001:10001 /app/tsconfig.json ./tsconfig.json
-
+USER 10001
 EXPOSE 3000
 
-# La imagen distroless/nodejs fija ENTRYPOINT ["/nodejs/bin/node"]; el CMD son
-# argumentos de node. Equivale al script "start" del repo (tsx src/server.ts).
-CMD ["--import", "tsx", "src/server.ts"]
+# ENTRYPOINT de distroless = /nodejs/bin/node; CMD son los argumentos.
+CMD ["dist/server.js"]

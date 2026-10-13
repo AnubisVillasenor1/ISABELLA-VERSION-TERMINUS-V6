@@ -29,6 +29,7 @@ import { applyProviderSubscriptionEvent } from "./commerce/provider-events";
 import type { ProviderConfig, SignatureScheme, TenantMapping } from "./commerce/webhook";
 import { LatencyRegistry } from "./deployment/latency-metrics";
 import { TtlSingleFlight } from "./deployment/ttl-single-flight";
+import { collectDependencyReadiness } from "./health/dependency-readiness";
 import { MetricsRegistry } from "./observability/metrics";
 import { SessionMemory, formatSessionContext, deriveSessionId } from "./memory/session-memory";
 import { VerifiedKnowledgeStore, formatVerifiedKnowledgeContext } from "./memory/verified-knowledge";
@@ -622,6 +623,23 @@ app.get("/api/v1/health", (_req, res) => {
     node: "Nodo Cero (Real del Monte, Hidalgo, México)",
     invariants: invariantViewModel,
     inferenceMode: "external-if-configured-otherwise-local-fallback",
+  });
+});
+
+// Deep dependency readiness. Distinguishes CONFIGURED from VERIFIED: these probes
+// observe process configuration and local IO, not external reachability. Answers 503
+// until every required dependency is healthy; fail-closed when evidence is missing.
+app.get("/api/v1/healthz", (_req, res) => {
+  const report = collectDependencyReadiness(process.env);
+  res.setHeader("Cache-Control", "no-store");
+  res.status(report.readiness.ready ? 200 : 503).json({
+    status: report.readiness.status,
+    ready: report.readiness.ready,
+    scope: "deep-dependency-readiness",
+    limitation: "Configuration-presence and local-IO probes; external reachability, quota and distributed concurrency are not verified here.",
+    blockers: report.readiness.blockers,
+    evidence: report.evidence,
+    checkedAt: report.readiness.checkedAt,
   });
 });
 

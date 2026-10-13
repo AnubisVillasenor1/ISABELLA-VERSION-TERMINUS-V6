@@ -89,9 +89,12 @@ spec:
             timeoutSeconds: 3
             failureThreshold: 3
           # ISA-356 (P1): readiness contra endpoint público verificado
-          # (GET /api/v1/health, src/server.ts:388). Una readiness PROFUNDA de
-          # dependencias reales (GET /api/v1/ops/readiness) todavía no existe:
-          # hoy es POST con body y no sirve como probe -> REQUIERE_VERIFICACION.
+          # (GET /api/v1/health, src/server.ts:388). El endpoint de readiness
+          # PROFUNDA de dependencias ahora existe: GET /api/v1/healthz evalúa
+          # configuración/local-IO real y responde 503 hasta que toda dependencia
+          # requerida esté sana. Se mantiene readiness contra /api/v1/health para
+          # no bloquear pods por dependencias externas aún no verificadas; apuntar
+          # a /api/v1/healthz cuando el Secret y los adaptadores estén listos.
           readinessProbe:
             httpGet:
               path: /api/v1/health
