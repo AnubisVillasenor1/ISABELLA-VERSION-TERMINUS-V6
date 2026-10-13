@@ -45,6 +45,12 @@ Los nombres y descripciones del perfil sirven para inventariar candidatos, pero 
 
 Estos contratos y pruebas no equivalen a nueve proveedores reales ni a un KMS ya provisionado. Las implementaciones de proveedor siguen siendo una fase de integración y deben verificarse con pruebas E2E.
 
+## Interfaz de producto y accesibilidad
+
+La UI anterior presentaba una introducción cinemática obligatoria antes de permitir acceder al espacio de trabajo, dependía de una imagen alojada en un blob externo y repetía el ID HTML `protocols` en dos secciones. Estos detalles producían una primera interacción lenta, un recurso visual fuera del control del repositorio y navegación/ARIA ambigua.
+
+La actualización visual adopta un sistema Obsidian / Platino / Azul Eléctrico con menor ruido, jerarquía tipográfica más legible, superficies de contraste controlado, estados de foco visibles, disposición responsive y respeto por `prefers-reduced-motion`. El espacio de trabajo abre de inmediato; la secuencia de marca sigue disponible de forma explícita con `?intro=1`. Se añade acción accesible de copiar respuesta, se retira el fondo externo y se elimina el ID duplicado. El smoke de UI ahora exige unicidad de IDs y ausencia del asset remoto.
+
 ## Recomendaciones organizacionales para el perfil
 
 1. Cada repo debe declarar su rol: canónico, librería interoperable, implementación federada, prototipo, especificación o legado.

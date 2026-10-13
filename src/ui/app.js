@@ -43,7 +43,10 @@ const advanceIntro = (elapsed = performance.now() - introStartedAt) => {
 };
 if (intro) {
   const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-  if (reducedMotion) {
+  const cinematicRequested = new URLSearchParams(window.location.search).get('intro') === '1';
+  // The enterprise workspace loads immediately by default. The cinematic sequence
+  // remains available as an explicit experience with ?intro=1.
+  if (reducedMotion || !cinematicRequested) {
     dismissIntro();
   } else {
     document.body.classList.add('intro-lock');
@@ -94,6 +97,28 @@ const addMessage = (text, role) => {
   const paragraph = document.createElement('p');
   paragraph.textContent = text;
   content.append(speaker, paragraph);
+  if (role !== 'user') {
+    const copyButton = document.createElement('button');
+    copyButton.type = 'button';
+    copyButton.className = 'message-copy';
+    copyButton.textContent = 'COPIAR';
+    copyButton.setAttribute('aria-label', 'Copiar respuesta de Isabella');
+    copyButton.addEventListener('click', async () => {
+      const value = paragraph.textContent || '';
+      try {
+        await navigator.clipboard.writeText(value);
+        copyButton.textContent = 'COPIADO';
+      } catch {
+        copyButton.textContent = 'SELECCIONA EL TEXTO';
+      }
+      copyButton.disabled = true;
+      window.setTimeout(() => {
+        copyButton.textContent = 'COPIAR';
+        copyButton.disabled = false;
+      }, 1800);
+    });
+    content.append(copyButton);
+  }
   article.append(avatar, content);
   messages.append(article);
   messages.scrollTop = messages.scrollHeight;
