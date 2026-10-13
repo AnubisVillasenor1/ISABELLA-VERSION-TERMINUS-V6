@@ -113,13 +113,13 @@ La revisión de runtime identificada como `8c19acd2959de3ae8f4c78a098d85192f1232
 
 | Gate | Resultado de esa revisión |
 |---|---|
-| Suite Vitest | 734 pruebas aprobadas en 135 archivos |
+| Suite Vitest | 746 pruebas aprobadas en 135 archivos |
 | UI smoke | `UI_NAVIGATION_SMOKE_OK`, `CINEMATIC_INTRO_12_SCENES_OK` |
 | Runtime smoke | `LOCAL_CONVERSATION_SMOKE_OK`, `PUBLIC_API_GUARDRAILS_OK`, `OPENROUTER_PAID_ID_BLOCK_OK` |
 | Suite estática de seguridad | 14 pasaron; 0 fallaron; 0 no aplicables |
-| Vercel | Despliegue READY para esa revisión |
+| Vercel | [Despliegue READY del SHA 03e6f68](https://vercel.com/isabella-mexa/isabella-v6-tina/HAC1kk2Ha1T5ukJNjRXiWjW8RwVq) |
 
-**No confundir esa base con el HEAD actual.** Se añadieron cambios posteriores en GAME OVER y pruebas de regresión; esos commits necesitan volver a pasar CI y build antes de declararse verificados. El último resultado histórico no valida automáticamente los cambios posteriores.
+**Alcance de la validación:** los 746 tests, los 135 archivos y la suite de seguridad corresponden al SHA 03e6f68. Vercel no compila el plugin Java de Jenkins. Se añadió un job `jenkins-plugin-verify` a `.github/workflows/ci.yml` para ejecutar Maven/JUnit y empaquetar el HPI; hasta observar una ejecución verde de ese job, el plugin continúa como código fuente endurecido pero no verificado por compilación. El workspace Rust y los demás gates abiertos siguen pendientes.
 
 ### Bloqueadores abiertos
 
