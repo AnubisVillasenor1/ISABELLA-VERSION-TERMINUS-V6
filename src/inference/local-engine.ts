@@ -1,4 +1,40 @@
+import { createHash } from "node:crypto";
 import type { GenerationRequest } from "./types";
+
+/** Índice estable derivado de una semilla (SHA-256); sin aleatoriedad. */
+function deterministicIndex(seed: string, length: number): number {
+  if (length <= 1) return 0;
+  const digest = createHash("sha256").update(seed, "utf8").digest();
+  return digest.readUInt32BE(0) % length;
+}
+
+function promptTerms(normalizedPrompt: string): string[] {
+  const terms = normalizedPrompt.match(/[\p{L}\p{N}]{4,}/gu) ?? [];
+  return [...new Set(terms)];
+}
+
+/**
+ * Selección determinista y relevante: elige la plantilla que comparte más
+ * términos con el prompt; los empates se resuelven con un hash estable del
+ * prompt (mismo prompt ⇒ misma plantilla, reproducible y auditable).
+ */
+function selectResponse(intent: string, normalizedPrompt: string, responses: readonly string[]): string | undefined {
+  if (responses.length === 0) return undefined;
+  const terms = promptTerms(normalizedPrompt);
+  let best = -1;
+  let candidates: string[] = [];
+  for (const response of responses) {
+    const haystack = response.toLowerCase();
+    const score = terms.reduce((acc, term) => acc + (haystack.includes(term) ? 1 : 0), 0);
+    if (score > best) {
+      best = score;
+      candidates = [response];
+    } else if (score === best) {
+      candidates.push(response);
+    }
+  }
+  return candidates[deterministicIndex(`${intent}:${normalizedPrompt}`, candidates.length)];
+}
 
 export interface LocalEngineConfig {
   botName: string;
@@ -205,7 +241,7 @@ export class LocalInferenceEngine {
       for (const regex of pattern.patterns) {
         if (regex.test(normalizedPrompt)) {
           const responses = pattern.responses;
-          const response = responses[Math.floor(Math.random() * responses.length)] ?? responses[0] ?? "No tengo respuesta para esa consulta.";
+          const response = selectResponse(pattern.intent, normalizedPrompt, responses) ?? responses[0] ?? "No tengo respuesta para esa consulta.";
           return {
             text: response,
             intent: pattern.intent,

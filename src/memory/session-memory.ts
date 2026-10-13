@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 
 export interface SessionMessage {
   readonly role: "user" | "assistant";
@@ -106,7 +106,8 @@ export function deriveSessionId(raw: string | undefined | null): string {
   if (typeof raw === "string" && raw.trim().length > 0) {
     return createHash("sha256").update(raw.trim()).digest("hex").slice(0, 32);
   }
-  return createHash("sha256").update(`${Date.now()}-${Math.random().toString(36).slice(2)}`).digest("hex").slice(0, 32);
+  // CSPRNG: un id de sesión anónimo no debe ser predecible (Math.random + Date.now son adivinables).
+  return randomBytes(16).toString("hex");
 }
 
 export function formatSessionContext(messages: readonly SessionMessage[], limit = 10): string {

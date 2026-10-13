@@ -7,6 +7,7 @@
  */
 import type { ProtocolDescriptor } from "./registry";
 import { createHash, randomUUID } from "node:crypto";
+import { equalSecret } from "../security/secrets";
 import { chunkBuffer, buildMerkleTree, generateMerkleProof, verifyChunkProof, generateZkCommitment } from "../bookpi/merkle";
 import { settleRoyalties, sharesAreBalanced, type FederationShare } from "../bookpi/royalties";
 import { createCanonicalDocument, changeDocumentState, type DocumentInput, type DocumentState } from "../atlas/documents";
@@ -97,7 +98,9 @@ export const PROTOCOL_CATALOG: readonly ProtocolDescriptor[] = [
       const input = (context.input ?? {}) as { payload?: unknown; actorId?: string; signature?: string };
       const payloadHash = sha256(JSON.stringify(input.payload ?? null));
       const expected = sha256(`${input.actorId ?? "unknown"}:${payloadHash}`);
-      return { valid: input.signature === expected, payloadHash, algorithm: "SHA-256(internal-binding)" };
+      // Comparación en tiempo constante; una firma ausente o no-string es inválida (fail-closed).
+      const valid = typeof input.signature === "string" && equalSecret(input.signature, expected);
+      return { valid, payloadHash, algorithm: "SHA-256(internal-binding)" };
     },
   },
 ];
