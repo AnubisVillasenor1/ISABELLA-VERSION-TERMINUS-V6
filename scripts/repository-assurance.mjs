@@ -132,8 +132,8 @@ const report = {
   schemaVersion: "1.0.0",
   audit: "isabella-genesis-repository-assurance",
   generatedAt: new Date().toISOString(),
-  commit: process.env.GITHUB_SHA || process.env.GIT_COMMIT || null,
-  branch: process.env.GITHUB_REF_NAME || null,
+  commit: process.env.GITHUB_SHA || process.env.GIT_COMMIT || process.env.VERCEL_GIT_COMMIT_SHA || null,
+  branch: process.env.GITHUB_REF_NAME || process.env.VERCEL_GIT_COMMIT_REF || null,
   scope: "read-only structural repository checks",
   disclaimer: "PASS means only that the named structural check passed; it does not prove runtime behavior, security, integration, deployment, or compliance.",
   summary: {
