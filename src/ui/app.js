@@ -331,6 +331,18 @@ if (Recognition && mic) {
   });
 }
 
+// Lattice navigation: keep the six accordions independent and route intent into the workspace.
+document.querySelectorAll('.rail-panel').forEach((panel) => {
+  panel.addEventListener('toggle', () => {
+    if (!panel.open) return;
+    panel.querySelector('summary')?.setAttribute('aria-expanded', 'true');
+  });
+  panel.querySelector('summary')?.setAttribute('aria-expanded', String(panel.open));
+});
+document.querySelectorAll('[data-focus-prompt="true"]').forEach((link) => {
+  link.addEventListener('click', () => window.setTimeout(() => prompt?.focus(), 280));
+});
+
 // HyperCore Ω² — malla cuántica decorativa del hero (canvas 2D autocontenido,
 // sin dependencias externas). No publica métricas: es ornamento visual honesto.
 (() => {
