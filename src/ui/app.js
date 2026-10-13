@@ -185,7 +185,11 @@ if ('speechSynthesis' in window) {
   window.speechSynthesis.addEventListener('voiceschanged', chooseIsabellaVoice);
 }
 const speak = (text) => {
-  if (!soundOn || !('speechSynthesis' in window)) return;
+  if (!soundOn) return;
+  if (!('speechSynthesis' in window)) {
+    addMessage('La síntesis de voz no está disponible en este navegador. La respuesta permanece disponible como texto.', 'isabella');
+    return;
+  }
   const voice = chooseIsabellaVoice();
   if (!voice) {
     addMessage('La síntesis de voz no tiene una voz española disponible en este navegador; la respuesta queda disponible en texto.', 'isabella');
@@ -212,6 +216,10 @@ const sendCurrentMessage = async () => {
   const input = attachment
     ? `${actualPrompt}\n\n[CONTEXTO DE ARCHIVO LOCAL: ${attachment.name}]\n${attachment.content}`
     : actualPrompt;
+  if (input.length > 18_000) {
+    addMessage('La solicitud combinada supera el límite seguro de 18,000 caracteres para esta ruta. Reduce el texto del mensaje o el archivo adjunto y vuelve a intentarlo.', 'isabella');
+    return;
+  }
   const history = priorHistory();
   addMessage(`${actualPrompt}${attachment ? `\n\nArchivo adjunto: ${attachment.name}` : ''}`, 'user');
   prompt.value = '';
@@ -493,7 +501,7 @@ const commandLauncher = byId('commandLauncher');
 const closeCommandPalette = byId('closeCommandPalette');
 const draftShelf = byId('draftShelf');
 const MAX_LOCAL_FILE_BYTES = 25 * 1024;
-const MAX_LOCAL_FILE_CHARS = 22_000;
+const MAX_LOCAL_FILE_CHARS = 12_000;
 const newSessionSeed = () => window.crypto?.randomUUID?.() || `session-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 const initialWelcomeMarkup = messages?.querySelector('.message')?.outerHTML || '';
 
@@ -744,6 +752,16 @@ commandSearch?.addEventListener('keydown', (event) => {
     event.preventDefault();
     visible[0]?.click();
   }
+});
+commandList?.addEventListener('keydown', (event) => {
+  if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+  const visible = [...(commandList.querySelectorAll('[data-command]') || [])].filter((button) => !button.hidden);
+  const currentIndex = visible.indexOf(document.activeElement);
+  if (currentIndex < 0 || visible.length < 2) return;
+  event.preventDefault();
+  const direction = event.key === 'ArrowDown' ? 1 : -1;
+  const nextIndex = (currentIndex + direction + visible.length) % visible.length;
+  visible[nextIndex]?.focus();
 });
 const runCommand = (command) => {
   const targets = {
