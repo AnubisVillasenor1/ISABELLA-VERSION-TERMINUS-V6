@@ -71,7 +71,7 @@ export class ToolRegistry {
 
     if (aegis.decision !== "ALLOW") {
       const receipt = makeReceipt(tool, principal, inputHash, serializedInput, startedAt, "blocked");
-      throw Object.assign(new Error(`TOOLS: AEGIS ${aegis.decision} requires review; execution denied for ${id}`), { receipt, findings: aegis.findings });
+      throw Object.assign(new Error(`TOOLS: AEGIS blocked execution; AEGIS ${aegis.decision} requires review; execution denied for ${id}`), { receipt, findings: aegis.findings });
     }
 
     const privileged = tool.riskTier === "HIGH" || tool.riskTier === "CRITICAL";
