@@ -262,12 +262,65 @@ export function createHyperCore(dependencies: HyperCoreDependencies = {}): Hyper
     const budget: EnergyBudget = { ...DEFAULT_ENERGY_BUDGET, ...task.budget };
     const principal = context.authenticatedPrincipal ?? task.userScope ?? "anonymous";
     const reasons: string[] = [];
+
+    // Authorization precedes prediction, cache reads and expert execution.
+    // A caller-supplied false flag must never downgrade a high/critical task.
+    const requiresAuthorization = task.requiresAuthorization === true || isCritical(task.risk) || requireAuthDefault;
+    if (requiresAuthorization) {
+      if (!dependencies.authorizer) {
+        reasons.push("AUTHORIZATION_REQUIRED");
+        return finalize({
+          status: "ESCALATED",
+          mode: "ECO",
+          response: null,
+          verdict: null,
+          state: null,
+          activated: [],
+          cacheHit: false,
+          energyKwh: 0,
+          cacheKey: null,
+          requestId,
+          task,
+          prediction: null,
+          reasons,
+          started,
+          principal,
+        });
+      }
+      const authorization = dependencies.authorizer({
+        taskId: task.taskId,
+        intent: task.intent,
+        risk: task.risk,
+        policyVersion: versions.policyVersion,
+      });
+      if (!authorization.authorized) {
+        reasons.push(`AUTHORIZATION_DENIED:${authorization.reason}`);
+        return finalize({
+          status: "DENIED",
+          mode: "ECO",
+          response: null,
+          verdict: null,
+          state: null,
+          activated: [],
+          cacheHit: false,
+          energyKwh: 0,
+          cacheKey: null,
+          requestId,
+          task,
+          prediction: null,
+          reasons,
+          started,
+          principal,
+        });
+      }
+    }
+
     const prediction = dependencies.predictor ? dependencies.predictor(task) : null;
 
     const previewState = compileContext(task, [], { policyVersion: versions.policyVersion });
     const selected = routeExperts(experts, previewState, routerPolicy);
     const estimate = estimateFromExperts(selected);
-    const mode = governMode({ estimate, budget, critical: isCritical(task.risk), authorizedCritical: false }).mode;
+    const mode = governMode({ estimate, budget, critical: isCritical(task.risk), authorizedCritical: isCritical(task.risk) && requiresAuthorization }).mode;
     const cacheKey = cache.buildKey(task, versions);
 
     const hit = cache.lookup(task, versions);
@@ -329,57 +382,6 @@ export function createHyperCore(dependencies: HyperCoreDependencies = {}): Hyper
       financialExecution: false,
     };
     void createDraft(candidate, speculative);
-
-    const requiresAuthorization = task.requiresAuthorization ?? requireAuthDefault;
-    if (requiresAuthorization) {
-      if (!dependencies.authorizer) {
-        reasons.push("AUTHORIZATION_REQUIRED");
-        return finalize({
-          status: "ESCALATED",
-          mode,
-          response: null,
-          verdict: null,
-          state,
-          activated: outputs,
-          cacheHit: false,
-          energyKwh,
-          cacheKey: null,
-          requestId,
-          task,
-          prediction,
-          reasons,
-          started,
-          principal,
-        });
-      }
-      const authorization = dependencies.authorizer({
-        taskId: task.taskId,
-        intent: task.intent,
-        risk: task.risk,
-        policyVersion: versions.policyVersion,
-      });
-      if (!authorization.authorized) {
-        candidate.policy = "fail";
-        reasons.push(`AUTHORIZATION_DENIED:${authorization.reason}`);
-        return finalize({
-          status: "DENIED",
-          mode,
-          response: null,
-          verdict: null,
-          state,
-          activated: outputs,
-          cacheHit: false,
-          energyKwh,
-          cacheKey: null,
-          requestId,
-          task,
-          prediction,
-          reasons,
-          started,
-          principal,
-        });
-      }
-    }
 
     const checks = deriveChecks(candidate, task.risk);
     const verdict = verifyCandidate({ checks, risk: task.risk });
