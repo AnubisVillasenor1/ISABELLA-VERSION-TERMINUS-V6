@@ -116,28 +116,27 @@ try {
 } catch {
   console.warn("[Genesis] Cinematic UI assets are unavailable at startup.");
 }
+const sendUiAsset = (fileName: string, contentType: string, res: express.Response) => {
+  try {
+    const content = fs.readFileSync(path.join(uiPath, fileName), "utf-8");
+    res.setHeader("Cache-Control", "no-store");
+    res.type(contentType).send(content);
+  } catch {
+    res.status(404).type(contentType).send(`/* UI asset unavailable: ${fileName} */`);
+  }
+};
 app.get("/", (_req, res, next) => {
-  if (cinematicHtml) {
-    res.setHeader("Cache-Control", "no-cache");
-    res.type("html").send(cinematicHtml);
-    return;
+  try {
+    const html = fs.readFileSync(path.join(uiPath, "index.html"), "utf-8");
+    res.setHeader("Cache-Control", "no-store");
+    res.type("html").send(html);
+  } catch {
+    // Continue to the fallback landing page when the cinematic UI is unavailable.
+    next();
   }
-  // Continue to the fallback landing page registered below if static UI assets failed at startup.
-  next();
 });
-app.get("/styles/cinematic.css", (_req, res) => {
-  if (!cinematicCss) {
-    res.status(404).type("css").send("/* Cinematic stylesheet unavailable */");
-    return;
-  }
-  res.setHeader("Cache-Control", "public, max-age=300, stale-while-revalidate=60");
-  res.type("css").send(cinematicCss);
-});
-app.get("/ui/app.js", (_req, res) => {
-  if (!cinematicJs) { res.status(404).type("text/javascript").send(""); return; }
-  res.setHeader("Cache-Control", "public, max-age=300, stale-while-revalidate=60");
-  res.type("js").send(cinematicJs);
-});
+app.get("/styles/cinematic.css", (_req, res) => sendUiAsset("cinematic.css", "css", res));
+app.get("/ui/app.js", (_req, res) => sendUiAsset("app.js", "js", res));
 app.get("/styles/crystal-clear.css", (_req, res) => {
   if (crystalClearCss === null) {
     res.status(404).type("text/css").send("/* CSS module not found */");
