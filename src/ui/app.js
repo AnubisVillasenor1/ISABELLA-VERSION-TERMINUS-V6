@@ -76,6 +76,16 @@ const soundToggle = byId('soundToggle');
 const navToggle = byId('navToggle');
 const navLinks = byId('primaryLinks');
 const runtimeStatus = byId('runtimeStatus');
+const sessionBadge = byId('sessionBadge');
+const voiceCapability = byId('voiceCapability');
+const contextInspector = byId('contextInspector');
+const contextExport = byId('contextExport');
+const systemInspector = byId('systemInspector');
+const closeSystemInspector = byId('closeSystemInspector');
+const inspectorRuntime = byId('inspectorRuntime');
+const inspectorSession = byId('inspectorSession');
+const inspectorVoice = byId('inspectorVoice');
+const inspectorAttachment = byId('inspectorAttachment');
 const submitButton = form?.querySelector('button[type="submit"]');
 let voiceMode = false;
 let soundOn = false;
@@ -83,6 +93,14 @@ let isSending = false;
 const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 let sessionId = window.crypto?.randomUUID?.() || `session-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 let activeAttachment = null;
+
+const refreshWorkspaceContext = () => {
+  const shortSession = sessionId.slice(-6).toUpperCase();
+  if (sessionBadge) sessionBadge.textContent = `SESSION · ${shortSession}`;
+  if (inspectorSession) inspectorSession.textContent = `ACTIVE · ${shortSession}`;
+  if (inspectorVoice) inspectorVoice.textContent = ('speechSynthesis' in window || Recognition) ? 'BROWSER' : 'TEXT ONLY';
+  if (inspectorAttachment) inspectorAttachment.textContent = activeAttachment?.name ? activeAttachment.name.slice(0, 22) : 'NONE';
+};
 
 const addMessage = (text, role) => {
   if (!messages) return null;
@@ -311,14 +329,17 @@ const updateRuntimeStatus = async () => {
     const response = await fetch('/api/v1/health', { headers: { accept: 'application/json' }, cache: 'no-store' });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     runtimeStatus.dataset.state = 'ready';
-    runtimeStatus.innerHTML = '<i aria-hidden="true"></i> NODO CERO · API DISPONIBLE';
+    runtimeStatus.innerHTML = '<i aria-hidden="true"></i><span>NODO CERO · API DISPONIBLE</span>';
+    if (inspectorRuntime) inspectorRuntime.textContent = 'READY';
     runtimeStatus.title = 'El endpoint de salud respondió correctamente. Esto no garantiza disponibilidad de inferencia externa.';
   } catch {
     runtimeStatus.dataset.state = 'degraded';
-    runtimeStatus.innerHTML = '<i aria-hidden="true"></i> NODO CERO · ESTADO LIMITADO';
+    runtimeStatus.innerHTML = '<i aria-hidden="true"></i><span>NODO CERO · ESTADO LIMITADO</span>';
+    if (inspectorRuntime) inspectorRuntime.textContent = 'LIMITED';
     runtimeStatus.title = 'No se pudo verificar el endpoint de salud.';
   }
 };
+refreshWorkspaceContext();
 void updateRuntimeStatus();
 
 document.querySelectorAll('.mode').forEach((button) => {
@@ -334,6 +355,7 @@ document.querySelectorAll('.mode').forEach((button) => {
         soundToggle.textContent = 'VOZ: ON';
         soundToggle.setAttribute('aria-pressed', 'true');
       }
+      voiceCapability?.classList.add('is-active');
       if (mic) mic.title = 'Dicta un mensaje; en modo voz se enviará al terminar el reconocimiento.';
       if (!Recognition) addMessage('El reconocimiento de voz depende del navegador y no está disponible aquí. Puedes continuar por texto.', 'isabella');
     } else if (mic) {
@@ -344,6 +366,8 @@ document.querySelectorAll('.mode').forEach((button) => {
 soundToggle?.addEventListener('click', () => {
   soundOn = !soundOn;
   soundToggle.textContent = `VOZ: ${soundOn ? 'ON' : 'OFF'}`;
+  voiceCapability?.classList.toggle('is-active', soundOn);
+  if (inspectorVoice) inspectorVoice.textContent = soundOn && ('speechSynthesis' in window) ? 'ON' : (('speechSynthesis' in window || Recognition) ? 'BROWSER' : 'TEXT ONLY');
   soundToggle.setAttribute('aria-pressed', String(soundOn));
   if (!soundOn && 'speechSynthesis' in window) window.speechSynthesis.cancel();
 });
@@ -397,17 +421,7 @@ if (Recognition && mic) {
   });
 }
 
-// Lattice navigation: keep the six accordions independent and route intent into the workspace.
-document.querySelectorAll('.rail-panel').forEach((panel) => {
-  panel.addEventListener('toggle', () => {
-    if (!panel.open) return;
-    panel.querySelector('summary')?.setAttribute('aria-expanded', 'true');
-  });
-  panel.querySelector('summary')?.setAttribute('aria-expanded', String(panel.open));
-});
-document.querySelectorAll('[data-focus-prompt="true"]').forEach((link) => {
-  link.addEventListener('click', () => window.setTimeout(() => prompt?.focus(), 280));
-});
+
 
 // HyperCore Ω² — malla cuántica decorativa del hero (canvas 2D autocontenido,
 // sin dependencias externas). No publica métricas: es ornamento visual honesto.
@@ -523,6 +537,7 @@ const clearActiveAttachment = () => {
   if (attachmentChip) attachmentChip.hidden = true;
   if (attachmentName) attachmentName.textContent = '';
   if (localFileInput) localFileInput.value = '';
+  refreshWorkspaceContext();
 };
 attachTextButton?.addEventListener('click', () => localFileInput?.click());
 removeAttachmentButton?.addEventListener('click', clearActiveAttachment);
@@ -545,6 +560,7 @@ localFileInput?.addEventListener('change', async () => {
     activeAttachment = { name: file.name.slice(0, 160), content };
     if (attachmentName) attachmentName.textContent = activeAttachment.name;
     if (attachmentChip) attachmentChip.hidden = false;
+    refreshWorkspaceContext();
     prompt?.focus();
   } catch {
     clearActiveAttachment();
@@ -693,11 +709,25 @@ const resetConversation = () => {
   sessionId = newSessionSeed();
   prompt && (prompt.value = '');
   clearActiveAttachment();
+  refreshWorkspaceContext();
   resizePrompt();
   prompt?.focus();
 };
 byId('newChat')?.addEventListener('click', resetConversation);
 byId('clearChat')?.addEventListener('click', resetConversation);
+contextExport?.addEventListener('click', exportConversation);
+
+const closeInspector = () => {
+  if (systemInspector?.open) systemInspector.close();
+};
+contextInspector?.addEventListener('click', () => {
+  refreshWorkspaceContext();
+  if (typeof systemInspector?.showModal === 'function') systemInspector.showModal();
+});
+closeSystemInspector?.addEventListener('click', closeInspector);
+systemInspector?.addEventListener('click', (event) => {
+  if (event.target === systemInspector) closeInspector();
+});
 byId('exportChat')?.addEventListener('click', exportConversation);
 byId('clearDrafts')?.addEventListener('click', () => {
   if (!readDrafts().length) return;
