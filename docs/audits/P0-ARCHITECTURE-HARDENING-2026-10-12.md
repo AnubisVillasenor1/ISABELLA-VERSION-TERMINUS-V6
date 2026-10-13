@@ -9,7 +9,7 @@
 
 La revisión encontró rutas donde un veredicto de revisión podía no impedir la ejecución, una caché de probes podía repoblarse con un resultado anterior tras una invalidación y el motor HyperCore podía consultar caché o ejecutar expertos antes de comprobar la autorización requerida. Se implementaron correcciones y pruebas de regresión para estas fronteras.
 
-**Este documento no certifica producción.** El SHA validado más reciente para esta intervención es `8c19acd2959de3ae8f4c78a098d85192f1232164`; Vercel registró `READY`, **734 pruebas aprobadas en 135 archivos** y la suite estática de seguridad con **14 passed, 0 failed, 0 not_applicable**. El smoke de inferencia externa se omitió por falta de credenciales elegibles. El estado de GitHub Actions y los gates Rust/durabilidad siguen abiertos.
+**Este documento no certifica producción.** El SHA validado más reciente para esta intervención es `8c19acd2959de3ae8f4c78a098d85192f1232164`; Vercel registró `READY`, **734 pruebas aprobadas en 135 archivos** y la suite estática de seguridad con **14 passed, 0 failed, 0 not_applicable**. El smoke de inferencia externa se omitió por falta de credenciales elegibles. El estado de GitHub Actions y los gates Rust/durabilidad siguen abiertos. `ige-omega/Cargo.lock` existe en `main`, pero aún no se ha confirmado una ejecución verde de Cargo con `--locked`.
 
 ## Hallazgos priorizados
 
