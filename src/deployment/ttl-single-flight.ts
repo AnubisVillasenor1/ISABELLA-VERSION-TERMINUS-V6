@@ -19,7 +19,13 @@ export class TtlSingleFlight<T> {
     const generation = this.generation;
     if (this.inFlight?.generation === generation) return this.inFlight.promise;
 
-    const pending = Promise.resolve().then(loader);
+    let loaded: Promise<T>;
+    try {
+      loaded = loader();
+    } catch (error) {
+      loaded = Promise.reject(error);
+    }
+    const pending = Promise.resolve(loaded);
     this.inFlight = { generation, promise: pending };
     try {
       const result = await pending;
