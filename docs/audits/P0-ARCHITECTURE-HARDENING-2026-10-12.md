@@ -9,7 +9,7 @@
 
 La revisión encontró rutas donde un veredicto de revisión podía no impedir la ejecución, una caché de probes podía repoblarse con un resultado anterior tras una invalidación y el motor HyperCore podía consultar caché o ejecutar expertos antes de comprobar la autorización requerida. Se implementaron correcciones y pruebas de regresión para estas fronteras.
 
-**Este documento no certifica producción.** El SHA validado más reciente para esta intervención es `8c19acd2959de3ae8f4c78a098d85192f1232164`; Vercel registró `READY`, **734 pruebas aprobadas en 135 archivos** y la suite estática de seguridad con **14 passed, 0 failed, 0 not_applicable**. El smoke de inferencia externa se omitió por falta de credenciales elegibles. El estado de GitHub Actions y los gates Rust/durabilidad siguen abiertos. `ige-omega/Cargo.lock` existe en `main`, pero aún no se ha confirmado una ejecución verde de Cargo con `--locked`.
+**Este documento no certifica producción.** El SHA de runtime TypeScript validado más reciente es `03e6f68ebc3ee5bec39bd42a69c0d704b40aff76`; Vercel registró `READY`, **746 pruebas aprobadas en 135 archivos** y la suite estática de seguridad con **14 passed, 0 failed, 0 not_applicable**. El smoke de inferencia externa se omitió por falta de credenciales elegibles. El estado de GitHub Actions y los gates Rust/durabilidad siguen abiertos. `ige-omega/Cargo.lock` existe en `main`, pero aún no se ha confirmado una ejecución verde de Cargo con `--locked`.
 
 ## Hallazgos priorizados
 
@@ -55,13 +55,27 @@ La revisión encontró rutas donde un veredicto de revisión podía no impedir l
 
 ## Evidencia de build validado
 
-- Commit de runtime/build: [`8c19acd`](https://github.com/OsoPanda1/Isabella-V6-TINA-h6/commit/8c19acd2959de3ae8f4c78a098d85192f1232164).
-- Deployment Vercel: [READY](https://vercel.com/isabella-mexa/isabella-v6-tina/HvkbCfEPeHqzRLB5JG1TFFbynRCM).
-- Vitest: 734/734 pruebas; 135/135 archivos.
+- Commit de runtime/build: [`03e6f68`](https://github.com/OsoPanda1/Isabella-V6-TINA-h6/commit/03e6f68ebc3ee5bec39bd42a69c0d704b40aff76).
+- Deployment Vercel: [READY](https://vercel.com/isabella-mexa/isabella-v6-tina/HAC1kk2Ha1T5ukJNjRXiWjW8RwVq).
+- Vitest: 746/746 pruebas; 135/135 archivos.
 - UI: `UI_NAVIGATION_SMOKE_OK`, `CINEMATIC_INTRO_12_SCENES_OK`.
 - Runtime: `LOCAL_CONVERSATION_SMOKE_OK`, `PUBLIC_API_GUARDRAILS_OK`, `OPENROUTER_PAID_ID_BLOCK_OK`.
 - Suite estática de seguridad: 14 passed, 0 failed, 0 not_applicable; `SEC-12` valida el fail-closed de AEGIS en Tools/Skills.
 - Inferencia externa: `LLM_GATEWAY_SMOKE_SKIPPED`; no se afirma que el proveedor real esté operativo.
+
+## Seguimiento GAME OVER / UAGP-1 — endurecimiento adicional
+
+Después del SHA de referencia se añadieron controles y pruebas de regresión para el runtime UAGP-1 y el plugin Jenkins:
+
+- Aprobación humana: un nombre escrito en la solicitud ya no basta; el gate exige un principal autenticado coincidente. En HTTP, el token administrativo no equivale a aprobación: se requiere la credencial separada `GENESIS_HUMAN_APPROVAL_TOKEN` junto con `GENESIS_HUMAN_APPROVER_ID`. Si faltan, la decisión queda en `ESCALATE`.
+- Política de aprobación: `humanApprovalRequired: false` no puede reducir el requisito derivado del riesgo o de una acción de alto impacto.
+- Pasaportes: validación de puntuación y vigencia, prevención de sobrescritura por ID duplicado en TypeScript y validación/registro concurrente seguro en el plugin Java.
+- Vínculo de autoridad: el agente y sus capacidades deben estar cubiertos por el pasaporte; una acción no declarada entre sus capacidades se rechaza.
+- Confianza: las métricas incluidas en la solicitud no pueden elevar la puntuación por encima de la asignada por el emisor del pasaporte.
+- Entradas: criticidad inválida se rechaza por validación y se trata como crítica en el motor de riesgo para impedir downgrade; el gateway TypeScript devuelve rechazo ante solicitudes malformadas sin propagar una excepción.
+- Jenkins: se añadieron pruebas JUnit para el gate humano, criticidad, validez del pasaporte, límite de confianza y alcance de acciones. Se añadió `jenkins-plugin-verify` al workflow CI para ejecutar `mvn test` y empaquetar el HPI.
+
+**Estado de verificación:** el build Vercel del SHA `03e6f68` valida el runtime TypeScript y sus 746 pruebas. Vercel no compila Java; las nuevas pruebas y el empaquetado del plugin Jenkins permanecen pendientes de una ejecución verde del job GitHub Actions. No se afirma que el plugin esté instalado o certificado.
 
 ## Gates restantes antes de declarar listo para producción
 
