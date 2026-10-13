@@ -46,6 +46,13 @@ try {
   assert.equal(typeof publicHealthBody.inferenceMode, "string", "public health must describe inference mode without exposing secrets");
   assert.equal("hasGeminiKey" in publicHealthBody, false, "public health must not disclose provider credential presence");
 
+  const healthz = await fetch(`${baseUrl}/api/v1/healthz`, { signal: AbortSignal.timeout(5_000) });
+  assert.ok([200, 503].includes(healthz.status), "deep readiness may only report healthy or explicitly blocked");
+  const healthzBody = await healthz.json();
+  assert.equal(healthzBody.scope, "deep-dependency-readiness", "deep readiness must declare its scope");
+  assert.ok(Array.isArray(healthzBody.evidence), "deep readiness must include observed dependency evidence");
+  assert.equal(healthz.status, healthzBody.ready ? 200 : 503, "deep readiness HTTP status must match its evaluated state");
+
   const chat = await fetch(`${baseUrl}/api/v1/cognition/route`, {
     method: "POST",
     headers: { "content-type": "application/json" },

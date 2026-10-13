@@ -1,3 +1,12 @@
+/**
+ * HyperCore **V5** (heurístico, legado) — decide activaciones por presión y
+ * riesgo y ejecuta un pipeline determinista sobre un runtime inyectado.
+ *
+ * NO confundir con el módulo V6 Ω² (`src/hypercore/`, tipos `HyperCore*` en
+ * CamelCase), que añade predicción, caché gobernada, expertos paralelos,
+ * verificación Veritas Ω y auditoría fail-closed. Ambos contratos coexisten y
+ * se exportan por el barril con nombres distintos deliberadamente.
+ */
 import {
   HYPERCORE_ACTIVATIONS, type HypercoreActivation, type HypercoreMode, type RiskTier, EARLY_EXIT_MAX_RISK,
 } from "../core/types";

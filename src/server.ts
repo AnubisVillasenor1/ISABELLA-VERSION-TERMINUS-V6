@@ -4,7 +4,7 @@ import fs from "fs";
 import path from "path";
 import { GoogleGenAI } from "@google/genai";
 import { generateText } from "ai";
-import { boundedMilliseconds, extractAssistantText, isOpenRouterModelAllowed } from "./inference/provider-policy";
+import { boundedMilliseconds, buildOpenAICompatibleCandidates, extractAssistantText, isOpenRouterModelAllowed } from "./inference/provider-policy";
 import { gateway } from "@ai-sdk/gateway";
 import { IsabellaGenesisRuntime } from "./genesis/runtime";
 import { assertBalancedAuthority, createPrincipal } from "./identity/principal";
@@ -29,23 +29,14 @@ import { applyProviderSubscriptionEvent } from "./commerce/provider-events";
 import type { ProviderConfig, SignatureScheme, TenantMapping } from "./commerce/webhook";
 import { LatencyRegistry } from "./deployment/latency-metrics";
 import { TtlSingleFlight } from "./deployment/ttl-single-flight";
+import { collectDependencyReadiness } from "./health/dependency-readiness";
 import { MetricsRegistry } from "./observability/metrics";
 import { SessionMemory, formatSessionContext, deriveSessionId } from "./memory/session-memory";
 import { VerifiedKnowledgeStore, formatVerifiedKnowledgeContext } from "./memory/verified-knowledge";
 import { osirisSentinel } from "./osiris";
 import { SubscriptionStore, UsageMeter, checkFeature, checkQuota, planEntitlements, PLANS, type PlanId, type QuotaKey, type SubscriptionRecord } from "./commerce";
 import { GAMEOVER_CONSTITUTION, passportAuthority, uagpGateway, type UagpRequestInput } from "./gameover";
-import {
-  HYPERCORE_DISCLAIMER,
-  HYPERCORE_ID,
-  HYPERCORE_OMEGA_MODES,
-  HYPERCORE_VERSION,
-  hyperCore,
-  hyperPredict,
-  type HyperCoreTask,
-  type HyperPredictSession,
-  type RiskClass,
-} from "./hypercore";
+import { registerHyperCoreRoutes } from "./routes/hypercore";
 
 const app: Application = express();
 app.disable("x-powered-by");
@@ -61,8 +52,15 @@ const metricsRegistry = new MetricsRegistry();
 const subscriptionStore = new SubscriptionStore();
 const usageMeter = new UsageMeter();
 const atlasHealthCache = new TtlSingleFlight<{ healthy: boolean; reason: string }>(1_000);
-const port = 3000;
-const host = "0.0.0.0";
+// Port is taken from the platform environment (PORT is the de-facto contract for
+// containers and PaaS). Validate it: an invalid value must fail loudly, not silently
+// bind the default and leave the deployment unreachable.
+const requestedPort = Number(process.env.PORT ?? 3000);
+if (!Number.isSafeInteger(requestedPort) || requestedPort < 1 || requestedPort > 65_535) {
+  throw new RangeError(`PORT must be an integer between 1 and 65535, received: ${process.env.PORT}`);
+}
+const port = requestedPort;
+const host = process.env.HOST?.trim() || "0.0.0.0";
 
 const connectorRawBodies = new WeakMap<object, string>();
 
@@ -178,13 +176,7 @@ let compatibleProviderCooldownUntil = 0;
  */
 async function generateCompatibleProviderNarrative(systemPrompt: string, input: string, history: PublicChatTurn[] = []): Promise<string | null> {
   if (Date.now() < compatibleProviderCooldownUntil) return null;
-  const candidates = [
-    { name: "groq", key: process.env.GROQ_API_KEY, url: "https://api.groq.com/openai/v1/chat/completions", model: process.env.GROQ_MODEL || "llama-3.1-8b-instant" },
-    { name: "cerebras", key: process.env.CEREBRAS_API_KEY, url: "https://api.cerebras.ai/v1/chat/completions", model: process.env.CEREBRAS_MODEL || "llama-3.1-8b" },
-    { name: "together", key: process.env.TOGETHER_API_KEY, url: "https://api.together.xyz/v1/chat/completions", model: process.env.TOGETHER_MODEL || "meta-llama/Llama-3.3-70B-Instruct-Turbo" },
-    { name: "deepinfra", key: process.env.DEEPINFRA_API_KEY, url: "https://api.deepinfra.com/v1/openai/chat/completions", model: process.env.DEEPINFRA_MODEL || "meta-llama/Meta-Llama-3.1-8B-Instruct" },
-    { name: "fireworks", key: process.env.FIREWORKS_API_KEY, url: "https://api.fireworks.ai/inference/v1/chat/completions", model: process.env.FIREWORKS_MODEL || "accounts/fireworks/models/llama-v3p1-8b-instruct" },
-  ].filter((candidate) => Boolean(candidate.key));
+  const candidates = buildOpenAICompatibleCandidates(process.env);
   if (candidates.length === 0) return null;
   for (const candidate of candidates) {
     try {
@@ -624,6 +616,23 @@ app.get("/api/v1/health", (_req, res) => {
   });
 });
 
+// Deep dependency readiness. Distinguishes CONFIGURED from VERIFIED: these probes
+// observe process configuration and local IO, not external reachability. Answers 503
+// until every required dependency is healthy; fail-closed when evidence is missing.
+app.get("/api/v1/healthz", (_req, res) => {
+  const report = collectDependencyReadiness(process.env);
+  res.setHeader("Cache-Control", "no-store");
+  res.status(report.readiness.ready ? 200 : 503).json({
+    status: report.readiness.status,
+    ready: report.readiness.ready,
+    scope: "deep-dependency-readiness",
+    limitation: "Configuration-presence and local-IO probes; external reachability, quota and distributed concurrency are not verified here.",
+    blockers: report.readiness.blockers,
+    evidence: report.evidence,
+    checkedAt: report.readiness.checkedAt,
+  });
+});
+
 app.get("/api/v1/status", (_req, res) => {
   const localBookPiConfigured = Boolean(process.env.BOOKPI_LEDGER_PATH?.trim());
   const bookPiBackend = localBookPiConfigured ? "DURABLE_APPEND_ONLY_JSONL_LOCAL_SCOPE" : "VOLATILE_IN_MEMORY_HASH_CHAIN";
@@ -933,8 +942,8 @@ app.post("/api/v1/cognition/route", async (req, res) => {
     }
     res.status(decision.admitted ? 200 : 403).json({
       success: decision.admitted, decision, principal, generativeNarrative, responseEngine,
-      modelConfigured: Boolean(genAi || process.env.OPENROUTER_API_KEY || (process.env.HF_TOKEN && process.env.HF_FREE_MODELS) || process.env.GROQ_API_KEY || process.env.CEREBRAS_API_KEY || process.env.TOGETHER_API_KEY || process.env.DEEPINFRA_API_KEY || process.env.FIREWORKS_API_KEY || process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN),
-      openModelConfigured: Boolean(process.env.OPENROUTER_API_KEY || (process.env.HF_TOKEN && process.env.HF_FREE_MODELS) || process.env.GROQ_API_KEY || process.env.CEREBRAS_API_KEY || process.env.TOGETHER_API_KEY || process.env.DEEPINFRA_API_KEY || process.env.FIREWORKS_API_KEY),
+      modelConfigured: Boolean(genAi || process.env.OPENROUTER_API_KEY || (process.env.HF_TOKEN && process.env.HF_FREE_MODELS) || process.env.OLLAMA_API_KEY || process.env.GROQ_API_KEY || process.env.CEREBRAS_API_KEY || process.env.TOGETHER_API_KEY || process.env.DEEPINFRA_API_KEY || process.env.FIREWORKS_API_KEY || process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN),
+      openModelConfigured: Boolean(process.env.OPENROUTER_API_KEY || (process.env.HF_TOKEN && process.env.HF_FREE_MODELS) || process.env.OLLAMA_API_KEY || process.env.GROQ_API_KEY || process.env.CEREBRAS_API_KEY || process.env.TOGETHER_API_KEY || process.env.DEEPINFRA_API_KEY || process.env.FIREWORKS_API_KEY),
       paidProviderConfigured: Boolean(genAi || process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN),
       conversationContextTurns: history.length,
       requestedRiskIgnored: true, publicAuthority: "VIEWER_ONLY",
@@ -4824,84 +4833,15 @@ app.post("/api/v1/gameover/govern", (req, res) => {
   }
 });
 
-const HYPERCORE_ADMIN_PRINCIPAL = "genesis-admin";
-const HYPERCORE_RISK_CLASSES: readonly RiskClass[] = ["low", "medium", "high", "critical"];
-
-function parseHyperCoreRisk(body: Record<string, unknown>): RiskClass {
-  const raw = (commerceStringField(body, "risk") ?? "low").toLowerCase();
-  return HYPERCORE_RISK_CLASSES.includes(raw as RiskClass) ? (raw as RiskClass) : "low";
-}
-
-function stringArrayField(body: Record<string, unknown>, key: string): string[] {
-  const value = body[key];
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
-}
-
-app.get("/api/v1/hypercore/modes", (_req, res) => {
-  res.json({
-    success: true,
-    id: HYPERCORE_ID,
-    version: HYPERCORE_VERSION,
-    modes: HYPERCORE_OMEGA_MODES,
-    disclaimer: HYPERCORE_DISCLAIMER,
-  });
-});
-
-app.post("/api/v1/hypercore/run", async (req, res) => {
-  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
-  try {
-    const body = (req.body ?? {}) as Record<string, unknown>;
-    const intent = commerceStringField(body, "intent");
-    const domain = commerceStringField(body, "domain");
-    const prompt = commerceStringField(body, "prompt");
-    if (!intent || !domain || !prompt) {
-      res.status(400).json({ success: false, error: "intent, domain y prompt son requeridos" });
-      return;
-    }
-    const task: HyperCoreTask = {
-      taskId: commerceStringField(body, "taskId") ?? `task-${Date.now()}`,
-      intent,
-      domain,
-      risk: parseHyperCoreRisk(body),
-      prompt,
-      contextTokens: typeof body.contextTokens === "number" ? body.contextTokens : 0,
-      userScope: commerceStringField(body, "userScope"),
-      territoryScope: commerceStringField(body, "territoryScope"),
-      requiresAuthorization: body.requiresAuthorization === true,
-    };
-    const result = await hyperCore.run(task, { authenticatedPrincipal: HYPERCORE_ADMIN_PRINCIPAL });
-    const delivered = result.status === "COMPLETED" || result.status === "CACHE_HIT";
-    const status = delivered ? 200 : result.status === "ESCALATED" ? 202 : 403;
-    res.status(status).json({ success: delivered, ...result });
-  } catch (error) {
-    res.status(400).json({ success: false, error: error instanceof Error ? error.message : "HYPERCORE_RUN_FAILED" });
-  }
-});
-
-app.post("/api/v1/hypercore/predict", (req, res) => {
-  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
-  try {
-    const body = (req.body ?? {}) as Record<string, unknown>;
-    const session: HyperPredictSession = {
-      subject: commerceStringField(body, "subject") ?? HYPERCORE_ADMIN_PRINCIPAL,
-      role: commerceStringField(body, "role") ?? "guardian",
-      deviceTrusted: body.deviceTrusted === true,
-      openArtifacts: stringArrayField(body, "openArtifacts"),
-      currentIntent: commerceStringField(body, "currentIntent") ?? "",
-      recentIntents: stringArrayField(body, "recentIntents"),
-      risk: parseHyperCoreRisk(body),
-      territory: commerceStringField(body, "territory") ?? "global",
-    };
-    const predictions = hyperPredict.predict(session);
-    res.json({
-      success: true,
-      predictions,
-      stats: hyperPredict.stats(),
-      disclaimer: HYPERCORE_DISCLAIMER,
-    });
-  } catch (error) {
-    res.status(400).json({ success: false, error: error instanceof Error ? error.message : "HYPERCORE_PREDICT_FAILED" });
-  }
+registerHyperCoreRoutes({
+  app,
+  skills: runtime.skills,
+  ledger: bookPiLedger,
+  authorizeApiToken,
+  enforceRateLimit,
+  rateLimiter: publicScanLimiter,
+  commerceStringField,
+  ...(process.env.HYPERCORE_SIGNING_KEY ? { signingKey: process.env.HYPERCORE_SIGNING_KEY } : {}),
 });
 
 if (!process.env.VERCEL) app.listen(port, host, () => {

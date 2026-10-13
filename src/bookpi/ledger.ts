@@ -311,6 +311,9 @@ export class DurableBookPiLedger {
     this.filePath = filePath;
     this.checkpointPath = `${filePath}.checkpoint.json`;
     this.maintenancePath = `${filePath}.maintenance.pending.json`;
+    // Own the durable directory from construction so readiness at boot reflects a
+    // writable volume instead of reporting unavailable until the first append.
+    mkdirSync(dirname(filePath), { recursive: true });
     this.load();
   }
 

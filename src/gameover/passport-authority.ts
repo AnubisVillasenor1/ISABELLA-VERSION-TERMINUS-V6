@@ -7,6 +7,7 @@
  */
 import { randomUUID } from "node:crypto";
 import { GAMEOVER_CONSTITUTION } from "./constitution";
+import type { PassportStorePort } from "./passport-store";
 import type { AgentIdentity, AIPassport, CertificationState, PassportVerification } from "./types";
 
 export interface IssuePassportInput {
@@ -20,6 +21,8 @@ export interface IssuePassportInput {
 export interface PassportAuthorityOptions {
   readonly now?: () => Date;
   readonly idFactory?: () => string;
+  /** Optional durable sink; when present the registry survives restarts. */
+  readonly store?: PassportStorePort;
 }
 
 export interface PassportAuthority {
@@ -47,6 +50,12 @@ export function createPassportAuthority(options: PassportAuthorityOptions = {}):
   const now = options.now ?? (() => new Date());
   const idFactory = options.idFactory ?? (() => `GOP-${randomUUID()}`);
   const passports = new Map<string, AIPassport>();
+  const store = options.store;
+  for (const persisted of store?.load() ?? []) passports.set(persisted.id, persisted);
+
+  function persist(): void {
+    if (store) store.save(list());
+  }
 
   function issue(input: IssuePassportInput): AIPassport {
     if (!input.agent || typeof input.agent.id !== "string" || !input.agent.id.trim()) throw new Error("PASSPORT_AGENT_ID_REQUIRED");
@@ -72,6 +81,7 @@ export function createPassportAuthority(options: PassportAuthorityOptions = {}):
       trustScore: input.trustScore,
     });
     passports.set(passport.id, passport);
+    persist();
     return passport;
   }
 
@@ -108,6 +118,7 @@ export function createPassportAuthority(options: PassportAuthorityOptions = {}):
       revokedReason: reason.trim(),
     });
     passports.set(id, revoked);
+    persist();
     return revoked;
   }
 

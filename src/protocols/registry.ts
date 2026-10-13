@@ -31,7 +31,7 @@ export class ProtocolRegistry {
     return [...this.protocols.values()];
   }
 
-  async execute(id: string, input: unknown, requestId = randomUUID()): Promise<unknown> {
+  async execute(id: string, input: unknown, requestId: string = randomUUID()): Promise<unknown> {
     return this.get(id).execute({ requestId, traceId: requestId, input });
   }
 }
