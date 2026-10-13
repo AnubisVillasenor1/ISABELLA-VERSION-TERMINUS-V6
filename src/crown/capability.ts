@@ -16,8 +16,13 @@ export function createCapabilityGate(descriptors: readonly CapabilityDescriptor[
   return gate;
 }
 export function registerCapability(gate: CapabilityGate, descriptor: CapabilityDescriptor): void {
+  if (!descriptor.methodId || !descriptor.owner) throw new Error("CROWN: capability metadata is incomplete.");
   if (gate.descriptors.has(descriptor.methodId)) throw new Error(`CROWN: capability already registered: ${descriptor.methodId}`);
-  gate.descriptors.set(descriptor.methodId, descriptor);
+  const frozenDescriptor: CapabilityDescriptor = Object.freeze({
+    ...descriptor,
+    allowedRoles: Object.freeze([...descriptor.allowedRoles]),
+  });
+  gate.descriptors.set(frozenDescriptor.methodId, frozenDescriptor);
 }
 export interface CapabilityRequest {
   principal: Principal;
