@@ -32,6 +32,19 @@ describe("GAME OVER UagpValidator", () => {
     expect(errors).toContain("ACTIONS_REQUIRED");
   });
 
+  it("rejects invalid criticality, approval flags and trust metrics", () => {
+    const errors = validateRequest({
+      ...valid,
+      criticality: "EXTREME",
+      humanApprovalRequired: "yes",
+      trustMetrics: { integrity: 101, unknownMetric: 1 },
+    }).errors;
+    expect(errors).toContain("CRITICALITY_INVALID");
+    expect(errors).toContain("HUMAN_APPROVAL_FLAG_INVALID");
+    expect(errors).toContain("TRUST_METRIC_INVALID:integrity");
+    expect(errors).toContain("TRUST_METRIC_UNKNOWN");
+  });
+
   it("validates evidence sha256 shape and kind", () => {
     const errors = validateRequest({
       ...valid,
