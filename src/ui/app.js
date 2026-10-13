@@ -109,7 +109,12 @@ const addMessage = (text, role) => {
         await navigator.clipboard.writeText(value);
         copyButton.textContent = 'COPIADO';
       } catch {
-        copyButton.textContent = 'SELECCIONA EL TEXTO';
+        const selection = window.getSelection();
+        const range = document.createRange();
+        range.selectNodeContents(paragraph);
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+        copyButton.textContent = 'TEXTO SELECCIONADO';
       }
       copyButton.disabled = true;
       window.setTimeout(() => {
