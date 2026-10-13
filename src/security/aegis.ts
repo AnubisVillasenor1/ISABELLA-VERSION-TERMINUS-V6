@@ -50,3 +50,29 @@ export function inspectAegis(input: string): AegisVerdict {
     findings,
   };
 }
+
+
+/**
+ * Inspect structured input without allowing serialization failures to bypass
+ * the policy gate. Callers must treat every non-ALLOW verdict as non-executable.
+ */
+export function inspectAegisValue(value: unknown): AegisVerdict {
+  let serialized: string | undefined;
+  try {
+    serialized = JSON.stringify(value);
+  } catch {
+    serialized = undefined;
+  }
+  if (typeof serialized !== "string") {
+    return {
+      decision: "BLOCK",
+      score: 1,
+      findings: [{
+        kind: "policy_evasion",
+        severity: "CRITICAL",
+        evidence: "input serialization failed; fail-closed",
+      }],
+    };
+  }
+  return inspectAegis(serialized);
+}
