@@ -9,20 +9,41 @@ export interface CapabilityDescriptor {
   governanceTier: GovernanceTier; humanApprovalRequired: boolean;
 }
 export interface CapabilityVerdict { granted: boolean; reason: string; evidenceRef?: string; }
-export interface CapabilityGate { descriptors: Map<string, CapabilityDescriptor>; }
+export interface CapabilityGate {
+  /** Read-only policy view; mutation is only possible through registerCapability. */
+  readonly descriptors: ReadonlyMap<string, CapabilityDescriptor>;
+}
+
+const capabilityMaps = new WeakMap<CapabilityGate, Map<string, CapabilityDescriptor>>();
+
+function readOnlyMap<K, V>(map: Map<K, V>): ReadonlyMap<K, V> {
+  return new Proxy(map, {
+    get(target, property) {
+      if (property === "set" || property === "delete" || property === "clear") return undefined;
+      const value = Reflect.get(target, property, target) as unknown;
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  }) as ReadonlyMap<K, V>;
+}
+
 export function createCapabilityGate(descriptors: readonly CapabilityDescriptor[]): CapabilityGate {
-  const gate: CapabilityGate = { descriptors: new Map() };
+  const mutable = new Map<string, CapabilityDescriptor>();
+  const gate: CapabilityGate = { descriptors: readOnlyMap(mutable) };
+  capabilityMaps.set(gate, mutable);
   for (const descriptor of descriptors) registerCapability(gate, descriptor);
   return gate;
 }
+
 export function registerCapability(gate: CapabilityGate, descriptor: CapabilityDescriptor): void {
+  const registered = capabilityMaps.get(gate);
+  if (!registered) throw new Error("CROWN: gate must be created by createCapabilityGate.");
   if (!descriptor.methodId || !descriptor.owner) throw new Error("CROWN: capability metadata is incomplete.");
-  if (gate.descriptors.has(descriptor.methodId)) throw new Error(`CROWN: capability already registered: ${descriptor.methodId}`);
+  if (registered.has(descriptor.methodId)) throw new Error(`CROWN: capability already registered: ${descriptor.methodId}`);
   const frozenDescriptor: CapabilityDescriptor = Object.freeze({
     ...descriptor,
     allowedRoles: Object.freeze([...descriptor.allowedRoles]),
   });
-  gate.descriptors.set(frozenDescriptor.methodId, frozenDescriptor);
+  registered.set(frozenDescriptor.methodId, frozenDescriptor);
 }
 export interface CapabilityRequest {
   principal: Principal;
