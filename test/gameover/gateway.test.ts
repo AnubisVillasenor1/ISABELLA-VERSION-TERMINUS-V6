@@ -31,7 +31,7 @@ function harness() {
   });
   const audit = createAuditService({ ledger });
   const gateway = createUagpGateway({ passportAuthority, audit });
-  passportAuthority.issue({ agent, issuer: "tamv", trustScore: 90, id: "pp-certified" });
+  passportAuthority.issue({ agent: { ...agent, capabilities: ["build", "deploy"] }, issuer: "tamv", trustScore: 90, id: "pp-certified" });
   return { gateway, audit, passportAuthority };
 }
 
@@ -68,7 +68,7 @@ describe("GAME OVER UagpGateway", () => {
 
   it("does not let the request disable approval for a high-risk action", () => {
     const { gateway } = harness();
-    const result = gateway.govern(request({ actions: ["deploy"], humanApprovalRequired: false }));
+    const result = gateway.govern(request({ actions: ["deploy"], agent: { ...agent, capabilities: ["deploy"] }, humanApprovalRequired: false }));
     expect(result.outcome).toBe("ESCALATE");
     expect(result.decision.humanApprovalRequired).toBe(true);
   });
@@ -88,6 +88,20 @@ describe("GAME OVER UagpGateway", () => {
     expect(result.decision.rationale).toContain("INVALID:PROTOCOL_UNSUPPORTED");
   });
 
+  it("rejects a request that declares an action outside its capabilities", () => {
+    const { gateway } = harness();
+    const result = gateway.govern(request({ actions: ["deploy"] }));
+    expect(result.outcome).toBe("REJECT");
+    expect(result.decision.rationale).toContain("ACTION_CAPABILITY_NOT_DECLARED:deploy");
+  });
+
+  it("rejects a passport used by a different agent identity", () => {
+    const { gateway } = harness();
+    const result = gateway.govern(request({ agent: { ...agent, id: "attacker-agent" } }));
+    expect(result.outcome).toBe("REJECT");
+    expect(result.decision.rationale).toContain("PASSPORT_AGENT_OR_CAPABILITY_MISMATCH");
+  });
+
   it("rejects a missing/unknown passport", () => {
     const { gateway } = harness();
     const result = gateway.govern(request({ passportId: "nope" }));
@@ -105,7 +119,7 @@ describe("GAME OVER UagpGateway", () => {
 
   it("does not accept a self-asserted approver without an authenticated principal", () => {
     const { gateway } = harness();
-    const result = gateway.govern(request({ actions: ["deploy"], humanApprover: "edwin" }));
+    const result = gateway.govern(request({ actions: ["deploy"], agent: { ...agent, capabilities: ["deploy"] }, humanApprover: "edwin" }));
     expect(result.outcome).toBe("ESCALATE");
     expect(result.decision.rationale).toContain("HUMAN_AUTHENTICATED_PRINCIPAL_REQUIRED");
     expect(result.allowed).toBe(false);
@@ -113,7 +127,7 @@ describe("GAME OVER UagpGateway", () => {
 
   it("accepts a high-risk action when a matching human approver is recorded", () => {
     const { gateway } = harness();
-    const result = gateway.govern(request({ actions: ["deploy"], humanApprover: "edwin" }), { authenticatedPrincipal: "edwin" });
+    const result = gateway.govern(request({ actions: ["deploy"], agent: { ...agent, capabilities: ["deploy"] }, humanApprover: "edwin" }), { authenticatedPrincipal: "edwin" });
     expect(result.outcome).toBe("ACCEPT");
     expect(result.decision.humanApprover).toBe("edwin");
   });
@@ -128,7 +142,7 @@ describe("GAME OVER UagpGateway", () => {
 
   it("rejects an approver mismatch (fail-closed)", () => {
     const { gateway } = harness();
-    const result = gateway.govern(request({ actions: ["deploy"], humanApprover: "someone-else" }), { authenticatedPrincipal: "edwin" });
+    const result = gateway.govern(request({ actions: ["deploy"], agent: { ...agent, capabilities: ["deploy"] }, humanApprover: "someone-else" }), { authenticatedPrincipal: "edwin" });
     expect(result.outcome).toBe("ESCALATE");
     expect(result.decision.rationale).toContain("HUMAN_APPROVER_MISMATCH");
   });
