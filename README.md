@@ -53,16 +53,18 @@ La visión es el **norte**; abajo se reporta, sin adornos, cuánto de ella exist
 
 ## 2. Estado real hoy (lo que ya tenemos)
 
-**SHA local validado: `8ebc118`** (HyperCore Ω² + HyperPredict Ω: runtime de hiperaceleración cognitiva en `src/hypercore/` con orquestador fail-closed, más capa visual elegante en `src/ui/`). El árbol pasa, de forma reproducible en local:
+**Último SHA de runtime validado en Vercel: `8c19acd2959de3ae8f4c78a098d85192f1232164`**. La revisión P0 endurece las fronteras AEGIS/CROWN, la autorización de HyperCore antes de caché/ejecución y la invalidación single-flight.
 
-| Gate | Comando | Resultado en `8ebc118` |
+| Gate | Comando / evidencia | Resultado del SHA validado |
 |---|---|---|
-| Tipos estrictos | `pnpm typecheck` | exit 0 |
-| Pruebas | `pnpm test` | **723 aprobadas / 135 archivos** |
-| Build completo | `pnpm build` | exit 0 (tsc + vitest + esbuild + `node --check src/ui/app.js` + smoke UI + smoke runtime) |
-| Suite de seguridad | `pnpm run security:suite` | **14 passed / 0 failed** |
+| Tipos y bundle | `pnpm run build` | exit 0; TypeScript + esbuild + comprobación sintáctica JS |
+| Pruebas | Vitest | **734 aprobadas / 135 archivos** |
+| Smoke de UI | `node scripts/ui-smoke.mjs` | `UI_NAVIGATION_SMOKE_OK` + `CINEMATIC_INTRO_12_SCENES_OK` |
+| Smoke de runtime | `node scripts/runtime-smoke.mjs` | HTTP/guardrails locales aprobados |
+| Suite de seguridad | `pnpm run security:suite` | **14 passed / 0 failed / 0 not_applicable** |
+| Vercel | deployment del SHA `8c19acd` | **READY** |
 
-> Este SHA **no** ha sido validado aún por GitHub Actions ni desplegado a Preview. El último SHA con deployment `READY` en Vercel fue `cccaede` (519 pruebas / 100 archivos). No se debe copiar evidencia de un SHA a otro.
+> Límites vigentes: el smoke de inferencia externa se omitió por ausencia de credenciales elegibles; no demuestra generación real de proveedor. GitHub Actions todavía requiere una ejecución con jobs y conclusión verde. El workspace Rust necesita `ige-omega/Cargo.lock` y sus gates `--locked`. El estado verificado corresponde al SHA indicado, no a commits posteriores.
 
 ### Componentes realmente implementados
 
@@ -92,8 +94,8 @@ La visión es el **norte**; abajo se reporta, sin adornos, cuánto de ella exist
 | Dimensión | Peso | Evaluación | Evidencia / gate |
 |---|---:|---:|---|
 | Runtime HTTP y flujo local | 20% | 75% | Smoke HTTP local verde en el SHA |
-| Pruebas y validación automatizada | 20% | 75% | 723 pruebas / 135 archivos |
-| Seguridad y guardrails | 15% | 45% | Suite de seguridad 14/14; falta revisión de producción |
+| Pruebas y validación automatizada | 20% | 75% | 734 pruebas / 135 archivos en el SHA validado |
+| Seguridad y guardrails | 15% | 45% | Suite estática 14/14; falta revisión de producción |
 | Inferencia externa real | 15% | 0% verificado | Sin credenciales elegibles; no demostrada |
 | Persistencia durable y recuperación | 10% | 40% | Ledger durable JSONL + backup/restore/retención con tests; falta E2E Postgres/Supabase y simulacro de recuperación |
 | CI reproducible y workspace Rust | 10% | 20% | CI sin jobs verdes; `Cargo.lock` ausente |
