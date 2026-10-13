@@ -106,4 +106,43 @@ describe("HyperCore Ω² orchestrator (fail-closed)", () => {
     expect(hit.observation.bookpiTraceId).not.toBeNull();
     expect(hit.disclaimer).toContain("Authorization is CROWN-only");
   });
+
+  it("requires authorization for high/critical risk even when the task flag is false", async () => {
+    let expertCalls = 0;
+    const core = createHyperCore({
+      experts: [{
+        id: "spy-expert",
+        domain: "code",
+        costUnits: 1,
+        latencyMs: 1,
+        energyKwh: 0.00001,
+        run: () => { expertCalls += 1; return { ok: true }; },
+      }],
+    });
+    const result = await core.run({ ...task, taskId: "hc-critical-no-auth", risk: "critical", requiresAuthorization: false });
+    expect(result.status).toBe("ESCALATED");
+    expect(result.reasons).toContain("AUTHORIZATION_REQUIRED");
+    expect(expertCalls).toBe(0);
+  });
+
+  it("rechecks CROWN authorization before serving a cached response", async () => {
+    let calls = 0;
+    const core = createHyperCore({
+      authorizer: () => {
+        calls += 1;
+        return calls === 1
+          ? { authorized: true, authority: "CROWN", reason: "APPROVED" }
+          : { authorized: false, authority: "CROWN", reason: "REVOKED" };
+      },
+    });
+    const authorizedTask = { ...task, taskId: "hc-cache-auth", requiresAuthorization: true };
+    const first = await core.run(authorizedTask);
+    expect(first.status).toBe("COMPLETED");
+    const second = await core.run(authorizedTask);
+    expect(second.status).toBe("DENIED");
+    expect(second.reasons).toContain("AUTHORIZATION_DENIED:REVOKED");
+    expect(calls).toBe(2);
+  });
+
+
 });
