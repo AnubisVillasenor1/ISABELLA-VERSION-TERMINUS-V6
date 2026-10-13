@@ -270,18 +270,21 @@ function checkNonceAntireplay() {
 function checkAegisFailClosed() {
   const aegis = path.join(SRC, "security", "aegis.ts");
   if (!exists(aegis)) {
-    return result("SEC-12", "AEGIS aplica fail-closed sobre entradas bloqueadas", "not_applicable", "no existe aegis.ts", "");
+    return result("SEC-12", "AEGIS fail-closed ante BLOCK, REVIEW, MODIFY y serialización inválida", "failed", "no existe aegis.ts", "AEGIS es una frontera obligatoria de seguridad.");
   }
-  const consumers = ["tools/registry.ts", "skills/registry.ts", "genesis/runtime.ts"]
-    .map((p) => path.join(SRC, p))
-    .filter((p) => exists(p) && /inspectAegis|BLOCK/.test(readText(p)));
-  const ok = consumers.length > 0;
+  const toolRegistry = readText(path.join(SRC, "tools", "registry.ts"));
+  const skillRegistry = readText(path.join(SRC, "skills", "registry.ts"));
+  const aegisSource = readText(aegis);
+  const usesStructuredGuard = /inspectAegisValue/.test(toolRegistry) && /inspectAegisValue/.test(skillRegistry);
+  const deniesNonAllow = /decision\s*!==\s*["']ALLOW["']/.test(toolRegistry) && /decision\s*!==\s*["']ALLOW["']/.test(skillRegistry);
+  const handlesSerializationFailure = /input serialization failed; fail-closed/.test(aegisSource);
+  const ok = usesStructuredGuard && deniesNonAllow && handlesSerializationFailure;
   return result(
     "SEC-12",
-    "AEGIS aplica fail-closed sobre entradas bloqueadas",
+    "AEGIS fail-closed ante BLOCK, REVIEW, MODIFY y serialización inválida",
     ok ? "passed" : "failed",
-    ok ? `consumidores con veredicto BLOCK: ${consumers.map(rel).join(", ")}` : "ningún consumidor aplica BLOCK de inspectAegis",
-    "inspectAegis debe gobernar rutas/librerías y bloquear cuando la decisión es BLOCK.",
+    `structuredGuard=${usesStructuredGuard}; denyNonAllow=${deniesNonAllow}; serializationFailClosed=${handlesSerializationFailure}`,
+    "ToolRegistry y SkillRegistry sólo ejecutan cuando AEGIS devuelve ALLOW; las entradas no serializables bloquean por defecto.",
   );
 }
 
