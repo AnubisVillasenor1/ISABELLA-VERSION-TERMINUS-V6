@@ -820,3 +820,208 @@ paths:
           description: No autorizado
         "503":
           description: Token de administración no configurado
+
+  /api/v1/healthz:
+    get:
+      summary: Readiness profunda de dependencias (config + IO local)
+      operationId: getHealthz
+      security: []
+      responses:
+        "200":
+          description: Listo
+        "503":
+          description: Bloqueadores presentes; fail-closed
+
+  /api/v1/readyz:
+    get:
+      summary: Readiness con evidencia
+      operationId: getReadyz
+      security: []
+      responses:
+        "200":
+          description: Listo
+        "503":
+          description: Dependencias no verificadas
+
+  /api/v1/ops/snapshot:
+    get:
+      summary: Snapshot operativo (readiness, mantenimiento, correlación)
+      operationId: getOpsSnapshot
+      security: []
+      responses:
+        "200":
+          description: Listo
+        "503":
+          description: Degradado; el snapshot se devuelve igualmente
+
+  /api/v1/ops/latency:
+    get:
+      summary: Latencias en proceso (token OPS_API_TOKEN)
+      operationId: getOpsLatency
+      security:
+        - AdminBearer: []
+      responses:
+        "200":
+          description: Muestra local, no es un SLA
+        "401":
+          description: No autorizado
+        "503":
+          description: Token no configurado
+
+  /api/v1/osiris/status:
+    get:
+      summary: Snapshot del centinela OSIRIS
+      operationId: getOsirisStatus
+      security:
+        - AdminBearer: []
+      responses:
+        "200":
+          description: Snapshot
+        "401":
+          description: No autorizado
+        "503":
+          description: Token no configurado
+
+  /api/v1/osiris/inspect:
+    post:
+      summary: Inspecciona una señal con OSIRIS
+      operationId: inspectOsiris
+      security:
+        - AdminBearer: []
+      responses:
+        "200":
+          description: Resultado
+        "400":
+          description: Señal inválida
+        "401":
+          description: No autorizado
+        "503":
+          description: Token no configurado
+
+  /api/v1/billing/plans:
+    get:
+      summary: Catálogo de planes (el servidor no procesa pagos)
+      operationId: getBillingPlans
+      security: []
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/billing/entitlements:
+    get:
+      summary: Entitlements de un plan
+      operationId: getBillingEntitlements
+      security: []
+      parameters:
+        - { name: plan, in: query, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Features y cuotas
+        "400":
+          description: PLAN_UNKNOWN
+
+  /api/v1/billing/subscription:
+    get:
+      summary: Suscripción y entitlements efectivos
+      operationId: getBillingSubscription
+      security:
+        - AdminBearer: []
+      parameters:
+        - { name: workspaceId, in: query, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: workspaceId requerido
+        "401":
+          description: No autorizado
+
+  /api/v1/billing/subscribe:
+    post:
+      summary: Registra estado de suscripción verificado por un proveedor externo
+      operationId: subscribeBilling
+      security:
+        - AdminBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [workspaceId, planCode, provider, externalRef]
+              properties:
+                workspaceId: { type: string }
+                planCode: { type: string }
+                provider: { type: string }
+                externalRef: { type: string }
+      responses:
+        "201":
+          description: Registrada
+        "400":
+          description: Entrada inválida
+        "401":
+          description: No autorizado
+
+  /api/v1/billing/cancel:
+    post:
+      summary: Cancela una suscripción
+      operationId: cancelBilling
+      security:
+        - AdminBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [workspaceId]
+              properties:
+                workspaceId: { type: string }
+      responses:
+        "200":
+          description: Cancelada
+        "404":
+          description: No existe
+        "401":
+          description: No autorizado
+
+  /api/v1/billing/usage:
+    get:
+      summary: Uso medido y decisiones de cuota
+      operationId: getBillingUsage
+      security:
+        - AdminBearer: []
+      parameters:
+        - { name: workspaceId, in: query, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: workspaceId requerido
+        "401":
+          description: No autorizado
+
+  /api/v1/commerce/offers:
+    post:
+      summary: Abre una oferta sujeta a entitlement y cuota
+      operationId: openCommerceOffer
+      security:
+        - AdminBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [workspaceId]
+              properties:
+                workspaceId: { type: string }
+      responses:
+        "201":
+          description: Oferta abierta
+        "402":
+          description: ENTITLEMENT_DENIED o QUOTA_DENIED
+        "400":
+          description: workspaceId requerido
+        "401":
+          description: No autorizado

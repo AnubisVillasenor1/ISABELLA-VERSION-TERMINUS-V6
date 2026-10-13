@@ -4,7 +4,7 @@
 > `state: auto_generated` — no editar a mano; requiere revisión humana para ser
 > evidencia (*CAPABILITY ≠ AUTHORITY ≠ EVIDENCE*, AGENTS.md).
 
-- **Generado:** 2026-10-13T19:34:00.609Z
+- **Generado:** 2026-10-13T23:55:06.299Z
 - **Fuente:** `src/server.ts` (parseo estático, sin ejecutar el servidor)
 - **Rutas totales:** 74 · **Sensibles:** 42 · **Con contrato verificado:** 4
 - **Contratos de tipo considerados:** `InferenceCapability`, `ModelDescriptor`, `GenerationRequest`, `GenerationResult`, `InferenceAdapter`, `EmbeddingAdapter`, `InferenceRouter`
