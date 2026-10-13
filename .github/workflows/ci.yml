@@ -62,10 +62,29 @@ jobs:
           path: evidence/security-suite.json
           if-no-files-found: error
 
+  jenkins-plugin-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+          cache-dependency-path: gameover-jenkins-plugin/pom.xml
+      - name: Run Jenkins plugin tests
+        working-directory: gameover-jenkins-plugin
+        run: mvn -B test
+      - name: Package Jenkins plugin
+        working-directory: gameover-jenkins-plugin
+        run: mvn -B -DskipTests package
+
   production-evidence:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: [verify, security]
+    needs: [verify, security, jenkins-plugin-verify]
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
