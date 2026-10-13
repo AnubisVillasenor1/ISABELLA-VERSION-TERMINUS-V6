@@ -6,6 +6,7 @@ import ai.gameover.model.ValidationResult;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 /** Structural validation of a UAGP-1 request. No trust/ethics/risk judgement. */
@@ -41,9 +42,35 @@ public final class UagpValidator {
       if (blank(request.agent().id())) errors.add("AGENT_ID_REQUIRED");
       if (blank(request.agent().name())) errors.add("AGENT_NAME_REQUIRED");
       if (blank(request.agent().owner())) errors.add("AGENT_OWNER_REQUIRED");
+      if (request.agent().capabilities() == null || request.agent().capabilities().isEmpty()
+          || request.agent().capabilities().stream().anyMatch(UagpValidator::blank)) {
+        errors.add("AGENT_CAPABILITIES_INVALID");
+      }
     }
-    if (request.actions() == null || request.actions().isEmpty()) {
+    if (request.actions() == null || request.actions().isEmpty()
+        || request.actions().stream().anyMatch(UagpValidator::blank)) {
       errors.add("ACTIONS_REQUIRED");
+    }
+    if (request.criticality() != null
+        && !Set.of("LOW", "MEDIUM", "HIGH", "CRITICAL").contains(request.criticality())) {
+      errors.add("CRITICALITY_INVALID");
+    }
+    if (request.humanApprovalRequired() != null && request.humanApprover() != null
+        && request.humanApprover().length() > 256) {
+      errors.add("HUMAN_APPROVER_INVALID");
+    }
+    if (request.trustMetrics() != null) {
+      Set<String> allowedMetrics = Set.of("integrity", "competence", "alignment", "transparency", "humanOversight", "incidentRecord");
+      for (Map.Entry<String, Double> metric : request.trustMetrics().entrySet()) {
+        if (!allowedMetrics.contains(metric.getKey())) {
+          errors.add("TRUST_METRIC_UNKNOWN");
+          break;
+        }
+        Double value = metric.getValue();
+        if (value == null || !Double.isFinite(value) || value < 0.0 || value > 100.0) {
+          errors.add("TRUST_METRIC_INVALID:" + metric.getKey());
+        }
+      }
     }
     if (request.evidence() != null) {
       int index = 0;
