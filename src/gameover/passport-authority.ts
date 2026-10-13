@@ -49,12 +49,21 @@ export function createPassportAuthority(options: PassportAuthorityOptions = {}):
   const passports = new Map<string, AIPassport>();
 
   function issue(input: IssuePassportInput): AIPassport {
-    if (!input.agent.id.trim()) throw new Error("PASSPORT_AGENT_ID_REQUIRED");
-    if (!input.issuer.trim()) throw new Error("PASSPORT_ISSUER_REQUIRED");
-    const issuedAt = now();
+    if (!input.agent || typeof input.agent.id !== "string" || !input.agent.id.trim()) throw new Error("PASSPORT_AGENT_ID_REQUIRED");
+    if (typeof input.issuer !== "string" || !input.issuer.trim()) throw new Error("PASSPORT_ISSUER_REQUIRED");
+    if (typeof input.trustScore !== "number" || !Number.isFinite(input.trustScore) || input.trustScore < 0 || input.trustScore > 100) {
+      throw new Error("PASSPORT_TRUST_SCORE_INVALID");
+    }
     const validityDays = input.validityDays ?? GAMEOVER_CONSTITUTION.defaultPassportValidityDays;
+    if (!Number.isInteger(validityDays) || validityDays < 1 || validityDays > 3650) {
+      throw new Error("PASSPORT_VALIDITY_DAYS_INVALID");
+    }
+    const id = input.id ?? idFactory();
+    if (typeof id !== "string" || !id.trim()) throw new Error("PASSPORT_ID_REQUIRED");
+    if (passports.has(id)) throw new Error("PASSPORT_ID_DUPLICATE");
+    const issuedAt = now();
     const passport: AIPassport = Object.freeze({
-      id: input.id ?? idFactory(),
+      id,
       agent: Object.freeze({ ...input.agent, capabilities: Object.freeze([...input.agent.capabilities]) }),
       issuedAt: issuedAt.toISOString(),
       expiresAt: addDays(issuedAt, validityDays).toISOString(),
