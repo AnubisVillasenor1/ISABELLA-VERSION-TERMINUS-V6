@@ -96,9 +96,11 @@ public class UagpGateway {
         && passportRecord.agent().capabilities().containsAll(input.agent().capabilities());
     Set<String> declaredCapabilities = input.agent() == null || input.agent().capabilities() == null
         ? Set.of()
-        : input.agent().capabilities().stream().map(value -> value.toLowerCase(Locale.ROOT)).collect(java.util.stream.Collectors.toSet());
+        : input.agent().capabilities().stream().filter(java.util.Objects::nonNull)
+            .map(value -> value.toLowerCase(Locale.ROOT)).collect(java.util.stream.Collectors.toSet());
     List<String> undeclaredActions = input.actions() == null ? List.of()
-        : input.actions().stream().filter(action -> !declaredCapabilities.contains(action.toLowerCase(Locale.ROOT))).toList();
+        : input.actions().stream().filter(java.util.Objects::nonNull)
+            .filter(action -> !declaredCapabilities.contains(action.toLowerCase(Locale.ROOT))).toList();
 
     if (!validation.valid()) {
       outcome = "REJECT";
@@ -162,6 +164,9 @@ public class UagpGateway {
       return false;
     }
     for (String action : actions) {
+      if (action == null) {
+        continue;
+      }
       String normalized = action.toLowerCase(Locale.ROOT);
       for (String token : HIGH_RISK_ACTIONS) {
         if (normalized.equals(token) || normalized.contains(token)) {
