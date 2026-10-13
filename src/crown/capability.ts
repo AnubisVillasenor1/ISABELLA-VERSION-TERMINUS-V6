@@ -17,13 +17,21 @@ export interface CapabilityGate {
 const capabilityMaps = new WeakMap<CapabilityGate, Map<string, CapabilityDescriptor>>();
 
 function readOnlyMap<K, V>(map: Map<K, V>): ReadonlyMap<K, V> {
-  return new Proxy(map, {
+  let view: ReadonlyMap<K, V>;
+  view = new Proxy(map, {
     get(target, property) {
       if (property === "set" || property === "delete" || property === "clear") return undefined;
+      if (property === "forEach") {
+        return (
+          callbackfn: (value: V, key: K, map: ReadonlyMap<K, V>) => void,
+          thisArg?: unknown,
+        ) => target.forEach((value, key) => callbackfn.call(thisArg, value, key, view));
+      }
       const value = Reflect.get(target, property, target) as unknown;
       return typeof value === "function" ? value.bind(target) : value;
     },
   }) as ReadonlyMap<K, V>;
+  return view;
 }
 
 export function createCapabilityGate(descriptors: readonly CapabilityDescriptor[]): CapabilityGate {
