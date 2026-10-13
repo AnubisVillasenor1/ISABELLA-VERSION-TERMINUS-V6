@@ -100,7 +100,7 @@ Auditoría detallada de hallazgos P0/P1, correcciones, pruebas y gates pendiente
 | Seguridad y guardrails | 15% | 45% | Suite estática 14/14; falta revisión de producción |
 | Inferencia externa real | 15% | 0% verificado | Sin credenciales elegibles; no demostrada |
 | Persistencia durable y recuperación | 10% | 40% | Ledger durable JSONL + backup/restore/retención con tests; falta E2E Postgres/Supabase y simulacro de recuperación |
-| CI reproducible y workspace Rust | 10% | 20% | CI sin jobs verdes; `Cargo.lock` ausente |
+| CI reproducible y workspace Rust | 10% | 20% | Sin jobs verdes; `Cargo.lock` presente, gates Cargo aún no validados |
 | Operación, observabilidad y rollback | 10% | 35% | Instrumentación presente; procedimientos sin probar |
 
 ---
@@ -114,7 +114,7 @@ Ordenadas por prioridad. Cada una exige contrato, evidencia y decisión de rollb
 1. **Persistencia durable del ledger BookPI:** cablear el ledger HTTP al almacenamiento durable (Postgres/JSONL), con retención, **backup/restore probado**, aislamiento por workspace y comportamiento fail-closed.
 2. **Inferencia externa real:** ejecutar el gate de modelo con credenciales elegibles en el entorno (nunca en Git) y demostrar respuestas reales, además de timeout, 429/5xx, respuesta vacía, modelo no permitido, cooldown y fallback.
 3. **CI reproducible:** obtener ejecución de GitHub Actions **con jobs** y conclusión verde sobre el SHA exacto de liberación (hoy devuelve `startup_failure` sin jobs).
-4. **Workspace Rust:** generar y revisar `ige-omega/Cargo.lock`; superar `cargo fmt --check`, Clippy, tests y build release con `--locked`.
+4. **Workspace Rust:** validar el `ige-omega/Cargo.lock` existente y superar `cargo fmt --check`, Clippy, tests y build release con `--locked`.
 5. **Aislamiento multi-tenant verificado:** RLS/`workspace_id` end-to-end, sin confiar solo en filtros de UI.
 
 **P1 — madurez operativa y de seguridad**
