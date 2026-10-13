@@ -86,9 +86,14 @@ Tests: `test/gameover/*.test.ts` (43 casos).
 - `POST /api/v1/gameover/passports/revoke`
 - `POST /api/v1/gameover/govern`
 
-En el runtime, el admin autenticado se trata como el **principal de autoridad
-humana** (`genesis-admin`); una acción de alto riesgo exige `humanApprover`
-coincidente.
+El token `GENESIS_ADMIN_API_TOKEN` habilita acceso administrativo, pero no se
+considera por sí solo aprobación humana. Para satisfacer el gate humano de la
+ruta HTTP deben configurarse `GENESIS_HUMAN_APPROVAL_TOKEN` y
+`GENESIS_HUMAN_APPROVER_ID`, y la solicitud debe presentar
+`x-human-approval-token`, `x-human-approver-id` y `humanApprover` coincidentes.
+Sin esa configuración, las acciones que requieren aprobación quedan en
+`ESCALATE`. Este control por credencial separada no sustituye un proveedor de
+identidad empresarial con MFA, sesiones individuales y trazas de autenticación.
 
 ## 4. Implementación Jenkins (`gameover-jenkins-plugin/`)
 
