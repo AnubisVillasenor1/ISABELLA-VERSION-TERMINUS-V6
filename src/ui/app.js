@@ -77,6 +77,8 @@ const submitButton = form?.querySelector('button[type="submit"]');
 let voiceMode = false;
 let soundOn = false;
 let isSending = false;
+const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+const sessionId = window.crypto?.randomUUID?.() || `session-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
 const addMessage = (text, role) => {
   if (!messages) return null;
@@ -166,7 +168,7 @@ const sendCurrentMessage = async () => {
   try {
     const response = await fetch('/api/v1/cognition/route', {
       method: 'POST',
-      headers: { 'content-type': 'application/json', accept: 'application/json' },
+      headers: { 'content-type': 'application/json', accept: 'application/json', 'x-session-id': sessionId },
       body: JSON.stringify({ input, modelEngine: 'auto', focusLens: 'general', history })
     });
     const body = await response.json().catch(() => ({}));
@@ -281,7 +283,6 @@ soundToggle?.addEventListener('click', () => {
   if (!soundOn && 'speechSynthesis' in window) window.speechSynthesis.cancel();
 });
 
-const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 if (Recognition && mic) {
   const recognition = new Recognition();
   let recognitionActive = false;

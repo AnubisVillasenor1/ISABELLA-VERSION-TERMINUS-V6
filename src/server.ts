@@ -53,7 +53,7 @@ app.use((_req, res, next) => {
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Frame-Options", "DENY");
   res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
-  res.setHeader("Permissions-Policy", "camera=(), microphone=()");
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(self)");
   next();
 });
 const latencyRegistry = new LatencyRegistry(100, 512);
@@ -85,7 +85,7 @@ app.use((req, res, next) => {
 
 app.use(
   express.json({
-    limit: "8mb",
+    limit: "256kb",
     verify: (req, _res, buf) => {
       // Preserve raw bytes only for the signed webhook route; duplicating every
       // request body adds avoidable allocations and GC pressure on the hot path.
