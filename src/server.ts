@@ -116,15 +116,6 @@ try {
 } catch {
   console.warn("[Genesis] Cinematic UI assets are unavailable at startup.");
 }
-const sendUiAsset = (fileName: string, contentType: string, res: express.Response) => {
-  try {
-    const content = fs.readFileSync(path.join(uiPath, fileName), "utf-8");
-    res.setHeader("Cache-Control", "no-store");
-    res.type(contentType).send(content);
-  } catch {
-    res.status(404).type(contentType).send(`/* UI asset unavailable: ${fileName} */`);
-  }
-};
 app.get("/", (_req, res, next) => {
   try {
     const html = fs.readFileSync(path.join(uiPath, "index.html"), "utf-8");
@@ -135,8 +126,22 @@ app.get("/", (_req, res, next) => {
     next();
   }
 });
-app.get("/styles/cinematic.css", (_req, res) => sendUiAsset("cinematic.css", "css", res));
-app.get("/ui/app.js", (_req, res) => sendUiAsset("app.js", "js", res));
+app.get("/styles/cinematic.css", (_req, res) => {
+  if (cinematicCss === null) {
+    res.status(404).type("css").send("/* Cinematic CSS unavailable */");
+    return;
+  }
+  res.setHeader("Cache-Control", "no-store");
+  res.type("css").send(cinematicCss);
+});
+app.get("/ui/app.js", (_req, res) => {
+  if (cinematicJs === null) {
+    res.status(404).type("js").send("// Cinematic JavaScript unavailable");
+    return;
+  }
+  res.setHeader("Cache-Control", "no-store");
+  res.type("js").send(cinematicJs);
+});
 app.get("/styles/crystal-clear.css", (_req, res) => {
   if (crystalClearCss === null) {
     res.status(404).type("text/css").send("/* CSS module not found */");
