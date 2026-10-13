@@ -51,7 +51,7 @@ assert.ok(html.includes('hero-system-board'), 'Hero must expose the enterprise s
 assert.ok(html.includes('SESSION-BOUNDED'), 'Workspace must disclose session-bounded context');
 assert.ok(css.includes('.hero-system-board'), 'Enterprise hero board styling must exist');
 assert.ok(js.includes('MAX_LOCAL_FILE_BYTES = 25 * 1024'), 'Text attachments must be explicitly size-bounded');
-assert.ok(js.includes('MAX_LOCAL_FILE_CHARS = 22_000'), 'Text attachments must be explicitly content-bounded');
+assert.ok(js.includes('MAX_LOCAL_FILE_CHARS = 12_000'), 'Text attachments must be explicitly content-bounded');
 assert.ok(js.includes('DRAFT_STORAGE_KEY'), 'Local Studio drafts must use an explicit storage namespace');
 assert.ok(js.includes('const exportConversation ='), 'Conversation export must be wired to a real Markdown download');
 assert.ok(js.includes('const resetConversation ='), 'New-session/restart behavior must clear the visible conversation and rotate the session ID');
