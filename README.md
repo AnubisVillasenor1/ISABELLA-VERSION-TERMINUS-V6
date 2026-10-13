@@ -83,9 +83,13 @@ El borrado criptográfico sólo queda confirmado si el KMS real destruye durable
 
 ## Interfaz de producto
 
-La interfaz usa un sistema visual Obsidian / Platino / Azul Eléctrico, con superficies de contraste controlado, jerarquía tipográfica, estados de foco visibles y diseño responsive. El espacio de trabajo se abre directamente; la secuencia cinemática de marca sigue disponible de forma explícita mediante la URL con el parámetro `?intro=1`. Esto evita que la historia de marca impida usar la aplicación en la primera interacción.
+La interfaz adopta un sistema visual Obsidian / Platino / Azul Eléctrico, jerarquía tipográfica contenida, estados de foco visibles y layout responsive. La navbar única sustituye los dos raíles laterales redundantes y da acceso directo a Conversar, Studio, Herramientas, Skills, Ecosistema y Gobernanza. El hero queda subordinado al espacio conversacional; la secuencia cinemática de 12 escenas permanece como experiencia opcional mediante `?intro=1`.
 
-Las respuestas de Isabella incluyen una acción de copia con confirmación y fallback visible. El estado del nodo comunica sólo el resultado del endpoint de salud; no se presenta como garantía de inferencia externa. Se eliminaron el fondo gráfico alojado fuera del repositorio y los identificadores HTML duplicados para reducir dependencias y mantener la navegación y las referencias ARIA deterministas.
+El command center ofrece búsqueda de acciones con Ctrl/Cmd+K, navegación por teclado y accesos a las funciones presentes. El compositor acepta Enter para enviar y Shift+Enter para salto de línea, muestra plantillas de intención y adjunta texto UTF-8 limitado a tipos permitidos, 25 KB de archivo, 12,000 caracteres y 18,000 caracteres para la entrada combinada. Exportar descarga la conversación visible como Markdown; Nuevo chat limpia el hilo visible y renueva el identificador del cliente.
+
+Cada respuesta proporciona Copiar, Guardar y Escuchar. Studio conserva hasta 30 respuestas seleccionadas deliberadamente en el almacenamiento local de este navegador y permite copiar, descargar o eliminar entradas. Esto no constituye sincronización entre dispositivos ni persistencia cloud. La voz usa capacidades nativas del navegador, cuya disponibilidad depende del entorno. La UI no presenta búsqueda web citada, selector de modelo ni generación de medios sin integración confirmada.
+
+El indicador comunica sólo el resultado del endpoint de salud; no garantiza inferencia externa. La interfaz no añade bibliotecas UI ni assets de terceros. El benchmark de 20 productos de alto tráfico y sus 100 patrones documentados está en `docs/audits/AI-INTERFACE-BENCHMARK-20-2026-10.md`. El smoke UI cubre contratos estáticos de navegación, comandos, Studio, archivos y accesibilidad básica; no sustituye pruebas E2E de navegador.
 
 ## Requisitos de ingeniería
 
