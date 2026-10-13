@@ -14,6 +14,12 @@ describe("GAME OVER HumanApprovalGate", () => {
     expect(result.reason).toBe("HUMAN_APPROVER_REQUIRED");
   });
 
+  it("rejects a self-asserted approver without an authenticated principal", () => {
+    const result = evaluateHumanApproval({ required: true, requestedApprover: "edwin" });
+    expect(result.satisfied).toBe(false);
+    expect(result.reason).toBe("HUMAN_AUTHENTICATED_PRINCIPAL_REQUIRED");
+  });
+
   it("rejects an approver that does not match the authenticated principal", () => {
     const result = evaluateHumanApproval({ required: true, requestedApprover: "someone", authenticatedPrincipal: "edwin" });
     expect(result.satisfied).toBe(false);
