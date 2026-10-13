@@ -63,8 +63,15 @@ const metricsRegistry = new MetricsRegistry();
 const subscriptionStore = new SubscriptionStore();
 const usageMeter = new UsageMeter();
 const atlasHealthCache = new TtlSingleFlight<{ healthy: boolean; reason: string }>(1_000);
-const port = 3000;
-const host = "0.0.0.0";
+// Port is taken from the platform environment (PORT is the de-facto contract for
+// containers and PaaS). Validate it: an invalid value must fail loudly, not silently
+// bind the default and leave the deployment unreachable.
+const requestedPort = Number(process.env.PORT ?? 3000);
+if (!Number.isSafeInteger(requestedPort) || requestedPort < 1 || requestedPort > 65_535) {
+  throw new RangeError(`PORT must be an integer between 1 and 65535, received: ${process.env.PORT}`);
+}
+const port = requestedPort;
+const host = process.env.HOST?.trim() || "0.0.0.0";
 
 const connectorRawBodies = new WeakMap<object, string>();
 

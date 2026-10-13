@@ -11,7 +11,7 @@
 
 **≈ 52% — estimación global provisional de readiness (rango honesto: 48–56%).**
 
-Es una **estimación de ingeniería, no una certificación**. Se calcula como media ponderada de dominios verificados de forma reproducible en la rama, con los gates externos penalizados en su estado real (no en su intención). El movimiento desde la base anterior (48%) proviene de la implementación y prueba local de la **Skill Fabric Ω v2** (contratos, motor de ejecución de nueve fases, triangulación algorítmica, puente MCP), los manifiestos de Kubernetes, la pila Compose desplegable y una readiness profunda real (875 aprobadas / 155 archivos). No proviene de dar por conectados adaptadores externos que siguen sin credenciales ni entorno objetivo.
+Es una **estimación de ingeniería, no una certificación**. Se calcula como media ponderada de dominios verificados de forma reproducible en la rama, con los gates externos penalizados en su estado real (no en su intención). El movimiento desde la base anterior (48%) proviene de la implementación y prueba local de la **Skill Fabric Ω v2** (contratos, motor de ejecución de nueve fases, triangulación algorítmica, puente MCP), los manifiestos de Kubernetes, la pila Compose desplegable y una readiness profunda real (878 aprobadas / 156 archivos). No proviene de dar por conectados adaptadores externos que siguen sin credenciales ni entorno objetivo.
 
 | Dominio | Estado real | Readiness |
 |---|---|---|
@@ -26,7 +26,7 @@ Es una **estimación de ingeniería, no una certificación**. Se calcula como me
 | Workspace Rust IGE-Ω | `Cargo.lock` + `fmt` limpios; **compilación/clippy local no ejecutables** | ≈ 25% |
 | Verificación de seguridad estática | 14/14 invariantes; sin pentest ni HSM productivo | ≈ 55% |
 
-**Lectura correcta del número:** Isabella pasa los gates locales que controla (tipos, 875 pruebas, build, 14/14 de seguridad), pero **no** está lista para producción ni para despliegue. Los adaptadores externos y el entorno objetivo son gates independientes que no se superan por tener interfaz ni por tener manifiesto YAML.
+**Lectura correcta del número:** Isabella pasa los gates locales que controla (tipos, 878 pruebas, build, 14/14 de seguridad), pero **no** está lista para producción ni para despliegue. Los adaptadores externos y el entorno objetivo son gates independientes que no se superan por tener interfaz ni por tener manifiesto YAML.
 
 ## Qué es Isabella
 
@@ -118,6 +118,13 @@ Requieren `HYPERCORE_API_TOKEN` (`Authorization: Bearer …`) y aplican rate lim
 
 Levanta el runtime (distroless, no-root, rootfs de sólo lectura) más PostgreSQL con las migraciones de `infra/db/migrations` aplicadas en el primer arranque y un volumen dedicado para el ledger BookPI. Es la vía más corta a un despliegue con persistencia real; Kubernetes permanece como objetivo productivo.
 
+Verificación del entrypoint de producción sin Docker:
+
+    pnpm run build:dist
+    pnpm run verify:production
+
+Arranca `node dist/server.js`, espera `/health`, ejecuta el smoke y termina el proceso. Pasos detallados en [el runbook de despliegue](docs/runbooks/DEPLOY-TODAY.md).
+
 ### Kubernetes
 
 `deploy/k8s/isabella-hypercore-omega.yaml` define un `Namespace` soberano, `ConfigMap`, `Secret` gestionado por KMS, y para el router y cada skill: `Deployment`, `Service`, probes **startup/readiness/liveness**, `HorizontalPodAutoscaler`, `PodDisruptionBudget` y `NetworkPolicy`. Se aplica menor privilegio (`runAsNonRoot: true`, `allowPrivilegeEscalation: false`, `readOnlyRootFilesystem: true`, `capabilities.drop: [ALL]`).
@@ -192,7 +199,7 @@ La interfaz usa un sistema visual Obsidian / Platino / Azul Eléctrico (capa can
     pnpm run security:suite
     pnpm run production:evidence
 
-Evidencia local reproducida en la rama actual: `pnpm typecheck` exit 0; `pnpm test` **875 aprobadas / 155 archivos**; `pnpm run build` exit 0 (tsc + vitest + esbuild + smoke UI + smoke runtime); `pnpm run security:suite` **14 passed / 0 failed / 0 not_applicable**. El smoke de inferencia externa se **omite** por falta de credenciales elegibles (`LLM_GATEWAY_SMOKE_SKIPPED`); no se afirma proveedor real operativo. Un test verde demuestra una capacidad computacional local, **no** autoridad, aprendizaje ni producción.
+Evidencia local reproducida en la rama actual: `pnpm typecheck` exit 0; `pnpm test` **878 aprobadas / 156 archivos**; `pnpm run build` exit 0 (tsc + vitest + esbuild + smoke UI + smoke runtime); `pnpm run security:suite` **14 passed / 0 failed / 0 not_applicable**. El smoke de inferencia externa se **omite** por falta de credenciales elegibles (`LLM_GATEWAY_SMOKE_SKIPPED`); no se afirma proveedor real operativo. Un test verde demuestra una capacidad computacional local, **no** autoridad, aprendizaje ni producción.
 
 ## Gates pendientes para liberar
 

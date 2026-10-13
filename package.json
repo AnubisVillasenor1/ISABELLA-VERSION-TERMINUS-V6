@@ -10,6 +10,7 @@
   "scripts": {
     "dev": "tsx src/server.ts",
     "start": "tsx src/server.ts",
+    "start:dist": "node dist/server.js",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -25,7 +26,8 @@
     "production:evidence": "node scripts/production-evidence.mjs",
     "smoke:runtime": "node scripts/runtime-smoke.mjs",
     "smoke:ui": "node --check src/ui/app.js && node scripts/ui-smoke.mjs",
-    "smoke:production": "tsx scripts/production-smoke.ts"
+    "smoke:production": "tsx scripts/production-smoke.ts",
+    "verify:production": "tsx scripts/verify-production.ts"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
