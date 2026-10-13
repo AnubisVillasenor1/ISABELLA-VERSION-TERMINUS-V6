@@ -67,8 +67,8 @@ export class SkillRegistry {
       return blockedInvocation(skill, ctx, startedAt);
     }
 
-    const aegis = inspectAegis(JSON.stringify(ctx.input) ?? "");
-    if (aegis.decision === "BLOCK") {
+    const aegis = inspectAegisValue(ctx.input);
+    if (aegis.decision !== "ALLOW") {
       return blockedInvocation(skill, ctx, startedAt);
     }
 
