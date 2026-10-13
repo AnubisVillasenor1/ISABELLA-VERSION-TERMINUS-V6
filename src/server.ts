@@ -4750,7 +4750,7 @@ app.post("/api/v1/gameover/passports", (req, res) => {
           : [],
         createdAt: commerceStringField(agent, "createdAt") ?? new Date().toISOString(),
       },
-      issuer: commerceStringField(agent, "issuer") ?? GAMEOVER_ADMIN_PRINCIPAL,
+      issuer: commerceStringField(agent, "issuer") ?? "genesis-admin",
       trustScore: typeof req.body.trustScore === "number" ? (req.body.trustScore as number) : 0,
       validityDays: typeof req.body.validityDays === "number" ? (req.body.validityDays as number) : undefined,
       id: commerceStringField((req.body ?? {}) as Record<string, unknown>, "passportId"),
