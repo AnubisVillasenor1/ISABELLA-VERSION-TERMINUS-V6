@@ -625,6 +625,11 @@ app.get("/api/v1/health", (_req, res) => {
 });
 
 app.get("/api/v1/status", (_req, res) => {
+  const localBookPiConfigured = Boolean(process.env.BOOKPI_LEDGER_PATH?.trim());
+  const bookPiBackend = localBookPiConfigured ? "DURABLE_APPEND_ONLY_JSONL_LOCAL_SCOPE" : "VOLATILE_IN_MEMORY_HASH_CHAIN";
+  const bookPiDurability = localBookPiConfigured
+    ? "LOCAL_FILE_FSYNCED_NOT_SHARED_NOT_WORM"
+    : "PROCESS_MEMORY_NOT_DURABLE";
   res.json({
     runtime: "Isabella Genesis TINA",
     version: "v40.0.0",
@@ -639,7 +644,8 @@ app.get("/api/v1/status", (_req, res) => {
       aegis: "ACTIVE",
       ikes: "ACTIVE",
       veritas: "ACTIVE",
-      bookpi: "VOLATILE_IN_MEMORY_HASH_CHAIN",
+      bookpi: bookPiBackend,
+      bookpiDurability: bookPiDurability,
       pdp: "ACTIVE",
       litleTrustFabric: "ACTIVE",
       quantumPennyLane: runtime.quantum.describe(),
@@ -1725,6 +1731,11 @@ app.post("/api/v1/security/triangulate", (req, res) => {
 
 // Configuration presence alone is not proof of provider health.
 async function currentOpsState() {
+  const localBookPiConfigured = Boolean(process.env.BOOKPI_LEDGER_PATH?.trim());
+  const bookPiBackend = localBookPiConfigured ? "DURABLE_APPEND_ONLY_JSONL_LOCAL_SCOPE" : "VOLATILE_IN_MEMORY_HASH_CHAIN";
+  const bookPiReason = localBookPiConfigured
+    ? "Local JSONL with fsync is configured; shared persistence, distributed concurrency, external signatures and WORM/HA are not runtime-verified."
+    : "The application uses the in-memory hash chain; events do not survive a process restart.";
   let atlasStatus: "healthy" | "degraded" | "unavailable" = "unavailable";
   let atlasReason = "No Atlas persistence adapter is configured.";
   if (runtime.persistence && typeof runtime.persistence.health === "function") {
@@ -1757,7 +1768,7 @@ async function currentOpsState() {
     { name: "observability", status: "degraded" as const, required: false },
   ];
   const readinessEvidence = [
-    { dependency: "bookpi-ledger", status: "degraded", reason: "The configured process-local hash chain is not durable WORM storage; persistence/signature adapters are not runtime-verified." },
+    { dependency: "bookpi-ledger", status: "degraded", backend: bookPiBackend, reason: bookPiReason },
     { dependency: "atlas-persistence", status: atlasStatus, reason: atlasReason },
     { dependency: "ikes-memory", status: "degraded", reason: "A live durable-memory probe is not wired into this readiness path." },
     { dependency: "observability", status: "degraded", reason: "No live telemetry exporter probe is wired into the readiness path." },

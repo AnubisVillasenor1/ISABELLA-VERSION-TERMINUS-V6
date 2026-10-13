@@ -24,6 +24,22 @@ try {
   assert.equal(health.headers.get("x-frame-options"), "DENY", "API must reject framing");
   assert.equal(health.headers.get("referrer-policy"), "strict-origin-when-cross-origin", "API must set a conservative referrer policy");
   assert.equal(health.headers.get("x-powered-by"), null, "Express fingerprint header must be disabled");
+  const statusResponse = await fetch(baseUrl + "/api/v1/status", { signal: AbortSignal.timeout(5_000) });
+  assert.equal(statusResponse.status, 200, "runtime status must remain available");
+  const statusBody = await statusResponse.json();
+  assert.ok(["VOLATILE_IN_MEMORY_HASH_CHAIN", "DURABLE_APPEND_ONLY_JSONL_LOCAL_SCOPE"].includes(statusBody.engines?.bookpi),
+    "BookPI status must disclose the configured backend without asserting external durability");
+  assert.ok(["PROCESS_MEMORY_NOT_DURABLE", "LOCAL_FILE_FSYNCED_NOT_SHARED_NOT_WORM"].includes(statusBody.engines?.bookpiDurability),
+    "BookPI status must disclose its durability scope");
+
+  const readyz = await fetch(baseUrl + "/api/v1/readyz", { signal: AbortSignal.timeout(5_000) });
+  assert.ok([200, 503].includes(readyz.status), "readiness may only report healthy or explicitly blocked");
+  const readyzBody = await readyz.json();
+  assert.equal(readyzBody.scope, "dependency-readiness");
+  assert.ok(Array.isArray(readyzBody.readinessEvidence), "readiness must include observed dependency evidence");
+  assert.equal(readyz.status, readyzBody.snapshot?.readiness?.ready ? 200 : 503,
+    "HTTP readiness must match the evaluated runtime readiness state");
+
   const publicHealth = await fetch(`${baseUrl}/api/v1/health`, { signal: AbortSignal.timeout(5_000) });
   assert.equal(publicHealth.status, 200, "public API health must remain available");
   const publicHealthBody = await publicHealth.json();

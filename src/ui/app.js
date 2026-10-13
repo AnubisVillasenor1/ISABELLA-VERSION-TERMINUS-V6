@@ -43,7 +43,10 @@ const advanceIntro = (elapsed = performance.now() - introStartedAt) => {
 };
 if (intro) {
   const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-  if (reducedMotion) {
+  const cinematicRequested = new URLSearchParams(window.location.search).get('intro') === '1';
+  // The enterprise workspace loads immediately by default. The cinematic sequence
+  // remains available as an explicit experience with ?intro=1.
+  if (reducedMotion || !cinematicRequested) {
     dismissIntro();
   } else {
     document.body.classList.add('intro-lock');
@@ -94,6 +97,33 @@ const addMessage = (text, role) => {
   const paragraph = document.createElement('p');
   paragraph.textContent = text;
   content.append(speaker, paragraph);
+  if (role !== 'user') {
+    const copyButton = document.createElement('button');
+    copyButton.type = 'button';
+    copyButton.className = 'message-copy';
+    copyButton.textContent = 'COPIAR';
+    copyButton.setAttribute('aria-label', 'Copiar respuesta de Isabella');
+    copyButton.addEventListener('click', async () => {
+      const value = paragraph.textContent || '';
+      try {
+        await navigator.clipboard.writeText(value);
+        copyButton.textContent = 'COPIADO';
+      } catch {
+        const selection = window.getSelection();
+        const range = document.createRange();
+        range.selectNodeContents(paragraph);
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+        copyButton.textContent = 'TEXTO SELECCIONADO';
+      }
+      copyButton.disabled = true;
+      window.setTimeout(() => {
+        copyButton.textContent = 'COPIAR';
+        copyButton.disabled = false;
+      }, 1800);
+    });
+    content.append(copyButton);
+  }
   article.append(avatar, content);
   messages.append(article);
   messages.scrollTop = messages.scrollHeight;
@@ -352,7 +382,7 @@ document.querySelectorAll('[data-focus-prompt="true"]').forEach((link) => {
   if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
-  const palette = ['#38bdf8', '#a855f7', '#34d399', '#8df3ff'];
+  const palette = ['#dfeaf3', '#8df3ff', '#79b8df', '#b8c9d8'];
   let width = 0;
   let height = 0;
   let nodes = [];

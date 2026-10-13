@@ -1,6 +1,6 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { randomUUID } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { DurableBookPiLedger, createAuditLedger } from "../../src/bookpi/ledger";
@@ -28,10 +28,19 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  try { rmSync(ledgerPath, { force: true }); } catch { /* ignore */ }
+  try { rmSync(dirname(ledgerPath), { recursive: true, force: true }); } catch { /* ignore */ }
 });
 
 describe("DurableBookPiLedger", () => {
+  it("fails closed when an interrupted maintenance marker exists", () => {
+    writeFileSync(ledgerPath + ".maintenance.pending.json", JSON.stringify({
+      operation: "prune",
+      startedAt: new Date().toISOString(),
+      targetLedger: ledgerPath,
+    }), "utf8");
+    expect(() => new DurableBookPiLedger(ledgerPath)).toThrow("BOOKPI_MAINTENANCE_RECOVERY_REQUIRED");
+  });
+
   it("persists events and reports a durable chain", () => {
     const ledger = new DurableBookPiLedger(ledgerPath);
     ledger.append(nextInput());
@@ -74,6 +83,8 @@ describe("DurableBookPiLedger", () => {
     const reopened = new DurableBookPiLedger(ledgerPath);
     expect(reopened.verify().valid).toBe(false);
     expect(reopened.verify().status).toBe("INTEGRITY_FAILURE");
+    expect(() => reopened.backup(ledgerPath + ".refuse-corrupt-backup"))
+      .toThrow("BOOKPI_BACKUP_SOURCE_CORRUPT");
   });
 
   it("backs up and restores the ledger", () => {
@@ -98,6 +109,32 @@ describe("DurableBookPiLedger", () => {
     writeFileSync(corrupt, "{\"not\":\"an event\"}\n", "utf8");
     expect(() => ledger.restore(corrupt)).toThrow("BOOKPI_RESTORE_SOURCE_INVALID");
     rmSync(corrupt, { force: true });
+  });
+
+  it("continues global sequence and checkpoint hash after pruning", () => {
+    const ledger = new DurableBookPiLedger(ledgerPath);
+    for (let i = 0; i < 5; i += 1) ledger.append(nextInput());
+    ledger.prune(planRetention(ledger.list(), { maxEvents: 2 }));
+    const lastKept = ledger.list().at(-1)!;
+    const appended = ledger.append(nextInput());
+    expect(appended.sequence).toBe(6);
+    expect(appended.previousHash).toBe(lastKept.hash);
+    expect(ledger.verify().valid).toBe(true);
+  });
+
+  it("backs up and restores a pruned ledger together with its checkpoint", () => {
+    const ledger = new DurableBookPiLedger(ledgerPath);
+    for (let i = 0; i < 5; i += 1) ledger.append(nextInput());
+    ledger.prune(planRetention(ledger.list(), { maxEvents: 2 }));
+    const backupPath = ledgerPath + ".pruned-backup";
+    ledger.backup(backupPath);
+    const result = ledger.restore(backupPath);
+    expect(result.valid).toBe(true);
+    expect(result.restored).toBe(2);
+    expect(ledger.verify().valid).toBe(true);
+    expect(ledger.getCheckpoint()?.archivedCount).toBe(3);
+    rmSync(backupPath, { force: true });
+    rmSync(backupPath + ".checkpoint.json", { force: true });
   });
 
   it("prunes an archived prefix and keeps the chain verifiable via checkpoint", () => {

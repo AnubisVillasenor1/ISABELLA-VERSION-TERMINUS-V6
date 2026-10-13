@@ -56,8 +56,11 @@ for (const [id, file, description] of [
 }
 const readme = await read("README.md");
 add("RA-016", "WARN",
-  !!readme && /Contrato de veracidad/i.test(readme) && /Bloqueo de instalación reproducible/i.test(readme) && /Fases de evolución/i.test(readme),
-  "README documenta límites de veracidad, reproducibilidad y fases de evolución.",
+  !!readme &&
+    /SPECIFIED\s*≠\s*IMPLEMENTED\s*≠\s*TESTED/i.test(readme) &&
+    /pnpm install --frozen-lockfile/i.test(readme) &&
+    /Gates pendientes para liberar/i.test(readme),
+  "README documenta el contrato de evidencia, instalación reproducible y gates de liberación actuales.",
   ["README.md"]);
 const server = await read("src/server.ts");
 add("RA-017", "BLOCKER",
@@ -93,7 +96,7 @@ add("RA-022", "BLOCKER",
   "Startup does not seed IKES with the audited placeholder source IDs/hashes.",
   ["src/server.ts"]);
 add("RA-023", "BLOCKER",
-  !!server && /req\.originalUrl\.split\("\?"\)\[0\] === "\/api\/v1\/connectors\/ingest"/.test(server),
+  !!server && /\(req\.url \?\? ""\)\.split\("\?"\)\[0\] === "\/api\/v1\/connectors\/ingest"/.test(server),
   "Raw webhook bodies are retained only for the signed connector-ingestion route.",
   ["src/server.ts"]);
 add("RA-024", "WARN",
@@ -111,12 +114,29 @@ add("RA-026", "BLOCKER",
     /cargo build --release -p gateway --locked/.test(ci),
   "CI contains locked formatting, Clippy, workspace-test and release-build gates for IGE-Ω.",
   [".github/workflows/ci.yml"]);
+const uiHtml = await read("src/ui/index.html");
+const uiCss = await read("src/ui/cinematic.css");
+const uiJs = await read("src/ui/app.js");
+const uiIds = uiHtml ? [...uiHtml.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]) : [];
+add("RA-027", "BLOCKER",
+  !!uiHtml && new Set(uiIds).size === uiIds.length,
+  "HTML identifiers are unique so navigation and ARIA references stay deterministic.",
+  ["src/ui/index.html"]);
+add("RA-028", "WARN",
+  !!uiJs && /!cinematicRequested/.test(uiJs) && /Copiar respuesta de Isabella/.test(uiJs),
+  "The workspace is immediately accessible and assistant replies expose a copy action.",
+  ["src/ui/app.js"]);
+add("RA-029", "WARN",
+  !!uiCss && !/hebbkx1anhila5yf/.test(uiCss),
+  "The interface does not depend on the retired external cinematic background asset.",
+  ["src/ui/cinematic.css"]);
+
 const report = {
   schemaVersion: "1.0.0",
   audit: "isabella-genesis-repository-assurance",
   generatedAt: new Date().toISOString(),
-  commit: process.env.GITHUB_SHA || process.env.GIT_COMMIT || null,
-  branch: process.env.GITHUB_REF_NAME || null,
+  commit: process.env.GITHUB_SHA || process.env.GIT_COMMIT || process.env.VERCEL_GIT_COMMIT_SHA || null,
+  branch: process.env.GITHUB_REF_NAME || process.env.VERCEL_GIT_COMMIT_REF || null,
   scope: "read-only structural repository checks",
   disclaimer: "PASS means only that the named structural check passed; it does not prove runtime behavior, security, integration, deployment, or compliance.",
   summary: {

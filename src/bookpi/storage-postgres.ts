@@ -54,7 +54,7 @@ export function createPostgresStorage(pool: PostgresLike, table = BOOKPI_TABLE):
         await pool.query(
           `INSERT INTO ${quote(table)}
            (id, type, sequence, prev_hash, timestamp, actor_id, payload, schema_version, meta, header, hash, integrity, canonical)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
           [record.id, record.type, record.sequence, record.prevHash, record.timestamp, record.actorId ?? null,
            record.payload, record.schemaVersion, record.meta, record.header, record.hash, record.integrity, record.canonical],
         );

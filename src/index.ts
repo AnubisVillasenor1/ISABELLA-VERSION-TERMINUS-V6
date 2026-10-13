@@ -77,3 +77,6 @@ export type { RateLimitDecision as TokenBucketRateLimitDecision } from "./deploy
 export type { ConfidenceLevel } from "./commerce";
 export type { ConfidenceLevel as CommerceConfidenceLevel } from "./commerce";
 export type { ConfidenceLevel as VerifiedConfidenceLevel } from "./memory/verified-knowledge";
+
+// Namespaced export avoids collisions with the existing BookPI retention contract.
+export * as Terminus from "./terminus";
