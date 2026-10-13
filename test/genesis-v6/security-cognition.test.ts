@@ -229,7 +229,7 @@ describe("Genesis V6 security and cognition", () => {
       owner: "test",
       allowedRoles: ["operator"],
       riskTier: "LOW" as const,
-      governanceTier: "STANDARD" as const,
+      governanceTier: "OPERATIONAL" as const,
       humanApprovalRequired: false,
     };
     expect(() => createCapabilityGate([descriptor, { ...descriptor, allowedRoles: [] }])).toThrow(/already registered/i);
@@ -241,7 +241,7 @@ describe("Genesis V6 security and cognition", () => {
       owner: "test",
       allowedRoles: ["operator"],
       riskTier: "LOW",
-      governanceTier: "STANDARD",
+      governanceTier: "OPERATIONAL",
       humanApprovalRequired: true,
     })).toBe(true);
   });
