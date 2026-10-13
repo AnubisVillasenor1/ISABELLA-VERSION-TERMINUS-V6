@@ -23,6 +23,9 @@ public class PassportAuthority {
   }
 
   public PassportAuthority(int defaultValidityDays) {
+    if (defaultValidityDays < 1 || defaultValidityDays > 3650) {
+      throw new IllegalArgumentException("PASSPORT_VALIDITY_DAYS_INVALID");
+    }
     this.defaultValidityDays = defaultValidityDays;
   }
 
@@ -37,10 +40,22 @@ public class PassportAuthority {
     if (issuer == null || issuer.isBlank()) {
       throw new IllegalArgumentException("PASSPORT_ISSUER_REQUIRED");
     }
+    if (!Double.isFinite(trustScore) || trustScore < 0.0 || trustScore > 100.0) {
+      throw new IllegalArgumentException("PASSPORT_TRUST_SCORE_INVALID");
+    }
+    if (validityDays < 1 || validityDays > 3650) {
+      throw new IllegalArgumentException("PASSPORT_VALIDITY_DAYS_INVALID");
+    }
+    if (agent.capabilities() == null || agent.capabilities().stream().anyMatch(value -> value == null || value.isBlank())) {
+      throw new IllegalArgumentException("PASSPORT_CAPABILITIES_INVALID");
+    }
+    AgentIdentity sealedAgent = new AgentIdentity(
+        agent.id(), agent.name(), agent.organization(), agent.owner(),
+        java.util.List.copyOf(agent.capabilities()), agent.createdAt());
     Instant now = Instant.now();
     AIPassport passport = new AIPassport(
         UUID.randomUUID().toString(),
-        agent,
+        sealedAgent,
         now.toString(),
         now.plus(validityDays, ChronoUnit.DAYS).toString(),
         issuer,
