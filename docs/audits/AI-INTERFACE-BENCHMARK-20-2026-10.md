@@ -219,7 +219,7 @@ Las 100 características se solapan y no deben convertirse en 100 botones ni en 
 - **Prompt starters:** insertan una plantilla editable; no activan por sí solos búsqueda, automatización o herramientas externas.
 
 ### Adjuntos
-Acepta archivos de texto UTF-8 con extensión TXT, Markdown, CSV, JSON o LOG. El límite actual es 25 KB y 22,000 caracteres; se leen en el navegador y el texto se agrega al prompt. No se sube el binario a un parser documental. PDF, DOCX e imágenes no son compatibles en esta versión. El backend debe seguir validando el tamaño final de la petición.
+Acepta archivos de texto UTF-8 con extensión TXT, Markdown, CSV, JSON o LOG. El límite actual es 25 KB y 12,000 caracteres; se leen en el navegador y el texto se agrega al prompt. No se sube el binario a un parser documental. PDF, DOCX e imágenes no son compatibles en esta versión. El backend debe seguir validando el tamaño final de la petición.
 
 ### Privacidad y exactitud
 Los borradores guardados sólo viven en localStorage de ese navegador; no se sincronizan entre dispositivos ni usuarios. No se muestra un selector de modelo, buscador live con citas, generador de medios ni edición colaborativa hasta que estén conectados y probados sus servicios. La existencia de una tarjeta de producto no equivale a ejecución real.
