@@ -111,6 +111,23 @@ add("RA-026", "BLOCKER",
     /cargo build --release -p gateway --locked/.test(ci),
   "CI contains locked formatting, Clippy, workspace-test and release-build gates for IGE-Ω.",
   [".github/workflows/ci.yml"]);
+const uiHtml = await read("src/ui/index.html");
+const uiCss = await read("src/ui/cinematic.css");
+const uiJs = await read("src/ui/app.js");
+const uiIds = uiHtml ? [...uiHtml.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]) : [];
+add("RA-027", "BLOCKER",
+  !!uiHtml && new Set(uiIds).size === uiIds.length,
+  "HTML identifiers are unique so navigation and ARIA references stay deterministic.",
+  ["src/ui/index.html"]);
+add("RA-028", "WARN",
+  !!uiJs && /!cinematicRequested/.test(uiJs) && /Copiar respuesta de Isabella/.test(uiJs),
+  "The workspace is immediately accessible and assistant replies expose a copy action.",
+  ["src/ui/app.js"]);
+add("RA-029", "WARN",
+  !!uiCss && !/hebbkx1anhila5yf/.test(uiCss),
+  "The interface does not depend on the retired external cinematic background asset.",
+  ["src/ui/cinematic.css"]);
+
 const report = {
   schemaVersion: "1.0.0",
   audit: "isabella-genesis-repository-assurance",

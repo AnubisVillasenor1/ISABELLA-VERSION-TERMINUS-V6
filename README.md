@@ -73,6 +73,12 @@ Una pasada de retención calcula los candidatos de forma determinista, escribe p
 
 El borrado criptográfico sólo queda confirmado si el KMS real destruye durablemente todas las copias recuperables de la clave. La eliminación de shards físicos se informa por separado, con sus fallos visibles. Réplicas, backups, cachés, almacenamiento del proveedor y requisitos legales requieren sus propios ciclos de expiración; el estado “eliminado” no debe ocultarlos.
 
+## Interfaz de producto
+
+La interfaz usa un sistema visual Obsidian / Platino / Azul Eléctrico, con superficies de contraste controlado, jerarquía tipográfica, estados de foco visibles y diseño responsive. El espacio de trabajo se abre directamente; la secuencia cinemática de marca sigue disponible de forma explícita mediante la URL con el parámetro `?intro=1`. Esto evita que la historia de marca impida usar la aplicación en la primera interacción.
+
+Las respuestas de Isabella incluyen una acción de copia con confirmación y fallback visible. El estado del nodo comunica sólo el resultado del endpoint de salud; no se presenta como garantía de inferencia externa. Se eliminaron el fondo gráfico alojado fuera del repositorio y los identificadores HTML duplicados para reducir dependencias y mantener la navegación y las referencias ARIA deterministas.
+
 ## Requisitos de ingeniería
 
 - Node.js 24.x.

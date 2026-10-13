@@ -11,6 +11,36 @@ function item(id: string, ageMs: number, extras: Partial<RetentionObject> = {}):
 }
 
 describe("BookPI bounded retention", () => {
+  it("reports the exact projected count and bytes when capacity is available", () => {
+    const current = [item("existing", 100)];
+    expect(checkWriteCapacity(current, 12, {
+      ...policy, maxObjects: 5, maxBytes: 1000, maxAgeMs: 100_000, minimumAgeMs: 1000,
+    }, now)).toEqual({
+      admitted: true,
+      requiresRetentionSweep: false,
+      reason: "CAPACITY_AVAILABLE",
+      currentObjects: 1,
+      projectedObjects: 2,
+      currentBytes: 10,
+      projectedBytes: 22,
+      candidateIds: [],
+    });
+  });
+
+  it("returns the candidate list instead of deleting during admission", () => {
+    const decision = checkWriteCapacity([item("expired-a", 20_000)], 12, policy, now);
+    expect(decision.reason).toBe("RETENTION_REQUIRED_BEFORE_ADMISSION");
+    expect(decision.candidateIds).toEqual(["expired-a"]);
+    expect(decision.admitted).toBe(false);
+  });
+
+  it("rejects projected byte overflow", () => {
+    const oversized = { ...policy, maxObjects: 10, maxBytes: Number.MAX_SAFE_INTEGER, maxAgeMs: 100_000, minimumAgeMs: 100_000 };
+    expect(() => checkWriteCapacity([item("near-limit", 100, { byteLength: Number.MAX_SAFE_INTEGER - 3 })], 10, oversized, now))
+      .toThrow("BOOKPI_PROJECTED_BYTES_OVERFLOW");
+  });
+
+
   it("prunes expired/oldest eligible payloads while protecting legal holds", () => {
     const objects = [
       item("expired-old", 20_000),

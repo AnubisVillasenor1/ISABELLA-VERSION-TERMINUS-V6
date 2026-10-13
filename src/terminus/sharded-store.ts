@@ -369,7 +369,7 @@ export class TerminusShardedStore {
       || typeof ref.keyId !== "string" || !ref.keyId.trim()
       || typeof ref.tenantFingerprint !== "string" || !validHexDigest(ref.ciphertextSha256)
       || ref.tenantFingerprint !== tenantFingerprint(tenantId)
-      || !Number.isSafeInteger(ref.ciphertextLength) || ref.ciphertextLength < 0
+      || !Number.isSafeInteger(ref.ciphertextLength) || ref.ciphertextLength < 16
       || !Number.isSafeInteger(ref.originalLength) || ref.originalLength < 0
       || typeof ref.createdAt !== "string" || !Number.isFinite(Date.parse(ref.createdAt))
       || ref.minimumRecoverableShards !== DATA_SHARDS || ref.configuredShardCount !== TOTAL_SHARDS

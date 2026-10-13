@@ -132,6 +132,11 @@ export interface WriteCapacityDecision {
   admitted: boolean;
   requiresRetentionSweep: boolean;
   reason: "CAPACITY_AVAILABLE" | "RETENTION_REQUIRED_BEFORE_ADMISSION" | "CAPACITY_BLOCKED";
+  currentObjects: number;
+  projectedObjects: number;
+  currentBytes: number;
+  projectedBytes: number;
+  candidateIds: string[];
 }
 
 /**
@@ -146,11 +151,32 @@ export function checkWriteCapacity(
 ): WriteCapacityDecision {
   if (!Number.isSafeInteger(incomingBytes) || incomingBytes < 0) throw new Error("BOOKPI_INCOMING_SIZE_INVALID");
   const plan = planRetention(objects, policy, nowMs);
-  if (plan.candidates.length > 0) return { admitted: false, requiresRetentionSweep: true, reason: "RETENTION_REQUIRED_BEFORE_ADMISSION" };
-  if (!plan.capacitySatisfied || objects.length + 1 > policy.maxObjects || plan.currentBytes + incomingBytes > policy.maxBytes) {
-    return { admitted: false, requiresRetentionSweep: false, reason: "CAPACITY_BLOCKED" };
+  const projectedObjects = plan.currentObjects + 1;
+  const projectedBytes = plan.currentBytes + incomingBytes;
+  if (!Number.isSafeInteger(projectedBytes)) throw new Error("BOOKPI_PROJECTED_BYTES_OVERFLOW");
+  if (plan.candidates.length > 0) {
+    return {
+      admitted: false,
+      requiresRetentionSweep: true,
+      reason: "RETENTION_REQUIRED_BEFORE_ADMISSION",
+      currentObjects: plan.currentObjects,
+      projectedObjects,
+      currentBytes: plan.currentBytes,
+      projectedBytes,
+      candidateIds: plan.candidates.map((candidate) => candidate.id),
+    };
   }
-  return { admitted: true, requiresRetentionSweep: false, reason: "CAPACITY_AVAILABLE" };
+  const blocked = !plan.capacitySatisfied || projectedObjects > policy.maxObjects || projectedBytes > policy.maxBytes;
+  return {
+    admitted: !blocked,
+    requiresRetentionSweep: false,
+    reason: blocked ? "CAPACITY_BLOCKED" : "CAPACITY_AVAILABLE",
+    currentObjects: plan.currentObjects,
+    projectedObjects,
+    currentBytes: plan.currentBytes,
+    projectedBytes,
+    candidateIds: [],
+  };
 }
 
 function jsonValue(value: unknown): JsonValue {
