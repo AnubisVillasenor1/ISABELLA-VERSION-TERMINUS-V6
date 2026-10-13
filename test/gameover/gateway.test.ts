@@ -42,6 +42,7 @@ function request(overrides: Partial<UagpRequestInput> = {}): UagpRequestInput {
     passportId: "pp-certified",
     objectiveTitle: "build container image",
     actions: ["build"],
+    criticality: "LOW",
     agent,
     trustMetrics: fullTrust,
     ...overrides,
@@ -55,6 +56,29 @@ describe("GAME OVER UagpGateway", () => {
     expect(result.outcome).toBe("ACCEPT");
     expect(result.allowed).toBe(true);
     expect(result.passport.valid).toBe(true);
+  });
+
+  it("does not let the request disable approval for a medium-risk action", () => {
+    const { gateway } = harness();
+    const result = gateway.govern(request({ criticality: "MEDIUM", humanApprovalRequired: false }));
+    expect(result.outcome).toBe("ESCALATE");
+    expect(result.decision.humanApprovalRequired).toBe(true);
+    expect(result.allowed).toBe(false);
+  });
+
+  it("does not let the request disable approval for a high-risk action", () => {
+    const { gateway } = harness();
+    const result = gateway.govern(request({ actions: ["deploy"], humanApprovalRequired: false }));
+    expect(result.outcome).toBe("ESCALATE");
+    expect(result.decision.humanApprovalRequired).toBe(true);
+  });
+
+  it("rejects malformed runtime input without throwing", () => {
+    const { gateway } = harness();
+    const result = gateway.govern(null as unknown as UagpRequestInput);
+    expect(result.outcome).toBe("REJECT");
+    expect(result.validation.valid).toBe(false);
+    expect(result.allowed).toBe(false);
   });
 
   it("rejects an unsupported protocol", () => {
