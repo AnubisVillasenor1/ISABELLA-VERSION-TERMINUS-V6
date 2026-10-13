@@ -169,6 +169,43 @@ const providerCooldownMs = boundedMilliseconds(process.env.PROVIDER_FAILURE_COOL
 let gatewayCooldownUntil = 0;
 let openRouterCooldownUntil = 0;
 let huggingFaceCooldownUntil = 0;
+let compatibleProviderCooldownUntil = 0;
+
+/**
+ * Optional OpenAI-compatible free/credit-tier providers. They are attempted only
+ * when an operator supplies the provider key and model explicitly; Isabella never
+ * invents credentials or silently upgrades to a paid model.
+ */
+async function generateCompatibleProviderNarrative(systemPrompt: string, input: string, history: PublicChatTurn[] = []): Promise<string | null> {
+  if (Date.now() < compatibleProviderCooldownUntil) return null;
+  const candidates = [
+    { name: "groq", key: process.env.GROQ_API_KEY, url: "https://api.groq.com/openai/v1/chat/completions", model: process.env.GROQ_MODEL || "llama-3.1-8b-instant" },
+    { name: "cerebras", key: process.env.CEREBRAS_API_KEY, url: "https://api.cerebras.ai/v1/chat/completions", model: process.env.CEREBRAS_MODEL || "llama-3.1-8b" },
+    { name: "together", key: process.env.TOGETHER_API_KEY, url: "https://api.together.xyz/v1/chat/completions", model: process.env.TOGETHER_MODEL || "meta-llama/Llama-3.3-70B-Instruct-Turbo" },
+    { name: "deepinfra", key: process.env.DEEPINFRA_API_KEY, url: "https://api.deepinfra.com/v1/openai/chat/completions", model: process.env.DEEPINFRA_MODEL || "meta-llama/Meta-Llama-3.1-8B-Instruct" },
+    { name: "fireworks", key: process.env.FIREWORKS_API_KEY, url: "https://api.fireworks.ai/inference/v1/chat/completions", model: process.env.FIREWORKS_MODEL || "accounts/fireworks/models/llama-v3p1-8b-instruct" },
+  ].filter((candidate) => Boolean(candidate.key));
+  if (candidates.length === 0) return null;
+  for (const candidate of candidates) {
+    try {
+      const response = await fetch(candidate.url, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${candidate.key}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ model: candidate.model, messages: [{ role: "system", content: systemPrompt }, ...history.map((turn) => ({ role: turn.role, content: turn.content })), { role: "user", content: input }], max_tokens: 900, temperature: 0.35 }),
+        signal: AbortSignal.timeout(providerTimeoutMs),
+      });
+      if (!response.ok) throw new Error(`${candidate.name} HTTP ${response.status}`);
+      const body = await response.json() as { choices?: Array<{ message?: { content?: unknown } }> };
+      const text = extractAssistantText(body);
+      if (text) return text;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.warn("[Isabella] compatible provider unavailable", { provider: candidate.name, message: message.slice(0, 180) });
+    }
+  }
+  compatibleProviderCooldownUntil = Date.now() + providerCooldownMs;
+  return null;
+}
 
 // Verified knowledge store (Supabase-backed when configured, in-memory otherwise).
 const verifiedKnowledgeStore = new VerifiedKnowledgeStore();
@@ -853,6 +890,10 @@ app.post("/api/v1/cognition/route", async (req, res) => {
         generativeNarrative = await generateHuggingFaceNarrative(systemPrompt, input, history);
         if (generativeNarrative) responseEngine = "huggingface-free";
       }
+      if (!generativeNarrative && (modelEngine === "open-science" || modelEngine === "auto" || modelEngine === "gemini")) {
+        generativeNarrative = await generateCompatibleProviderNarrative(systemPrompt, input, history);
+        if (generativeNarrative) responseEngine = "open-science";
+      }
       if (!generativeNarrative && process.env.ALLOW_PAID_PROVIDER_FALLBACK === "true") {
         if (genAi && modelEngine !== "gemini") {
           try {
@@ -886,8 +927,8 @@ app.post("/api/v1/cognition/route", async (req, res) => {
     }
     res.status(decision.admitted ? 200 : 403).json({
       success: decision.admitted, decision, principal, generativeNarrative, responseEngine,
-      modelConfigured: Boolean(genAi || process.env.OPENROUTER_API_KEY || (process.env.HF_TOKEN && process.env.HF_FREE_MODELS) || process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN),
-      openModelConfigured: Boolean(process.env.OPENROUTER_API_KEY || (process.env.HF_TOKEN && process.env.HF_FREE_MODELS)),
+      modelConfigured: Boolean(genAi || process.env.OPENROUTER_API_KEY || (process.env.HF_TOKEN && process.env.HF_FREE_MODELS) || process.env.GROQ_API_KEY || process.env.CEREBRAS_API_KEY || process.env.TOGETHER_API_KEY || process.env.DEEPINFRA_API_KEY || process.env.FIREWORKS_API_KEY || process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN),
+      openModelConfigured: Boolean(process.env.OPENROUTER_API_KEY || (process.env.HF_TOKEN && process.env.HF_FREE_MODELS) || process.env.GROQ_API_KEY || process.env.CEREBRAS_API_KEY || process.env.TOGETHER_API_KEY || process.env.DEEPINFRA_API_KEY || process.env.FIREWORKS_API_KEY),
       paidProviderConfigured: Boolean(genAi || process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN),
       conversationContextTurns: history.length,
       requestedRiskIgnored: true, publicAuthority: "VIEWER_ONLY",

@@ -144,12 +144,13 @@ button:disabled{opacity:.55;cursor:wait}
 .cinematic-intro .intro-enter{pointer-events:auto!important}
 
 /* Isabella command lattice: six independent, non-blocking accordions. */
-.side-rail{position:fixed;z-index:20;top:50%;display:flex;flex-direction:column;gap:10px;width:166px;transform:translateY(-50%);pointer-events:none}
+.side-rail{position:fixed;z-index:20;top:50%;display:flex;flex-direction:column;gap:10px;width:166px;max-height:calc(100vh - 132px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;transform:translateY(-50%);pointer-events:none}
 .rail-left{left:20px}.rail-right{right:20px}
+.side-rail::-webkit-scrollbar{width:3px}.side-rail::-webkit-scrollbar-thumb{background:rgba(131,244,255,.32);border-radius:99px}
 .rail-panel{pointer-events:auto;border:1px solid rgba(131,244,255,.18);background:linear-gradient(145deg,rgba(7,15,28,.88),rgba(5,8,18,.66));backdrop-filter:blur(18px);box-shadow:0 18px 50px rgba(0,0,0,.2);overflow:hidden}
 .rail-panel[open]{border-color:rgba(131,244,255,.42);box-shadow:0 0 30px rgba(56,189,248,.08)}
 .rail-panel summary{display:flex;align-items:center;justify-content:space-between;gap:8px;list-style:none;cursor:pointer;padding:13px 11px;color:rgba(245,247,251,.82);font:700 9px/1 ui-monospace,SFMono-Regular,monospace;letter-spacing:.13em}
-.rail-panel summary::-webkit-details-marker{display:none}.rail-panel summary::after{content:'+';color:var(--cyan);font-size:14px;font-weight:400}.rail-panel[open] summary::after{content:'−'}
+.rail-panel summary::-webkit-details-marker{display:none}.rail-panel summary::after{content:'+';color:var(--cyan);font-size:14px;font-weight:400}.rail-panel[open] summary::after{content:'−'}.rail-panel nav{max-height:180px;overflow-y:auto;overscroll-behavior:contain}
 .rail-index{color:var(--cyan);font-size:8px}.rail-panel nav{display:flex;flex-direction:column;gap:2px;padding:0 8px 9px}.rail-panel a{padding:8px 6px;color:rgba(245,247,251,.5);font-size:10px;text-decoration:none;border-left:1px solid transparent;transition:color .2s ease,border-color .2s ease,background .2s ease}.rail-panel a:hover,.rail-panel a:focus-visible{color:var(--cyan);border-left-color:var(--cyan);background:rgba(131,244,255,.06);outline:none}
 .hero,.console,.access-section,footer{width:min(1040px,calc(100% - 390px));margin-left:auto;margin-right:auto}.hero{min-height:clamp(620px,90vh,880px)}
 .intro-backdrop{background-image:linear-gradient(145deg,rgba(2,3,10,.92),rgba(5,15,27,.9)),url('https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Gemini_Generated_Image_s3jmggs3jmggs3jm-4uw17tTMZ8ruo9yssQeyCLpQcF4hNk.jpeg');background-size:cover;background-position:center;background-blend-mode:screen}
