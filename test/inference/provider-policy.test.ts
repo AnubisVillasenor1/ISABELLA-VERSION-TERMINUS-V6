@@ -33,4 +33,18 @@ describe("OpenAI-compatible candidate builder", () => {
   it("treats a blank credential as absent", () => {
     expect(buildOpenAICompatibleCandidates({ OLLAMA_API_KEY: "   " })).toHaveLength(0);
   });
+
+  it("gates Groq behind a credential with an available free default model", () => {
+    const defaults = buildOpenAICompatibleCandidates({ GROQ_API_KEY: "k" });
+    expect(defaults[0]).toMatchObject({
+      name: "groq",
+      url: "https://api.groq.com/openai/v1/chat/completions",
+      model: "openai/gpt-oss-20b",
+    });
+    const override = buildOpenAICompatibleCandidates({
+      GROQ_API_KEY: "k",
+      GROQ_MODEL: "qwen/qwen3.8-27b",
+    });
+    expect(override[0]?.model).toBe("qwen/qwen3.8-27b");
+  });
 });

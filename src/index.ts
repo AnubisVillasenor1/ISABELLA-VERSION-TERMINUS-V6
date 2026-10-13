@@ -116,3 +116,9 @@ export type { ConfidenceLevel as VerifiedConfidenceLevel } from "./memory/verifi
  * Namespaced export to prevent collisions with the core BookPI retention contract.
  */
 export * as Terminus from "./terminus";
+
+/**
+ * Native, provider-agnostic, seed-deterministic trainable ML engine (pure TS).
+ * Namespaced to avoid collisions with existing ML/evaluation contracts.
+ */
+export * as NativeML from "./lib/native-ml";

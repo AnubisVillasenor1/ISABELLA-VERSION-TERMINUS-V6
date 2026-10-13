@@ -56,7 +56,7 @@ export function buildOpenAICompatibleCandidates(
   const ollamaBase = (env.OLLAMA_BASE_URL?.trim() || "https://ollama.com/v1").replace(/\/+$/, "");
   const specs: readonly CandidateSpec[] = [
     { name: "ollama", key: env.OLLAMA_API_KEY, url: `${ollamaBase}/chat/completions`, model: env.OLLAMA_MODEL?.trim() || "gpt-oss:20b" },
-    { name: "groq", key: env.GROQ_API_KEY, url: "https://api.groq.com/openai/v1/chat/completions", model: env.GROQ_MODEL?.trim() || "llama-3.1-8b-instant" },
+    { name: "groq", key: env.GROQ_API_KEY, url: "https://api.groq.com/openai/v1/chat/completions", model: env.GROQ_MODEL?.trim() || "openai/gpt-oss-20b" },
     { name: "cerebras", key: env.CEREBRAS_API_KEY, url: "https://api.cerebras.ai/v1/chat/completions", model: env.CEREBRAS_MODEL?.trim() || "llama-3.1-8b" },
     { name: "together", key: env.TOGETHER_API_KEY, url: "https://api.together.xyz/v1/chat/completions", model: env.TOGETHER_MODEL?.trim() || "meta-llama/Llama-3.3-70B-Instruct-Turbo" },
     { name: "deepinfra", key: env.DEEPINFRA_API_KEY, url: "https://api.deepinfra.com/v1/openai/chat/completions", model: env.DEEPINFRA_MODEL?.trim() || "meta-llama/Meta-Llama-3.1-8B-Instruct" },
