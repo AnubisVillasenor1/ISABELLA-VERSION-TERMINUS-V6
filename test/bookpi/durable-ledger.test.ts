@@ -100,6 +100,32 @@ describe("DurableBookPiLedger", () => {
     rmSync(corrupt, { force: true });
   });
 
+  it("continues global sequence and checkpoint hash after pruning", () => {
+    const ledger = new DurableBookPiLedger(ledgerPath);
+    for (let i = 0; i < 5; i += 1) ledger.append(nextInput());
+    ledger.prune(planRetention(ledger.list(), { maxEvents: 2 }));
+    const lastKept = ledger.list().at(-1)!;
+    const appended = ledger.append(nextInput());
+    expect(appended.sequence).toBe(6);
+    expect(appended.previousHash).toBe(lastKept.hash);
+    expect(ledger.verify().valid).toBe(true);
+  });
+
+  it("backs up and restores a pruned ledger together with its checkpoint", () => {
+    const ledger = new DurableBookPiLedger(ledgerPath);
+    for (let i = 0; i < 5; i += 1) ledger.append(nextInput());
+    ledger.prune(planRetention(ledger.list(), { maxEvents: 2 }));
+    const backupPath = ledgerPath + ".pruned-backup";
+    ledger.backup(backupPath);
+    const result = ledger.restore(backupPath);
+    expect(result.valid).toBe(true);
+    expect(result.restored).toBe(2);
+    expect(ledger.verify().valid).toBe(true);
+    expect(ledger.getCheckpoint()?.archivedCount).toBe(3);
+    rmSync(backupPath, { force: true });
+    rmSync(backupPath + ".checkpoint.json", { force: true });
+  });
+
   it("prunes an archived prefix and keeps the chain verifiable via checkpoint", () => {
     const ledger = new DurableBookPiLedger(ledgerPath);
     for (let i = 0; i < 5; i += 1) ledger.append(nextInput());

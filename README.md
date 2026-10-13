@@ -1,245 +1,126 @@
-# Isabella Villaseñor AI V6 · Genesis TINA
+# Isabella Villaseñor AI — Genesis TINA / Terminus Ω
 
-**Runtime cognitivo gobernado para TAMV Online Network y RDM Digital.** Isabella separa identidad, capacidad, autoridad, ejecución, evidencia, aprendizaje y producción. El objetivo es coordinar modelos, memoria, agentes, herramientas y operaciones bajo políticas verificables y supervisión humana.
+**Runtime cognitivo gobernado para TAMV Online Network.** Este es el repositorio autorizado para la evolución de Isabella V6: https://github.com/OsoPanda1/ISABELLA-VERSION-TERMINUS-V6
 
-[![Repository Assurance](https://github.com/OsoPanda1/Isabella-V6-TINA-h6/actions/workflows/repository-assurance.yml/badge.svg)](https://github.com/OsoPanda1/Isabella-V6-TINA-h6/actions/workflows/repository-assurance.yml)
-[![Genesis CI](https://github.com/OsoPanda1/Isabella-V6-TINA-h6/actions/workflows/ci.yml/badge.svg)](https://github.com/OsoPanda1/Isabella-V6-TINA-h6/actions/workflows/ci.yml)
+[![Repository Assurance](https://github.com/OsoPanda1/ISABELLA-VERSION-TERMINUS-V6/actions/workflows/repository-assurance.yml/badge.svg)](https://github.com/OsoPanda1/ISABELLA-VERSION-TERMINUS-V6/actions/workflows/repository-assurance.yml)
+[![Genesis CI](https://github.com/OsoPanda1/ISABELLA-VERSION-TERMINUS-V6/actions/workflows/ci.yml/badge.svg)](https://github.com/OsoPanda1/ISABELLA-VERSION-TERMINUS-V6/actions/workflows/ci.yml)
 
-> **Invariante constitucional**
->
-> `CAPABILITY ≠ AUTHORITY ≠ EXECUTION ≠ EVIDENCE ≠ LEARNING ≠ PRODUCTION`
->
-> **Contrato de veracidad:** `SPECIFIED ≠ IMPLEMENTED ≠ TESTED ≠ INTEGRATED ≠ VERIFIED ≠ DEPLOYED ≠ CERTIFIED`.
+> **Invariante:** CAPABILITY ≠ AUTHORITY ≠ EXECUTION ≠ EVIDENCE ≠ LEARNING ≠ PRODUCTION
 
-Este README distingue la arquitectura objetivo del comportamiento que cuenta con evidencia de implementación. Un nombre de módulo, un esquema, una tarjeta de interfaz, un hash o un endpoint no prueban por sí solos una integración completa.
+## Preparación global para producción y despliegue
 
-## 1. Qué es Isabella
+**47.5% — estimación global provisional de readiness.**
 
-Isabella V6 Genesis es un runtime de orquestación y gobernanza cognitiva que forma parte del ecosistema TAMV Online Network. Su referencia territorial y de investigación es el Nodo Cero — Real del Monte (Mineral del Monte), Hidalgo, México.
+La estimación aumenta respecto de la base declarada anteriormente por la implementación del plano de autorización Terminus, almacenamiento cifrado con codificación de borrado 6+3, control de tamaño de objetos, registros BookPI para operaciones de almacenamiento y pruebas nuevas de contrato y regresión. Es una estimación de ingeniería, no una certificación; todavía debe confirmarse la suite sobre el SHA de esta rama. Los adaptadores reales de los nueve dominios de almacenamiento y el KMS durable no se dan por conectados ni se consideran listos sólo por existir sus interfaces.
 
-No es, por el estado actual del repositorio, un modelo fundacional entrenado desde cero, una AGI, una entidad consciente ni una plataforma certificada. La selección de proveedores de inferencia no equivale a entrenamiento nativo. El fallback soberano local es determinista y no debe presentarse como un LLM.
+## Qué hace Isabella
 
-### Principios operativos
+Isabella coordina modelos, memoria, capacidades, herramientas y operaciones bajo reglas de identidad, autoridad, evidencia, verificación y supervisión humana. La presencia de una capacidad técnica no concede automáticamente permiso para ejecutarla ni autoridad para presentar un resultado como hecho.
 
-- **Autoridad explícita:** las capacidades no crean permisos; la autorización se evalúa antes de operaciones protegidas.
-- **Fail-closed:** una política inválida, un verificador ausente o una validación fallida no debe convertirse en permiso.
-- **Evidencia antes de confianza:** los eventos relevantes deben enlazarse con fuentes, artefactos, pruebas o trazas identificables.
-- **Memoria gobernada:** recuperar conocimiento requiere contexto y autorización; una memoria no se convierte en instrucción de sistema.
-- **Supervisión humana:** las acciones de riesgo elevado deben escalarse o requerir aprobación de un principal autorizado.
-- **Soberanía y privacidad:** aislamiento por tenant, minimización de datos, límites de entrada y control de secretos.
-- **Honestidad de estado:** las cifras de riesgo, confianza y eficiencia son heurísticas hasta que existan calibración y benchmarks reproducibles.
+El estado del repositorio no se presenta como un modelo fundacional entrenado desde cero, AGI, entidad consciente, MoE entrenado ni plataforma certificada. Un router heurístico no demuestra entrenamiento de pesos; un hash no demuestra la verdad del contenido; una especificación de arquitectura no demuestra integración operacional.
 
-## 2. Arquitectura
+## Arquitectura operativa
 
-```text
-Interfaz web / clientes / agentes
-              │
-              ▼
-     Express + TypeScript API
-              │
-      Validación y límites
-              │
-   Identidad / scopes / C.R.O.W.N.
-              │
-    AEGIS + políticas de admisión
-              │
-       Genesis / TINA runtime
-        ┌─────┼─────────┐
-        ▼     ▼         ▼
-    Cognición Memoria  HyperCore Ω²
-        │     │         │
-        └─────┼─────────┘
-              ▼
-       Adaptadores de modelo
-  OpenRouter · Hugging Face · Gemini
-       · AI Gateway · fallback local
-              │
-              ▼
-    Verificación / política / BookPI
-              │
-              ▼
-      Respuesta o decisión gobernada
-```
+    Solicitud / cliente / agente
+             |
+    Validación y límites de entrada
+             |
+    Identidad, tenant y scopes
+             |
+    CROWN / AEGIS / política de riesgo
+             |
+    Terminus Ω — mandato acotado y decisión
+             |
+    Inferencia / memoria / capacidad autorizada
+             |
+    VERITAS / validación de evidencia
+             |
+    BookPI — eventos de decisión y trazabilidad
+             |
+    Respuesta / decisión / alerta operacional
 
-Dominios asociados:
+### Terminus Ω: autoridad antes de ejecución
 
-| Dominio | Responsabilidad y estado honesto |
-|---|---|
-| **TINA / Genesis** | Runtime cognitivo, registro de capacidades y orquestación. |
-| **C.R.O.W.N.** | Política de capacidades, roles, scopes y autoridad. |
-| **AEGIS** | Guardrails de entrada y herramientas; la decisión no-ALLOW debe bloquear la ejecución. |
-| **YUN** | Contratos y eventos de federación; no implica una red federada distribuida ya operativa. |
-| **BookPI** | Ledger encadenado y trazabilidad. La persistencia depende del backend configurado; un hash-chain no es almacenamiento WORM. |
-| **GAME OVER / UAGP-1** | Evalúa pasaporte, confianza, riesgo, ética, aprobación y auditoría. En el runtime actual emite decisiones; no ejecuta la acción gobernada ni certifica el resultado. |
-| **HyperCore Ω² / HyperPredict Ω** | Caché, compresión, predicción, enrutamiento y verificación. Router y afinidad son heurísticos; la caché léxica no equivale a embeddings ni a un MoE entrenado. |
-| **OSIRIS** | Observación defensiva y registro de señales. No debe describirse como un bloqueo automático ni como certificación de seguridad. |
-| **IGE-Ω (Rust)** | Workspace separado con crates y contratos de cognición, memoria, world model, ABX, BookPI y gateway. No asumir integración end-to-end hasta superar los gates de Rust e integración. |
-| **ISVF** | Especificación de identidad acústica. La verificación biométrica, calibración por idioma/canal, anti-spoofing y procedencia requieren validación experimental antes de afirmaciones productivas. |
+El módulo **src/terminus/mandate.ts** define el contrato del mandato, una política versionada, presupuestos de recursos, evidencia, separación de actores y límites de riesgo. Una decisión de riesgo elevado pasa a **ESCALATE** si no existe una aprobación humana vigente ligada a la evidencia declarada. Las operaciones prohibidas se rechazan independientemente del nombre de la capacidad solicitada.
 
-La monografía técnico-académica de Isabella V6 Genesis describe la arquitectura objetivo como una cadena de identidad, política, memoria gobernada, CROWN, runtime, herramientas, verificación y evidencia. Sus ecuaciones son modelos de diseño; no constituyen por sí mismas una prueba formal ni un resultado experimental.
+**TerminusRuntime** no ejecuta la acción gobernada. Antes de devolver **ALLOW**, exige que los adaptadores configurados verifiquen la identidad y la evidencia, que un contador duradero reserve una ejecución de forma atómica y que el resultado pueda registrarse en BookPI. Si falla una dependencia necesaria, se aplica **fail-closed**.
 
-## 3. GAME OVER — Universal Agent Governance Protocol (UAGP-1)
+Los adaptadores **verifyIdentity**, **verifyEvidence** y **ExecutionCounter** son dependencias externas deliberadas. No hay una identidad verificada ni un contador distribuido sólo por implementar una interfaz: deben conectarse al proveedor de identidad y a la base de datos autorizados y someterse a pruebas de concurrencia y revocación.
 
-GAME OVER es una meta-capa de gobernanza para agentes, herramientas MCP y operaciones CI/CD. No es otro modelo generativo. Su contrato canónico contempla:
+### BookPI: evidencia duradera y mantenimiento
 
-1. Validar estructura de la solicitud UAGP-1.
-2. Verificar el AI Passport y su estado.
-3. Calcular una puntuación heurística de confianza.
-4. Evaluar riesgo y acciones de alto impacto.
-5. Aplicar reglas éticas deterministas.
-6. Requerir aprobación humana según la política.
-7. Emitir una decisión explicable y registrar auditoría BookPI.
-8. Devolver `ACCEPT`, `REJECT` o `ESCALATE`; nunca ejecutar por sí solo la operación protegida.
+BookPI conserva el ledger JSONL durable existente, seleccionable mediante **BOOKPI_LEDGER_PATH**. Sus eventos forman una cadena hash y el mantenimiento permite verificar, respaldar, restaurar y planear la retención de prefijos. La retención del ledger necesita conservar un archivo y un checkpoint; no se debe borrar su historia desde una rutina de limpieza de cargas de datos.
 
-### Controles de seguridad en el runtime
+El adaptador PostgreSQL utiliza trece campos para registrar el evento completo, incluido **canonical**; la prueba de contrato correspondiente valida que la sentencia inserte los trece parámetros. Para que PostgreSQL sea el almacenamiento autoritativo, aún deben probarse el esquema real, los permisos append-only, la concurrencia, la propagación de errores, el respaldo y la restauración contra una instancia de prueba.
 
-El código de GAME OVER valida campos de riesgo, flags de aprobación, métricas de confianza y referencias de evidencia. La política derivada del riesgo no puede ser rebajada por `humanApprovalRequired: false`. Una identidad de pasaporte duplicada debe rechazarse en vez de reemplazar el registro existente. La evaluación de riesgo trata niveles de criticidad inválidos como críticos.
+**BookPI no es un dispositivo WORM.** La cadena de hashes permite detectar modificaciones que no reencadenen correctamente, pero no impide por sí sola que un administrador privilegiado cambie el archivo, los permisos, el checkpoint o todas las copias de respaldo. Para endurecer la evidencia se requieren roles de sólo inserción, anclaje externo y una política de backup/restauración comprobada.
 
-**Límite importante:** el registro de pasaportes del runtime es en memoria, no una autoridad criptográfica federada. La puntuación usa métricas declaradas y pesos heurísticos; no es una medición empírica de exactitud. El registro de auditoría hash-chain no es un dispositivo WORM.
+### Terminus Sharded Store: cifrado, 6+3 y cuotas
 
-### Plugin de Jenkins
+**src/terminus/erasure-code.ts** implementa codificación Reed–Solomon sobre GF(2^8): seis shards de datos y tres de paridad. Los datos se cifran con AES-256-GCM antes de codificarse; el coordinador sólo devuelve datos tras validar tenant, índices, metadata, hashes y autenticación del sobre. Se pueden reconstruir los ciphertexts a partir de cualquier seis shards válidos, tolerando como máximo tres shards perdidos o inválidos.
 
-El módulo `gameover-jenkins-plugin/` contiene el código fuente de un plugin Jenkins que expone el paso `gameOverGovernance`. Su contrato es bloquear el pipeline si el resultado no es `ACCEPT` cuando `failOnReject` está activo.
+Esta estrategia aporta redundancia, no espacio de almacenamiento gratuito. Los nueve shards requieren más bytes que el objeto original y suman costes de metadatos y cifrado. El constructor exige nueve identificadores de proveedor diferentes y una cota local de bytes/objetos por proveedor; esto no demuestra que existan nueve bases de datos externas ni nueve dominios de fallo realmente independientes.
 
-El plugin **no debe considerarse compilado, probado o instalado** hasta que Maven/JDK 17 produzcan el artefacto y la suite JUnit termine correctamente. La autoridad de pasaportes y el ledger del plugin son espejos en memoria; para decisiones autoritativas debe integrarse con el runtime configurado y validar autenticación, TLS, timeout, esquema y trazabilidad.
+Cada adaptador productivo debe escribir de forma atómica y sin sobrescribir, aplicar las cuotas locales y verificar las cuotas reales del proveedor. Las cuotas gratuitas pueden cambiar; cuando la capacidad real sea desconocida, el adaptador debe rechazar la operación en lugar de suponer que existe espacio. Nueve aliases en una sola cuenta, región, volumen o servicio no constituyen nueve dominios de fallo.
 
-Documentación: [especificación canónica UAGP-1](docs/GAME_OVER_UAGP1_CANONICAL.md) · [README del plugin Jenkins](gameover-jenkins-plugin/README.md).
+El coordinador requiere **ShardStore**, **DataKeyManager**, **BookPiStorage** durable y un **maxObjectBytes** explícito. Las pruebas locales de estos contratos usan proveedores en memoria y no cuentan como conexión con servicios externos.
 
-## 4. Estado de implementación y evidencia
+### Borrado y retención de datos
 
-### Última base de validación conocida
+La retención de cargas externas es independiente de la retención de eventos de auditoría. Las políticas de **src/terminus/retention.ts** fijan un límite versionado de objetos, bytes, edad máxima, edad mínima y tamaño de lote. Los datos con retención legal, fijados o en uso no se eliminan automáticamente.
 
-La revisión de runtime identificada como `8c19acd2959de3ae8f4c78a098d85192f1232164` pasó, según la evidencia de esa revisión:
+Una pasada de retención calcula los candidatos de forma determinista, escribe primero la intención en BookPI, solicita la eliminación de la carga y sus shards al adaptador y registra el resultado para cada objeto. Si BookPI no puede escribir el evento de intención, no se elimina nada. Si no es posible llegar a los límites por existir elementos protegidos o por haberse alcanzado el tamaño máximo de lote, debe bloquearse la nueva admisión hasta resolver la situación.
 
-| Gate | Resultado de esa revisión |
-|---|---|
-| Suite Vitest | 746 pruebas aprobadas en 135 archivos |
-| UI smoke | `UI_NAVIGATION_SMOKE_OK`, `CINEMATIC_INTRO_12_SCENES_OK` |
-| Runtime smoke | `LOCAL_CONVERSATION_SMOKE_OK`, `PUBLIC_API_GUARDRAILS_OK`, `OPENROUTER_PAID_ID_BLOCK_OK` |
-| Suite estática de seguridad | 14 pasaron; 0 fallaron; 0 no aplicables |
-| Vercel | [Despliegue READY del SHA 03e6f68](https://vercel.com/isabella-mexa/isabella-v6-tina/HAC1kk2Ha1T5ukJNjRXiWjW8RwVq) |
+El borrado criptográfico sólo queda confirmado si el KMS real destruye durablemente todas las copias recuperables de la clave. La eliminación de shards físicos se informa por separado, con sus fallos visibles. Réplicas, backups, cachés, almacenamiento del proveedor y requisitos legales requieren sus propios ciclos de expiración; el estado “eliminado” no debe ocultarlos.
 
-**Alcance de la validación:** los 746 tests, los 135 archivos y la suite de seguridad corresponden al SHA 03e6f68. Vercel no compila el plugin Java de Jenkins. Se añadió un job `jenkins-plugin-verify` a `.github/workflows/ci.yml` para ejecutar Maven/JUnit y empaquetar el HPI; hasta observar una ejecución verde de ese job, el plugin continúa como código fuente endurecido pero no verificado por compilación. El workspace Rust y los demás gates abiertos siguen pendientes.
+## Requisitos de ingeniería
 
-### Bloqueadores abiertos
+- Node.js 24.x.
+- pnpm 10.28.0.
+- Rust y PostgreSQL de prueba para validar el workspace IGE-Ω y sus pruebas de integración.
+- Para almacenar objetos con Terminus: nueve adaptadores independientes, cuotas reales verificadas, un KMS durable y un BookPI duradero configurado.
 
-- **CI reproducible:** obtener una ejecución de GitHub Actions con jobs ejecutados y conclusión verde para el SHA actual.
-- **Pruebas de los cambios recientes:** build TypeScript, suite Vitest, smokes de UI/runtime y suite de seguridad sobre el HEAD actual.
-- **Inferencia externa:** la última validación omitió el smoke del proveedor porque no había credenciales elegibles; no se afirma que la inferencia real esté verificada.
-- **Rust / IGE-Ω:** ejecutar `cargo fmt --check`, Clippy, tests y release build con `--locked` usando el lockfile del workspace.
-- **Persistencia y recuperación:** probar E2E Postgres/Supabase, aislamiento multi-tenant/RLS, retención, backup/restore y simulacro de recuperación.
-- **GAME OVER/Jenkins:** compilar el plugin con JDK 17 y Maven, ejecutar JUnit, verificar su comunicación autenticada con el runtime y ensayar bloqueo de pipeline.
-- **E2E de navegador y observabilidad:** pruebas reales en escritorio/móvil, dashboards, SLO, errores, coste y latencia p50/p95/p99.
-- **CITEMESH y MoE:** los artefactos de CITEMESH siguen sin recuperarse/verificarse; el router heurístico no es un MoE entrenado.
-- **KMS/HSM y PQC:** la integración con servicios y proveedores criptográficos reales depende de infraestructura externa y no se marca verde por tener contratos o adaptadores.
+### Validación
 
-La estimación de readiness previamente publicada es **46.25% ponderado por gates**. No es un porcentaje científico de funcionalidades ni se incrementa hasta que las brechas anteriores tengan evidencia reproducible. Consulta el [estado real](docs/ESTADO-REAL-ACTUAL.md) y la [auditoría P0](docs/audits/P0-ARCHITECTURE-HARDENING-2026-10-12.md).
+    corepack enable
+    pnpm install --frozen-lockfile
+    pnpm run typecheck
+    pnpm test
+    pnpm run build
+    pnpm run security:suite
+    pnpm run production:evidence
 
-## 5. Requisitos
+**pnpm test** incluye las pruebas nuevas de Terminus y BookPI. El resultado debe observarse sobre el SHA de la rama en GitHub Actions; los tests escritos no equivalen a tests ejecutados ni demuestran por sí solos integración distribuida.
 
-- Node.js **24.x**.
-- pnpm **10.28.x** (el proyecto declara `pnpm@10.28.0`).
-- Git.
-- Para el plugin Jenkins: JDK 17, Maven y un Jenkins de pruebas compatible con la versión objetivo declarada por el plugin.
-- Para inferencia externa, almacenamiento persistente y otros servicios: credenciales y recursos configurados fuera del repositorio.
+### Mantenimiento BookPI
 
-## 6. Instalación y ejecución local
+    pnpm bookpi:maintenance verify --path data/bookpi/ledger.jsonl
+    pnpm bookpi:maintenance summary --path data/bookpi/ledger.jsonl
+    pnpm bookpi:maintenance backup --path data/bookpi/ledger.jsonl --dest backups/ledger.jsonl
+    pnpm bookpi:maintenance retention --path data/bookpi/ledger.jsonl --max-events 10000 --archive backups/archive.jsonl --prune
 
-```bash
-git clone https://github.com/OsoPanda1/Isabella-V6-TINA-h6.git
-cd Isabella-V6-TINA-h6
-corepack enable
-pnpm install --frozen-lockfile
-pnpm run dev
-```
+Ejecuta operaciones destructivas sólo después de validar el ledger, confirmar el backup y comprobar el destino del archivo. La poda del ledger no es un sustituto de la retención de payloads de Terminus.
 
-El servidor se configura en el código para escuchar en el puerto `3000`. No expongas el servidor a Internet con secretos de desarrollo ni sin configurar autenticación, límites y observabilidad.
+## Gates pendientes para liberar
 
-### Validación local
+- Ejecutar typecheck, suite completa Vitest, build, smokes, seguridad estática y production-evidence sobre el mismo SHA.
+- Probar con PostgreSQL real el contrato de trece campos, el rol append-only, las restricciones, aislamiento multi-tenant, concurrencia, backup y restore.
+- Aprovisionar nueve dominios de fallo independientes y validar las cuotas actuales del servicio y sus límites de escritura.
+- Integrar un gestor de claves real con límites de acceso, rotación, destrucción duradera y prueba de restauración; comprobar que no se conservan copias recuperables no autorizadas.
+- Ensayar pérdida de tres shards, pérdida por encima del quórum, proveedores fuera de cuota, fallo de KMS, fallo de BookPI, restauración y retención legal.
+- Ejecutar formato, Clippy, tests y build release del workspace Rust con lockfile comprometido y **--locked**.
+- Medir latencia p50/p95/p99 con carga reproducible, distinguiendo tiempo de aplicación, red, cold start, inferencia y persistencia. No se promete latencia casi cero sin esas medidas.
+- Verificar rollback, permisos y recuperación con objetivos RTO/RPO documentados antes de promoción.
 
-```bash
-pnpm run typecheck
-pnpm test
-pnpm run smoke:ui
-pnpm run smoke:runtime
-pnpm run security:suite
-pnpm run build
-```
+## Documentación
 
-`pnpm run build` incluye typecheck de build, Vitest, bundle de servidor, comprobación sintáctica de la interfaz, smoke de UI, smoke de runtime y suite estática de seguridad. Una prueba local solo valida el entorno y el SHA en el que se ejecutó.
+- [Auditoría global del perfil GitHub y plano Terminus](docs/audits/GLOBAL-PROFILE-TERMINUS-2026-10-12.md)
+- [BookPI: ledger durable, retención y backup/restore](docs/bookpi/DURABLE-LEDGER.md)
+- [Estado real de Isabella y gates previos](docs/ESTADO-REAL-ACTUAL.md)
+- [Auditoría P0 de arquitectura](docs/audits/P0-ARCHITECTURE-HARDENING-2026-10-12.md)
+- [Inventario de API](docs/api/README.md) · [OpenAPI](docs/api/openapi.yaml)
+- [Política de seguridad](SECURITY.md)
 
-### Plugin Jenkins
+## Principio de liberación
 
-```bash
-cd gameover-jenkins-plugin
-mvn -B test
-mvn -B package
-```
-
-El comando de empaquetado debe producir un artefacto HPI sin errores antes de instalarlo en una instancia Jenkins aislada de pruebas. No pruebes el primer despliegue de un plugin de gobernanza sobre producción.
-
-## 7. Configuración y secretos
-
-Los nombres de variables pueden variar por integración. Revisa el código y los documentos de cada adaptador antes de habilitarlo. Entre los nombres de configuración usados por el runtime están:
-
-- `GENESIS_ADMIN_API_TOKEN`: acceso administrativo a rutas protegidas.
-- `GENESIS_HUMAN_APPROVAL_TOKEN` y `GENESIS_HUMAN_APPROVER_ID`: credencial y principal designado para la aprobación humana independiente en GAME OVER. Si no están configurados o no coinciden, una acción que exige aprobación debe quedar en `ESCALATE`; el token administrativo por sí solo no cuenta como aprobación.
-- `BOOKPI_LEDGER_PATH`: ruta del ledger JSONL durable cuando se habilita ese backend.
-- Credenciales específicas de proveedores de inferencia (por ejemplo, OpenRouter, Hugging Face o Gemini) y variables de conexión para persistencia.
-
-Reglas mínimas:
-
-- No guardes tokens, claves privadas, archivos `.env` ni credenciales de producción en Git.
-- Usa el gestor de secretos del entorno de despliegue y rota cualquier secreto expuesto.
-- No habilites proveedores de coste variable sin opt-in explícito, presupuesto y límites.
-- Verifica identidad, scopes, tenant y autorización del lado servidor; no confíes en roles enviados por el cliente.
-- No uses un token administrativo compartido como sustituto de identidades individuales para aprobaciones críticas. GAME OVER exige una credencial de aprobación separada y un ID de aprobador configurado; este mecanismo es un control de despliegue, no sustituye una integración completa con un proveedor de identidad corporativo.
-- Prueba fallos de red, timeout, respuestas malformadas, proveedor indisponible, revocación y rollback.
-
-## 8. API de referencia
-
-El inventario completo está en [docs/api/route-inventory.json](docs/api/route-inventory.json), [docs/api/README.md](docs/api/README.md) y [OpenAPI](docs/api/openapi.yaml). Estas rutas son una guía; el estado de cada ruta debe confirmarse mediante pruebas y configuración reales.
-
-| Método | Ruta | Función |
-|---|---|---|
-| `GET` | `/api/v1/health` | Salud pública de la API |
-| `GET` | `/api/v1/status` | Estado resumido |
-| `POST` | `/api/v1/cognition/route` | Conversación/orquestación pública con límites |
-| `POST` | `/api/v1/cognitive/request` | Mediación cognitiva |
-| `GET` | `/api/v1/metrics` | Métricas agregadas |
-| `GET` / `POST` | `/api/v1/gameover/constitution`, `/passports` | Constitución y pasaportes; requieren autorización administrativa en las rutas protegidas |
-| `POST` | `/api/v1/gameover/passports/revoke` | Revocación de pasaporte |
-| `POST` | `/api/v1/gameover/govern` | Decisión UAGP-1 |
-| `GET` | `/api/v1/hypercore/modes` | Modos y límites declarados de HyperCore |
-| `POST` | `/api/v1/hypercore/run` | Pipeline HyperCore protegido |
-| `POST` | `/api/v1/hypercore/predict` | Predicción/prefetch gobernado |
-| `GET` | `/api/v1/osiris/status` | Estado de observación OSIRIS |
-| `POST` | `/api/v1/osiris/inspect` | Inspección defensiva advisory |
-| `GET` | `/api/v1/billing/plans` | Planes y entitlements declarados |
-| `POST` | `/api/v1/commerce/offers` | Puerta de ofertas con entitlements y cuotas |
-
-Las rutas administrativas necesitan el token configurado. No se deben interpretar como abiertas por aparecer en la tabla.
-
-## 9. Mapa de documentación
-
-- [Mapa operativo de arquitectura](docs/ARCHITECTURE-OPERATING-MAP.md)
-- [Estado real actual](docs/ESTADO-REAL-ACTUAL.md)
-- [Auditoría P0 de endurecimiento](docs/audits/P0-ARCHITECTURE-HARDENING-2026-10-12.md)
-- [Backlog de implementación](docs/evolution/IMPLEMENTATION-BACKLOG.md)
-- [Especificación C.R.O.W.N. / VΩ](docs/CROWN-ISABELLA-VOMEGA-OPERATING-SPEC.md)
-- [GAME OVER / UAGP-1](docs/GAME_OVER_UAGP1_CANONICAL.md)
-- [BookPI: ledger durable y mantenimiento](docs/bookpi/DURABLE-LEDGER.md)
-- [OSIRIS: arquitectura y límites](docs/osiris/ARCHITECTURE.md)
-- [Aislamiento multi-tenant](docs/tenancy/ISOLATION.md)
-- [Motor de facturación y entitlements](docs/commerce/BILLING-ENGINE.md)
-- [Gates de operaciones IGE-Ω](ige-omega/docs/OPERATIONS-AND-RELEASE-GATES.md)
-
-## 10. Seguridad y reporte de vulnerabilidades
-
-No publiques secretos, datos personales, tokens válidos ni detalles explotables de una instancia productiva en issues públicos. Para reportar un problema, proporciona una reproducción mínima sin credenciales, el SHA afectado, entorno, impacto observado y pruebas que lo sustentan. Las medidas defensivas del repositorio no sustituyen una revisión independiente ni una auditoría de despliegue.
-
-## 11. Licencia, autoría y alcance
-
-Este repositorio contiene software y especificaciones en evolución. Antes de reutilizarlo, consulta los archivos de licencia y avisos existentes. Las afiliaciones, identificadores académicos, certificaciones, DOI y afirmaciones de cumplimiento deben citarse únicamente cuando estén publicados y verificables.
-
-**Principio de cierre:** ninguna capacidad se considera lista para producción por su nombre, intención o documentación. Debe superar validación automatizada, integración real, revisión de seguridad, pruebas operativas y evidencia del SHA exacto que se pretende liberar.
+**SPECIFIED ≠ IMPLEMENTED ≠ TESTED ≠ INTEGRATED ≠ VERIFIED ≠ DEPLOYED ≠ CERTIFIED.** Ninguna capacidad se declara lista para producción por su nombre, por tener un archivo o por aparecer en un diagrama. La promoción exige evidencia reproducible vinculada al SHA liberable, integración real en el entorno objetivo, pruebas de fallo y rollback, y supervisión humana para operaciones privilegiadas.
