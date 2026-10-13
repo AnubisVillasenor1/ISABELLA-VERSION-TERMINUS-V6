@@ -1,38 +1,381 @@
-/**
- * Crystal Clear Aesthetic CSS Module
- * Isabella Genesis TINA V6 (esLatina)
- *
- * Implements:
- * - High-translucency glassmorphic layers with backdrop-filter: blur(28px - 36px)
- * - Iridescent linear-gradient borders with chromatic shifts
- * - Subtle neon-iridescent box-shadows (neon crystal glow alive)
- * - 100% Retractable accordion-style sidebars with fluid transitions
- * - Focused ultra-clean chat immersion mode
- */
+/* ==========================================================================
+   CRYSTAL CLEAR Ω
+   Isabella Genesis TINA V6 — Enterprise Sovereign Interface
+   Design language: Obsidian Glass · Sovereign Light · Controlled Iridescence
+
+   This file is the canonical Crystal Clear Ω layer. It is loaded by BOTH:
+   - the primary workspace (src/ui/index.html, after cinematic.css), where it
+     remaps the enterprise theme tokens and retunes the hard-coded accents so
+     the whole project adopts the Ω language; and
+   - the server.ts fallback page, through the legacy `.crystal-*` classes.
+
+   Principle: the interface must not look futuristic from excess glow. It must
+   look sovereign through clarity, depth and control.
+
+   Provenance: engine-generated · state: draft (visual verification pending)
+   ========================================================================== */
 
 :root {
-  /* Enterprise palette: electric blue, platinum, pearl ivory, navy and bandera green. */
-  --bg-deep-space: #061426;
-  --crystal-surface: rgba(9, 25, 48, 0.78);
-  --crystal-surface-active: rgba(15, 40, 76, 0.9);
-  --crystal-card: rgba(13, 34, 64, 0.72);
-  --crystal-card-hover: rgba(20, 52, 91, 0.86);
+  /* Core environment */
+  --obsidian-900: #04070f;
+  --obsidian-800: #070d1a;
+  --obsidian-700: #0a1424;
+  --obsidian-600: #0d1b30;
 
-  --crystal-border-subtle: rgba(214, 226, 240, 0.18);
-  --crystal-border-glow: rgba(37, 181, 255, 0.5);
-  --crystal-highlight-top: rgba(255, 255, 255, 0.3);
-  --crystal-highlight-bottom: rgba(0, 8, 20, 0.55);
+  /* Crystal surfaces */
+  --glass-01: rgba(10, 22, 40, 0.62);
+  --glass-02: rgba(14, 30, 54, 0.72);
+  --glass-03: rgba(18, 38, 68, 0.80);
+  --glass-active: rgba(24, 50, 88, 0.88);
 
-  --neon-cyan: #26b9ff;
-  --neon-indigo: #4169e1;
-  --neon-rose: #a9b7c9;
-  --neon-amber: #f0c674;
-  --neon-emerald: #22a06b;
-  --neon-violet: #8ca9d8;
+  /* Optical borders */
+  --edge-faint: rgba(226, 238, 252, 0.10);
+  --edge-soft: rgba(226, 238, 252, 0.16);
+  --edge-strong: rgba(120, 190, 255, 0.38);
+
+  /* Sovereign palette */
+  --aqua: #38d6ff;
+  --indigo: #6a7bff;
+  --violet: #a37bff;
+  --gold: #e8c37a;
+  --emerald: #35d6a4;
+  --rose: #ff7a9c;
+  --platinum: #e8f1fb;
+  --pearl: #f7fbff;
+
+  /* Text */
+  --text-primary: #eaf3ff;
+  --text-secondary: rgba(214, 230, 248, 0.72);
+  --text-muted: rgba(190, 210, 235, 0.48);
+
+  /* Motion */
+  --ease-quantum: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-soft: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --motion-fast: 180ms;
+  --motion-base: 320ms;
+  --motion-slow: 620ms;
+
+  /* Depth */
+  --shadow-panel:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 -1px 0 rgba(0, 8, 20, 0.48),
+    0 24px 70px -28px rgba(0, 0, 0, 0.88),
+    0 0 32px -14px rgba(56, 214, 255, 0.16);
+  --shadow-card:
+    inset 0 1px 0 rgba(255, 255, 255, 0.10),
+    0 14px 34px -18px rgba(0, 0, 0, 0.72);
+  --shadow-focus:
+    0 0 0 1px rgba(56, 214, 255, 0.45),
+    0 0 28px -6px rgba(56, 214, 255, 0.28);
+
+  --radius-xs: 8px;
+  --radius-sm: 12px;
+  --radius-md: 18px;
+  --radius-lg: 26px;
+  --radius-xl: 34px;
+
+  /* ----------------------------------------------------------------------
+     Legacy aliases — keep the server.ts fallback page and any historical
+     class names working while they adopt the Ω palette.
+     ---------------------------------------------------------------------- */
+  --bg-deep-space: var(--obsidian-900);
+  --crystal-surface: var(--glass-01);
+  --crystal-surface-active: var(--glass-active);
+  --crystal-card: var(--glass-02);
+  --crystal-card-hover: var(--glass-03);
+  --crystal-border-subtle: var(--edge-faint);
+  --crystal-border-glow: var(--edge-strong);
+  --crystal-highlight-top: rgba(255, 255, 255, 0.18);
+  --crystal-highlight-bottom: rgba(0, 8, 20, 0.50);
+  --neon-cyan: var(--aqua);
+  --neon-indigo: var(--indigo);
+  --neon-rose: var(--rose);
+  --neon-amber: var(--gold);
+  --neon-emerald: var(--emerald);
+  --neon-violet: var(--violet);
+
+  /* ------------------------------------------------------------------ */
+  /* Project theme bridge                                               */
+  /* The cinematic interface consumes these names (declared in           */
+  /* src/ui/cinematic.css). Loading this file afterwards remaps the whole */
+  /* project onto the Crystal Clear Ω palette.                           */
+  /* ------------------------------------------------------------------ */
+  --void: var(--obsidian-900);
+  --panel: var(--glass-02);
+  --text: var(--text-primary);
+  --muted: var(--text-secondary);
+  --line: var(--edge-faint);
+  --cyan: var(--aqua);
+  --violet: var(--indigo);
+  --warm: var(--gold);
+  --green: var(--emerald);
+  --surface-0: var(--obsidian-900);
+  --surface-1: var(--obsidian-800);
+  --surface-2: var(--obsidian-700);
+  --azure: var(--aqua);
 }
 
 /* ==========================================================================
-   Crystal Clear Panels & Glass Surfaces
+   GLOBAL FOUNDATION
+   ========================================================================== */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background:
+    radial-gradient(1200px 720px at 12% -10%, rgba(56, 214, 255, 0.10), transparent 60%),
+    radial-gradient(900px 620px at 88% 8%, rgba(163, 123, 255, 0.10), transparent 62%),
+    radial-gradient(1100px 800px at 50% 120%, rgba(53, 214, 164, 0.07), transparent 65%),
+    linear-gradient(180deg, var(--obsidian-900) 0%, var(--obsidian-800) 45%, var(--obsidian-700) 100%);
+  background-attachment: fixed;
+  color: var(--text-primary);
+  font-family:
+    "Inter", "SF Pro Display", "Segoe UI Variable", "Segoe UI",
+    system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Fine luminous grain, without visual noise */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+  background-size: 26px 26px;
+  opacity: 0.3;
+  mask-image: radial-gradient(circle at center, black 25%, transparent 78%);
+}
+
+/* ==========================================================================
+   APP SHELL
+   ========================================================================== */
+
+.isabella-shell {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 20rem) minmax(0, 1fr) minmax(0, 22rem);
+  gap: 1.15rem;
+  min-height: 100vh;
+  padding: 1.15rem;
+}
+
+.isabella-shell.sidebar-left-collapsed {
+  grid-template-columns: 0 minmax(0, 1fr) minmax(0, 22rem);
+}
+
+.isabella-shell.sidebar-right-collapsed {
+  grid-template-columns: minmax(0, 20rem) minmax(0, 1fr) 0;
+}
+
+.isabella-shell.focus-mode {
+  grid-template-columns: 0 minmax(0, 1fr) 0;
+}
+
+/* ==========================================================================
+   CRYSTAL SURFACES
+   ========================================================================== */
+
+.crystal {
+  position: relative;
+  isolation: isolate;
+  border-radius: var(--radius-lg);
+  background: var(--glass-01);
+  backdrop-filter: blur(34px) saturate(170%);
+  -webkit-backdrop-filter: blur(34px) saturate(170%);
+  border: 1px solid var(--edge-faint);
+  box-shadow: var(--shadow-panel);
+  transition:
+    background var(--motion-base) var(--ease-quantum),
+    border-color var(--motion-base) var(--ease-quantum),
+    box-shadow var(--motion-base) var(--ease-quantum),
+    transform var(--motion-base) var(--ease-quantum);
+}
+
+.crystal::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.12), transparent 42%);
+  opacity: 0.7;
+  z-index: -1;
+}
+
+.crystal--interactive:hover,
+.crystal--interactive:focus-within {
+  background: var(--glass-02);
+  border-color: var(--edge-strong);
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.20),
+    0 28px 62px -24px rgba(0, 0, 0, 0.82),
+    0 0 40px -10px rgba(56, 214, 255, 0.30);
+}
+
+/* ==========================================================================
+   IRIDESCENT SOVEREIGN BORDER
+   ========================================================================== */
+
+@property --border-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.sovereign-border {
+  position: relative;
+}
+
+.sovereign-border::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: inherit;
+  padding: 1px;
+  pointer-events: none;
+  background: conic-gradient(
+    from var(--border-angle, 0deg),
+    rgba(56, 214, 255, 0.75),
+    rgba(106, 123, 255, 0.55),
+    rgba(163, 123, 255, 0.65),
+    rgba(232, 195, 122, 0.55),
+    rgba(53, 214, 164, 0.55),
+    rgba(56, 214, 255, 0.75)
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  opacity: 0.72;
+  transition: opacity var(--motion-base) var(--ease-quantum);
+}
+
+.sovereign-border:hover::before,
+.sovereign-border:focus-within::before {
+  opacity: 1;
+}
+
+@keyframes sovereign-rotation {
+  to { --border-angle: 360deg; }
+}
+
+.sovereign-border--alive::before {
+  animation: sovereign-rotation 14s linear infinite;
+}
+
+/* ==========================================================================
+   STATUS CHIPS
+   ========================================================================== */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.36rem 0.72rem;
+  border-radius: 999px;
+  border: 1px solid var(--edge-faint);
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 0.68rem;
+  font-weight: 650;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.chip::before {
+  content: "";
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 10px currentColor;
+}
+
+.chip--secure { color: var(--emerald); border-color: rgba(53, 214, 164, 0.32); background: rgba(53, 214, 164, 0.08); }
+.chip--warning { color: var(--gold); border-color: rgba(232, 195, 122, 0.32); background: rgba(232, 195, 122, 0.08); }
+.chip--critical { color: var(--rose); border-color: rgba(255, 122, 156, 0.32); background: rgba(255, 122, 156, 0.08); }
+.chip--sovereign { color: var(--aqua); border-color: rgba(56, 214, 255, 0.32); background: rgba(56, 214, 255, 0.08); }
+
+/* ==========================================================================
+   METRIC CARDS
+   ========================================================================== */
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.metric {
+  padding: 0.9rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--edge-faint);
+  background: rgba(255, 255, 255, 0.03);
+  transition:
+    border-color var(--motion-base) var(--ease-quantum),
+    transform var(--motion-base) var(--ease-quantum),
+    box-shadow var(--motion-base) var(--ease-quantum);
+}
+
+.metric:hover {
+  border-color: rgba(56, 214, 255, 0.28);
+  transform: translateY(-2px);
+  box-shadow: 0 18px 38px -22px rgba(0, 0, 0, 0.8);
+}
+
+.metric-label {
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.metric-value {
+  margin-top: 0.35rem;
+  font-size: 1.35rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  color: var(--pearl);
+}
+
+.metric-trend {
+  margin-top: 0.2rem;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+/* ==========================================================================
+   SCROLLBAR
+   ========================================================================== */
+
+.crystal-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+.crystal-scroll::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.02); }
+.crystal-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(190, 215, 240, 0.20);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+.crystal-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(56, 214, 255, 0.45);
+  box-shadow: 0 0 12px rgba(56, 214, 255, 0.35);
+}
+
+/* ==========================================================================
+   LEGACY COMPATIBILITY — server.ts fallback page selectors
    ========================================================================== */
 
 .crystal-clear-panel {
@@ -41,12 +384,12 @@
   -webkit-backdrop-filter: blur(32px) saturate(180%);
   border: 1px solid var(--crystal-border-subtle);
   position: relative;
-  box-shadow: 
+  box-shadow:
     inset 0 1px 1px 0 var(--crystal-highlight-top),
     inset 0 -1px 1px 0 var(--crystal-highlight-bottom),
     0 20px 45px -15px rgba(0, 0, 0, 0.82),
-    0 0 25px -8px rgba(0, 242, 254, 0.08);
-  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    0 0 25px -8px rgba(56, 214, 255, 0.08);
+  transition: all var(--motion-base) var(--ease-quantum);
 }
 
 .crystal-clear-card {
@@ -54,95 +397,65 @@
   backdrop-filter: blur(20px) saturate(160%);
   -webkit-backdrop-filter: blur(20px) saturate(160%);
   border: 1px solid rgba(255, 255, 255, 0.07);
-  box-shadow: 
+  box-shadow:
     inset 0 1px 0 0 rgba(255, 255, 255, 0.12),
     0 10px 25px -8px rgba(0, 0, 0, 0.6);
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.25s var(--ease-quantum);
 }
 
 .crystal-clear-card:hover {
   background: var(--crystal-card-hover);
-  border-color: rgba(0, 242, 254, 0.38);
+  border-color: rgba(56, 214, 255, 0.38);
   transform: translateY(-1.5px);
-  box-shadow: 
+  box-shadow:
     inset 0 1px 0 0 rgba(255, 255, 255, 0.25),
     0 16px 32px -8px rgba(0, 0, 0, 0.7),
-    0 0 24px -4px rgba(0, 242, 254, 0.22);
-}
-
-/* ==========================================================================
-   Linear Gradient Borders & Iridescent Neon Glow Alive
-   ========================================================================== */
-
-@keyframes iridescentShift {
-  0% {
-    filter: hue-rotate(0deg) brightness(1);
-  }
-  50% {
-    filter: hue-rotate(35deg) brightness(1.25);
-  }
-  100% {
-    filter: hue-rotate(0deg) brightness(1);
-  }
-}
-
-@keyframes neonGlowPulse {
-  0%, 100% {
-    box-shadow: 
-      0 0 18px -2px rgba(0, 242, 254, 0.28),
-      0 0 35px -6px rgba(244, 63, 94, 0.18),
-      inset 0 1px 1.5px rgba(255, 255, 255, 0.28);
-  }
-  50% {
-    box-shadow: 
-      0 0 28px 0px rgba(0, 242, 254, 0.42),
-      0 0 48px -4px rgba(244, 63, 94, 0.28),
-      inset 0 1px 2px rgba(255, 255, 255, 0.45);
-  }
+    0 0 24px -4px rgba(56, 214, 255, 0.22);
 }
 
 .crystal-gradient-border {
   position: relative;
-  background-clip: padding-box;
 }
 
 .crystal-gradient-border::before {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
   border-radius: inherit;
   padding: 1px;
-  background: linear-gradient(135deg, 
-    rgba(0, 242, 254, 0.7) 0%, 
-    rgba(99, 102, 241, 0.5) 25%, 
-    rgba(244, 63, 94, 0.6) 50%, 
-    rgba(245, 158, 11, 0.65) 75%, 
-    rgba(0, 242, 254, 0.7) 100%
+  pointer-events: none;
+  z-index: 1;
+  background: conic-gradient(
+    from var(--border-angle, 0deg),
+    rgba(56, 214, 255, 0.75),
+    rgba(106, 123, 255, 0.55),
+    rgba(163, 123, 255, 0.65),
+    rgba(232, 195, 122, 0.55),
+    rgba(53, 214, 164, 0.55),
+    rgba(56, 214, 255, 0.75)
   );
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   mask-composite: exclude;
-  pointer-events: none;
-  animation: iridescentShift 12s ease-in-out infinite;
-  z-index: 1;
+  opacity: 0.8;
 }
 
 .neon-crystal-glow-alive {
-  animation: neonGlowPulse 4s ease-in-out infinite;
+  animation: neonGlowPulse 5s var(--ease-soft) infinite;
 }
 
-/* ==========================================================================
-   Retractable Accordion-Style Sidebars (100% Collapsible)
-   ========================================================================== */
+@keyframes neonGlowPulse {
+  0%, 100% { box-shadow: 0 0 22px -10px rgba(56, 214, 255, 0.30); }
+  50% { box-shadow: 0 0 34px -8px rgba(56, 214, 255, 0.46); }
+}
 
 .crystal-sidebar {
-  width: 21rem; /* 336px */
-  max-width: 21rem;
-  transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1), 
-              margin 0.35s cubic-bezier(0.16, 1, 0.3, 1), 
-              opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), 
-              transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-  will-change: width, margin, opacity, transform;
+  transition:
+    width var(--motion-slow) var(--ease-quantum),
+    margin var(--motion-slow) var(--ease-quantum),
+    opacity var(--motion-base) var(--ease-quantum),
+    transform var(--motion-slow) var(--ease-quantum);
 }
 
 .crystal-sidebar-left.collapsed {
@@ -171,7 +484,6 @@
   transform: translateX(100%);
 }
 
-/* Floating Clean Edge Triggers when sidebars are collapsed */
 .floating-edge-trigger {
   position: absolute;
   top: 50%;
@@ -179,22 +491,23 @@
   z-index: 45;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  background: rgba(15, 23, 42, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.7), 0 0 20px rgba(0, 242, 254, 0.25);
-  transition: all 0.25s ease-in-out;
+  background: var(--glass-02);
+  border: 1px solid var(--edge-soft);
+  box-shadow:
+    0 10px 30px -5px rgba(0, 0, 0, 0.7),
+    0 0 20px -8px rgba(56, 214, 255, 0.28);
+  transition: all 0.25s var(--ease-soft);
 }
 
 .floating-edge-trigger:hover {
-  background: rgba(22, 34, 62, 0.95);
-  border-color: rgba(0, 242, 254, 0.6);
+  background: var(--glass-active);
+  border-color: var(--edge-strong);
   transform: translateY(-50%) scale(1.08);
 }
 
-/* Accordion Item Aesthetics */
 .crystal-accordion-header {
-  transition: all 0.2s ease;
-  border-radius: 0.75rem;
+  transition: background var(--motion-fast) var(--ease-soft);
+  border-radius: var(--radius-sm);
 }
 
 .crystal-accordion-header:hover {
@@ -202,34 +515,284 @@
 }
 
 .crystal-accordion-content {
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all var(--motion-base) var(--ease-quantum);
 }
 
-/* Focus Mode: Centered clean chat space when all sidebars are retracted */
 .chat-focus-mode {
-  transition: max-width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: max-width var(--motion-slow) var(--ease-quantum);
 }
 
 .chat-focus-mode.wide-view {
   max-width: 58rem !important;
 }
 
-/* Subtle glass scrollbar */
-.crystal-clear-scrollbar::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
-}
-.crystal-clear-scrollbar::-webkit-scrollbar-track {
-  background: rgba(5, 8, 17, 0.35);
-}
+.crystal-clear-scrollbar::-webkit-scrollbar { width: 5px; }
+.crystal-clear-scrollbar::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.02); }
 .crystal-clear-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.28);
-  border-radius: 9999px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 999px;
+  background: rgba(190, 215, 240, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 .crystal-clear-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(38, 185, 255, 0.58);
-  box-shadow: 0 0 10px rgba(38, 185, 255, 0.35);
+  background: rgba(56, 214, 255, 0.45);
+  box-shadow: 0 0 12px rgba(56, 214, 255, 0.35);
+}
+
+/* ==========================================================================
+   PROJECT BRIDGE — cinematic UI surfaces (layout untouched, optics only)
+   ========================================================================== */
+
+html { background: var(--void); }
+
+body {
+  background:
+    radial-gradient(1100px 620px at 82% -6%, rgba(56, 214, 255, 0.12), transparent 58%),
+    radial-gradient(760px 520px at 4% 30%, rgba(163, 123, 255, 0.09), transparent 60%),
+    linear-gradient(180deg, var(--obsidian-900), var(--obsidian-800) 52%, var(--obsidian-900));
+  color: var(--text);
+}
+
+.stage {
+  background:
+    radial-gradient(ellipse at 70% 12%, rgba(56, 214, 255, 0.10), transparent 34rem),
+    radial-gradient(ellipse at 6% 44%, rgba(163, 123, 255, 0.055), transparent 26rem);
+}
+
+.grain { opacity: 0.02; }
+
+.topbar {
+  border: 1px solid var(--edge-faint);
+  background: var(--glass-02);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.10),
+    0 12px 36px rgba(0, 0, 0, 0.20);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  backdrop-filter: blur(22px) saturate(160%);
+}
+
+.wordmark span { color: var(--aqua); }
+.nav-links a { color: var(--text-secondary); }
+.nav-links a:hover,
+.nav-links a[aria-current="location"] { color: var(--pearl); }
+.nav-links a[aria-current="location"] { text-decoration-color: var(--aqua); }
+
+.status {
+  border: 1px solid var(--edge-faint);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-secondary);
+}
+.status[data-state="ready"] i { background: var(--emerald); box-shadow: 0 0 0 3px rgba(53, 214, 164, 0.12); }
+.status[data-state="degraded"] i { background: var(--gold); box-shadow: 0 0 0 3px rgba(232, 195, 122, 0.12); }
+
+.nav-toggle {
+  border: 1px solid var(--edge-soft);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+}
+
+.hero::before {
+  background:
+    radial-gradient(58% 52% at 18% 22%, rgba(56, 214, 255, 0.18), transparent 70%),
+    radial-gradient(52% 60% at 84% 30%, rgba(163, 123, 255, 0.16), transparent 72%),
+    radial-gradient(44% 46% at 62% 92%, rgba(53, 214, 164, 0.12), transparent 74%);
+}
+
+.eyebrow { color: var(--aqua); }
+.hero h1 em,
+.protocols h2 em { color: var(--platinum); }
+
+.eyebrow,
+.hero h1 em { -webkit-text-fill-color: currentColor; }
+
+.lede { color: var(--text-secondary); }
+
+.primary {
+  border: 1px solid var(--edge-strong);
+  background: linear-gradient(120deg, rgba(56, 214, 255, 0.24), rgba(106, 123, 255, 0.22), rgba(163, 123, 255, 0.20));
+  color: var(--pearl);
+  box-shadow: 0 8px 24px -12px rgba(56, 214, 255, 0.45);
+}
+.primary:hover {
+  box-shadow: 0 12px 32px -12px rgba(56, 214, 255, 0.62);
+}
+
+.text-link { color: var(--text-secondary); }
+.text-link:hover { color: var(--aqua); }
+
+.hero-code, .console-state { color: var(--text-muted); }
+.console-state { border-color: var(--edge-faint); background: rgba(255, 255, 255, 0.02); color: var(--text-muted); }
+
+.hero-system-board { border-color: var(--edge-faint); }
+.system-item { border-left-color: var(--edge-faint); }
+.system-label { color: var(--text-muted); }
+.system-item strong { color: var(--pearl); }
+.system-item small { color: var(--text-muted); }
+
+.core {
+  border-color: var(--edge-strong);
+  background: radial-gradient(circle at 36% 24%, var(--pearl) 0, var(--aqua) 8%, var(--obsidian-600) 40%, var(--obsidian-900) 74%);
+  box-shadow:
+    0 0 0 12px rgba(56, 214, 255, 0.04),
+    0 0 52px rgba(56, 214, 255, 0.16),
+    inset 0 0 28px rgba(226, 240, 255, 0.10);
+}
+.core:before { border-color: rgba(232, 241, 251, 0.30); }
+.core:after { border-color: rgba(120, 190, 255, 0.22); }
+.core span { color: var(--pearl); }
+.core small { color: var(--platinum); }
+
+.orbit { border-color: rgba(120, 190, 255, 0.20); }
+.orbit-b { border-color: var(--edge-faint); }
+.orbital .orbit-a { box-shadow: inset 0 0 70px rgba(56, 214, 255, 0.18); }
+.orbital .orbit-b { box-shadow: inset 0 0 70px rgba(163, 123, 255, 0.16); }
+.signal { color: var(--text-muted); }
+.signal b { color: var(--aqua); }
+
+.hero::after {
+  border: 1px solid var(--edge-faint);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.02), transparent 44%),
+    radial-gradient(circle at 88% 38%, rgba(56, 214, 255, 0.08), transparent 23rem);
+}
+
+.console, .protocols {
+  border: 1px solid var(--edge-soft);
+  background: linear-gradient(150deg, var(--glass-02), var(--glass-01));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 24px 64px rgba(0, 0, 0, 0.24),
+    0 0 40px -22px rgba(56, 214, 255, 0.35);
+  -webkit-backdrop-filter: blur(26px) saturate(165%);
+  backdrop-filter: blur(26px) saturate(165%);
+}
+
+.console { position: relative; }
+.console::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  pointer-events: none;
+  z-index: 2;
+  background: conic-gradient(
+    from var(--border-angle, 0deg),
+    rgba(56, 214, 255, 0.55),
+    rgba(106, 123, 255, 0.35),
+    rgba(163, 123, 255, 0.45),
+    rgba(232, 195, 122, 0.35),
+    rgba(53, 214, 164, 0.35),
+    rgba(56, 214, 255, 0.55)
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  opacity: 0.6;
+  animation: sovereign-rotation 18s linear infinite;
+}
+.console:before { color: var(--emerald); }
+.console-head { border-bottom-color: var(--edge-faint); }
+.console-head::after { background: linear-gradient(90deg, transparent, rgba(56, 214, 255, 0.3)); }
+
+.mode { color: var(--text-muted); }
+.mode.active { color: var(--aqua); border-color: var(--aqua); }
+
+.messages { border-top: 1px solid var(--edge-faint); }
+.message { border: 1px solid var(--edge-faint); }
+.message.user {
+  background: linear-gradient(135deg, rgba(56, 214, 255, 0.14), rgba(106, 123, 255, 0.10));
+  border-color: rgba(56, 214, 255, 0.24);
+  border-radius: var(--radius-md);
+}
+.avatar {
+  border-color: var(--edge-soft);
+  background: rgba(56, 214, 255, 0.08);
+  color: var(--aqua);
+}
+.message.user .avatar { color: var(--text-secondary); }
+.speaker { color: var(--text-muted); }
+.message p, .message.user p { color: var(--text-primary); }
+
+.message-copy { color: var(--text-muted); }
+.message-copy:hover, .message-copy:focus-visible {
+  border-color: var(--edge-soft);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--pearl);
+}
+
+.composer {
+  border: 1px solid var(--edge-soft);
+  background: rgba(4, 9, 15, 0.58);
+}
+.composer:focus-within {
+  border-color: var(--edge-strong);
+  box-shadow: var(--shadow-focus);
+}
+.composer textarea { color: var(--text-primary); }
+.composer textarea::placeholder { color: var(--text-muted); }
+.icon-button, .send { border-color: var(--edge-soft); color: var(--aqua); }
+.icon-button:hover { background: rgba(56, 214, 255, 0.08); }
+.send {
+  border-color: var(--edge-strong);
+  background: linear-gradient(135deg, var(--aqua), var(--indigo));
+  color: #04101c;
+}
+.disclaimer { color: var(--text-muted); }
+
+.console h2, .protocols h2 { color: var(--pearl); }
+
+.protocol-grid article {
+  border: 1px solid var(--edge-faint);
+  background: linear-gradient(155deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.012));
+}
+.protocol-grid article:hover {
+  border-color: var(--edge-strong);
+  background: linear-gradient(155deg, rgba(56, 214, 255, 0.07), rgba(255, 255, 255, 0.012));
+}
+.protocol-grid article > b { color: var(--aqua); }
+.protocol-grid p { color: var(--text-secondary); }
+.protocol-grid a { color: var(--aqua); }
+
+footer { color: var(--text-muted); }
+
+:where(a, button, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--aqua);
+  outline-offset: 3px;
+}
+
+.skip-link { border-radius: 9px; background: var(--platinum); color: #08131f; }
+
+.rail-panel {
+  border-color: var(--edge-faint);
+  background: var(--glass-02);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  backdrop-filter: blur(20px) saturate(160%);
+}
+.rail-panel[open] {
+  border-color: var(--edge-strong);
+  box-shadow:
+    0 12px 34px rgba(0, 0, 0, 0.22),
+    0 0 30px -14px rgba(56, 214, 255, 0.45);
+}
+.rail-panel summary { color: var(--text-secondary); }
+.rail-panel summary::after { color: var(--aqua); }
+.rail-index { color: var(--aqua); }
+.rail-panel a { color: var(--text-muted); }
+.rail-panel a:hover, .rail-panel a:focus-visible {
+  color: var(--pearl);
+  border-left-color: var(--aqua);
+  background: rgba(56, 214, 255, 0.06);
+}
+.side-rail::-webkit-scrollbar-thumb { background: rgba(56, 214, 255, 0.32); }
+
+/* ==========================================================================
+   ACCESSIBILITY & PERFORMANCE
+   ========================================================================== */
+
+:focus-visible {
+  outline-color: rgba(56, 214, 255, 0.75);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -238,7 +801,13 @@
   *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
-    scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
+  .sovereign-border--alive::before,
+  .console::after { animation: none !important; }
+}
+
+@media (max-width: 1180px) {
+  .isabella-shell { grid-template-columns: minmax(0, 1fr); }
 }
