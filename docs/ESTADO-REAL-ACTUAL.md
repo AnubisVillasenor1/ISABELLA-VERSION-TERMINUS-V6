@@ -1,13 +1,14 @@
-# Estado real de Isabella Genesis — 11 de octubre de 2026
+# Estado real de Isabella Genesis — 12 de octubre de 2026
 
-**Repositorio:** \`OsoPanda1/isabella-V6-TINA-h6\`  
-**Rama inspeccionada:** \`evolution/runtime-hardening-2026-10\`  
-**SHA de referencia previo a este incremento:** \`e1c09b6f4569b6e4d845eba8dff902f16a1c8d45\`  
-**Clasificación:** beta de ingeniería / Preview; no producción certificada.
+**Repositorio:** `OsoPanda1/Isabella-V6-TINA-h6`  
+**Rama de runtime validada:** `main`  
+**SHA de runtime/build validado:** `8c19acd2959de3ae8f4c78a098d85192f1232164`  
+**Deployment Vercel:** [READY](https://vercel.com/isabella-mexa/isabella-v6-tina/HvkbCfEPeHqzRLB5JG1TFFbynRCM)  
+**Clasificación:** beta de ingeniería con validación de build; no producción certificada.
 
 ## Readiness estimada
 
-**44.25% ponderado (≈44%) de preparación para producción.** Esta cifra es una evaluación de gates, no una métrica científica ni porcentaje de funcionalidades. Se calculó con los siguientes pesos y estimaciones de evidencia del estado anterior a este commit.
+**46.25% ponderado (≈46%) de preparación para producción.** Es una evaluación de gates, no una métrica científica ni un porcentaje de funcionalidades. No se incrementa por el mero aumento del número de pruebas: siguen abiertos la inferencia externa real, CI reproducible, la validación Rust, el E2E de persistencia y la prueba operativa de recuperación.
 
 | Dimensión | Peso | Puntaje | Aporte |
 |---|---:|---:|---:|
@@ -15,49 +16,47 @@
 | Pruebas y validación automatizada | 20 | 75 | 15 |
 | Seguridad y guardrails | 15 | 45 | 6.75 |
 | Inferencia externa real verificada | 15 | 0 | 0 |
-| Persistencia durable y recuperación | 10 | 20 | 2 |
+| Persistencia durable y recuperación | 10 | 40 | 4 |
 | CI reproducible y workspace Rust | 10 | 20 | 2 |
 | Operación, observabilidad y rollback | 10 | 35 | 3.5 |
-| **Total** | **100** |  | **44.25** |
+| **Total** | **100** |  | **46.25** |
 
-## Evidencia observada
+## Evidencia del SHA validado
 
-- El Preview asociado al SHA de referencia figuraba como \`READY\` en Vercel.
-- El smoke test del runtime local y las guardas de API estaban incorporados en el proceso de build.
-- Las pruebas de YUN cubren validación, hash determinista y detección de alteración.
-- GitHub Actions devolvió ejecuciones con conclusión \`startup_failure\` y cero jobs para los run IDs inspeccionados.
-- \`ige-omega/Cargo.lock\` no existía en la rama inspeccionada.
-- No había evidencia de una respuesta real generada por un proveedor externo elegible en Preview.
-- La presencia de módulos BookPI, IKES o YUN no demuestra persistencia durable ni integración federada completa.
+- Vercel: deployment `8c19acd` en estado **READY**.
+- Vitest: **734 pruebas aprobadas en 135 archivos**.
+- Build: TypeScript, bundle esbuild y comprobación sintáctica de la interfaz completados.
+- Smoke de interfaz: `UI_NAVIGATION_SMOKE_OK` y `CINEMATIC_INTRO_12_SCENES_OK`.
+- Smoke de runtime: `LOCAL_CONVERSATION_SMOKE_OK`, `PUBLIC_API_GUARDRAILS_OK` y `OPENROUTER_PAID_ID_BLOCK_OK`.
+- Suite estática de seguridad: **14 passed, 0 failed, 0 not_applicable**. SEC-12 confirma el guard compartido de AEGIS y el rechazo de decisiones distintas de `ALLOW` en Tools/Skills.
+- Se agregaron pruebas para autorización de HyperCore antes de la caché/ejecución, entradas AEGIS no serializables, decisiones `REVIEW`, mutabilidad del registro CROWN y carreras de invalidación single-flight.
+- `ige-omega/Cargo.lock` **sí existe en main**, pero su presencia no demuestra que `cargo fmt`, Clippy, los tests ni el build `--locked` hayan pasado.
+- `LLM_GATEWAY_SMOKE_SKIPPED`: no había credenciales elegibles configuradas; no se demuestra inferencia externa real.
+- La validación de interfaz es smoke de markup/código, no E2E real con navegador, micrófono y dispositivos móviles.
+- GitHub Actions no tiene evidencia de una ejecución verde con jobs para el SHA final; ejecuciones previas registraron `startup_failure` y cero jobs.
 
-## Cambios de este incremento
+## Cambios P0 registrados
 
-- Extracción de reglas de configuración de inferencia a \`src/inference/provider-policy.ts\`.
-- Pruebas unitarias para límites de timeout/cooldown, guardas de modelos de OpenRouter y extracción de contenido textual.
-- Integración de esas funciones compartidas en el runtime HTTP.
-- Reescritura del README para diferenciar componentes ejecutables, objetivos arquitectónicos y bloqueos de producción.
+- AEGIS: Tools y Skills sólo continúan con veredicto `ALLOW`; `REVIEW`, `MODIFY`, `BLOCK` y fallo de serialización no ejecutan la capacidad.
+- CROWN: rechazo de IDs duplicados, política de aprobación coherente, roles congelados y vista de registro de sólo lectura.
+- HyperCore: autorización antes del predictor, la caché y la ejecución de expertos; tareas de riesgo alto/crítico exigen autorización incluso si el request intenta desactivarla.
+- Caché single-flight: una generación anterior no puede sobrescribir el resultado después de `invalidate()`.
+- Build de producción: ejecuta la suite de seguridad estática como parte de `pnpm run build`.
 
-## Evidencia de Preview — SHA ff2ed47
-
-- Vercel deployment del SHA `cccaede3c21c2516ec8ec6a61c1d69d72d106875`: **READY**.
-- `pnpm run build` completó TypeScript, Vitest, bundle esbuild, `node --check src/ui/app.js`, smoke de UI y smoke de runtime.
-- Vitest: **519 pruebas aprobadas, 100 archivos de prueba aprobados**.
-- `UI_NAVIGATION_SMOKE_OK`, `LOCAL_CONVERSATION_SMOKE_OK`, `PUBLIC_API_GUARDRAILS_OK` y `OPENROUTER_PAID_ID_BLOCK_OK` presentes.
-- `GET /`, `/ui/app.js`, `/styles/cinematic.css` y `/api/v1/health`: HTTP 200; cabeceras de seguridad presentes en API.
-- `LLM_GATEWAY_SMOKE_SKIPPED`: no hay credenciales gratuitas elegibles; la inferencia externa no está demostrada.
-- GitHub Actions sigue devolviendo `startup_failure` sin jobs.
-- `ige-omega/Cargo.lock` sigue ausente.
-- El smoke UI valida enlaces/anclas, elementos de control y cableado estático; no sustituye una prueba E2E real en navegadores móviles y de escritorio.
+El detalle de hallazgos, cambios y gates pendientes está en [la auditoría P0/P1](audits/P0-ARCHITECTURE-HARDENING-2026-10-12.md).
 
 ## Gates pendientes
 
-- Obtener ejecución de CI con jobs y conclusión verde sobre el SHA actual.
-- Ejecutar y registrar \`pnpm typecheck\`, \`pnpm test\`, \`pnpm build\` y \`pnpm run security:suite\` sobre el SHA actual.
-- Generar \`Cargo.lock\` mediante Cargo, revisar cambios y superar fmt/Clippy/tests/build.
-- Ejecutar el gate manual de modelo con credenciales configuradas en el entorno, nunca en Git.
-- Probar fallos de proveedor simulados y reales: timeout, 429, 5xx, respuesta vacía, cooldown y fallback.
-- Validar persistencia, aislamiento multi-tenant, recuperación, observabilidad, rate limits y rollback.
+1. Conseguir una ejecución de GitHub Actions con jobs y conclusión verde sobre el SHA de liberación.
+2. Ejecutar `cargo fmt --all -- --check`, Clippy, tests y build release en `ige-omega` con `--locked`.
+3. Configurar credenciales elegibles sólo en el entorno de despliegue y probar una inferencia real, además de timeout, 429/5xx, respuesta vacía, cooldown y fallback.
+4. Validar persistencia durable end-to-end, aislamiento multi-tenant/RLS, recuperación, retención y backup/restore bajo fallos.
+5. Añadir E2E de navegador para navegación, chat, Skills/Tools, permisos y responsive.
+6. Recuperar y verificar la fuente CITEMESH; mantener `E0 NOT FETCHED` hasta tener evidencia.
+7. Verificar artefactos MoE reales (versiones, hash, licencia, pesos y evaluación); no etiquetar un router heurístico como MoE entrenado.
+8. Medir p50/p95/p99 end-to-end separando CPU, red, proveedor de inferencia, cold start y persistencia. Los benchmarks locales no justifican la afirmación “latencia casi cero”.
+9. Ensayar rollback y documentar RTO/RPO antes de promoción productiva.
 
 ## Interpretación
 
-El porcentaje se debe actualizar cuando se obtenga nueva evidencia. Un build exitoso de Preview no aumenta automáticamente los puntajes de persistencia, CI, seguridad o inferencia externa. No promover a producción mientras haya gates obligatorios pendientes.
+El build READY demuestra que el código incluido en ese SHA compiló y pasó los gates registrados allí. No demuestra por sí solo producción certificada, disponibilidad del proveedor de inferencia, persistencia distribuida ni operación de todas las integraciones de interfaz.
