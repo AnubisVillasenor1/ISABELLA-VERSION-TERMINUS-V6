@@ -29,6 +29,48 @@ export function isOpenRouterModelAllowed(modelId: string, paidRoutesEnabled: boo
   return model === "openrouter/free" || model.endsWith(":free");
 }
 
+export interface OpenAICompatibleCandidate {
+  readonly name: string;
+  readonly key: string;
+  readonly url: string;
+  readonly model: string;
+}
+
+interface CandidateSpec {
+  name: string;
+  key: string | undefined;
+  url: string;
+  model: string | undefined;
+}
+
+/**
+ * Deterministic, credential-gated candidate list for OpenAI-compatible
+ * providers, in attempt order. A candidate is included only when both its key
+ * and model are present; Isabella never invents credentials or silently
+ * upgrades to a paid route. Ollama Cloud is OpenAI-compatible and defaults to
+ * its documented base URL and a model observed available to the account.
+ */
+export function buildOpenAICompatibleCandidates(
+  env: Readonly<Record<string, string | undefined>>,
+): readonly OpenAICompatibleCandidate[] {
+  const ollamaBase = (env.OLLAMA_BASE_URL?.trim() || "https://ollama.com/v1").replace(/\/+$/, "");
+  const specs: readonly CandidateSpec[] = [
+    { name: "ollama", key: env.OLLAMA_API_KEY, url: `${ollamaBase}/chat/completions`, model: env.OLLAMA_MODEL?.trim() || "gpt-oss:20b" },
+    { name: "groq", key: env.GROQ_API_KEY, url: "https://api.groq.com/openai/v1/chat/completions", model: env.GROQ_MODEL?.trim() || "llama-3.1-8b-instant" },
+    { name: "cerebras", key: env.CEREBRAS_API_KEY, url: "https://api.cerebras.ai/v1/chat/completions", model: env.CEREBRAS_MODEL?.trim() || "llama-3.1-8b" },
+    { name: "together", key: env.TOGETHER_API_KEY, url: "https://api.together.xyz/v1/chat/completions", model: env.TOGETHER_MODEL?.trim() || "meta-llama/Llama-3.3-70B-Instruct-Turbo" },
+    { name: "deepinfra", key: env.DEEPINFRA_API_KEY, url: "https://api.deepinfra.com/v1/openai/chat/completions", model: env.DEEPINFRA_MODEL?.trim() || "meta-llama/Meta-Llama-3.1-8B-Instruct" },
+    { name: "fireworks", key: env.FIREWORKS_API_KEY, url: "https://api.fireworks.ai/inference/v1/chat/completions", model: env.FIREWORKS_MODEL?.trim() || "accounts/fireworks/models/llama-v3p1-8b-instruct" },
+  ];
+  const candidates: OpenAICompatibleCandidate[] = [];
+  for (const spec of specs) {
+    const key = spec.key?.trim();
+    const model = spec.model?.trim();
+    if (key && model) candidates.push(Object.freeze({ name: spec.name, key, url: spec.url, model }));
+  }
+  return Object.freeze(candidates);
+}
+
 type AssistantContentPart = { type?: unknown; text?: unknown };
 type OpenAICompatibleResponse = {
   choices?: Array<{ message?: { content?: unknown } }>;

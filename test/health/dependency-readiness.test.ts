@@ -62,4 +62,10 @@ describe("deep dependency readiness", () => {
     expect(evidence.status).toBe("degraded");
     expect(evidence.required).toBe(true);
   });
+
+  it("recognizes an Ollama Cloud credential as a configured inference provider", () => {
+    const report = collectDependencyReadiness({ OLLAMA_API_KEY: "configured" }, writableFilesystem);
+    const inference = report.evidence.find((entry) => entry.dependency === "inference-provider");
+    expect(inference?.status).toBe("healthy");
+  });
 });

@@ -4,7 +4,7 @@ import fs from "fs";
 import path from "path";
 import { GoogleGenAI } from "@google/genai";
 import { generateText } from "ai";
-import { boundedMilliseconds, extractAssistantText, isOpenRouterModelAllowed } from "./inference/provider-policy";
+import { boundedMilliseconds, buildOpenAICompatibleCandidates, extractAssistantText, isOpenRouterModelAllowed } from "./inference/provider-policy";
 import { gateway } from "@ai-sdk/gateway";
 import { IsabellaGenesisRuntime } from "./genesis/runtime";
 import { assertBalancedAuthority, createPrincipal } from "./identity/principal";
@@ -176,13 +176,7 @@ let compatibleProviderCooldownUntil = 0;
  */
 async function generateCompatibleProviderNarrative(systemPrompt: string, input: string, history: PublicChatTurn[] = []): Promise<string | null> {
   if (Date.now() < compatibleProviderCooldownUntil) return null;
-  const candidates = [
-    { name: "groq", key: process.env.GROQ_API_KEY, url: "https://api.groq.com/openai/v1/chat/completions", model: process.env.GROQ_MODEL || "llama-3.1-8b-instant" },
-    { name: "cerebras", key: process.env.CEREBRAS_API_KEY, url: "https://api.cerebras.ai/v1/chat/completions", model: process.env.CEREBRAS_MODEL || "llama-3.1-8b" },
-    { name: "together", key: process.env.TOGETHER_API_KEY, url: "https://api.together.xyz/v1/chat/completions", model: process.env.TOGETHER_MODEL || "meta-llama/Llama-3.3-70B-Instruct-Turbo" },
-    { name: "deepinfra", key: process.env.DEEPINFRA_API_KEY, url: "https://api.deepinfra.com/v1/openai/chat/completions", model: process.env.DEEPINFRA_MODEL || "meta-llama/Meta-Llama-3.1-8B-Instruct" },
-    { name: "fireworks", key: process.env.FIREWORKS_API_KEY, url: "https://api.fireworks.ai/inference/v1/chat/completions", model: process.env.FIREWORKS_MODEL || "accounts/fireworks/models/llama-v3p1-8b-instruct" },
-  ].filter((candidate) => Boolean(candidate.key));
+  const candidates = buildOpenAICompatibleCandidates(process.env);
   if (candidates.length === 0) return null;
   for (const candidate of candidates) {
     try {
@@ -948,8 +942,8 @@ app.post("/api/v1/cognition/route", async (req, res) => {
     }
     res.status(decision.admitted ? 200 : 403).json({
       success: decision.admitted, decision, principal, generativeNarrative, responseEngine,
-      modelConfigured: Boolean(genAi || process.env.OPENROUTER_API_KEY || (process.env.HF_TOKEN && process.env.HF_FREE_MODELS) || process.env.GROQ_API_KEY || process.env.CEREBRAS_API_KEY || process.env.TOGETHER_API_KEY || process.env.DEEPINFRA_API_KEY || process.env.FIREWORKS_API_KEY || process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN),
-      openModelConfigured: Boolean(process.env.OPENROUTER_API_KEY || (process.env.HF_TOKEN && process.env.HF_FREE_MODELS) || process.env.GROQ_API_KEY || process.env.CEREBRAS_API_KEY || process.env.TOGETHER_API_KEY || process.env.DEEPINFRA_API_KEY || process.env.FIREWORKS_API_KEY),
+      modelConfigured: Boolean(genAi || process.env.OPENROUTER_API_KEY || (process.env.HF_TOKEN && process.env.HF_FREE_MODELS) || process.env.OLLAMA_API_KEY || process.env.GROQ_API_KEY || process.env.CEREBRAS_API_KEY || process.env.TOGETHER_API_KEY || process.env.DEEPINFRA_API_KEY || process.env.FIREWORKS_API_KEY || process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN),
+      openModelConfigured: Boolean(process.env.OPENROUTER_API_KEY || (process.env.HF_TOKEN && process.env.HF_FREE_MODELS) || process.env.OLLAMA_API_KEY || process.env.GROQ_API_KEY || process.env.CEREBRAS_API_KEY || process.env.TOGETHER_API_KEY || process.env.DEEPINFRA_API_KEY || process.env.FIREWORKS_API_KEY),
       paidProviderConfigured: Boolean(genAi || process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN),
       conversationContextTurns: history.length,
       requestedRiskIgnored: true, publicAuthority: "VIEWER_ONLY",

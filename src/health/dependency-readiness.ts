@@ -85,6 +85,7 @@ export function probeInferenceProvider(env: EnvLike): DependencyEvidence {
     "GEMINI_API_KEY",
     "INFERENCE_API_KEY",
     "MODEL_API_KEY",
+    "OLLAMA_API_KEY",
     "GROQ_API_KEY",
     "CEREBRAS_API_KEY",
     "TOGETHER_API_KEY",
