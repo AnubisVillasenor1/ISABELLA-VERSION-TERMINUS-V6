@@ -17,6 +17,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 const REPO_ROOT = process.cwd();
+const SRC_DIR = path.join(REPO_ROOT, "src");
 const SERVER_FILE = path.join(REPO_ROOT, "src", "server.ts");
 const TYPES_FILE = path.join(REPO_ROOT, "src", "inference", "types.ts");
 const API_BLUEPRINT = path.join(REPO_ROOT, "docs", "spec", "BLUEPRINT-API-v4.2.0.md");
@@ -45,7 +46,7 @@ function lineOf(source, index) {
   return source.slice(0, index).split("\n").length;
 }
 
-function extractServerRoutes(source) {
+function extractServerRoutes(source, relFile = "src/server.ts") {
   const routeRe = /app\.(get|post|put|patch|delete)\(\s*(["'])([^"']+)\2\s*,/g;
   const raw = [];
   let match;
@@ -68,10 +69,27 @@ function extractServerRoutes(source) {
       route: entry.route,
       line,
       params: arrow ? arrow[1].replace(/\s+/g, " ").trim() : "",
-      handler: named && !arrow ? named[1] : `inline@server.ts:${line}`,
+      handler: named && !arrow ? `${named[1]}@${relFile}:${line}` : `inline@${relFile}:${line}`,
       segment,
     };
   });
+}
+
+/**
+ * Walks every `.ts` module under `src/` and collects route registrations. Route
+ * groups extracted out of the monolith (e.g. `src/routes/hypercore.ts`) are
+ * inventoried exactly like the ones still in `src/server.ts`.
+ */
+function collectAllRoutes() {
+  const routes = [];
+  if (!fs.existsSync(SRC_DIR)) return routes;
+  for (const rel of fs.readdirSync(SRC_DIR, { recursive: true, encoding: "utf8" })) {
+    if (!rel.endsWith(".ts")) continue;
+    const abs = path.join(SRC_DIR, rel);
+    const relFile = path.relative(REPO_ROOT, abs).replace(/\\/g, "/");
+    routes.push(...extractServerRoutes(readText(abs), relFile));
+  }
+  return routes;
 }
 
 function extractTypeContracts() {
@@ -141,13 +159,12 @@ function controlsFor(segment) {
 }
 
 function main() {
-  if (!fs.existsSync(SERVER_FILE)) {
-    console.error(`[route-inventory] No existe ${path.relative(REPO_ROOT, SERVER_FILE)}. Nada que inventariar.`);
+  if (!fs.existsSync(SRC_DIR)) {
+    console.error(`[route-inventory] No existe ${path.relative(REPO_ROOT, SRC_DIR)}. Nada que inventariar.`);
     process.exit(1);
   }
 
-  const source = readText(SERVER_FILE);
-  const entries = extractServerRoutes(source);
+  const entries = collectAllRoutes();
   const typeContracts = extractTypeContracts();
   const references = collectRouteReferences();
 
@@ -193,13 +210,13 @@ function main() {
   const verifiedCount = routes.filter((r) => r.verified).length;
   const sensitiveCount = routes.filter((r) => r.sensitive).length;
   console.log(
-    `[route-inventory] ${routes.length} rutas extraídas de src/server.ts ` +
+    `[route-inventory] ${routes.length} rutas extra��das de src/ ` +
       `(${sensitiveCount} sensibles, ${verifiedCount} con contrato verificado).`,
   );
   console.log(`[route-inventory] Escrito: ${path.relative(REPO_ROOT, OUT_JSON).replace(/\\/g, "/")}`);
   console.log(`[route-inventory] Escrito: ${path.relative(REPO_ROOT, OUT_MD).replace(/\\/g, "/")}`);
   if (routes.length === 0) {
-    console.warn("[route-inventory] AVISO: no se detectaron rutas parseables en src/server.ts.");
+    console.warn("[route-inventory] AVISO: no se detectaron rutas parseables en src/.");
   }
 }
 
@@ -211,7 +228,7 @@ function renderMarkdown(routes, typeContracts) {
   const rows = routes
     .map((r) => {
       const check = (v) => (v ? "sí" : "no");
-      const handlerLabel = r.handler.startsWith("inline@") ? r.handler : `${r.handler}@server.ts:${r.line}`;
+      const handlerLabel = r.handler;
       return `| \`${r.method}\` | \`${r.route}\` | \`${handlerLabel}\` | ${check(r.sensitive)} | ${check(
         r.controls.auth,
       )} | ${check(r.controls.rateLimit)} | ${check(r.controls.inputValidation)} | ${check(r.verified)} |`;
