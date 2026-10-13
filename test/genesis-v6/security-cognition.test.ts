@@ -247,4 +247,23 @@ describe("Genesis V6 security and cognition", () => {
   });
 
 
+
+  it("CROWN snapshots capability roles so caller mutation cannot widen policy", () => {
+    const roles = ["operator"];
+    const descriptor = {
+      methodId: "T.CORE.E01.read.v1.0.0.LOW.TERRITORIAL",
+      owner: "test",
+      allowedRoles: roles,
+      riskTier: "LOW" as const,
+      governanceTier: "TERRITORIAL" as const,
+      humanApprovalRequired: false,
+    };
+    const gate = createCapabilityGate([descriptor]);
+    roles.splice(0, roles.length);
+    const principal = createPrincipal({ id: "operator-2", kind: "machine", roles: ["operator"] });
+    expect(callGate(gate, descriptor.methodId, { principal, action: "read", resource: "test" }).granted).toBe(true);
+    expect(Object.isFrozen(gate.descriptors.get(descriptor.methodId)?.allowedRoles)).toBe(true);
+  });
+
+
 });
