@@ -64,8 +64,8 @@ export class ToolRegistry {
     const tool = this.get(id);
     if (!tool.scopes.includes(scope)) throw new Error(`TOOLS: scope denied for ${id}`);
 
-    const serializedInput = JSON.stringify(input) ?? "";
-    const aegis = inspectAegis(serializedInput);
+    const serializedInput = safeSerialize(input);
+    const aegis = inspectAegisValue(input);
     const startedAt = new Date().toISOString();
     const inputHash = hash(input);
 
@@ -106,10 +106,17 @@ export class ToolRegistry {
   list(): readonly ToolDescriptor[] { return [...this.tools.values()]; }
 }
 
-function hash(value: unknown): string {
-  return createHash("sha256").update((JSON.stringify(value) ?? ""), "utf8").digest("hex");
+function safeSerialize(value: unknown): string {
+  try {
+    return JSON.stringify(value) ?? "[UNSERIALIZABLE_INPUT]";
+  } catch {
+    return "[UNSERIALIZABLE_INPUT]";
+  }
 }
 
+function hash(value: unknown): string {
+  return createHash("sha256").update(safeSerialize(value), "utf8").digest("hex");
+}
 function makeReceipt(
   tool: ToolDescriptor,
   principal: Principal,
