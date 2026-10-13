@@ -17,6 +17,13 @@ class RiskEngineTest {
   }
 
   @Test
+  void treatsInvalidCriticalityAsCritical() {
+    RiskAssessment risk = RiskEngine.assessRisk("UNRECOGNIZED", 0);
+    assertEquals("CRITICAL", risk.criticality());
+    assertEquals("CRITICAL", risk.level());
+  }
+
+  @Test
   void defaultsToMediumCriticality() {
     assertEquals("MEDIUM", RiskEngine.assessRisk(null, 0).criticality());
     assertEquals(0.35, RiskEngine.assessRisk(null, 0).score());
