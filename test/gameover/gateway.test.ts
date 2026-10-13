@@ -81,6 +81,13 @@ describe("GAME OVER UagpGateway", () => {
     expect(result.allowed).toBe(false);
   });
 
+  it("caps request-supplied trust metrics at the issuer-assigned passport score", () => {
+    const { gateway } = harness();
+    const result = gateway.govern(request({ trustMetrics: fullTrust }));
+    expect(result.trust.score).toBe(90);
+    expect(result.decision.trustScore).toBe(90);
+  });
+
   it("rejects an unsupported protocol", () => {
     const { gateway } = harness();
     const result = gateway.govern(request({ protocol: "UAGP-0" }));
