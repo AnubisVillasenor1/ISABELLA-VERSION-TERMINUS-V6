@@ -55,6 +55,8 @@ El adaptador PostgreSQL utiliza trece campos para registrar el evento completo, 
 
 **El ledger durable agrega cada fila con `fsync` y usa reemplazos atómicos para backup, restauración y poda. Un marcador de mantenimiento pendiente bloquea el uso del ledger tras una interrupción de operaciones de dos archivos, hasta que se valide y reconcilie explícitamente la cadena.
 
+El backend JSONL local usa `fsync`, pero no es una fuente compartida para réplicas/serverless y no se considera persistencia productiva distribuida por el mero hecho de configurar `BOOKPI_LEDGER_PATH`.
+
 BookPI no es un dispositivo WORM.** La cadena de hashes permite detectar modificaciones que no reencadenen correctamente, pero no impide por sí sola que un administrador privilegiado cambie el archivo, los permisos, el checkpoint o todas las copias de respaldo. Para endurecer la evidencia se requieren roles de sólo inserción, anclaje externo y una política de backup/restauración comprobada.
 
 ### Terminus Sharded Store: cifrado, 6+3 y cuotas

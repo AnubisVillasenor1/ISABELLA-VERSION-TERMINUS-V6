@@ -53,6 +53,10 @@ La UI anterior presentaba una introducción cinemática obligatoria antes de per
 
 La actualización visual adopta un sistema Obsidian / Platino / Azul Eléctrico con menor ruido, jerarquía tipográfica más legible, superficies de contraste controlado, estados de foco visibles, disposición responsive y respeto por `prefers-reduced-motion`. El espacio de trabajo abre de inmediato; la secuencia de marca sigue disponible de forma explícita con `?intro=1`. Se añade acción accesible de copiar respuesta, se retira el fondo externo y se elimina el ID duplicado. El smoke de UI ahora exige unicidad de IDs y ausencia del asset remoto.
 
+## Estado operativo y ámbito real de BookPI
+
+El endpoint de estado ahora declara si BookPI usa la cadena volátil de memoria o el archivo JSONL local con `fsync`; no eleva ese segundo caso a almacenamiento compartido, alta disponibilidad ni WORM. `/api/v1/readyz` mantiene el control fail-closed: una dependencia crítica degradada conserva HTTP 503 y devuelve evidencia explícita en vez de convertir la presencia de configuración en una afirmación de salud.
+
 ## Control de admisión concurrente
 
 El coordinador de almacenamiento ahora exige un gate de admisión tenant-scoped. Si una escritura excede los límites de la política o existen candidatos de retención, ejecuta únicamente la pasada que registra la intención y el resultado en BookPI; después, vuelve a consultar el estado. La escritura sólo continúa si el repositorio implementa una reserva de capacidad atómica y durable. El contrato no se considera una integración concluida hasta conectar y probar un repositorio transaccional que reserve bytes/objetos concurrentes, recupere reservas huérfanas y reconcilie el manifiesto después de un fallo.
