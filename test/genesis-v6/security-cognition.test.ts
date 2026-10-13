@@ -3,7 +3,7 @@ import { createRbacPolicy } from "../../src/identity/rbac";
 import { createPrincipal } from "../../src/identity/principal";
 import { decidePdp } from "../../src/identity/pdp";
 import { issueHumanApproval, verifyHumanApproval, createApprovalReplayRegistry } from "../../src/identity/approval";
-import { callGate, createCapabilityGate } from "../../src/crown/capability";
+import { approvalRequiredForGate, callGate, createCapabilityGate } from "../../src/crown/capability";
 import { inspectAegis } from "../../src/security/aegis";
 import { planExecution } from "../../src/intelligence/adaptive-router";
 import { IKESEngine, hashSourceContent, verifyKnowledgeClaimIntegrity } from "../../src/memory/ikes";
@@ -222,4 +222,29 @@ describe("Genesis V6 security and cognition", () => {
     const tampered: ControlEvidence = { ...evidence[0]!, details: "altered after hashing" };
     expect(verifyEvidenceIntegrity(tampered)).toBe(false);
   });
+
+  it("CROWN rejects duplicate capability IDs instead of silently replacing policy", () => {
+    const descriptor = {
+      methodId: "T.CORE.E01.read.v1.0.0.LOW.TERRITORIAL",
+      owner: "test",
+      allowedRoles: ["operator"],
+      riskTier: "LOW" as const,
+      governanceTier: "STANDARD" as const,
+      humanApprovalRequired: false,
+    };
+    expect(() => createCapabilityGate([descriptor, { ...descriptor, allowedRoles: [] }])).toThrow(/already registered/i);
+  });
+
+  it("CROWN reports human approval as required when policy explicitly requires it", () => {
+    expect(approvalRequiredForGate({
+      methodId: "T.CORE.E01.write.v1.0.0.LOW.TERRITORIAL",
+      owner: "test",
+      allowedRoles: ["operator"],
+      riskTier: "LOW",
+      governanceTier: "STANDARD",
+      humanApprovalRequired: true,
+    })).toBe(true);
+  });
+
+
 });
