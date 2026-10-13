@@ -10,6 +10,12 @@ describe("GAME OVER RiskEngine", () => {
     expect(assessRisk({ criticality: "CRITICAL" }).level).toBe("CRITICAL");
   });
 
+  it("treats invalid runtime criticality as CRITICAL", () => {
+    const risk = assessRisk({ criticality: "INVALID" as never });
+    expect(risk.criticality).toBe("CRITICAL");
+    expect(risk.level).toBe("CRITICAL");
+  });
+
   it("defaults to MEDIUM criticality when unspecified", () => {
     const risk = assessRisk();
     expect(risk.criticality).toBe("MEDIUM");
