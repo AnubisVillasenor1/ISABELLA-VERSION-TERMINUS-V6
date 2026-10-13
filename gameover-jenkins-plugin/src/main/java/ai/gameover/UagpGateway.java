@@ -88,9 +88,9 @@ public class UagpGateway {
     String outcome;
     boolean identityMatches = passportRecord != null && input.agent() != null
         && passportRecord.agent() != null
-        && passportRecord.agent().id().equals(input.agent().id())
-        && passportRecord.agent().name().equals(input.agent().name())
-        && passportRecord.agent().owner().equals(input.agent().owner())
+        && java.util.Objects.equals(passportRecord.agent().id(), input.agent().id())
+        && java.util.Objects.equals(passportRecord.agent().name(), input.agent().name())
+        && java.util.Objects.equals(passportRecord.agent().owner(), input.agent().owner())
         && input.agent().capabilities() != null
         && passportRecord.agent().capabilities() != null
         && passportRecord.agent().capabilities().containsAll(input.agent().capabilities());
