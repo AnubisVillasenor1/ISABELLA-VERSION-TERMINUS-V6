@@ -53,10 +53,10 @@ export function inspectAegis(input: string): AegisVerdict {
 
 
 /**
- * Inspect structured input without allowing serialization failures to bypass
- * the policy gate. Callers must treat every non-ALLOW verdict as non-executable.
+ * Serialize once and evaluate the same bytes at a security boundary.
+ * Serialization failure is a hard block, never an implicit empty input.
  */
-export function inspectAegisValue(value: unknown): AegisVerdict {
+export function inspectAegisInput(value: unknown): { serialized: string | null; verdict: AegisVerdict } {
   let serialized: string | undefined;
   try {
     serialized = JSON.stringify(value);
@@ -65,14 +65,21 @@ export function inspectAegisValue(value: unknown): AegisVerdict {
   }
   if (typeof serialized !== "string") {
     return {
-      decision: "BLOCK",
-      score: 1,
-      findings: [{
-        kind: "policy_evasion",
-        severity: "CRITICAL",
-        evidence: "input serialization failed; fail-closed",
-      }],
+      serialized: null,
+      verdict: {
+        decision: "BLOCK",
+        score: 1,
+        findings: [{
+          kind: "policy_evasion",
+          severity: "CRITICAL",
+          evidence: "input serialization failed; fail-closed",
+        }],
+      },
     };
   }
-  return inspectAegis(serialized);
+  return { serialized, verdict: inspectAegis(serialized) };
+}
+
+export function inspectAegisValue(value: unknown): AegisVerdict {
+  return inspectAegisInput(value).verdict;
 }
