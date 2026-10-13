@@ -380,7 +380,7 @@ export class TerminusShardedStore {
     }
   }
 
-  private async audit(type: string, payload: Record<string, string | number | boolean | string[]>): Promise<void> {
+  private async audit(type: string, payload: Record<string, string | number | boolean | string[] | number[]>): Promise<void> {
     await this.options.ledger.appendEvent({
       header: {
         type,

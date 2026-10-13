@@ -93,7 +93,7 @@ add("RA-022", "BLOCKER",
   "Startup does not seed IKES with the audited placeholder source IDs/hashes.",
   ["src/server.ts"]);
 add("RA-023", "BLOCKER",
-  !!server && /req\.originalUrl\.split\("\?"\)\[0\] === "\/api\/v1\/connectors\/ingest"/.test(server),
+  !!server && /\(req\.url \?\? ""\)\.split\("\?"\)\[0\] === "\/api\/v1\/connectors\/ingest"/.test(server),
   "Raw webhook bodies are retained only for the signed connector-ingestion route.",
   ["src/server.ts"]);
 add("RA-024", "WARN",

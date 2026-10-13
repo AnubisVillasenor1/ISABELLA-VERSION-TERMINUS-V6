@@ -257,7 +257,7 @@ export function evaluateMandate(mandate: TerminusMandate, policy: TerminusPolicy
     policyVersion: policy.version,
     reasonCodes: ["MANDATE_BOUNDED_AND_POLICY_COMPLIANT"],
     rationale: "Mandato acotado; la identidad, la evidencia, el contador durable y el registro BookPI se verifican por separado.",
-    dossierHash: sha256Hex(canonicalJson(material)),
+    dossierHash: sha256Hex(canonicalJson(material as unknown as JsonValue)),
     decidedAt: material.decidedAt,
   };
 }
