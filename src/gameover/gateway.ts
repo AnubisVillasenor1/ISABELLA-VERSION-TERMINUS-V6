@@ -38,6 +38,15 @@ export interface UagpGatewayOptions {
   readonly audit?: AuditService;
 }
 
+function trustLevelFor(score: number): "UNTRUSTED" | "LOW" | "MODERATE" | "HIGH" | "EXEMPLARY" {
+  const thresholds = GAMEOVER_CONSTITUTION.trustLevelThresholds;
+  if (score >= thresholds.exemplary) return "EXEMPLARY";
+  if (score >= thresholds.high) return "HIGH";
+  if (score >= thresholds.moderate) return "MODERATE";
+  if (score >= thresholds.low) return "LOW";
+  return "UNTRUSTED";
+}
+
 function isHighRiskAction(actions: readonly string[]): boolean {
   const normalized = actions.map((action) => action.toLowerCase());
   return normalized.some((action) =>
@@ -85,7 +94,16 @@ export function createUagpGateway(options: UagpGatewayOptions = {}): UagpGateway
       agent.capabilities.every((capability) => passportCapabilities.has(capability.toLowerCase()))
     );
     const undeclaredActions = safeInput.actions.filter((action) => !requestedCapabilities.has(action.toLowerCase()));
-    const trust = scoreTrust(safeInput.trustMetrics ?? {});
+    const declaredTrust = scoreTrust(safeInput.trustMetrics ?? {});
+    // Request-supplied metrics are not authority. They can lower a score, but
+    // cannot raise it above the score assigned by the trusted passport issuer.
+    const effectiveTrustScore = Math.min(declaredTrust.score, passportRecord?.trustScore ?? 0);
+    const trust = Object.freeze({
+      ...declaredTrust,
+      score: effectiveTrustScore,
+      level: trustLevelFor(effectiveTrustScore),
+      summary: `trust=${effectiveTrustScore}/100; capped by issuer-assigned passport score; declared metrics are untrusted input`,
+    });
     const risk = assessRisk({ criticality: safeInput.criticality, capabilityCount: agent.capabilities.length });
     const ethics = evaluateEthics({
       agent,
