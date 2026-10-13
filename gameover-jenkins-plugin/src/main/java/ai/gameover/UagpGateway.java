@@ -8,6 +8,7 @@ import ai.gameover.engine.EthicsEngine;
 import ai.gameover.engine.ExplainabilityEngine;
 import ai.gameover.engine.RiskEngine;
 import ai.gameover.engine.TrustEngine;
+import ai.gameover.model.AIPassport;
 import ai.gameover.model.GovernanceDecision;
 import ai.gameover.model.PassportVerification;
 import ai.gameover.model.RiskAssessment;
@@ -59,22 +60,46 @@ public class UagpGateway {
   }
 
   public UagpResult govern(UagpRequest input, String authenticatedPrincipal) {
-    PassportVerification passport = passportAuthority.verify(input.passportId());
+    if (input == null) {
+      throw new IllegalArgumentException("REQUEST_NOT_AN_OBJECT");
+    }
     ValidationResult validation = UagpValidator.validate(input);
-    TrustScorecard trust = TrustEngine.scoreTrust(input.trustMetrics());
+    PassportVerification passport = passportAuthority.verify(input.passportId());
+    AIPassport passportRecord = passportAuthority.get(input.passportId());
     int capabilityCount = (input.agent() != null && input.agent().capabilities() != null)
         ? input.agent().capabilities().size() : 0;
     RiskAssessment risk = RiskEngine.assessRisk(input.criticality(), capabilityCount);
+    TrustScorecard declaredTrust = TrustEngine.scoreTrust(input.trustMetrics());
+    double effectiveTrust = Math.min(declaredTrust.score(), passportRecord == null ? 0.0 : passportRecord.trustScore());
+    TrustScorecard trust = new TrustScorecard(
+        effectiveTrust,
+        declaredTrust.metrics(),
+        trustLevel(effectiveTrust),
+        "trust=" + effectiveTrust + "/100; capped by issuer-assigned passport score; request metrics are untrusted");
     List<String> ethicsViolations = EthicsEngine.evaluate(input);
     boolean ethicsPassed = ethicsViolations.isEmpty();
 
-    boolean humanRequired = input.humanApprovalRequired() != null
-        ? input.humanApprovalRequired()
-        : ("HIGH".equals(risk.level()) || "CRITICAL".equals(risk.level()) || isHighRisk(input.actions()));
+    boolean humanRequired = !"LOW".equals(risk.level())
+        || isHighRisk(input.actions())
+        || Boolean.TRUE.equals(input.humanApprovalRequired());
     HumanApprovalGate.Approval human = HumanApprovalGate.evaluate(humanRequired, input.humanApprover(), authenticatedPrincipal);
 
     List<String> rationale = new ArrayList<>();
     String outcome;
+    boolean identityMatches = passportRecord != null && input.agent() != null
+        && passportRecord.agent() != null
+        && passportRecord.agent().id().equals(input.agent().id())
+        && passportRecord.agent().name().equals(input.agent().name())
+        && passportRecord.agent().owner().equals(input.agent().owner())
+        && input.agent().capabilities() != null
+        && passportRecord.agent().capabilities() != null
+        && passportRecord.agent().capabilities().containsAll(input.agent().capabilities());
+    Set<String> declaredCapabilities = input.agent() == null || input.agent().capabilities() == null
+        ? Set.of()
+        : input.agent().capabilities().stream().map(value -> value.toLowerCase(Locale.ROOT)).collect(java.util.stream.Collectors.toSet());
+    List<String> undeclaredActions = input.actions() == null ? List.of()
+        : input.actions().stream().filter(action -> !declaredCapabilities.contains(action.toLowerCase(Locale.ROOT))).toList();
+
     if (!validation.valid()) {
       outcome = "REJECT";
       for (String error : validation.errors()) {
@@ -83,6 +108,12 @@ public class UagpGateway {
     } else if (!passport.valid()) {
       outcome = "REJECT";
       rationale.add("PASSPORT:" + passport.reason());
+    } else if (!identityMatches) {
+      outcome = "REJECT";
+      rationale.add("PASSPORT_AGENT_OR_CAPABILITY_MISMATCH");
+    } else if (!undeclaredActions.isEmpty()) {
+      outcome = "REJECT";
+      for (String action : undeclaredActions) rationale.add("ACTION_CAPABILITY_NOT_DECLARED:" + action);
     } else if (!ethicsPassed) {
       outcome = "REJECT";
       rationale.addAll(ethicsViolations);
@@ -116,6 +147,14 @@ public class UagpGateway {
 
     return new UagpResult(input.requestId(), PROTOCOL, outcome, "ACCEPT".equals(outcome), decision, trust, risk,
         passport, validation, entry.hash(), entry.sequence(), DISCLAIMER);
+  }
+
+  private static String trustLevel(double score) {
+    if (score >= 90) return "EXEMPLARY";
+    if (score >= 75) return "HIGH";
+    if (score >= 50) return "MODERATE";
+    if (score >= 25) return "LOW";
+    return "UNTRUSTED";
   }
 
   private static boolean isHighRisk(List<String> actions) {
