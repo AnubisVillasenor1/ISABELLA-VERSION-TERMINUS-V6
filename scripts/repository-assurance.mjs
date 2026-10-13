@@ -56,8 +56,11 @@ for (const [id, file, description] of [
 }
 const readme = await read("README.md");
 add("RA-016", "WARN",
-  !!readme && /Contrato de veracidad/i.test(readme) && /Bloqueo de instalación reproducible/i.test(readme) && /Fases de evolución/i.test(readme),
-  "README documenta límites de veracidad, reproducibilidad y fases de evolución.",
+  !!readme &&
+    /SPECIFIED\s*≠\s*IMPLEMENTED\s*≠\s*TESTED/i.test(readme) &&
+    /pnpm install --frozen-lockfile/i.test(readme) &&
+    /Gates pendientes para liberar/i.test(readme),
+  "README documenta el contrato de evidencia, instalación reproducible y gates de liberación actuales.",
   ["README.md"]);
 const server = await read("src/server.ts");
 add("RA-017", "BLOCKER",

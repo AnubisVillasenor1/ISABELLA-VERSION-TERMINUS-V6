@@ -9,9 +9,9 @@
 
 ## Preparación global para producción y despliegue
 
-**47.5% — estimación global provisional de readiness.**
+**48.0% — estimación global provisional de readiness.**
 
-La estimación aumenta respecto de la base declarada anteriormente por la implementación del plano de autorización Terminus, almacenamiento cifrado con codificación de borrado 6+3, control de tamaño de objetos, registros BookPI para operaciones de almacenamiento y pruebas nuevas de contrato y regresión. Es una estimación de ingeniería, no una certificación; todavía debe confirmarse la suite sobre el SHA de esta rama. Los adaptadores reales de los nueve dominios de almacenamiento y el KMS durable no se dan por conectados ni se consideran listos sólo por existir sus interfaces.
+La estimación aumenta respecto de la base anterior por la implementación y endurecimiento de Terminus, admisión de capacidad tenant-scoped, continuidad durable de BookPI, evidencia de readiness, ejecución de 780 pruebas en el deployment verificable de la rama y una interfaz empresarial con smoke automatizado. Sigue siendo una estimación de ingeniería, no una certificación: los adaptadores externos, KMS productivo, integración Rust/GitHub Actions y pruebas distribuidas de recuperación permanecen como gates independientes. Los adaptadores reales de los nueve dominios de almacenamiento y el KMS durable no se dan por conectados ni se consideran listos sólo por existir sus interfaces.
 
 ## Qué hace Isabella
 

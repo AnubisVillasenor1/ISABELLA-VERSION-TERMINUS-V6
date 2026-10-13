@@ -382,7 +382,7 @@ document.querySelectorAll('[data-focus-prompt="true"]').forEach((link) => {
   if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
-  const palette = ['#38bdf8', '#a855f7', '#34d399', '#8df3ff'];
+  const palette = ['#dfeaf3', '#8df3ff', '#79b8df', '#b8c9d8'];
   let width = 0;
   let height = 0;
   let nodes = [];

@@ -36,4 +36,7 @@ assert.ok(js.includes('INTRO_SCENE_MS = 4_200'), 'Intro timing must be scene-bas
 assert.ok(js.includes("intro.dataset.scene = String(sceneIndex)"), 'Scene changes must drive camera angles');
 assert.ok(css.includes('.cinematic-intro[data-scene="11"] .intro-world'), 'Every scene camera pose must be defined through scene 12');
 assert.ok(css.includes('@media(prefers-reduced-motion:reduce)'), 'Cinematic effects must respect reduced motion');
+assert.ok(html.includes('hero-system-board'), 'Hero must expose the enterprise system posture board');
+assert.ok(html.includes('SESSION-BOUNDED'), 'Workspace must disclose session-bounded context');
+assert.ok(css.includes('.hero-system-board'), 'Enterprise hero board styling must exist');
 console.log('CINEMATIC_INTRO_12_SCENES_OK');
