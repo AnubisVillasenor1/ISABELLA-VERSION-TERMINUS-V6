@@ -4710,10 +4710,9 @@ app.post("/api/v1/commerce/offers", async (req, res) => {
   });
 });
 
-// GAME OVER / UAGP-1 — agent governance gateway. Every route is admin-gated and
-// treats the authenticated admin as the human-authority principal. The gateway
-// decides, scores and records; it never executes the governed action.
-const GAMEOVER_ADMIN_PRINCIPAL = "genesis-admin";
+// GAME OVER / UAGP-1 — admin access is not automatically human approval.
+ // High-risk approvals require a separate, explicitly configured approval token
+ // and an exact configured approver identity; otherwise the gateway escalates.
 
 app.get("/api/v1/gameover/constitution", (req, res) => {
   if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
@@ -4784,7 +4783,29 @@ app.post("/api/v1/gameover/govern", (req, res) => {
   if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
   try {
     const input = (req.body ?? {}) as UagpRequestInput;
-    const result = uagpGateway.govern(input, { authenticatedPrincipal: GAMEOVER_ADMIN_PRINCIPAL });
+    const suppliedApprovalToken = req.header("x-human-approval-token") ?? "";
+    const configuredApprovalToken = process.env.GENESIS_HUMAN_APPROVAL_TOKEN ?? "";
+    const suppliedApproverId = (req.header("x-human-approver-id") ?? "").trim();
+    const configuredApproverId = (process.env.GENESIS_HUMAN_APPROVER_ID ?? "").trim();
+    let authenticatedPrincipal: string | undefined;
+
+    if (
+      configuredApprovalToken &&
+      configuredApproverId &&
+      suppliedApproverId === configuredApproverId &&
+      suppliedApprovalToken.length > 0
+    ) {
+      const supplied = Buffer.from(suppliedApprovalToken);
+      const configured = Buffer.from(configuredApprovalToken);
+      if (supplied.length === configured.length && timingSafeEqual(supplied, configured)) {
+        authenticatedPrincipal = configuredApproverId;
+      }
+    }
+
+    const result = uagpGateway.govern(
+      input,
+      authenticatedPrincipal ? { authenticatedPrincipal } : {},
+    );
     const status = result.outcome === "ACCEPT" ? 200 : result.outcome === "ESCALATE" ? 202 : 403;
     res.status(status).json({ success: result.allowed, ...result });
   } catch (error) {
