@@ -120,6 +120,16 @@ describe("TerminusShardedStore", () => {
     expect(keyManager.keys.size).toBe(0);
   });
 
+  it("round-trips empty and short payloads with the GCM tag stored separately", async () => {
+    const { coordinator } = makeHarness();
+    const emptyRef = await coordinator.put({ objectId: "obj-empty", tenantId: "tenant-a", plaintext: "" });
+    const shortRef = await coordinator.put({ objectId: "obj-short", tenantId: "tenant-a", plaintext: "ok" });
+    expect(emptyRef.ciphertextLength).toBe(0);
+    expect(emptyRef.originalLength).toBe(0);
+    await expect(coordinator.getText(emptyRef, "tenant-a")).resolves.toBe("");
+    await expect(coordinator.getText(shortRef, "tenant-a")).resolves.toBe("ok");
+  });
+
   it("refuses cross-tenant reconstruction", async () => {
     const { coordinator } = makeHarness();
     const ref = await coordinator.put({ objectId: "obj-tenant", tenantId: "tenant-a", plaintext: "tenant data" });
