@@ -17,6 +17,16 @@ human approval -> explain -> audit`. It returns a `UagpResult` and, when
 `ACCEPT`. It **decides, scores and records**; it never executes the governed
 action or certifies it.
 
+The source now applies the following fail-closed controls: a required approval
+must have a named approver and authenticated principal that match; request flags
+cannot lower a policy-derived approval requirement; invalid risk criticality is
+treated as `CRITICAL`; passport issuance validates trust and expiry bounds;
+request trust cannot exceed the issuer-assigned passport score; the presented
+agent identity and requested capabilities must be covered by its passport; and
+each requested action must be included in the agent's declared capabilities.
+These controls are source-level changes and must pass Maven/JUnit before being
+considered verified.
+
 ## Build (requires JDK 17 + Maven)
 
 Not available in the environment where this was authored, so the `.hpi` was
@@ -49,3 +59,7 @@ The plugin targets `jenkins.version 2.440.3` and `java.level 17`, and depends on
   in-memory mirrors. The authoritative audit ledger lives in Isabella's BookPI;
   wire `GameOverGlobalConfiguration.gatewayUrl` if you route decisions to the
   runtime service.
+- A Jenkins `User.current()` name is not by itself a cryptographic proof of
+  approval. Validate the configured human identity in the Jenkins security
+  context and preserve an independently auditable approval event before using
+  this gate for production deployments.
