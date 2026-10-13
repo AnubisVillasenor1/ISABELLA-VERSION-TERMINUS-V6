@@ -13,7 +13,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "build": "tsc -p tsconfig.build.json && vitest run && esbuild src/server.ts --bundle --platform=node --format=esm --packages=external --target=node24 --outfile=dist/server.js && node --check src/ui/app.js && node scripts/ui-smoke.mjs && node scripts/runtime-smoke.mjs",
+    "build": "tsc -p tsconfig.build.json && vitest run && esbuild src/server.ts --bundle --platform=node --format=esm --packages=external --target=node24 --outfile=dist/server.js && node --check src/ui/app.js && node scripts/ui-smoke.mjs && node scripts/runtime-smoke.mjs && pnpm run security:suite",
     "lint": "tsc --noEmit",
     "reconcile:pids": "tsx src/cli/reconcilePids.ts",
     "bookpi:maintenance": "tsx src/cli/bookpiMaintenance.ts",
