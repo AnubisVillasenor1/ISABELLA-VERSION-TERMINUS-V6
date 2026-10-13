@@ -11,7 +11,9 @@ export interface CapabilityDescriptor {
 export interface CapabilityVerdict { granted: boolean; reason: string; evidenceRef?: string; }
 export interface CapabilityGate { descriptors: Map<string, CapabilityDescriptor>; }
 export function createCapabilityGate(descriptors: readonly CapabilityDescriptor[]): CapabilityGate {
-  return { descriptors: new Map(descriptors.map((d) => [d.methodId, d])) };
+  const gate: CapabilityGate = { descriptors: new Map() };
+  for (const descriptor of descriptors) registerCapability(gate, descriptor);
+  return gate;
 }
 export function registerCapability(gate: CapabilityGate, descriptor: CapabilityDescriptor): void {
   if (gate.descriptors.has(descriptor.methodId)) throw new Error(`CROWN: capability already registered: ${descriptor.methodId}`);
@@ -50,5 +52,5 @@ export function callGate(gate: CapabilityGate, methodId: string, req: Capability
   return { granted: true, reason: "capacidad registrada como invocable en modo no privilegiado" };
 }
 export function approvalRequiredForGate(descriptor: CapabilityDescriptor): boolean {
-  return descriptor.riskTier === "HIGH" || descriptor.riskTier === "CRITICAL";
+  return descriptor.humanApprovalRequired || descriptor.riskTier === "HIGH" || descriptor.riskTier === "CRITICAL";
 }
