@@ -275,7 +275,7 @@ function checkAegisFailClosed() {
   const toolRegistry = readText(path.join(SRC, "tools", "registry.ts"));
   const skillRegistry = readText(path.join(SRC, "skills", "registry.ts"));
   const aegisSource = readText(aegis);
-  const usesStructuredGuard = /inspectAegisValue/.test(toolRegistry) && /inspectAegisValue/.test(skillRegistry);
+  const usesStructuredGuard = /inspectAegis(?:Value|Input)/.test(toolRegistry) && /inspectAegisValue/.test(skillRegistry);
   const deniesNonAllow = /decision\s*!==\s*["']ALLOW["']/.test(toolRegistry) && /decision\s*!==\s*["']ALLOW["']/.test(skillRegistry);
   const handlesSerializationFailure = /input serialization failed; fail-closed/.test(aegisSource);
   const ok = usesStructuredGuard && deniesNonAllow && handlesSerializationFailure;
