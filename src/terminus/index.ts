@@ -17,7 +17,8 @@ export {
   type ExecutionCounter, type TerminusRuntimeOptions,
 } from "./mandate";
 export {
-  planRetention, checkWriteCapacity, runRetentionSweep, createBookPiRetentionAudit,
+  planRetention, checkWriteCapacity, runRetentionSweep, createRetentionAdmissionGate, createBookPiRetentionAudit,
   type RetentionObject, type RetentionPolicy, type RetentionPlan,
   type RetentionRepository, type RetentionAudit, type WriteCapacityDecision,
+  type RetentionAdmissionRequest, type RetentionAdmissionReservation, type RetentionAdmissionGate,
 } from "./retention";

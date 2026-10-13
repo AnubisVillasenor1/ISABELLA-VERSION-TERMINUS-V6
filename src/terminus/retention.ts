@@ -32,10 +32,33 @@ export interface RetentionPlan {
   blockedBy: string[];
 }
 
+export interface RetentionAdmissionRequest {
+  id: string;
+  /** Pseudonymous tenant scope; raw tenant IDs must not be placed in the retention manifest. */
+  tenantFingerprint: string;
+  byteLength: number;
+}
+export interface RetentionAdmissionReservation {
+  /** Commit a durable capacity reservation once the shards meet their quorum. */
+  commit(): Promise<void>;
+  /** Idempotently release a pending/committed reservation if storage does not complete. */
+  release(): Promise<void>;
+}
+export type RetentionAdmissionGate = (input: RetentionAdmissionRequest) => Promise<RetentionAdmissionReservation>;
+
 export interface RetentionRepository {
-  listObjects(): Promise<readonly RetentionObject[]>;
-  /** Must delete mutable payload/shards only; it must never delete the BookPI audit ledger. */
-  erasePayload(id: string): Promise<{ physicalDeletionComplete: boolean; details?: string }>;
+  /** If provided, the query must be tenant-scoped and exclude unrelated tenants' objects. */
+  listObjects(tenantFingerprint?: string): Promise<readonly RetentionObject[]>;
+  /** Erases mutable payload/shards only; never delete the BookPI audit ledger. */
+  erasePayload(id: string, tenantFingerprint?: string): Promise<{ physicalDeletionComplete: boolean; details?: string }>;
+  /**
+   * Must atomically re-check tenant object/byte limits and create a durable reservation.
+   * This is the serialization point across workers/replicas; process-local locks are insufficient.
+   */
+  reserveAdmission?(
+    input: RetentionAdmissionRequest,
+    policy: RetentionPolicy,
+  ): Promise<RetentionAdmissionReservation>;
 }
 
 export interface RetentionAudit {
@@ -211,13 +234,15 @@ export async function runRetentionSweep(
   audit: RetentionAudit,
   policy: RetentionPolicy,
   nowMs = Date.now(),
+  tenantFingerprint?: string,
 ): Promise<{ plan: RetentionPlan; erased: string[]; failed: Array<{ id: string; reason: string }> }> {
-  const plan = planRetention(await repository.listObjects(), policy, nowMs);
+  const plan = planRetention(await repository.listObjects(tenantFingerprint), policy, nowMs);
   if (plan.candidates.length === 0) return { plan, erased: [], failed: [] };
 
   await audit.append("bookpi.retention.requested", {
     policyVersion: policy.version,
     plannedAt: plan.plannedAt,
+    ...(tenantFingerprint ? { tenantFingerprint } : {}),
     candidateIds: plan.candidates.map((candidate) => candidate.id),
     candidateCount: plan.candidates.length,
     projectedObjects: plan.projectedObjects,
@@ -229,7 +254,7 @@ export async function runRetentionSweep(
   for (const candidate of plan.candidates) {
     let physicalDeletionComplete = false;
     try {
-      const result = await repository.erasePayload(candidate.id);
+      const result = await repository.erasePayload(candidate.id, tenantFingerprint);
       if (!result.physicalDeletionComplete) throw new Error(result.details ?? "PHYSICAL_DELETION_INCOMPLETE");
       physicalDeletionComplete = true;
       erased.push(candidate.id);
@@ -241,6 +266,7 @@ export async function runRetentionSweep(
       await audit.append(physicalDeletionComplete ? "bookpi.retention.completed" : "bookpi.retention.failed", {
         policyVersion: policy.version,
         objectId: candidate.id,
+        ...(tenantFingerprint ? { tenantFingerprint } : {}),
         reason: candidate.reason,
         physicalDeletionComplete,
         completedAt: new Date(nowMs).toISOString(),
@@ -251,3 +277,45 @@ export async function runRetentionSweep(
   }
   return { plan, erased, failed };
 }
+
+
+/**
+ * Tenant-scoped admission gate. It runs an audited sweep only when the current
+ * policy identifies expired/capacity candidates, then requires the repository
+ * to reserve capacity atomically in durable storage before returning.
+ */
+export function createRetentionAdmissionGate(
+  repository: RetentionRepository,
+  audit: RetentionAudit,
+  policy: RetentionPolicy,
+  clock: () => number = Date.now,
+): RetentionAdmissionGate {
+  return async (input) => {
+    if (!input.id?.trim() || !input.tenantFingerprint?.trim()
+      || !Number.isSafeInteger(input.byteLength) || input.byteLength < 0) {
+      throw new Error("TERMINUS_ADMISSION_INPUT_INVALID");
+    }
+    if (typeof repository.reserveAdmission !== "function") {
+      throw new Error("TERMINUS_ATOMIC_ADMISSION_RESERVATION_REQUIRED");
+    }
+
+    let objects = await repository.listObjects(input.tenantFingerprint);
+    if (objects.some((item) => item.id === input.id)) throw new Error("TERMINUS_OBJECT_ID_ALREADY_RETAINED");
+    let decision = checkWriteCapacity(objects, input.byteLength, policy, clock());
+
+    if (decision.requiresRetentionSweep) {
+      const sweep = await runRetentionSweep(repository, audit, policy, clock(), input.tenantFingerprint);
+      if (sweep.failed.length > 0) throw new Error("TERMINUS_RETENTION_SWEEP_INCOMPLETE");
+      objects = await repository.listObjects(input.tenantFingerprint);
+      if (objects.some((item) => item.id === input.id)) throw new Error("TERMINUS_OBJECT_ID_ALREADY_RETAINED");
+      decision = checkWriteCapacity(objects, input.byteLength, policy, clock());
+    }
+
+    if (!decision.admitted) throw new Error("TERMINUS_CAPACITY_BLOCKED:" + decision.reason);
+
+    // The repository transaction must re-check both count and bytes as concurrent
+    // writers may have reserved space since the read/planning phase above.
+    return repository.reserveAdmission(input, policy);
+  };
+}
+

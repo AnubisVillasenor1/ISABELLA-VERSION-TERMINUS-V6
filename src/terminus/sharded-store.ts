@@ -5,6 +5,7 @@ import { decodeShards, encodeShards, DATA_SHARDS, TOTAL_SHARDS } from "./erasure
 import type { ShardPiece } from "./erasure-code";
 import { triangulateDigest, verifyTriangulatedDigest } from "../security/triangulated-crypto";
 import type { TriangulatedDigest } from "../security/triangulated-crypto";
+import type { RetentionAdmissionGate, RetentionAdmissionReservation } from "./retention";
 
 export interface ShardQuota {
   /** Operator-configured hard cap; provider adapters must also enforce current upstream quota atomically. */
@@ -55,6 +56,7 @@ export interface ShardedStoreOptions {
   quotas: Readonly<Record<string, ShardQuota>>;
   keyManager: DataKeyManager;
   ledger: BookPiStorage;
+  admissionGate: RetentionAdmissionGate;
   maxObjectBytes: number;
   clock?: () => number;
 }
@@ -180,6 +182,7 @@ export class TerminusShardedStore {
       if (!validateQuota(options.quotas[store.providerId])) throw new Error("TERMINUS_PROVIDER_QUOTA_MISSING_OR_INVALID:" + store.providerId);
     }
     if (!Number.isSafeInteger(options.maxObjectBytes) || options.maxObjectBytes < 1) throw new Error("TERMINUS_MAX_OBJECT_BYTES_INVALID");
+    if (typeof options.admissionGate !== "function") throw new Error("TERMINUS_ADMISSION_GATE_REQUIRED");
     this.storesByIndex = Object.freeze(stores);
     this.clock = options.clock ?? Date.now;
   }
@@ -200,13 +203,18 @@ export class TerminusShardedStore {
     const objectIdDigest = sha256(Buffer.from(input.objectId, "utf8"));
     const createdAt = new Date(this.clock()).toISOString();
     let keyMaterial: { keyId: string; key: Uint8Array } | null = null;
+    let admissionReservation: RetentionAdmissionReservation | null = null;
     let storedIndexes: number[] = [];
     let intentWritten = false;
+    let completed = false;
     try {
       await this.audit("terminus.object.store.requested", {
         objectIdDigest, tenantFingerprint: fingerprint, originalLength: plaintext.byteLength, requestedAt: createdAt,
       });
       intentWritten = true;
+      admissionReservation = await this.options.admissionGate({
+        id: input.objectId, tenantFingerprint: fingerprint, byteLength: plaintext.byteLength,
+      });
       keyMaterial = await this.options.keyManager.createKey({ objectIdDigest, tenantFingerprint: fingerprint });
       if (!keyMaterial.keyId.trim() || keyMaterial.key.byteLength !== 32) {
         throw new Error("TERMINUS_KEY_MANAGER_RETURNED_INVALID_KEY");
@@ -239,11 +247,13 @@ export class TerminusShardedStore {
         successfulShardIndexes: storedIndexes,
         degraded: storedIndexes.length < TOTAL_SHARDS,
       };
+      await admissionReservation.commit();
       await this.audit("terminus.object.store.completed", {
         objectIdDigest, tenantFingerprint: fingerprint, ciphertextSha256: reference.ciphertextSha256,
         ciphertextLength: reference.ciphertextLength, successfulShardIndexes: storedIndexes,
         degraded: reference.degraded,
       });
+      completed = true;
       return reference;
     } catch (error) {
       await Promise.allSettled(storedIndexes.map((index) => this.storesByIndex[index]!.delete(input.objectId, fingerprint, index)));
@@ -256,6 +266,7 @@ export class TerminusShardedStore {
       }
       throw error;
     } finally {
+      if (!completed && admissionReservation) await admissionReservation.release().catch(() => undefined);
       keyMaterial?.key.fill(0);
       plaintext.fill(0);
     }

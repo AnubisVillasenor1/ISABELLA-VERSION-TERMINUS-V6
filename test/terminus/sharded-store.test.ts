@@ -45,6 +45,10 @@ class MemoryShardStore implements ShardStore {
   }
 }
 
+function noOpAdmissionGate() {
+  return async () => ({ commit: async () => {}, release: async () => {} });
+}
+
 class MemoryKeyManager implements DataKeyManager {
   readonly keys = new Map<string, Uint8Array>();
   private next = 0;
@@ -97,6 +101,7 @@ function makeHarness(failedProviders: number[] = [], maxObjectBytes = 1_000_000)
     quotas,
     keyManager,
     ledger: fakeLedger(),
+    admissionGate: noOpAdmissionGate(),
     maxObjectBytes,
     clock: () => Date.parse("2026-10-12T12:00:00.000Z"),
   });
@@ -150,7 +155,7 @@ describe("TerminusShardedStore", () => {
   it("requires nine distinct providers with explicit quota ceilings", () => {
     const stores = Array.from({ length: 9 }, () => new MemoryShardStore("same-provider"));
     const quotas = Object.fromEntries(stores.map((store) => [store.providerId, { maxBytes: 1000, maxObjects: 10 }]));
-    expect(() => new TerminusShardedStore({ stores, quotas, keyManager: new MemoryKeyManager(), ledger: fakeLedger(), maxObjectBytes: 1000 }))
+    expect(() => new TerminusShardedStore({ stores, quotas, keyManager: new MemoryKeyManager(), ledger: fakeLedger(), admissionGate: noOpAdmissionGate(), maxObjectBytes: 1000 }))
       .toThrow("TERMINUS_REQUIRES_NINE_DISTINCT_STORAGE_PROVIDERS");
   });
 
@@ -161,4 +166,18 @@ describe("TerminusShardedStore", () => {
     expect(keyManager.keys.size).toBe(0);
     expect(stores.every((store) => store.entries.size === 0)).toBe(true);
   });
+  it("fails before key creation when durable retention admission rejects", async () => {
+    const stores = Array.from({ length: 9 }, (_, index) => new MemoryShardStore("provider-" + index));
+    const quotas = Object.fromEntries(stores.map((item) => [item.providerId, { maxBytes: 10_000_000, maxObjects: 10 }]));
+    const keyManager = new MemoryKeyManager();
+    const coordinator = new TerminusShardedStore({
+      stores, quotas, keyManager, ledger: fakeLedger(), maxObjectBytes: 1000,
+      admissionGate: async () => { throw new Error("TERMINUS_CAPACITY_BLOCKED"); },
+    });
+    await expect(coordinator.put({ objectId: "denied", tenantId: "tenant-a", plaintext: "not written" }))
+      .rejects.toThrow("TERMINUS_CAPACITY_BLOCKED");
+    expect(keyManager.keys.size).toBe(0);
+    expect(stores.every((item) => item.entries.size === 0)).toBe(true);
+  });
+
 });

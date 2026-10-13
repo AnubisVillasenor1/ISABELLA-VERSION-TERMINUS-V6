@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkWriteCapacity, planRetention, runRetentionSweep, type RetentionObject, type RetentionPolicy } from "../../src/terminus/retention";
+import { checkWriteCapacity, createRetentionAdmissionGate, planRetention, runRetentionSweep, type RetentionObject, type RetentionPolicy } from "../../src/terminus/retention";
 
 const now = Date.parse("2026-10-12T12:00:00.000Z");
 const policy: RetentionPolicy = {
@@ -85,4 +85,58 @@ describe("BookPI bounded retention", () => {
     expect(deleted).toEqual(["expired"]);
     expect(auditEvents).toEqual(["bookpi.retention.requested", "bookpi.retention.completed"]);
   });
+
+  it("sweeps expired payloads with tenant scope before reserving new capacity", async () => {
+    const objects = [item("expired", 20_000, { legalHold: false })];
+    const auditEvents: string[] = [];
+    const erased: string[] = [];
+    const reservations: string[] = [];
+    const repository = {
+      listObjects: async (tenantFingerprint?: string) => {
+        expect(tenantFingerprint).toBe("tenant-hash-a");
+        return [...objects];
+      },
+      erasePayload: async (id: string, tenantFingerprint?: string) => {
+        expect(tenantFingerprint).toBe("tenant-hash-a");
+        erased.push(id);
+        objects.splice(objects.findIndex((candidate) => candidate.id === id), 1);
+        return { physicalDeletionComplete: true };
+      },
+      reserveAdmission: async (request: { id: string; tenantFingerprint: string; byteLength: number }) => {
+        reservations.push(request.id);
+        return { commit: async () => {}, release: async () => {} };
+      },
+    };
+    const audit = { append: async (type: string) => { auditEvents.push(type); } };
+    const gate = createRetentionAdmissionGate(repository, audit, {
+      ...policy, maxObjects: 3, maxBytes: 100, maxAgeMs: 5000, minimumAgeMs: 1000, batchSize: 5,
+    }, () => now);
+    const reservation = await gate({ id: "new-object", tenantFingerprint: "tenant-hash-a", byteLength: 10 });
+    expect(erased).toEqual(["expired"]);
+    expect(reservations).toEqual(["new-object"]);
+    expect(auditEvents).toEqual(["bookpi.retention.requested", "bookpi.retention.completed"]);
+    await reservation.release();
+  });
+
+  it("fails closed when the repository has no atomic durable reservation", async () => {
+    const repository = { listObjects: async () => [], erasePayload: async () => ({ physicalDeletionComplete: true }) };
+    const gate = createRetentionAdmissionGate(repository, { append: async () => {} }, policy, () => now);
+    await expect(gate({ id: "new", tenantFingerprint: "tenant-hash", byteLength: 10 }))
+      .rejects.toThrow("TERMINUS_ATOMIC_ADMISSION_RESERVATION_REQUIRED");
+  });
+
+  it("does not admit the object when capacity remains blocked after retention", async () => {
+    const objects = [item("held", 50_000, { legalHold: true })];
+    const repository = {
+      listObjects: async () => [...objects],
+      erasePayload: async () => ({ physicalDeletionComplete: true }),
+      reserveAdmission: async () => ({ commit: async () => {}, release: async () => {} }),
+    };
+    const gate = createRetentionAdmissionGate(repository, { append: async () => {} }, {
+      ...policy, maxObjects: 1, maxBytes: 100, maxAgeMs: 100_000, minimumAgeMs: 100_000,
+    }, () => now);
+    await expect(gate({ id: "new", tenantFingerprint: "tenant-hash", byteLength: 10 }))
+      .rejects.toThrow("TERMINUS_CAPACITY_BLOCKED");
+  });
+
 });

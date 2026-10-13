@@ -66,6 +66,10 @@ Cada adaptador productivo debe escribir de forma atómica y sin sobrescribir, ap
 El coordinador requiere **ShardStore**, **DataKeyManager**, **BookPiStorage** durable y un **maxObjectBytes** explícito. Las pruebas locales de estos contratos usan proveedores en memoria y no cuentan como conexión con servicios externos.
 
 ### Borrado y retención de datos
+### Admisión bajo cuotas concurrentes
+
+Cada escritura de Terminus pasa por un `RetentionAdmissionGate` tenant-scoped. El gate puede solicitar una pasada de retención previamente auditada y después requiere que el repositorio de retención reserve de forma atómica capacidad en bytes y número de objetos. Si el repositorio no implementa una reserva durable transaccional, el gate bloquea la escritura: una consulta previa o un lock local no protegen contra carreras entre funciones serverless o réplicas. La reserva se confirma cuando los shards alcanzan quórum y se libera ante fallos posteriores. Los adaptadores reales deben hacer que el manifiesto de retención y el almacenamiento de shards concuerden tras reinicios y fallos parciales.
+
 
 La retención de cargas externas es independiente de la retención de eventos de auditoría. Las políticas de **src/terminus/retention.ts** fijan un límite versionado de objetos, bytes, edad máxima, edad mínima y tamaño de lote. Los datos con retención legal, fijados o en uso no se eliminan automáticamente.
 
