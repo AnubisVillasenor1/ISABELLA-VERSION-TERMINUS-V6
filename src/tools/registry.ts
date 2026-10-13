@@ -3,7 +3,7 @@ import type { RiskTier } from "../authority/method-id";
 import type { ApprovalRef } from "../identity/approval";
 import { verifyHumanApproval } from "../identity/approval";
 import type { Principal } from "../identity/principal";
-import { inspectAegis } from "../security/aegis";
+import { inspectAegisValue } from "../security/aegis";
 
 export interface ToolDescriptor {
   id: string;
@@ -69,9 +69,9 @@ export class ToolRegistry {
     const startedAt = new Date().toISOString();
     const inputHash = hash(input);
 
-    if (aegis.decision === "BLOCK") {
+    if (aegis.decision !== "ALLOW") {
       const receipt = makeReceipt(tool, principal, inputHash, serializedInput, startedAt, "blocked");
-      throw Object.assign(new Error(`TOOLS: AEGIS blocked tool input for ${id}`), { receipt, findings: aegis.findings });
+      throw Object.assign(new Error(`TOOLS: AEGIS ${aegis.decision} requires review; execution denied for ${id}`), { receipt, findings: aegis.findings });
     }
 
     const privileged = tool.riskTier === "HIGH" || tool.riskTier === "CRITICAL";
