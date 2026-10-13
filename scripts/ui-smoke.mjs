@@ -12,7 +12,7 @@ assert.equal(ids.size, allIds.length, 'Every HTML id must be unique to keep navi
 const navLinks = [...html.matchAll(/<a\b[^>]*href="#([^"]+)"[^>]*>/g)].map((match) => match[1]);
 for (const target of navLinks) assert.ok(ids.has(target), `Navigation target #${target} must exist`);
 for (const id of ['top', 'chat', 'studio', 'tools', 'skills', 'economy', 'protocols', 'workspace', 'evidence', 'governance', 'contact']) assert.ok(ids.has(id), `Missing section id #${id}`);
-for (const id of ['navToggle', 'primaryLinks', 'runtimeStatus', 'soundToggle', 'chatForm', 'prompt', 'mic', 'enterChat', 'skipIntro', 'newChat', 'commandLauncher', 'commandPalette', 'commandSearch', 'studio', 'draftShelf', 'exportChat', 'clearChat', 'attachText', 'localFile', 'attachmentChip', 'attachmentName', 'removeAttachment', 'clearDrafts']) {
+for (const id of ['navToggle', 'primaryLinks', 'runtimeStatus', 'soundToggle', 'chatForm', 'prompt', 'mic', 'enterChat', 'skipIntro', 'newChat', 'commandLauncher', 'commandPalette', 'commandSearch', 'studio', 'draftShelf', 'exportChat', 'clearChat', 'attachText', 'localFile', 'attachmentChip', 'attachmentName', 'removeAttachment', 'clearDrafts', 'contextInspector', 'systemInspector', 'closeSystemInspector', 'sessionBadge', 'inspectorRuntime']) {
   assert.ok(ids.has(id), `Missing interactive UI element #${id}`);
   assert.ok(js.includes(`byId('${id}')`) || js.includes(`byId("${id}")`) || js.includes(`#${id}`), `Missing interaction wiring for #${id}`);
 }
@@ -28,6 +28,13 @@ assert.ok(html.includes('id="studio"'), 'The local Studio workspace must exist')
 assert.ok(html.includes('class="prompt-starters"'), 'The chat composer must expose task-starting prompt chips');
 assert.ok(html.includes('id="localFile"'), 'The text attachment control must exist');
 assert.ok(css.includes('.command-palette'), 'The command palette must have dedicated styling');
+assert.ok(css.includes('.workspace-context-bar'), 'The workspace context bar must have dedicated styling');
+assert.ok(css.includes('.system-inspector'), 'The system inspector must have dedicated styling');
+assert.ok(html.includes('data-nav-target="chat"'), 'Primary navigation must expose a task-oriented Chat destination');
+assert.ok(html.includes('data-nav-target="governance"'), 'Primary navigation must expose a task-oriented Governance destination');
+assert.ok(js.includes('IntersectionObserver'), 'Navigation must track the active workspace section');
+assert.ok(js.includes('refreshWorkspaceContext'), 'Session context must be reflected in the workspace shell');
+assert.ok(!js.includes('.rail-panel'), 'Legacy rail navigation code must be removed from the unified workspace');
 assert.ok(css.includes('.studio-panel'), 'The Studio workspace must have dedicated styling');
 assert.ok(css.includes('.prompt-starters'), 'Prompt starter chips must have dedicated styling');
 assert.ok(css.includes('.draft-shelf'), 'The local draft shelf must have dedicated styling');
@@ -36,7 +43,7 @@ assert.ok(css.includes('@media(max-width:680px)'), 'A compact mobile workspace l
 assert.ok(!css.includes('hebbkx1anhila5yf'), 'Enterprise UI must not depend on the unowned external intro background asset');
 assert.ok(css.includes('.message-copy'), 'Assistant replies must expose the copy affordance styling');
 assert.ok(js.includes("!cinematicRequested"), 'The default workspace must not force a lengthy cinematic intro before interaction');
-assert.ok(css.includes('position:sticky;top:0;z-index:30'), 'Navbar must remain sticky without a later position override');
+assert.ok(css.includes('position:sticky;top:12px'), 'Navbar must use the modern floating sticky workspace shell');
 assert.ok(!html.includes('LATENCIA<br><b>12ms</b>'), 'UI must not publish an unverified fixed latency');
 console.log('UI_NAVIGATION_SMOKE_OK');
 
