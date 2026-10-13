@@ -30,6 +30,19 @@ describe("GAME OVER PassportAuthority", () => {
     expect(a.issue({ agent, issuer: "tamv", trustScore: 10, id: "pp-10" }).certification).toBe("UNKNOWN");
   });
 
+  it("rejects duplicate passport IDs rather than overwriting identity", () => {
+    const { authority: a } = authority();
+    a.issue({ agent, issuer: "tamv", trustScore: 90, id: "pp-duplicate" });
+    expect(() => a.issue({ agent, issuer: "attacker", trustScore: 90, id: "pp-duplicate" })).toThrow("PASSPORT_ID_DUPLICATE");
+    expect(a.get("pp-duplicate")?.issuer).toBe("tamv");
+  });
+
+  it("rejects non-finite or out-of-range trust scores", () => {
+    const { authority: a } = authority();
+    expect(() => a.issue({ agent, issuer: "tamv", trustScore: Number.NaN, id: "pp-nan" })).toThrow("PASSPORT_TRUST_SCORE_INVALID");
+    expect(() => a.issue({ agent, issuer: "tamv", trustScore: 101, id: "pp-high" })).toThrow("PASSPORT_TRUST_SCORE_INVALID");
+  });
+
   it("verifies a valid certified passport", () => {
     const { authority: a } = authority();
     a.issue({ agent, issuer: "tamv", trustScore: 90, id: "pp-1" });
