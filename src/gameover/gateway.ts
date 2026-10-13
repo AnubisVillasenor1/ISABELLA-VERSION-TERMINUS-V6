@@ -50,24 +50,47 @@ export function createUagpGateway(options: UagpGatewayOptions = {}): UagpGateway
   const audit = options.audit ?? createAuditService();
 
   function govern(input: UagpRequestInput, context: GovernContext = {}): UagpResult {
-    const passport = passportAuthority.verify(input.passportId);
+    // Treat the HTTP boundary as untrusted even though the public TypeScript API is typed.
     const validation = validateRequest(input);
-    const trust = scoreTrust(input.trustMetrics ?? {});
-    const risk = assessRisk({ criticality: input.criticality, capabilityCount: input.agent.capabilities.length });
+    const raw = input && typeof input === "object" ? input as Partial<UagpRequestInput> : {};
+    const rawAgent = raw.agent && typeof raw.agent === "object" ? raw.agent : undefined;
+    const capabilities = Array.isArray(rawAgent?.capabilities)
+      ? rawAgent.capabilities.filter((value): value is string => typeof value === "string")
+      : [];
+    const agent = rawAgent && typeof rawAgent.id === "string" && typeof rawAgent.name === "string" && typeof rawAgent.owner === "string"
+      ? { ...rawAgent, organization: typeof rawAgent.organization === "string" ? rawAgent.organization : "unknown", createdAt: typeof rawAgent.createdAt === "string" ? rawAgent.createdAt : "", capabilities }
+      : { id: "unknown", name: "unknown", organization: "unknown", owner: "unknown", createdAt: "", capabilities: [] as readonly string[] };
+    const safeInput = {
+      ...raw,
+      requestId: typeof raw.requestId === "string" && raw.requestId.trim() ? raw.requestId : "invalid-request",
+      protocol: typeof raw.protocol === "string" ? raw.protocol : "",
+      passportId: typeof raw.passportId === "string" ? raw.passportId : "",
+      objectiveTitle: typeof raw.objectiveTitle === "string" ? raw.objectiveTitle : "",
+      objectiveDescription: typeof raw.objectiveDescription === "string" ? raw.objectiveDescription : "",
+      agent,
+      actions: Array.isArray(raw.actions) ? raw.actions.filter((value): value is string => typeof value === "string") : [],
+      dataClasses: Array.isArray(raw.dataClasses) ? raw.dataClasses.filter((value): value is string => typeof value === "string") : [],
+      evidence: Array.isArray(raw.evidence) ? raw.evidence : [],
+    } as UagpRequestInput;
+
+    const passport = passportAuthority.verify(safeInput.passportId);
+    const trust = scoreTrust(safeInput.trustMetrics ?? {});
+    const risk = assessRisk({ criticality: safeInput.criticality, capabilityCount: agent.capabilities.length });
     const ethics = evaluateEthics({
-      agent: input.agent,
-      objectiveTitle: input.objectiveTitle,
-      objectiveDescription: input.objectiveDescription,
-      actions: input.actions,
-      dataClasses: input.dataClasses,
-      evidence: input.evidence ?? [],
+      agent,
+      objectiveTitle: safeInput.objectiveTitle,
+      objectiveDescription: safeInput.objectiveDescription,
+      actions: safeInput.actions,
+      dataClasses: safeInput.dataClasses,
+      evidence: safeInput.evidence ?? [],
     });
 
+    // The request may raise the approval bar, but can never lower a policy-derived bar.
     const humanApprovalRequired =
-      input.humanApprovalRequired ?? (risk.level === "HIGH" || risk.level === "CRITICAL" || isHighRiskAction(input.actions));
+      risk.level !== "LOW" || isHighRiskAction(safeInput.actions) || safeInput.humanApprovalRequired === true;
     const human = evaluateHumanApproval({
       required: humanApprovalRequired,
-      requestedApprover: input.humanApprover,
+      requestedApprover: safeInput.humanApprover,
       authenticatedPrincipal: context.authenticatedPrincipal,
     });
 
@@ -111,7 +134,7 @@ export function createUagpGateway(options: UagpGatewayOptions = {}): UagpGateway
     });
 
     const decision: GovernanceDecision = Object.freeze({
-      requestId: input.requestId,
+      requestId: safeInput.requestId,
       timestamp: new Date().toISOString(),
       outcome,
       rationale: Object.freeze(rationale),
@@ -125,14 +148,14 @@ export function createUagpGateway(options: UagpGatewayOptions = {}): UagpGateway
     });
 
     const entry = audit.record({
-      principal: approver ?? input.agent.id ?? "unknown",
+      principal: approver ?? agent.id || "unknown",
       riskTier: risk.level,
       status: `GOVERNANCE_${outcome}`,
     });
     const storage = audit.snapshot().storage;
 
     return Object.freeze({
-      requestId: input.requestId,
+      requestId: safeInput.requestId,
       protocol: UAGP_PROTOCOL,
       outcome,
       allowed: outcome === "ACCEPT",
