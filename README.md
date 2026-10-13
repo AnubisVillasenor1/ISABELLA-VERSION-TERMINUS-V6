@@ -66,6 +66,8 @@ La visión es el **norte**; abajo se reporta, sin adornos, cuánto de ella exist
 
 > Límites vigentes: el smoke de inferencia externa se omitió por ausencia de credenciales elegibles; no demuestra generación real de proveedor. GitHub Actions todavía requiere una ejecución con jobs y conclusión verde. El workspace Rust necesita `ige-omega/Cargo.lock` y sus gates `--locked`. El estado verificado corresponde al SHA indicado, no a commits posteriores.
 
+Auditoría detallada de hallazgos P0/P1, correcciones, pruebas y gates pendientes: [P0 Architecture Hardening](docs/audits/P0-ARCHITECTURE-HARDENING-2026-10-12.md).
+
 ### Componentes realmente implementados
 
 - **Ingress y límites:** validación de entrada, topes de tamaño, rate limiting con fail-closed.
