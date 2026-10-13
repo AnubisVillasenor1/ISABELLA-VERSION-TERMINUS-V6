@@ -1,11 +1,14 @@
 /**
  * TTL cache with single-flight request coalescing for expensive health probes.
  * Successful results are cached; failures are not cached so recovery is immediate.
+ * Invalidation advances a generation so an older in-flight probe cannot repopulate
+ * the cache or prevent a fresh probe from starting.
  */
 export class TtlSingleFlight<T> {
   private value: T | undefined;
   private expiresAt = 0;
-  private inFlight: Promise<T> | undefined;
+  private generation = 0;
+  private inFlight: { generation: number; promise: Promise<T> } | undefined;
 
   constructor(private readonly ttlMs: number) {
     if (!Number.isFinite(ttlMs) || ttlMs < 1) throw new Error("TTL_CACHE_TTL_INVALID");
@@ -13,26 +16,33 @@ export class TtlSingleFlight<T> {
 
   async get(loader: () => Promise<T>, now = Date.now()): Promise<T> {
     if (this.value !== undefined && now < this.expiresAt) return this.value;
-    if (this.inFlight) return this.inFlight;
+    const generation = this.generation;
+    if (this.inFlight?.generation === generation) return this.inFlight.promise;
 
-    const pending = loader();
-    this.inFlight = pending;
+    const pending = Promise.resolve().then(loader);
+    this.inFlight = { generation, promise: pending };
     try {
       const result = await pending;
-      this.value = result;
-      this.expiresAt = Date.now() + this.ttlMs;
+      if (this.generation === generation) {
+        this.value = result;
+        this.expiresAt = Date.now() + this.ttlMs;
+      }
       return result;
     } catch (error) {
-      this.value = undefined;
-      this.expiresAt = 0;
+      if (this.generation === generation) {
+        this.value = undefined;
+        this.expiresAt = 0;
+      }
       throw error;
     } finally {
-      if (this.inFlight === pending) this.inFlight = undefined;
+      if (this.inFlight?.promise === pending) this.inFlight = undefined;
     }
   }
 
   invalidate(): void {
+    this.generation += 1;
     this.value = undefined;
     this.expiresAt = 0;
+    this.inFlight = undefined;
   }
 }
