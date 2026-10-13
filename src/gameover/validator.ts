@@ -1,12 +1,11 @@
 /**
  * GAME OVER UagpValidator (UAGP-1).
  *
- * Structural validation of a declared governance request. state: draft |
- * engine-generated. It checks shape and required fields; it makes no trust,
- * ethics or risk judgement (those engines run separately).
+ * Structural validation of an untrusted governance request. This layer checks
+ * shape and policy fields; it makes no trust, ethics or risk judgement.
  */
 import { isKnownEvidenceKind } from "./constitution";
-import { UAGP_PROTOCOL } from "./types";
+import { UAGP_PROTOCOL, type RiskLevel } from "./types";
 
 export interface ValidationResult {
   readonly valid: boolean;
@@ -14,6 +13,7 @@ export interface ValidationResult {
 }
 
 const SHA256_HEX = /^[0-9a-f]{64}$/;
+const RISK_LEVELS: readonly RiskLevel[] = ["LOW", "MEDIUM", "HIGH", "CRITICAL"];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -39,21 +39,49 @@ export function validateRequest(input: unknown): ValidationResult {
   if (!nonEmptyString(input.passportId)) errors.push("PASSPORT_ID_REQUIRED");
   if (!nonEmptyString(input.objectiveTitle)) errors.push("OBJECTIVE_TITLE_REQUIRED");
 
+  if (input.criticality !== undefined && !RISK_LEVELS.includes(input.criticality as RiskLevel)) {
+    errors.push("CRITICALITY_INVALID");
+  }
+  if (input.humanApprovalRequired !== undefined && typeof input.humanApprovalRequired !== "boolean") {
+    errors.push("HUMAN_APPROVAL_FLAG_INVALID");
+  }
+  if (input.humanApprover !== undefined && input.humanApprover !== null && typeof input.humanApprover !== "string") {
+    errors.push("HUMAN_APPROVER_INVALID");
+  }
+
   if (!isRecord(input.agent)) {
     errors.push("AGENT_REQUIRED");
   } else {
     if (!nonEmptyString(input.agent.id)) errors.push("AGENT_ID_REQUIRED");
     if (!nonEmptyString(input.agent.name)) errors.push("AGENT_NAME_REQUIRED");
     if (!nonEmptyString(input.agent.owner)) errors.push("AGENT_OWNER_REQUIRED");
-    if (!isStringArray(input.agent.capabilities)) errors.push("AGENT_CAPABILITIES_INVALID");
+    if (!isStringArray(input.agent.capabilities) || input.agent.capabilities.some((item) => !item.trim())) {
+      errors.push("AGENT_CAPABILITIES_INVALID");
+    }
   }
 
   if (!isStringArray(input.actions) || input.actions.length === 0 || !input.actions.every(nonEmptyString)) {
     errors.push("ACTIONS_REQUIRED");
   }
 
-  if (input.dataClasses !== undefined && !isStringArray(input.dataClasses)) {
+  if (input.dataClasses !== undefined && (!isStringArray(input.dataClasses) || input.dataClasses.some((item) => !item.trim()))) {
     errors.push("DATA_CLASSES_INVALID");
+  }
+
+  if (input.trustMetrics !== undefined) {
+    if (!isRecord(input.trustMetrics)) {
+      errors.push("TRUST_METRICS_INVALID");
+    } else {
+      for (const [key, value] of Object.entries(input.trustMetrics)) {
+        if (!["integrity", "competence", "alignment", "transparency", "humanOversight", "incidentRecord"].includes(key)) {
+          errors.push("TRUST_METRIC_UNKNOWN");
+          break;
+        }
+        if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || value > 100) {
+          errors.push(`TRUST_METRIC_INVALID:${key}`);
+        }
+      }
+    }
   }
 
   if (input.evidence !== undefined) {
