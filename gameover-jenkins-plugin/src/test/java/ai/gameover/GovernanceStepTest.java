@@ -73,6 +73,28 @@ class GovernanceStepTest {
   }
 
   @Test
+  void capsRequestTrustAtIssuerAssignedPassportScore() {
+    PassportAuthority authority = new PassportAuthority();
+    AIPassport passport = authority.issue(PASSPORT_AGENT, "tamv", 90.0);
+    UagpGateway gateway = new UagpGateway(authority, new AuditService());
+    UagpResult result = gateway.govern(request(passport.id(), List.of("build"), "LOW", null));
+    assertEquals(90.0, result.trust().score());
+    assertEquals(90.0, result.decision().trustScore());
+  }
+
+  @Test
+  void rejectsActionNotDeclaredAsAgentCapability() {
+    PassportAuthority authority = new PassportAuthority();
+    AIPassport passport = authority.issue(PASSPORT_AGENT, "tamv", 90.0);
+    UagpGateway gateway = new UagpGateway(authority, new AuditService());
+    UagpRequest request = new UagpRequest("req-action-scope", "UAGP-1", AGENT, passport.id(),
+        "deploy production", "", List.of("deploy"), List.of(), List.of(), "LOW", FULL_TRUST, null, null);
+    UagpResult result = gateway.govern(request);
+    assertEquals("REJECT", result.outcome());
+    assertTrue(result.decision().rationale().contains("ACTION_CAPABILITY_NOT_DECLARED:deploy"));
+  }
+
+  @Test
   void doesNotAllowRequestToDisableRequiredHumanApproval() {
     PassportAuthority authority = new PassportAuthority();
     AIPassport passport = authority.issue(PASSPORT_AGENT, "tamv", 90.0);
