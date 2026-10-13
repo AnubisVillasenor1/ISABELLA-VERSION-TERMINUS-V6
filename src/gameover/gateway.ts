@@ -148,7 +148,7 @@ export function createUagpGateway(options: UagpGatewayOptions = {}): UagpGateway
     });
 
     const entry = audit.record({
-      principal: approver ?? agent.id || "unknown",
+      principal: approver ?? (agent.id || "unknown"),
       riskTier: risk.level,
       status: `GOVERNANCE_${outcome}`,
     });
