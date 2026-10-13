@@ -74,6 +74,17 @@ export function createUagpGateway(options: UagpGatewayOptions = {}): UagpGateway
     } as UagpRequestInput;
 
     const passport = passportAuthority.verify(safeInput.passportId);
+    const passportRecord = passportAuthority.get(safeInput.passportId);
+    const requestedCapabilities = new Set(agent.capabilities.map((value) => value.toLowerCase()));
+    const passportCapabilities = new Set((passportRecord?.agent.capabilities ?? []).map((value) => value.toLowerCase()));
+    const identityMatches = Boolean(
+      passportRecord &&
+      passportRecord.agent.id === agent.id &&
+      passportRecord.agent.name === agent.name &&
+      passportRecord.agent.owner === agent.owner &&
+      agent.capabilities.every((capability) => passportCapabilities.has(capability.toLowerCase()))
+    );
+    const undeclaredActions = safeInput.actions.filter((action) => !requestedCapabilities.has(action.toLowerCase()));
     const trust = scoreTrust(safeInput.trustMetrics ?? {});
     const risk = assessRisk({ criticality: safeInput.criticality, capabilityCount: agent.capabilities.length });
     const ethics = evaluateEthics({
@@ -103,6 +114,12 @@ export function createUagpGateway(options: UagpGatewayOptions = {}): UagpGateway
     } else if (!passport.valid) {
       outcome = "REJECT";
       rationale.push(`PASSPORT:${passport.reason}`);
+    } else if (!identityMatches) {
+      outcome = "REJECT";
+      rationale.push("PASSPORT_AGENT_OR_CAPABILITY_MISMATCH");
+    } else if (undeclaredActions.length > 0) {
+      outcome = "REJECT";
+      rationale.push(...undeclaredActions.map((action) => `ACTION_CAPABILITY_NOT_DECLARED:${action}`));
     } else if (!ethics.passed) {
       outcome = "REJECT";
       rationale.push(...ethics.violations);
