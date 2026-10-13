@@ -263,6 +263,9 @@ describe("Genesis V6 security and cognition", () => {
     const principal = createPrincipal({ id: "operator-2", kind: "machine", roles: ["operator"] });
     expect(callGate(gate, descriptor.methodId, { principal, action: "read", resource: "test" }).granted).toBe(true);
     expect(Object.isFrozen(gate.descriptors.get(descriptor.methodId)?.allowedRoles)).toBe(true);
+    expect(() => gate.descriptors.forEach((_value, _key, exposed) => {
+      (exposed as Map<string, unknown>).set("T.CORE.E99.override.v1.0.0.LOW.TERRITORIAL", {});
+    })).toThrow();
   });
 
 
