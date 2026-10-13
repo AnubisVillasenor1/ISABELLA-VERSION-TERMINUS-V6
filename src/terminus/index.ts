@@ -13,7 +13,8 @@ export {
   type RiskDimension, type RiskVector, type Verdict, type AuthorityChain,
   type EvidenceReference, type HumanApproval, type MandateBudget,
   type TerminusMandate, type TerminusPolicy, type TerminusDecision,
-  type EvidenceVerifier, type ExecutionCounter, type TerminusRuntimeOptions,
+  type EvidenceVerifier, type IdentityVerifier, type HumanApprovalVerifier,
+  type ExecutionCounter, type TerminusRuntimeOptions,
 } from "./mandate";
 export {
   planRetention, runRetentionSweep, createBookPiRetentionAudit,

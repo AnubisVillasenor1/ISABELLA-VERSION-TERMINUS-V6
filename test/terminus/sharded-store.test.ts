@@ -88,7 +88,7 @@ function fakeLedger(): BookPiStorage {
   };
 }
 
-function makeHarness(failedProviders: number[] = []) {
+function makeHarness(failedProviders: number[] = [], maxObjectBytes = 1_000_000) {
   const stores = Array.from({ length: 9 }, (_, index) => new MemoryShardStore("provider-" + index, failedProviders.includes(index)));
   const quotas = Object.fromEntries(stores.map((store) => [store.providerId, { maxBytes: 10_000_000, maxObjects: 100 }]));
   const keyManager = new MemoryKeyManager();
@@ -97,7 +97,7 @@ function makeHarness(failedProviders: number[] = []) {
     quotas,
     keyManager,
     ledger: fakeLedger(),
-    maxObjectBytes: 1_000_000,
+    maxObjectBytes,
     clock: () => Date.parse("2026-10-12T12:00:00.000Z"),
   });
   return { stores, quotas, keyManager, coordinator };
@@ -142,5 +142,13 @@ describe("TerminusShardedStore", () => {
     const quotas = Object.fromEntries(stores.map((store) => [store.providerId, { maxBytes: 1000, maxObjects: 10 }]));
     expect(() => new TerminusShardedStore({ stores, quotas, keyManager: new MemoryKeyManager(), ledger: fakeLedger(), maxObjectBytes: 1000 }))
       .toThrow("TERMINUS_REQUIRES_NINE_DISTINCT_STORAGE_PROVIDERS");
+  });
+
+  it("rejects an object above the configured byte ceiling before creating a key", async () => {
+    const { stores, keyManager, coordinator } = makeHarness([], 5);
+    await expect(coordinator.put({ objectId: "too-large", tenantId: "tenant-a", plaintext: "123456" }))
+      .rejects.toThrow("TERMINUS_OBJECT_MAX_BYTES_EXCEEDED");
+    expect(keyManager.keys.size).toBe(0);
+    expect(stores.every((store) => store.entries.size === 0)).toBe(true);
   });
 });

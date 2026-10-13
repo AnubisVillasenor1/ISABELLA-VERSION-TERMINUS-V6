@@ -44,7 +44,7 @@ export interface ShardStore {
 }
 
 export interface DataKeyManager {
-  createKey(context: { objectId: string; tenantFingerprint: string }): Promise<{ keyId: string; key: Uint8Array }>;
+  createKey(context: { objectIdDigest: string; tenantFingerprint: string }): Promise<{ keyId: string; key: Uint8Array }>;
   getKey(keyId: string): Promise<Uint8Array | null>;
   /** Must be durable and idempotent; destroying the key is the logical erasure boundary. */
   destroyKey(keyId: string): Promise<void>;
@@ -207,7 +207,7 @@ export class TerminusShardedStore {
         objectIdDigest, tenantFingerprint: fingerprint, originalLength: plaintext.byteLength, requestedAt: createdAt,
       });
       intentWritten = true;
-      keyMaterial = await this.options.keyManager.createKey({ objectId: input.objectId, tenantFingerprint: fingerprint });
+      keyMaterial = await this.options.keyManager.createKey({ objectIdDigest, tenantFingerprint: fingerprint });
       if (!keyMaterial.keyId.trim() || keyMaterial.key.byteLength !== 32) {
         throw new Error("TERMINUS_KEY_MANAGER_RETURNED_INVALID_KEY");
       }
@@ -369,7 +369,7 @@ export class TerminusShardedStore {
       || typeof ref.keyId !== "string" || !ref.keyId.trim()
       || typeof ref.tenantFingerprint !== "string" || !validHexDigest(ref.ciphertextSha256)
       || ref.tenantFingerprint !== tenantFingerprint(tenantId)
-      || !Number.isSafeInteger(ref.ciphertextLength) || ref.ciphertextLength < 16
+      || !Number.isSafeInteger(ref.ciphertextLength) || ref.ciphertextLength < 0
       || !Number.isSafeInteger(ref.originalLength) || ref.originalLength < 0
       || typeof ref.createdAt !== "string" || !Number.isFinite(Date.parse(ref.createdAt))
       || ref.minimumRecoverableShards !== DATA_SHARDS || ref.configuredShardCount !== TOTAL_SHARDS

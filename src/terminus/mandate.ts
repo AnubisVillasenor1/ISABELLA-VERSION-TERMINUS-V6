@@ -89,6 +89,7 @@ export interface TerminusDecision {
 
 export type EvidenceVerifier = (evidence: EvidenceReference, tenantId: string) => Promise<boolean>;
 export type IdentityVerifier = (mandate: TerminusMandate) => Promise<boolean>;
+export type HumanApprovalVerifier = (approval: HumanApproval, mandate: TerminusMandate) => Promise<boolean>;
 export type ExecutionCounter = {
   /** Must atomically decrement the remaining budget or fail; implementations must be durable. */
   consumeOne(mandateId: string, maxExecutions: number, expiresAt: string): Promise<boolean>;
@@ -132,7 +133,7 @@ function decisionFor(mandate: TerminusMandate, policy: TerminusPolicy, now: numb
     rationale,
     decidedAt: new Date(now).toISOString(),
   };
-  return { verdict, mandateId: material.mandateId, policyVersion: policy.version, reasonCodes: [code], rationale, dossierHash: sha256Hex(canonicalJson(material)), decidedAt: material.decidedAt };
+  return { verdict, mandateId: material.mandateId, policyVersion: policy.version, reasonCodes: [code], rationale, dossierHash: sha256Hex(canonicalJson(material as unknown as JsonValue)), decidedAt: material.decidedAt };
 }
 
 function deny(mandate: TerminusMandate, policy: TerminusPolicy, now: number, code: string, rationale: string): TerminusDecision {
@@ -269,6 +270,7 @@ export interface TerminusRuntimeOptions {
   policy: TerminusPolicy;
   ledger: BookPiStorage;
   verifyIdentity: IdentityVerifier;
+  verifyHumanApproval: HumanApprovalVerifier;
   verifyEvidence: EvidenceVerifier;
   executionCounter: ExecutionCounter;
   clock?: () => number;
@@ -298,8 +300,17 @@ export class TerminusRuntime {
           if (evidenceResults.some((valid) => !valid)) {
             decision = deny(mandate, this.options.policy, now, "EVIDENCE_VERIFICATION_FAILED", "La evidencia no pudo verificarse de forma independiente.");
           } else {
-            const consumed = await this.options.executionCounter.consumeOne(mandate.id, mandate.maxExecutions, mandate.expiresAt);
-            if (!consumed) decision = deny(mandate, this.options.policy, now, "EXECUTION_RESERVATION_FAILED", "No fue posible reservar atómicamente una ejecución del mandato.");
+            const requiresApproval = RISK_DIMENSIONS.some((dimension) => mandate.risk[dimension] >= this.options.policy.escalationRiskThreshold);
+            if (requiresApproval) {
+              const approval = mandate.humanApproval;
+              if (!approval || !await this.options.verifyHumanApproval(approval, mandate)) {
+                decision = deny(mandate, this.options.policy, now, "HUMAN_APPROVAL_PROOF_INVALID", "La aprobación humana contextual no fue autenticada por el verificador de confianza.");
+              }
+            }
+            if (decision.verdict === "ALLOW") {
+              const consumed = await this.options.executionCounter.consumeOne(mandate.id, mandate.maxExecutions, mandate.expiresAt);
+              if (!consumed) decision = deny(mandate, this.options.policy, now, "EXECUTION_RESERVATION_FAILED", "No fue posible reservar atómicamente una ejecución del mandato.");
+            }
           }
         }
       } catch {
