@@ -5,7 +5,7 @@ import ai.gameover.model.AgentIdentity;
 import ai.gameover.model.PassportVerification;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.LinkedHashMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -15,7 +15,7 @@ import java.util.UUID;
  */
 public class PassportAuthority {
 
-  private final Map<String, AIPassport> passports = new LinkedHashMap<>();
+  private final Map<String, AIPassport> passports = new ConcurrentHashMap<>();
   private final int defaultValidityDays;
 
   public PassportAuthority() {
