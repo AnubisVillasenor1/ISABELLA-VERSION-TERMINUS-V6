@@ -1,7 +1,65 @@
-import { createHash } from "node:crypto";
-import { appendFileSync, copyFileSync, existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
+import { createHash, randomUUID } from "node:crypto";
+import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, readFileSync, renameSync, unlinkSync, writeSync } from "node:fs";
 import { dirname } from "node:path";
 import type { RetentionPlan } from "./retention";
+
+function syncDirectory(path: string): void {
+  if (process.platform === "win32") return;
+  const fd = openSync(path, "r");
+  try { fsyncSync(fd); } finally { closeSync(fd); }
+}
+
+function writeAll(fd: number, bytes: Buffer): void {
+  let offset = 0;
+  while (offset < bytes.length) {
+    const written = writeSync(fd, bytes, offset, bytes.length - offset, null);
+    if (written <= 0) throw new Error("BOOKPI_WRITE_ZERO_PROGRESS");
+    offset += written;
+  }
+}
+
+/** Atomic same-directory replacement with file fsync, rename, and directory fsync. */
+function atomicDurableWrite(path: string, content: string | Uint8Array): void {
+  const directory = dirname(path);
+  mkdirSync(directory, { recursive: true });
+  const tempPath = path + ".tmp-" + randomUUID();
+  const bytes = typeof content === "string" ? Buffer.from(content, "utf8") : Buffer.from(content);
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeAll(fd, bytes);
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+    renameSync(tempPath, path);
+    syncDirectory(directory);
+  } catch (error) {
+    if (fd !== null) {
+      try { closeSync(fd); } catch { /* preserve the original failure */ }
+    }
+    try { if (existsSync(tempPath)) unlinkSync(tempPath); } catch { /* fail closed on next open */ }
+    throw error;
+  } finally { bytes.fill(0); }
+}
+
+/** Append one JSONL row and fsync it before the event is published in memory. */
+function appendDurableLine(path: string, line: string): void {
+  const directory = dirname(path);
+  mkdirSync(directory, { recursive: true });
+  const existed = existsSync(path);
+  const fd = openSync(path, "a", 0o600);
+  const bytes = Buffer.from(line, "utf8");
+  try {
+    writeAll(fd, bytes);
+    fsyncSync(fd);
+  } finally {
+    closeSync(fd);
+    bytes.fill(0);
+  }
+  if (!existed) syncDirectory(directory);
+}
+
+
 
 export interface BookPiEventInput {
   id: string;
@@ -243,6 +301,8 @@ function isRecordLine(value: unknown): value is BookPiEvent {
 export class DurableBookPiLedger {
   private readonly filePath: string;
   private readonly checkpointPath: string;
+  private readonly maintenancePath: string;
+  private poisoned = false;
   private events: BookPiEvent[] = [];
   private checkpoint: DurableLedgerCheckpoint | null = null;
 
@@ -250,10 +310,16 @@ export class DurableBookPiLedger {
     if (!filePath.trim()) throw new Error("BOOKPI_LEDGER_PATH_REQUIRED");
     this.filePath = filePath;
     this.checkpointPath = `${filePath}.checkpoint.json`;
+    this.maintenancePath = `${filePath}.maintenance.pending.json`;
     this.load();
   }
 
+  private assertHealthy(): void {
+    if (this.poisoned || existsSync(this.maintenancePath)) throw new Error("BOOKPI_MAINTENANCE_RECOVERY_REQUIRED");
+  }
+
   private load(): void {
+    if (existsSync(this.maintenancePath)) throw new Error("BOOKPI_MAINTENANCE_RECOVERY_REQUIRED");
     if (existsSync(this.checkpointPath)) {
       const raw = readFileSync(this.checkpointPath, "utf8");
       const parsed = JSON.parse(raw) as DurableLedgerCheckpoint;
@@ -286,32 +352,35 @@ export class DurableBookPiLedger {
   }
 
   private persist(entry: BookPiEvent): void {
-    mkdirSync(dirname(this.filePath), { recursive: true });
-    appendFileSync(this.filePath, JSON.stringify(entry) + "\n", "utf8");
+    try { appendDurableLine(this.filePath, JSON.stringify(entry) + "\n"); }
+    catch (error) { this.poisoned = true; throw error; }
   }
 
   append(input: BookPiEventInput): BookPiEvent {
+    this.assertHealthy();
     assertAppendInput(input);
     const previousHash = this.events.at(-1)?.hash ?? this.checkpoint?.lastArchivedHash ?? GENESIS_HASH;
     const sequence = (this.checkpoint?.archivedCount ?? 0) + this.events.length + 1;
     const entry = seal(input, sequence, previousHash);
-    mkdirSync(dirname(this.filePath), { recursive: true });
-    appendFileSync(this.filePath, JSON.stringify(entry) + "\n", "utf8");
+    this.persist(entry);
     this.events.push(entry);
     return { ...entry };
   }
 
   list(limit?: number): readonly BookPiEvent[] {
+    this.assertHealthy();
     const list = limit && limit > 0 ? this.events.slice(-limit) : this.events;
     return list.map((event) => Object.freeze({ ...event }));
   }
 
   getEventById(id: string): BookPiEvent | null {
+    this.assertHealthy();
     const found = this.events.find((e) => e.id === id);
     return found ? Object.freeze({ ...found }) : null;
   }
 
   verify(): BookPiVerification {
+    this.assertHealthy();
     const startPrevHash = this.checkpoint?.lastArchivedHash ?? GENESIS_HASH;
     const result = verifyEvents(this.events, startPrevHash, "DURABLE_APPEND_ONLY_JSONL", true);
     if (!result.valid) return result;
@@ -332,10 +401,12 @@ export class DurableBookPiLedger {
   }
 
   getSummary(): BookPiSummary {
+    this.assertHealthy();
     return summarize(this.events);
   }
 
   snapshot(): BookPiSnapshot {
+    this.assertHealthy();
     return {
       count: this.events.length,
       events: this.list(),
@@ -348,22 +419,29 @@ export class DurableBookPiLedger {
 
   /** Copy the current ledger file to `destPath`. Returns bytes and event count. */
   backup(destPath: string): { path: string; bytes: number; events: number } {
-    mkdirSync(dirname(destPath), { recursive: true });
-    if (!existsSync(this.filePath)) writeFileSync(this.filePath, "", "utf8");
-    copyFileSync(this.filePath, destPath);
+    this.assertHealthy();
+    if (!this.verify().valid) throw new Error("BOOKPI_BACKUP_SOURCE_CORRUPT");
+    const ledgerContents = existsSync(this.filePath) ? readFileSync(this.filePath) : Buffer.alloc(0);
+    try { atomicDurableWrite(destPath, ledgerContents); } finally { ledgerContents.fill(0); }
     const checkpointBackup = destPath + ".checkpoint.json";
-    if (existsSync(this.checkpointPath)) copyFileSync(this.checkpointPath, checkpointBackup);
-    else if (existsSync(checkpointBackup)) unlinkSync(checkpointBackup);
+    if (existsSync(this.checkpointPath)) {
+      const checkpointContents = readFileSync(this.checkpointPath);
+      try { atomicDurableWrite(checkpointBackup, checkpointContents); } finally { checkpointContents.fill(0); }
+    } else if (existsSync(checkpointBackup)) {
+      unlinkSync(checkpointBackup);
+      syncDirectory(dirname(checkpointBackup));
+    }
     const bytes = readFileSync(destPath).byteLength
       + (existsSync(checkpointBackup) ? readFileSync(checkpointBackup).byteLength : 0);
     return { path: destPath, bytes, events: this.events.length };
   }
 
   /**
-   * Replace the ledger with a backup file, but only after validating that the
-   * backup's chain is intact. Restores are refused if the source is corrupt.
+   * Restore a verified backup and its checkpoint. A maintenance marker prevents
+   * an interrupted two-file replacement from being mistaken for a valid ledger.
    */
   restore(srcPath: string): { restored: number; valid: boolean } {
+    this.assertHealthy();
     if (!existsSync(srcPath)) throw new Error("BOOKPI_RESTORE_SOURCE_MISSING");
     const raw = readFileSync(srcPath, "utf8");
     const incoming: BookPiEvent[] = [];
@@ -373,16 +451,16 @@ export class DurableBookPiLedger {
       if (!isRecordLine(parsed)) throw new Error("BOOKPI_RESTORE_SOURCE_INVALID");
       incoming.push(parsed);
     }
+
     let incomingCheckpoint: DurableLedgerCheckpoint | null = null;
     const sourceCheckpointPath = srcPath + ".checkpoint.json";
-    if (existsSync(sourceCheckpointPath)) {
-      const parsed = JSON.parse(readFileSync(sourceCheckpointPath, "utf8")) as DurableLedgerCheckpoint;
+    const checkpointRaw = existsSync(sourceCheckpointPath) ? readFileSync(sourceCheckpointPath, "utf8") : null;
+    if (checkpointRaw !== null) {
+      const parsed = JSON.parse(checkpointRaw) as DurableLedgerCheckpoint;
       if (!Number.isSafeInteger(parsed.archivedCount) || parsed.archivedCount < 0
         || (parsed.archivedCount === 0 && parsed.lastArchivedHash !== null)
         || (parsed.archivedCount > 0 && (typeof parsed.lastArchivedHash !== "string" || !/^[a-f0-9]{64}$/i.test(parsed.lastArchivedHash)))
-        || !Number.isFinite(Date.parse(parsed.updatedAt))) {
-        throw new Error("BOOKPI_RESTORE_CHECKPOINT_INVALID");
-      }
+        || !Number.isFinite(Date.parse(parsed.updatedAt))) throw new Error("BOOKPI_RESTORE_CHECKPOINT_INVALID");
       incomingCheckpoint = parsed;
     }
     const startHash = incomingCheckpoint?.lastArchivedHash ?? GENESIS_HASH;
@@ -392,28 +470,41 @@ export class DurableBookPiLedger {
     if (incoming.some((event, index) => event.sequence !== baseSequence + index + 1)) {
       throw new Error("BOOKPI_RESTORE_SEQUENCE_INVALID");
     }
-    mkdirSync(dirname(this.filePath), { recursive: true });
-    copyFileSync(srcPath, this.filePath);
-    if (incomingCheckpoint) copyFileSync(sourceCheckpointPath, this.checkpointPath);
-    else {
-      if (existsSync(this.checkpointPath)) unlinkSync(this.checkpointPath);
-      this.checkpoint = null;
+
+    const transaction = {
+      operation: "restore",
+      startedAt: new Date().toISOString(),
+      sourceDigest: createHash("sha256").update(raw).digest("hex"),
+      sourceCheckpointDigest: checkpointRaw === null ? null : createHash("sha256").update(checkpointRaw).digest("hex"),
+      targetLedger: this.filePath,
+      targetCheckpoint: this.checkpointPath,
+    };
+    this.poisoned = true;
+    atomicDurableWrite(this.maintenancePath, JSON.stringify(transaction));
+    try {
+      atomicDurableWrite(this.filePath, raw);
+      if (checkpointRaw !== null) atomicDurableWrite(this.checkpointPath, checkpointRaw);
+      else if (existsSync(this.checkpointPath)) {
+        unlinkSync(this.checkpointPath);
+        syncDirectory(dirname(this.checkpointPath));
+      }
+      unlinkSync(this.maintenancePath);
+      syncDirectory(dirname(this.maintenancePath));
+      this.load();
+      this.poisoned = false;
+      return { restored: incoming.length, valid: true };
+    } catch (error) {
+      this.poisoned = true;
+      throw error;
     }
-    this.load();
-    return { restored: incoming.length, valid: true };
   }
 
-  /**
-   * Physically prune an archived prefix from the live file and advance the
-   * checkpoint so verification remains anchored. Refuses to prune events that
-   * are still present at the head (plan mismatch). Writes the archive that the
-   * caller must persist BEFORE pruning. This is an explicit administrative
-   * operation, not an automatic one.
-   */
   prune(plan: RetentionPlan): { pruned: number; remaining: number } {
+    this.assertHealthy();
     if (!this.verify().valid) throw new Error("BOOKPI_PRUNE_SOURCE_CORRUPT");
     if (plan.archived.length === 0) return { pruned: 0, remaining: this.events.length };
     if (plan.archived.length + plan.kept.length !== this.events.length) throw new Error("BOOKPI_PRUNE_PLAN_MISMATCH");
+
     const planned = [...plan.archived, ...plan.kept];
     for (let index = 0; index < this.events.length; index += 1) {
       const actual = this.events[index]!;
@@ -426,21 +517,45 @@ export class DurableBookPiLedger {
     if (!headArchived) throw new Error("BOOKPI_PRUNE_PLAN_MISMATCH");
     const firstKept = plan.kept.at(0);
     if (firstKept && firstKept.previousHash !== headArchived.hash) throw new Error("BOOKPI_PRUNE_PLAN_MISMATCH");
+
     const body = plan.kept.map((event) => JSON.stringify(event)).join("\n");
-    writeFileSync(this.filePath, body ? body + "\n" : "", "utf8");
     const checkpoint: DurableLedgerCheckpoint = {
       archivedCount: (this.checkpoint?.archivedCount ?? 0) + plan.archived.length,
       lastArchivedHash: headArchived.hash,
       updatedAt: new Date().toISOString(),
     };
-    writeFileSync(this.checkpointPath, JSON.stringify(checkpoint), "utf8");
-    this.events = [...plan.kept];
-    this.checkpoint = checkpoint;
-    return { pruned: plan.archived.length, remaining: this.events.length };
+    const transaction = {
+      operation: "prune",
+      startedAt: new Date().toISOString(),
+      previousCheckpoint: this.checkpoint,
+      nextCheckpoint: checkpoint,
+      archivedCount: plan.archived.length,
+      lastArchivedHash: headArchived.hash,
+      retainedHead: firstKept?.hash ?? null,
+      targetLedger: this.filePath,
+      targetCheckpoint: this.checkpointPath,
+    };
+
+    this.poisoned = true;
+    atomicDurableWrite(this.maintenancePath, JSON.stringify(transaction));
+    try {
+      atomicDurableWrite(this.filePath, body ? body + "\n" : "");
+      atomicDurableWrite(this.checkpointPath, JSON.stringify(checkpoint));
+      unlinkSync(this.maintenancePath);
+      syncDirectory(dirname(this.maintenancePath));
+      this.events = [...plan.kept];
+      this.checkpoint = checkpoint;
+      this.poisoned = false;
+      return { pruned: plan.archived.length, remaining: this.events.length };
+    } catch (error) {
+      this.poisoned = true;
+      throw error;
+    }
   }
 
   /** Return the current checkpoint (archived count + anchor hash), if any. */
   getCheckpoint(): DurableLedgerCheckpoint | null {
+    this.assertHealthy();
     return this.checkpoint ? { ...this.checkpoint } : null;
   }
 }

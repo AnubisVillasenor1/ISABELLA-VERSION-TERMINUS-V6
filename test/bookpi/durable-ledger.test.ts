@@ -1,6 +1,6 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { randomUUID } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { DurableBookPiLedger, createAuditLedger } from "../../src/bookpi/ledger";
@@ -28,10 +28,19 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  try { rmSync(ledgerPath, { force: true }); } catch { /* ignore */ }
+  try { rmSync(dirname(ledgerPath), { recursive: true, force: true }); } catch { /* ignore */ }
 });
 
 describe("DurableBookPiLedger", () => {
+  it("fails closed when an interrupted maintenance marker exists", () => {
+    writeFileSync(ledgerPath + ".maintenance.pending.json", JSON.stringify({
+      operation: "prune",
+      startedAt: new Date().toISOString(),
+      targetLedger: ledgerPath,
+    }), "utf8");
+    expect(() => new DurableBookPiLedger(ledgerPath)).toThrow("BOOKPI_MAINTENANCE_RECOVERY_REQUIRED");
+  });
+
   it("persists events and reports a durable chain", () => {
     const ledger = new DurableBookPiLedger(ledgerPath);
     ledger.append(nextInput());
@@ -74,6 +83,8 @@ describe("DurableBookPiLedger", () => {
     const reopened = new DurableBookPiLedger(ledgerPath);
     expect(reopened.verify().valid).toBe(false);
     expect(reopened.verify().status).toBe("INTEGRITY_FAILURE");
+    expect(() => reopened.backup(ledgerPath + ".refuse-corrupt-backup"))
+      .toThrow("BOOKPI_BACKUP_SOURCE_CORRUPT");
   });
 
   it("backs up and restores the ledger", () => {

@@ -53,7 +53,9 @@ BookPI conserva el ledger JSONL durable existente, seleccionable mediante **BOOK
 
 El adaptador PostgreSQL utiliza trece campos para registrar el evento completo, incluido **canonical**; la prueba de contrato correspondiente valida que la sentencia inserte los trece parámetros. Para que PostgreSQL sea el almacenamiento autoritativo, aún deben probarse el esquema real, los permisos append-only, la concurrencia, la propagación de errores, el respaldo y la restauración contra una instancia de prueba.
 
-**BookPI no es un dispositivo WORM.** La cadena de hashes permite detectar modificaciones que no reencadenen correctamente, pero no impide por sí sola que un administrador privilegiado cambie el archivo, los permisos, el checkpoint o todas las copias de respaldo. Para endurecer la evidencia se requieren roles de sólo inserción, anclaje externo y una política de backup/restauración comprobada.
+**El ledger durable agrega cada fila con `fsync` y usa reemplazos atómicos para backup, restauración y poda. Un marcador de mantenimiento pendiente bloquea el uso del ledger tras una interrupción de operaciones de dos archivos, hasta que se valide y reconcilie explícitamente la cadena.
+
+BookPI no es un dispositivo WORM.** La cadena de hashes permite detectar modificaciones que no reencadenen correctamente, pero no impide por sí sola que un administrador privilegiado cambie el archivo, los permisos, el checkpoint o todas las copias de respaldo. Para endurecer la evidencia se requieren roles de sólo inserción, anclaje externo y una política de backup/restauración comprobada.
 
 ### Terminus Sharded Store: cifrado, 6+3 y cuotas
 

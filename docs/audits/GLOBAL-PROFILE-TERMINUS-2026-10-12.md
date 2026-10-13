@@ -33,6 +33,8 @@ Los nombres y descripciones del perfil sirven para inventariar candidatos, pero 
 11. **Rendimiento.** El código local de hashes, codificación y routing no permite inferir latencia de producción. Hace falta medir percentiles bajo carga, con red, proveedores, cold starts, almacenamiento real y concurrencia.
 12. **Licencias y procedencia.** Una marca común no convierte las licencias en compatibles. El código procedente de repositorios auxiliares requiere revisión de LICENSE, dependencia, origen y atribución por componente.
 
+13. **Durabilidad de archivos BookPI.** Las escrituras usan `fsync`, los archivos se sustituyen de forma atómica y la poda/restauración mantiene un marcador durable de mantenimiento. Si el marcador persiste tras un fallo, el runtime se bloquea hasta reconciliar el ledger, el archivo y el checkpoint; no intenta adivinar qué mitad de la operación fue confirmada.
+
 ## Diseño de Terminus incorporado al destino
 
 - **src/terminus/erasure-code.ts:** codificador Reed–Solomon 6+3 y decodificador de cualquier combinación válida de seis shards.
