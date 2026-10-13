@@ -323,7 +323,7 @@ document.querySelectorAll('.mode').forEach((button) => {
     if (voiceMode) {
       soundOn = true;
       if (soundToggle) {
-        soundToggle.textContent = 'SONIDO: ON';
+        soundToggle.textContent = 'VOZ: ON';
         soundToggle.setAttribute('aria-pressed', 'true');
       }
       if (mic) mic.title = 'Dicta un mensaje; en modo voz se enviará al terminar el reconocimiento.';
@@ -335,7 +335,7 @@ document.querySelectorAll('.mode').forEach((button) => {
 });
 soundToggle?.addEventListener('click', () => {
   soundOn = !soundOn;
-  soundToggle.textContent = `SONIDO: ${soundOn ? 'ON' : 'OFF'}`;
+  soundToggle.textContent = `VOZ: ${soundOn ? 'ON' : 'OFF'}`;
   soundToggle.setAttribute('aria-pressed', String(soundOn));
   if (!soundOn && 'speechSynthesis' in window) window.speechSynthesis.cancel();
 });
@@ -688,7 +688,7 @@ const resetConversation = () => {
   resizePrompt();
   prompt?.focus();
 };
-newChat?.addEventListener('click', resetConversation);
+byId('newChat')?.addEventListener('click', resetConversation);
 byId('clearChat')?.addEventListener('click', resetConversation);
 byId('exportChat')?.addEventListener('click', exportConversation);
 byId('clearDrafts')?.addEventListener('click', () => {
