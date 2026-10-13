@@ -118,7 +118,7 @@ describe("GAME OVER UagpGateway", () => {
 
   it("escalates a high-risk action when no human approver is recorded", () => {
     const { gateway } = harness();
-    const result = gateway.govern(request({ actions: ["deploy"] }));
+    const result = gateway.govern(request({ actions: ["deploy"], agent: { ...agent, capabilities: ["deploy"] } }));
     expect(result.outcome).toBe("ESCALATE");
     expect(result.decision.humanApprovalRequired).toBe(true);
     expect(result.allowed).toBe(false);
