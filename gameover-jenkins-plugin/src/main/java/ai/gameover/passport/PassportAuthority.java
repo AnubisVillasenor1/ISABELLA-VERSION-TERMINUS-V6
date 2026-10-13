@@ -37,6 +37,9 @@ public class PassportAuthority {
     if (agent == null || agent.id() == null || agent.id().isBlank()) {
       throw new IllegalArgumentException("PASSPORT_AGENT_ID_REQUIRED");
     }
+    if (agent.name() == null || agent.name().isBlank() || agent.owner() == null || agent.owner().isBlank()) {
+      throw new IllegalArgumentException("PASSPORT_AGENT_IDENTITY_INCOMPLETE");
+    }
     if (issuer == null || issuer.isBlank()) {
       throw new IllegalArgumentException("PASSPORT_ISSUER_REQUIRED");
     }
