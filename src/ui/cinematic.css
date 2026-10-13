@@ -418,7 +418,7 @@ footer{display:flex;justify-content:space-between;gap:16px;padding:22px 2px 0;bo
 .palette-top h2{margin:0;font-size:22px;font-weight:570;letter-spacing:-.035em}
 .palette-close{padding:5px 7px;border:1px solid rgba(180,211,233,.15);border-radius:6px;background:transparent;color:#9bb0c2;font:10px ui-monospace,monospace;cursor:pointer}
 .palette-search-label{display:block;padding:0 22px;margin:0 0 7px;color:#8598aa;font-size:10px}
-.palette-search{display:block;width:calc(100% - 44px);min-height:42px;margin:0 22px 12px;padding:0 12px;border:1px solid rgba(180,211,233,.17);border-radius:9px;outline:0;background:#0b1118;color:#edf5fb;font:12px inherit}
+.palette-search{display:block;width:calc(100% - 44px);min-height:42px;margin:0 22px 12px;padding:0 12px;border:1px solid rgba(180,211,233,.17);border-radius:9px;outline:0;background:#0b1118;color:#edf5fb;font:inherit;font-size:12px}
 .palette-search:focus{border-color:rgba(155,207,242,.5);box-shadow:0 0 0 3px rgba(155,207,242,.055)}
 .command-list{display:grid;gap:3px;max-height:420px;overflow:auto;padding:3px 12px 13px}
 .command-list button{display:grid;grid-template-columns:36px minmax(0,1fr) auto;align-items:center;gap:12px;min-height:54px;padding:8px 10px;border:1px solid transparent;border-radius:9px;background:transparent;text-align:left;color:#dae6ef;cursor:pointer}
