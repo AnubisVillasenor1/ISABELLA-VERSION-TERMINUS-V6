@@ -183,6 +183,7 @@ El comando de empaquetado debe producir un artefacto HPI sin errores antes de in
 Los nombres de variables pueden variar por integración. Revisa el código y los documentos de cada adaptador antes de habilitarlo. Entre los nombres de configuración usados por el runtime están:
 
 - `GENESIS_ADMIN_API_TOKEN`: acceso administrativo a rutas protegidas.
+- `GENESIS_HUMAN_APPROVAL_TOKEN` y `GENESIS_HUMAN_APPROVER_ID`: credencial y principal designado para la aprobación humana independiente en GAME OVER. Si no están configurados o no coinciden, una acción que exige aprobación debe quedar en `ESCALATE`; el token administrativo por sí solo no cuenta como aprobación.
 - `BOOKPI_LEDGER_PATH`: ruta del ledger JSONL durable cuando se habilita ese backend.
 - Credenciales específicas de proveedores de inferencia (por ejemplo, OpenRouter, Hugging Face o Gemini) y variables de conexión para persistencia.
 
@@ -192,7 +193,7 @@ Reglas mínimas:
 - Usa el gestor de secretos del entorno de despliegue y rota cualquier secreto expuesto.
 - No habilites proveedores de coste variable sin opt-in explícito, presupuesto y límites.
 - Verifica identidad, scopes, tenant y autorización del lado servidor; no confíes en roles enviados por el cliente.
-- No uses un token administrativo compartido como sustituto de identidades individuales para aprobaciones críticas.
+- No uses un token administrativo compartido como sustituto de identidades individuales para aprobaciones críticas. GAME OVER exige una credencial de aprobación separada y un ID de aprobador configurado; este mecanismo es un control de despliegue, no sustituye una integración completa con un proveedor de identidad corporativo.
 - Prueba fallos de red, timeout, respuestas malformadas, proveedor indisponible, revocación y rollback.
 
 ## 8. API de referencia
