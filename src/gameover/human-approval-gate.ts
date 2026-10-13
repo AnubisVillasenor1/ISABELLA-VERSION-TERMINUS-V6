@@ -28,7 +28,10 @@ export function evaluateHumanApproval(input: HumanApprovalInput): HumanApprovalR
     return Object.freeze({ required: true, satisfied: false, approver: null, reason: "HUMAN_APPROVER_REQUIRED" });
   }
   const principal = typeof input.authenticatedPrincipal === "string" && input.authenticatedPrincipal.trim() ? input.authenticatedPrincipal.trim() : null;
-  if (principal && principal !== approver) {
+  if (!principal) {
+    return Object.freeze({ required: true, satisfied: false, approver, reason: "HUMAN_AUTHENTICATED_PRINCIPAL_REQUIRED" });
+  }
+  if (principal !== approver) {
     return Object.freeze({ required: true, satisfied: false, approver, reason: "HUMAN_APPROVER_MISMATCH" });
   }
   return Object.freeze({ required: true, satisfied: true, approver, reason: "HUMAN_APPROVED" });
