@@ -3,7 +3,7 @@ import type { RiskTier } from "../authority/method-id";
 import type { ApprovalRef } from "../identity/approval";
 import { verifyHumanApproval } from "../identity/approval";
 import type { Principal } from "../identity/principal";
-import { inspectAegisValue } from "../security/aegis";
+import { inspectAegisInput } from "../security/aegis";
 
 export interface ToolDescriptor {
   id: string;
@@ -64,10 +64,11 @@ export class ToolRegistry {
     const tool = this.get(id);
     if (!tool.scopes.includes(scope)) throw new Error(`TOOLS: scope denied for ${id}`);
 
-    const serializedInput = safeSerialize(input);
-    const aegis = inspectAegisValue(input);
+    const inspection = inspectAegisInput(input);
+    const serializedInput = inspection.serialized ?? "[UNSERIALIZABLE_INPUT]";
+    const aegis = inspection.verdict;
     const startedAt = new Date().toISOString();
-    const inputHash = hash(input);
+    const inputHash = hashSerialized(serializedInput);
 
     if (aegis.decision !== "ALLOW") {
       const receipt = makeReceipt(tool, principal, inputHash, serializedInput, startedAt, "blocked");
@@ -114,8 +115,12 @@ function safeSerialize(value: unknown): string {
   }
 }
 
+function hashSerialized(serialized: string): string {
+  return createHash("sha256").update(serialized, "utf8").digest("hex");
+}
+
 function hash(value: unknown): string {
-  return createHash("sha256").update(safeSerialize(value), "utf8").digest("hex");
+  return hashSerialized(safeSerialize(value));
 }
 function makeReceipt(
   tool: ToolDescriptor,
