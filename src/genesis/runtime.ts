@@ -8,6 +8,7 @@ import { SkillRegistry } from "../skills/registry";
 import { GovernedInferenceRouter } from "../inference/router";
 import type { GenerationRequest, GenerationResult } from "../inference/types";
 import { DeterministicVerifier } from "../veritas/verifier";
+import { assessGrounding, type GroundingEvidence, type GroundingOptions, type GroundingReport } from "../veritas/grounding";
 import { evaluateCompanionSafety, type CompanionSafetyVerdict } from "../companion/safety";
 import { InMemoryHumanEscalationQueue, createEscalation, type HumanEscalationQueue } from "../companion/escalation";
 import { explainPolicyDecision, type DecisionExplanation } from "../cognition/explainability";
@@ -388,6 +389,14 @@ export class IsabellaGenesisRuntime {
         });
       },
     });
+    this.capabilities.register({
+      descriptor: low("hsf.truth.grounding", "verification", "Evidence Grounding Guard Ω: anclaje léxico fail-closed de una respuesta a su evidencia (no verdad)."),
+      health: () => "ready",
+      execute: async (input) => {
+        const value = input as { answer?: string; evidence?: GroundingEvidence[]; options?: GroundingOptions };
+        return this.assessGrounding(value.answer ?? "", value.evidence ?? [], value.options);
+      },
+    });
   }
 
   private registerCanonicalProtocols(): void {
@@ -743,6 +752,17 @@ export class IsabellaGenesisRuntime {
   /** Contradiction Engine Ω: detecta contradicciones estructurales entre claims canónicos. */
   detectContradictions(claims: readonly CanonicalClaim[], options?: ContradictionOptions): ContradictionReport {
     return runContradictionDetection(claims, options);
+  }
+
+  /** Evidence Grounding Guard Ω: mide el anclaje léxico de una respuesta a su evidencia (fail-closed). */
+  assessGrounding(answer: string, evidence: readonly GroundingEvidence[], options?: GroundingOptions): GroundingReport {
+    const report = assessGrounding(answer, evidence, options);
+    this.events.publish({
+      topic: "truth.grounding.assessed",
+      type: report.verdict,
+      payload: { verdict: report.verdict, groundedness: report.groundedness, unsupported: report.unsupportedClaimCount, digest: report.digest },
+    });
+    return report;
   }
 
   /** Registro canónico de las 7 federaciones TAMV (id ↔ código YUN). */
