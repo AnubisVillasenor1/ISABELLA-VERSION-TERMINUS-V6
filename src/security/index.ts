@@ -1,5 +1,14 @@
 
 export { inspectAegis, type AegisFinding, type AegisFindingKind, type AegisVerdict } from "./aegis";
+export {
+  evaluateVigia,
+  evaluateVigiaInput,
+  evaluateVigiaValue,
+  type VigiaDecision,
+  type VigiaFinding,
+  type VigiaVerdict,
+  type VigiaVertex,
+} from "./vigia";
 export { requiredSecret, bookPiSecret, isTestRuntime, equalSecret } from "./secrets";
 export * from "./api-token";
 export * from "./rate-limit";

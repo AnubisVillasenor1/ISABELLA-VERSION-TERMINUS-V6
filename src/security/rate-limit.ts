@@ -67,8 +67,11 @@ export class FixedWindowRateLimiter {
   }
 
   private evictExpired(now: number): void {
+    // Only genuinely elapsed windows are reclaimable. A rolled-back clock
+    // (now < startedAt) must never free capacity: that would let a new key
+    // capture another client's quota by rewinding time.
     for (const [key, state] of this.windows) {
-      if (now - state.startedAt >= this.windowMs || now < state.startedAt) this.windows.delete(key);
+      if (now - state.startedAt >= this.windowMs) this.windows.delete(key);
     }
   }
 }

@@ -60,10 +60,11 @@ import type { KnowledgeClaim } from "../memory/ikes";
 import { ProtocolRegistry, PROTOCOL_CATALOG } from "../protocols";
 import { GenesisModuleRegistry } from "../modules";
 import { CANONICAL_TOOLS, PROTOCOL_TOOLS } from "../tools";
-import { CANONICAL_SKILLS } from "../skills";
+import { CANONICAL_SKILLS, FOUNDATIONAL_SKILLS } from "../skills";
 import { assessEpistemicState, passesEriGate, type SophiaSignals, type SophiaAssessment } from "../cognition/sophia";
+import { detectContradictions as runContradictionDetection, type CanonicalClaim, type ContradictionOptions, type ContradictionReport } from "../cognition/contradiction";
 import { hardenSanitization, buildQuarantineRecord, type HardeningResult } from "../sanitization";
-import { triangulateDigest, sealEnvelope, openEnvelope, type TriangulatedDigest, type SealedEnvelope } from "../security";
+import { triangulateDigest, sealEnvelope, openEnvelope, evaluateVigia, type TriangulatedDigest, type SealedEnvelope, type VigiaVerdict } from "../security";
 import { buildOpsSnapshot, assessProductionReadiness, TokenBucket, CircuitBreaker, type DependencyHealth, type MaintenanceWindow, type OpsSnapshot, type ProductionReadinessReport } from "../deployment";
 import { buildTapAct, validateTapAct, evaluateIsaPipeline, type TapActInput, type TapAct, type TapActValidation, type HighImpactTrigger } from "../ingress";
 import {
@@ -145,7 +146,7 @@ export class IsabellaGenesisRuntime {
       if (this.tools.list().some((t) => t.id === tool.id)) continue;
       this.tools.register(tool);
     }
-    for (const skill of CANONICAL_SKILLS) {
+    for (const skill of [...CANONICAL_SKILLS, ...FOUNDATIONAL_SKILLS]) {
       if (this.skills.list().some((s) => s.id === skill.id)) continue;
       this.skills.register(skill);
     }
@@ -348,6 +349,19 @@ export class IsabellaGenesisRuntime {
       health: () => "ready",
       execute: async (input) => this.evaluateIsa(input as Parameters<typeof evaluateIsaPipeline>[0]),
     });
+    this.capabilities.register({
+      descriptor: low("hsf.vigia.integrity", "verification", "Triple bloqueo VIGIA: integridad ontológica, semántica y conductual (fail-closed)."),
+      health: () => "ready",
+      execute: async (input) => this.assessVigia((input as { content?: string }).content ?? ""),
+    });
+    this.capabilities.register({
+      descriptor: low("hsf.truth.contradiction", "verification", "Contradiction Engine Ω: contradicciones estructurales entre claims canónicos."),
+      health: () => "ready",
+      execute: async (input) => {
+        const value = input as { claims?: CanonicalClaim[]; functionalRelations?: string[] };
+        return this.detectContradictions(value.claims ?? [], { functionalRelations: value.functionalRelations });
+      },
+    });
   }
 
   private registerCanonicalProtocols(): void {
@@ -496,6 +510,11 @@ export class IsabellaGenesisRuntime {
 
   assessCompanionSafety(input: string): CompanionSafetyVerdict {
     return evaluateCompanionSafety(input);
+  }
+
+  /** VIGIA triple bloqueo: integridad ontológica, semántica y conductual. */
+  assessVigia(input: string): VigiaVerdict {
+    return evaluateVigia(input);
   }
 
   explainPolicy(decision: "ALLOW"|"DENY"|"REVIEW", factors: readonly string[], evidenceRefs: readonly string[], policyVersion: string): DecisionExplanation {
@@ -684,6 +703,11 @@ export class IsabellaGenesisRuntime {
   assessEpistemic(signals: SophiaSignals): SophiaAssessment & { passesEriGate: boolean } {
     const assessment = assessEpistemicState(signals);
     return { ...assessment, passesEriGate: passesEriGate(assessment) };
+  }
+
+  /** Contradiction Engine Ω: detecta contradicciones estructurales entre claims canónicos. */
+  detectContradictions(claims: readonly CanonicalClaim[], options?: ContradictionOptions): ContradictionReport {
+    return runContradictionDetection(claims, options);
   }
 
   /* ------------------------------------------------------------------ */

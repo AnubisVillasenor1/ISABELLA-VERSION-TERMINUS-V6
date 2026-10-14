@@ -44,6 +44,7 @@ export * from "./cognition/moe";
 export * from "./cognition/consent";
 export * from "./cognition/orchestrator";
 export * from "./cognition/sophia";
+export * from "./cognition/contradiction";
 
 // ============================================================================
 // 4. TERRITORY, XR, QUANTUM & SYSTEM INFRASTRUCTURE

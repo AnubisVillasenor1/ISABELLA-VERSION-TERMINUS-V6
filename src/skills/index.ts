@@ -7,6 +7,7 @@ export {
   type SkillBudget,
 } from "./registry";
 export { CANONICAL_SKILLS } from "./catalog";
+export { FOUNDATIONAL_SKILLS } from "./foundational";
 export {
   type SkillContract,
   type SkillAuthority,

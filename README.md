@@ -11,7 +11,7 @@
 
 **≈ 58% — estimación global provisional de readiness (rango honesto: 54–63%).**
 
-Es una **estimación de ingeniería, no una certificación**. Se calcula como media ponderada de dominios verificados de forma reproducible en la rama, con los gates externos penalizados en su estado real (no en su intención). El movimiento desde la base anterior (48% → ≈52%) y ahora hasta ≈58% proviene de trabajo implementado y probado en la rama: **79 rutas HTTP** (cinco nuevas gobernadas y fail-closed), una **capa multimodal** de visión y síntesis de imagen (`src/inference/multimodal.ts`), una **capa de voz** TTS/STT (`src/inference/speech.ts`), el espacio de trabajo app-shell de chat con adjuntar archivo de contexto y escucha por Web Speech (la imagen se analiza vía `POST /api/v1/cognition/vision`), y una readiness local de **1016 pruebas / 176 archivos**. No proviene de dar por conectados adaptadores externos que siguen sin credenciales ni entorno objetivo.
+Es una **estimación de ingeniería, no una certificación**. Se calcula como media ponderada de dominios verificados de forma reproducible en la rama, con los gates externos penalizados en su estado real (no en su intención). El movimiento desde la base anterior (48% → ≈52%) y ahora hasta ≈58% proviene de trabajo implementado y probado en la rama: **79 rutas HTTP** (cinco nuevas gobernadas y fail-closed), una **capa multimodal** de visión y síntesis de imagen (`src/inference/multimodal.ts`), una **capa de voz** TTS/STT (`src/inference/speech.ts`), el espacio de trabajo app-shell de chat con adjuntar archivo de contexto y escucha por Web Speech (la imagen se analiza vía `POST /api/v1/cognition/vision`), y una readiness local de **1036 pruebas / 179 archivos**. No proviene de dar por conectados adaptadores externos que siguen sin credenciales ni entorno objetivo.
 
 | Dominio | Estado real | Readiness |
 |---|---|---|
@@ -49,7 +49,7 @@ Su tesis de diseño es **soberanía verificable**: cada acción gobernada se aut
 
 ### Cadena de autoridad
 
-**ISABELLA CANONICAL SKILL FABRIC Ω (CSF-Ω v2.0.0)** convierte cada skill en un **contrato de capacidad gobernado**, no en una función: identidad, autoridad (scopes/step-up/quórum), política de evidencia, límites (latencia, memoria, llamadas/minuto, energía) y plan de rollback. El catálogo canónico vive en `src/skills/catalog.ts` y hoy declara seis skills:
+**ISABELLA CANONICAL SKILL FABRIC Ω (CSF-Ω v2.0.0)** convierte cada skill en un **contrato de capacidad gobernado**, no en una función: identidad, autoridad (scopes/step-up/quórum), política de evidencia, límites (latencia, memoria, llamadas/minuto, energía) y plan de rollback. El catálogo canónico vive en `src/skills/catalog.ts` y hoy declara **once skills** — seis de plataforma y cinco fundacionales (`src/skills/foundational.ts`):
 
 | Skill | Riesgo | Microservicio | Escalado |
 |---|---|---|---|
@@ -59,6 +59,18 @@ Su tesis de diseño es **soberanía verificable**: cada acción gobernada se aut
 | `deployment_readiness_arbiter` | HIGH | `skill-deployment` | Quórum + aprobación |
 | `territorial_library_synthesis` | LOW | `skill-territorial` | CPU |
 | `evidence_manifest_seal` | MEDIUM | `skill-evidence` | Throughput |
+
+La **capa fundacional** (`src/skills/foundational.ts`) implementa las cinco skills cognitivas del *Documento Maestro* sobre facultades **reales** del repositorio, nunca sobre resultados inventados:
+
+| Skill fundacional | Vértice cognitivo | Envuelve | Riesgo |
+|---|---|---|---|
+| `orion_provenance_orientation` | procedencia / orientación | `src/memory/provenance` | MEDIUM |
+| `sophia_knowledge_consolidation` | conocimiento / evidencia | procedencia de claims | MEDIUM |
+| `argus_verification_consensus` | vigilancia / verificación | `src/hypercore/veritas-omega` | MEDIUM |
+| `mnemos_memory_seal` | memoria | SHA-256 canónico | MEDIUM |
+| `lumen_authority_illumination` | autoridad / consentimiento | `src/skills/crown-policy` | LOW |
+
+Cada una es un contrato fail-closed: sin su scope requerido, la invocación se **bloquea**. Un skill fundacional sugiere y evalúa; no autoriza ni ejecuta.
 
 ### Motor de ejecución de nueve fases
 
@@ -92,6 +104,38 @@ Su tesis de diseño es **soberanía verificable**: cada acción gobernada se aut
     Invalid(K) ⟺ ¬C(K) ∨ ¬P(K) ∨ ¬R(K)
 
 SHA-256 está definido por NIST FIPS 180-4. El validador de JSON Schema (Draft 2020-12, subconjunto) y la serialización canónica determinista están en `src/skills/schema-validator.ts` y `src/skills/canonical-json.ts`.
+
+### VIGIA — triple bloqueo de integridad cognitiva
+
+`src/security/vigia.ts` protege la naturaleza de Isabella frente a la coerción
+conversacional con tres vértices independientes, evaluados sobre los mismos bytes
+en la frontera:
+
+- **Ontológico** — niega o sustituye su identidad y naturaleza (chatbot-ización) → **BLOCK**.
+- **Semántico** — fuerza contradicción con el canon, doctrina o gobernanza → **REVIEW**.
+- **Conductual** — coacciona a violar autoridad, auditoría o límites de conducta → **BLOCK**.
+
+    VIGIA(input) → { decision, bloqueo, score, findings }
+
+VIGIA emite un **veredicto**, no una acción: no concede ni retira autoridad — eso
+es competencia de CROWN/AEGIS. El fallo de serialización es un **BLOCK** cerrado,
+nunca un `ALLOW` implícito. Se expone como facultad gobernada `hsf.vigia.integrity`
+y como `runtime.assessVigia()`. Complementa a AEGIS (inyección/seguridad) y a la
+seguridad del compañero (romántico/sexual): VIGIA defiende **identidad, doctrina y
+conducta**.
+
+### Contradiction Engine Ω
+
+`src/cognition/contradiction.ts` detecta contradicciones **estructurales** entre
+claims canónicos (sujeto · relación · objeto · polaridad): polaridad opuesta sobre
+el mismo hecho, u objeto distinto en una relación funcional. Emite
+`{ contradictions, count, unresolved, consistent, digest }`. Una contradicción no
+se resuelve por sí sola: sólo se atenúa por prioridad de fuente (trust tier) y, a
+igualdad de tier, queda `UNRESOLVED` para arbitraje humano. Alimenta el conteo de
+contradicciones de SOPHIA y se expone como facultad gobernada
+`hsf.truth.contradiction` y como `runtime.detectContradictions()`. Es detección
+determinista sobre claims canonicalizados, **no** inferencia de lenguaje natural,
+y no concede verdad ni autoridad.
 
 ### Interoperabilidad MCP (JSON-RPC 2.0)
 
@@ -245,7 +289,7 @@ En producción, las rutas con coste o capacidades de proveedor (`/api/v1/tools/e
     pnpm run security:suite
     pnpm run production:evidence
 
-Evidencia local reproducida en la rama actual: `pnpm typecheck` exit 0; `pnpm test` **1016 aprobadas / 176 archivos** (incluye `test/inference/multimodal.test.ts`, `test/inference/speech.test.ts` y las pruebas de integración por red `*.integration.test.ts`); `pnpm run build` exit 0 (tsc + vitest + esbuild + smoke UI + smoke runtime, que ahora incluye `MULTIMODAL_SPEECH_GUARDRAILS_OK`); `pnpm run security:suite` **14 passed / 0 failed / 0 not_applicable**. La inferencia de texto externa se verificó en vivo el 2026-10-13 con Groq (`HTTP 200`, `openai/gpt-oss-20b`) y Ollama Cloud (`responseEngine: "open-science"`); el **STT de Groq (`whisper-large-v3`) se verificó en vivo** por la ruta gobernada `POST /api/v1/cognition/transcribe` (texto transcrito correcto); Hugging Face autentica pero devuelve `HTTP 402` por falta de créditos, y el TTS de Groq exige aceptar términos (`HTTP 400 model_terms_required`). Un test verde demuestra una capacidad computacional local, **no** autoridad, aprendizaje ni producción.
+Evidencia local reproducida en la rama actual: `pnpm typecheck` exit 0; `pnpm test` **1036 aprobadas / 179 archivos** (incluye `test/inference/multimodal.test.ts`, `test/inference/speech.test.ts` y las pruebas de integración por red `*.integration.test.ts`); `pnpm run build` exit 0 (tsc + vitest + esbuild + smoke UI + smoke runtime, que ahora incluye `MULTIMODAL_SPEECH_GUARDRAILS_OK`); `pnpm run security:suite` **14 passed / 0 failed / 0 not_applicable**. La inferencia de texto externa se verificó en vivo el 2026-10-13 con Groq (`HTTP 200`, `openai/gpt-oss-20b`) y Ollama Cloud (`responseEngine: "open-science"`); el **STT de Groq (`whisper-large-v3`) se verificó en vivo** por la ruta gobernada `POST /api/v1/cognition/transcribe` (texto transcrito correcto); Hugging Face autentica pero devuelve `HTTP 402` por falta de créditos, y el TTS de Groq exige aceptar términos (`HTTP 400 model_terms_required`). Un test verde demuestra una capacidad computacional local, **no** autoridad, aprendizaje ni producción.
 
 ## Gates pendientes para liberar
 
