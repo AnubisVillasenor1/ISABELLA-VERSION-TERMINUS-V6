@@ -128,20 +128,31 @@ app.get("/", (_req, res, next) => {
   }
 });
 app.get("/styles/cinematic.css", (_req, res) => {
-  if (cinematicCss === null) {
+  try {
+    const css = fs.readFileSync(path.join(uiPath, "cinematic.css"), "utf-8");
+    res.setHeader("Cache-Control", "no-store");
+    res.type("css").send(css);
+  } catch {
     res.status(404).type("css").send("/* Cinematic CSS unavailable */");
-    return;
   }
-  res.setHeader("Cache-Control", "no-store");
-  res.type("css").send(cinematicCss);
 });
 app.get("/ui/app.js", (_req, res) => {
-  if (cinematicJs === null) {
+  try {
+    const js = fs.readFileSync(path.join(uiPath, "app.js"), "utf-8");
+    res.setHeader("Cache-Control", "no-store");
+    res.type("js").send(js);
+  } catch {
     res.status(404).type("js").send("// Cinematic JavaScript unavailable");
+  }
+});
+app.get("/assets/audio/IntroIsabella.mp3", (_req, res) => {
+  const audioPath = path.resolve(process.cwd(), "src/assets/musica/IntroIsabella.mp3");
+  if (!fs.existsSync(audioPath)) {
+    res.status(404).type("text").send("Intro audio unavailable");
     return;
   }
-  res.setHeader("Cache-Control", "no-store");
-  res.type("js").send(cinematicJs);
+  res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+  res.type("audio/mpeg").sendFile(audioPath);
 });
 app.get("/styles/crystal-clear.css", (_req, res) => {
   if (crystalClearCss === null) {
@@ -355,6 +366,12 @@ function authorizeApiToken(req: Request, res: Response, envName: string): boolea
     return false;
   }
   return true;
+}
+
+/** Provider-backed capabilities fail closed in production unless explicitly authenticated. */
+function authorizeProviderRoute(req: Request, res: Response): boolean {
+  if (process.env.NODE_ENV !== "production" && !process.env.GENESIS_PUBLIC_API_TOKEN) return true;
+  return authorizeApiToken(req, res, "GENESIS_PUBLIC_API_TOKEN");
 }
 
 const publicCognitionLimiter = new FixedWindowRateLimiter(30, 60_000);
@@ -578,7 +595,7 @@ const CROWN_NODES = [
   { id: "MNEMOSYNE", name: "Mnemosyne Memory", role: "Memoria episódica, semántica y procedencia IKES", federation: "FED-3 Datos/IA", status: "DECLARED", weight: 0.90, icon: "📜" },
   { id: "TELLUS", name: "Tellus Territorio", role: "Territorio, cartografía y Nodo Cero (RDM)", federation: "FED-6 Inmersión", status: "DECLARED", weight: 0.94, icon: "🏔️" },
   { id: "CHRONOS", name: "Chronos Auditor", role: "Temporalidad, secuenciación y hash-chain BookPI en memoria", federation: "FED-7 Auditoría", status: "DECLARED", weight: 0.91, icon: "⏳" },
-  { id: "HERMES", name: "Hermes Relayer", role: "Comunicación inter-nodos, eventos y telemetría", federation: "FED-5 Infraestructura", status: "DECLARED", weight: 0.93, icon: "⚡" },
+  { id: "HERMES", name: "Hermes Relayer", role: "Comunicación inter-nodos, eventos y telemetr��a", federation: "FED-5 Infraestructura", status: "DECLARED", weight: 0.93, icon: "⚡" },
   { id: "AXIOMA", name: "Axioma Lógica", role: "Validación lógica formal y Veritas proofs", federation: "FED-3 Datos/IA", status: "DECLARED", weight: 0.89, icon: "📐" },
   { id: "KAIROS", name: "Kairos Oportunidad", role: "Optimización de inferencia y balance de carga", federation: "FED-4 Economía", status: "DECLARED", weight: 0.88, icon: "⏱️" },
   { id: "HARMONIA", name: "Harmonia Consenso", role: "Arbitraje ético y reconciliación de divergencias", federation: "FED-2 Patrimonio", status: "DECLARED", weight: 0.97, icon: "⚖️" },
@@ -776,6 +793,7 @@ app.get("/api/v1/bookpi/events/admin", (req, res) => {
 
 // Tool execution
 app.post("/api/v1/tools/execute", async (req, res) => {
+  if (!authorizeProviderRoute(req, res)) return;
   if (!enforceRateLimit(req, res, publicCognitionLimiter, "public-tool")) return;
   try {
     const { toolId = "rdm_territory_query", input = {} } = req.body ?? {};
@@ -831,6 +849,7 @@ app.post("/api/v1/cognition/route", async (req, res) => {
   try {
     const body = req.body ?? {};
     const modelEngine = ["auto", "sovereign", "open-science", "gemini"].includes(body.modelEngine) ? body.modelEngine : "auto";
+    if (modelEngine !== "sovereign" && !authorizeProviderRoute(req, res)) return;
     if (modelEngine !== "sovereign" && !enforceRateLimit(req, res, publicModelLimiter, "public-model")) return;
     const history = sanitizePublicHistory(body.history);
     const input = typeof body.input === "string" ? body.input.trim() : "";
@@ -973,6 +992,7 @@ const MAX_IMAGE_BASE64_CHARS = 8_000_000;
 // Public image-understanding route: viewer-only. The image is a bounded raster
 // data URL; the body can never supply authority, roles or provider selection.
 app.post("/api/v1/cognition/vision", async (req, res) => {
+  if (!authorizeProviderRoute(req, res)) return;
   if (!enforceRateLimit(req, res, publicCognitionLimiter, "cognition-vision")) return;
   try {
     const body = req.body ?? {};
@@ -1027,6 +1047,7 @@ app.post("/api/v1/cognition/vision", async (req, res) => {
 // Public text-to-image route: viewer-only. The prompt is bounded and no provider
 // is ever selected from request input.
 app.post("/api/v1/cognition/image", async (req, res) => {
+  if (!authorizeProviderRoute(req, res)) return;
   if (!enforceRateLimit(req, res, publicCognitionLimiter, "cognition-image")) return;
   try {
     const body = req.body ?? {};
@@ -1079,6 +1100,7 @@ app.post("/api/v1/cognition/image", async (req, res) => {
 // Fails closed with NO_SPEECH_PROVIDER_CONFIGURED when no provider is wired; the
 // client may fall back to its own offline Web Speech API without any server call.
 app.post("/api/v1/cognition/speech", async (req, res) => {
+  if (!authorizeProviderRoute(req, res)) return;
   if (!enforceRateLimit(req, res, publicCognitionLimiter, "cognition-speech")) return;
   try {
     const body = req.body ?? {};
@@ -1127,6 +1149,7 @@ app.post("/api/v1/cognition/speech", async (req, res) => {
 
 // Public speech-to-text route: viewer-only. Bounded base64 audio (max ~6 MB) in.
 app.post("/api/v1/cognition/transcribe", async (req, res) => {
+  if (!authorizeProviderRoute(req, res)) return;
   if (!enforceRateLimit(req, res, publicCognitionLimiter, "cognition-transcribe")) return;
   try {
     const body = req.body ?? {};
