@@ -60,6 +60,7 @@
   "POST /api/v1/hypercore/predict",
   "POST /api/v1/hypercore/run",
   "POST /api/v1/hypercore/skills/execute",
+  "POST /api/v1/intelligence/turbo-plan",
   "POST /api/v1/isa/act",
   "POST /api/v1/isa/pipeline",
   "POST /api/v1/isabella/entropy",

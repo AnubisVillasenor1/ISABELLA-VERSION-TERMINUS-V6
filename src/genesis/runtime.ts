@@ -1,6 +1,7 @@
 import { evaluateCrown, type CrownEvaluationInput, type CrownVerdict } from "../crown";
 import { inspectAegis, type AegisVerdict } from "../security/aegis";
 import { planExecution, type AdaptivePlan, type AdaptiveRequest } from "../intelligence/adaptive-router";
+import { planTurboRoute as buildTurboPlan, type TurboPlan, type TurboRequest } from "../intelligence/turbo-planner";
 import { InMemoryTelemetry, sloSnapshot, type TelemetrySink } from "../observability/telemetry";
 import { IKESEngine } from "../memory/ikes";
 import { ToolRegistry, type ToolAuthorization, type ToolReceipt } from "../tools/registry";
@@ -423,6 +424,15 @@ export class IsabellaGenesisRuntime {
         return this.verifyOrderAuthorization(value.envelope, value.catalog);
       },
     });
+    this.capabilities.register({
+      descriptor: low("hsf.intelligence.turbo-planner", "strategy", "TURBO ROUTE PLANNER Ω: decide la ruta (FAST/GROUNDED/AGENT/HUMAN_REVIEW) y qué filtros gobernados son obligatorios u omitibles; planificar no autoriza."),
+      health: () => "ready",
+      execute: async (input) => {
+        const value = input as { request?: TurboRequest };
+        if (!value.request) throw new Error("TURBO_REQUEST_REQUIRED");
+        return this.planTurboRoute(value.request);
+      },
+    });
   }
 
   private registerCanonicalProtocols(): void {
@@ -836,6 +846,32 @@ export class IsabellaGenesisRuntime {
       },
     });
     return verification;
+  }
+
+  /**
+   * TURBO ROUTE PLANNER Ω: decide la ruta de baja latencia (FAST/GROUNDED/AGENT/
+   * HUMAN_REVIEW), qué filtros gobernados son obligatorios u omitibles, la política
+   * de caché y el ámbito federado. Planificar NO autoriza ni ejecuta: la ruta es una
+   * recomendación de flujo; CROWN sigue autorizando.
+   */
+  planTurboRoute(request: TurboRequest): TurboPlan {
+    const plan = buildTurboPlan(request);
+    this.events.publish({
+      topic: "intelligence.turbo.planned",
+      type: plan.route,
+      payload: {
+        route: plan.route,
+        complexity: plan.complexity,
+        mode: plan.mode,
+        requiredFilters: plan.requiredFilters,
+        skippedFilters: plan.skippedFilters,
+        cachePolicy: plan.cachePolicy,
+        federationId: plan.federationId,
+        humanReviewRequired: plan.humanReviewRequired,
+        digest: plan.digest,
+      },
+    });
+    return plan;
   }
 
   /** MAGPIE-X: publica un evento gobernado en el bus en proceso. Transporta intención, no autoriza ejecución. */

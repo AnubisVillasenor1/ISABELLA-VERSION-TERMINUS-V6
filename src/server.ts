@@ -43,6 +43,7 @@ import { GAMEOVER_CONSTITUTION, passportAuthority, uagpGateway, type UagpRequest
 import { registerHyperCoreRoutes } from "./routes/hypercore";
 import { registerOpenAiCompatibleRoutes } from "./routes/openai";
 import { registerOrderPermissionRoutes } from "./routes/governance-permissions";
+import { registerTurboPlannerRoutes } from "./routes/turbo-planner";
 
 const app: Application = express();
 app.disable("x-powered-by");
@@ -5119,6 +5120,17 @@ registerOrderPermissionRoutes({
   app,
   mapOrderPermissions: (order) => runtime.mapOrderPermissions(order),
   verifyOrderAuthorization: (envelope, catalog) => runtime.verifyOrderAuthorization(envelope, catalog),
+  enforceRateLimit,
+  rateLimiter: publicScanLimiter,
+  authorizeAdmin: (req, res) => authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN"),
+});
+
+// ── Turbo Route Planner Ω (state: draft | engine-generated) ─ decide la ruta de baja
+// latencia (FAST/GROUNDED/AGENT/HUMAN_REVIEW), los filtros gobernados obligatorios vs.
+// omitibles y la política de caché federada. Planificar NO autoriza ni ejecuta.
+registerTurboPlannerRoutes({
+  app,
+  planTurboRoute: (request) => runtime.planTurboRoute(request),
   enforceRateLimit,
   rateLimiter: publicScanLimiter,
   authorizeAdmin: (req, res) => authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN"),

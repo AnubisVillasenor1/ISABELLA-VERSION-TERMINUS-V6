@@ -9,9 +9,9 @@
 
 ## Preparación global para producción y despliegue
 
-**≈ 59.5% — estimación global provisional de readiness (rango honesto: 54–63%).**
+**≈ 60% — estimación global provisional de readiness (rango honesto: 54–64%).**
 
-Es una **estimación de ingeniería, no una certificación**. Se calcula como media ponderada de dominios verificados de forma reproducible en la rama, con los gates externos penalizados en su estado real (no en su intención). El movimiento desde la base anterior (48% → ≈52%) y ahora hasta ≈59.5% proviene de trabajo implementado y probado en la rama: **85 rutas HTTP** (incluidas la superficie OpenAI-compatible `/v1` y los endpoints de Permission Map Ω), un **bus de eventos gobernado en proceso** (`src/messaging/magpie.ts`), un **guard de anclaje de evidencia** fail-closed (`src/veritas/grounding.ts`), una **superficie compatible con OpenAI** (`src/routes/openai.ts`), un **motor de mapeo de permisos con consentimiento humano** (`src/governance/permission-map.ts`), una **capa multimodal** de visión y síntesis de imagen (`src/inference/multimodal.ts`), una **capa de voz** TTS/STT (`src/inference/speech.ts`), el espacio de trabajo app-shell de chat con adjuntar archivo de contexto y escucha por Web Speech (la imagen se analiza vía `POST /api/v1/cognition/vision`), y una readiness local de **1106 pruebas / 189 archivos**. No proviene de dar por conectados adaptadores externos que siguen sin credenciales ni entorno objetivo.
+Es una **estimación de ingeniería, no una certificación**. Se calcula como media ponderada de dominios verificados de forma reproducible en la rama, con los gates externos penalizados en su estado real (no en su intención). El movimiento desde la base anterior (48% → ≈52%) y ahora hasta ≈60% proviene de trabajo implementado y probado en la rama: **86 rutas HTTP** (incluidas la superficie OpenAI-compatible `/v1`, los endpoints de Permission Map Ω y el planificador de ruta turbo), un **bus de eventos gobernado en proceso** (`src/messaging/magpie.ts`), un **guard de anclaje de evidencia** fail-closed (`src/veritas/grounding.ts`), una **superficie compatible con OpenAI** (`src/routes/openai.ts`), un **motor de mapeo de permisos con consentimiento humano** (`src/governance/permission-map.ts`), un **planificador de ruta de baja latencia, federado y ético** (`src/intelligence/turbo-planner.ts`), una **capa multimodal** de visión y síntesis de imagen (`src/inference/multimodal.ts`), una **capa de voz** TTS/STT (`src/inference/speech.ts`), el espacio de trabajo app-shell de chat con adjuntar archivo de contexto y escucha por Web Speech (la imagen se analiza vía `POST /api/v1/cognition/vision`), y una readiness local de **1120 pruebas / 191 archivos**. No proviene de dar por conectados adaptadores externos que siguen sin credenciales ni entorno objetivo.
 
 | Dominio | Estado real | Readiness |
 |---|---|---|
@@ -218,6 +218,27 @@ como endpoints `POST /api/v1/governance/order-permissions` y
 `POST /api/v1/governance/order-authorize` (admin-gated); emite los eventos
 `governance.permissions.mapped` y `governance.permissions.authorized`.
 
+### Turbo Route Planner Ω (ruta de baja latencia, federada y ética)
+
+`src/intelligence/turbo-planner.ts` resuelve la fricción de **latencia real**: cada
+filtro interno (AEGIS, CROWN, VIGIA, saneamiento, anclaje, contradicción, permisos)
+cuesta tiempo, y ejecutarlos todos para cada solicitud trivial es lo que vuelve lento
+al sistema. El planificador **compone** las piezas que ya existen (el router adaptativo
+decide complejidad y modo; el caché semántico gobernado reutiliza respuestas) y produce
+un `TurboPlan` determinista: una **ruta** (`FAST · GROUNDED · AGENT · HUMAN_REVIEW`),
+la lista de **filtros obligatorios vs. omitibles**, la **política de caché** y el
+**ámbito federado**. Invariante: **planificar una ruta no autoriza ni ejecuta** — la
+ruta es una recomendación de flujo; `authorityPath` permanece `FULL`, CROWN sigue
+autorizando y BookPI sigue evidenciando. Fail-closed: riesgo `HIGH`/`CRITICAL` o
+cualquier **disparador de alto impacto** fuerza `HUMAN_REVIEW` con **todos** los
+filtros obligatorios y **sin** reutilización de caché; sin **ámbito federado**
+declarado la caché se desactiva (no se puede violar el aislamiento entre
+federaciones/inquilinos). El digest es un compromiso determinista de las señales de
+entrada y de la ruta resultante. Se expone como facultad `hsf.intelligence.turbo-planner`,
+como método `runtime.planTurboRoute()`, y como endpoint
+`POST /api/v1/intelligence/turbo-plan` (admin-gated); emite el evento
+`intelligence.turbo.planned`.
+
 ### Superficie HTTP (admin-gated)
 
 Requieren `HYPERCORE_API_TOKEN` (`Authorization: Bearer …`) y aplican rate limit:
@@ -367,7 +388,7 @@ En producción, las rutas con coste o capacidades de proveedor (`/api/v1/tools/e
     pnpm run security:suite
     pnpm run production:evidence
 
-Evidencia local reproducida en la rama actual: `pnpm typecheck` exit 0; `pnpm test` **1106 aprobadas / 189 archivos** (incluye `test/inference/multimodal.test.ts`, `test/inference/speech.test.ts` y las pruebas de integración por red `*.integration.test.ts`); `pnpm run build` exit 0 (tsc + vitest + esbuild + smoke UI + smoke runtime, que ahora incluye `MULTIMODAL_SPEECH_GUARDRAILS_OK`); `pnpm run security:suite` **14 passed / 0 failed / 0 not_applicable**. La inferencia de texto externa se verificó en vivo el 2026-10-13 con Groq (`HTTP 200`, `openai/gpt-oss-20b`) y Ollama Cloud (`responseEngine: "open-science"`); el **STT de Groq (`whisper-large-v3`) se verificó en vivo** por la ruta gobernada `POST /api/v1/cognition/transcribe` (texto transcrito correcto); además, la **visión (imagen→texto) se verificó en vivo** con Ollama local (`qwen2.5vl:7b`) por `POST /api/v1/cognition/vision` (`success:true`, `provider:"local"`, descripción correcta), aunque la síntesis de imagen sigue sin proveedor; Hugging Face autentica pero devuelve `HTTP 402` por falta de créditos, y el TTS de Groq exige aceptar términos (`HTTP 400 model_terms_required`). Un test verde demuestra una capacidad computacional local, **no** autoridad, aprendizaje ni producción.
+Evidencia local reproducida en la rama actual: `pnpm typecheck` exit 0; `pnpm test` **1120 aprobadas / 191 archivos** (incluye `test/intelligence/turbo-planner.test.ts`, `test/inference/multimodal.test.ts`, `test/inference/speech.test.ts` y las pruebas de integración por red `*.integration.test.ts`); `pnpm run build` exit 0 (tsc + vitest + esbuild + smoke UI + smoke runtime, que ahora incluye `MULTIMODAL_SPEECH_GUARDRAILS_OK`); `pnpm run security:suite` **14 passed / 0 failed / 0 not_applicable**. La inferencia de texto externa se verificó en vivo el 2026-10-13 con Groq (`HTTP 200`, `openai/gpt-oss-20b`) y Ollama Cloud (`responseEngine: "open-science"`); el **STT de Groq (`whisper-large-v3`) se verificó en vivo** por la ruta gobernada `POST /api/v1/cognition/transcribe` (texto transcrito correcto); además, la **visión (imagen→texto) se verificó en vivo** con Ollama local (`qwen2.5vl:7b`) por `POST /api/v1/cognition/vision` (`success:true`, `provider:"local"`, descripción correcta), aunque la síntesis de imagen sigue sin proveedor; Hugging Face autentica pero devuelve `HTTP 402` por falta de créditos, y el TTS de Groq exige aceptar términos (`HTTP 400 model_terms_required`). Un test verde demuestra una capacidad computacional local, **no** autoridad, aprendizaje ni producción.
 
 ## Gates pendientes para liberar
 
