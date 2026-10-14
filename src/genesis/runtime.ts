@@ -63,6 +63,7 @@ import { CANONICAL_TOOLS, PROTOCOL_TOOLS } from "../tools";
 import { CANONICAL_SKILLS, FOUNDATIONAL_SKILLS } from "../skills";
 import { assessEpistemicState, passesEriGate, type SophiaSignals, type SophiaAssessment } from "../cognition/sophia";
 import { detectContradictions as runContradictionDetection, type CanonicalClaim, type ContradictionOptions, type ContradictionReport } from "../cognition/contradiction";
+import { federationById, listFederations, type TamvFederation } from "../federation";
 import { hardenSanitization, buildQuarantineRecord, type HardeningResult } from "../sanitization";
 import { triangulateDigest, sealEnvelope, openEnvelope, evaluateVigia, type TriangulatedDigest, type SealedEnvelope, type VigiaVerdict } from "../security";
 import { buildOpsSnapshot, assessProductionReadiness, TokenBucket, CircuitBreaker, type DependencyHealth, type MaintenanceWindow, type OpsSnapshot, type ProductionReadinessReport } from "../deployment";
@@ -360,6 +361,14 @@ export class IsabellaGenesisRuntime {
       execute: async (input) => {
         const value = input as { claims?: CanonicalClaim[]; functionalRelations?: string[] };
         return this.detectContradictions(value.claims ?? [], { functionalRelations: value.functionalRelations });
+      },
+    });
+    this.capabilities.register({
+      descriptor: low("hsf.federation.registry", "collective", "Registro canónico de las 7 federaciones TAMV (id ↔ código YUN)."),
+      health: () => "ready",
+      execute: async (input) => {
+        const value = input as { id?: number };
+        return value.id === undefined ? listFederations() : this.federation(value.id);
       },
     });
   }
@@ -708,6 +717,11 @@ export class IsabellaGenesisRuntime {
   /** Contradiction Engine Ω: detecta contradicciones estructurales entre claims canónicos. */
   detectContradictions(claims: readonly CanonicalClaim[], options?: ContradictionOptions): ContradictionReport {
     return runContradictionDetection(claims, options);
+  }
+
+  /** Registro canónico de las 7 federaciones TAMV (id ↔ código YUN). */
+  federation(id: number): TamvFederation {
+    return federationById(id);
   }
 
   /* ------------------------------------------------------------------ */
