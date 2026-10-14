@@ -9,9 +9,9 @@
 
 ## Preparación global para producción y despliegue
 
-**≈ 58.5% — estimación global provisional de readiness (rango honesto: 54–63%).**
+**≈ 59% — estimación global provisional de readiness (rango honesto: 54–63%).**
 
-Es una **estimación de ingeniería, no una certificación**. Se calcula como media ponderada de dominios verificados de forma reproducible en la rama, con los gates externos penalizados en su estado real (no en su intención). El movimiento desde la base anterior (48% → ≈52%) y ahora hasta ≈58.5% proviene de trabajo implementado y probado en la rama: **79 rutas HTTP** (cinco nuevas gobernadas y fail-closed), un **bus de eventos gobernado en proceso** (`src/messaging/magpie.ts`), un **guard de anclaje de evidencia** fail-closed (`src/veritas/grounding.ts`), una **capa multimodal** de visión y síntesis de imagen (`src/inference/multimodal.ts`), una **capa de voz** TTS/STT (`src/inference/speech.ts`), el espacio de trabajo app-shell de chat con adjuntar archivo de contexto y escucha por Web Speech (la imagen se analiza vía `POST /api/v1/cognition/vision`), y una readiness local de **1082 pruebas / 186 archivos**. No proviene de dar por conectados adaptadores externos que siguen sin credenciales ni entorno objetivo.
+Es una **estimación de ingeniería, no una certificación**. Se calcula como media ponderada de dominios verificados de forma reproducible en la rama, con los gates externos penalizados en su estado real (no en su intención). El movimiento desde la base anterior (48% → ≈52%) y ahora hasta ≈59% proviene de trabajo implementado y probado en la rama: **82 rutas HTTP** (incluida la superficie OpenAI-compatible `/v1`), un **bus de eventos gobernado en proceso** (`src/messaging/magpie.ts`), un **guard de anclaje de evidencia** fail-closed (`src/veritas/grounding.ts`), una **superficie compatible con OpenAI** (`src/routes/openai.ts`), una **capa multimodal** de visión y síntesis de imagen (`src/inference/multimodal.ts`), una **capa de voz** TTS/STT (`src/inference/speech.ts`), el espacio de trabajo app-shell de chat con adjuntar archivo de contexto y escucha por Web Speech (la imagen se analiza vía `POST /api/v1/cognition/vision`), y una readiness local de **1087 pruebas / 187 archivos**. No proviene de dar por conectados adaptadores externos que siguen sin credenciales ni entorno objetivo.
 
 | Dominio | Estado real | Readiness |
 |---|---|---|
@@ -179,6 +179,20 @@ verdad. Se expone como facultad gobernada `hsf.truth.grounding` y como
 `runtime.assessGrounding()`; emite el evento `truth.grounding.assessed` y sella un
 digest determinista por reporte.
 
+### Superficie compatible con OpenAI (/v1)
+
+`src/routes/openai.ts` expone `/v1/models`, `/v1/chat/completions` y
+`/v1/completions` para que **cualquier cliente con SDK de OpenAI use a Isabella
+como modelo sustituible** (compatibilidad a nivel de cable; **no** es un producto
+OpenAI). Cada petición pasa por la mediación canónica del runtime
+(`runtime.mediateIsabella`), de modo que CROWN/AEGIS y el motor de Isabella siguen
+aplicándose; el perfil se **deriva en el servidor** del sufijo del modelo
+(`-gobernanza`, `-contra-auditoria`, `-simulacion`, `-secretaria`), nunca del texto
+libre del cliente. Soporta streaming SSE (`stream: true`) con terminador `[DONE]` y
+el sobre de error estándar (`{ error: { type, code } }`). Rate-limited por el bucket
+de cognición pública; token opcional con `OPENAI_COMPAT_API_TOKEN`. La superficie
+**transporta** peticiones y devuelve una respuesta: no concede autoridad ni producción.
+
 ### Interoperabilidad MCP (JSON-RPC 2.0)
 
 `src/skills/mcp-server.ts` expone la fábrica como herramientas Model Context Protocol: `initialize`, `tools/list` y `tools/call`. Cada llamada se enruta a través de HyperCore Ω, de modo que CROWN, triangulación y BookPI siguen aplicándose. **MCP transporta intención; no concede autoridad.**
@@ -332,7 +346,7 @@ En producción, las rutas con coste o capacidades de proveedor (`/api/v1/tools/e
     pnpm run security:suite
     pnpm run production:evidence
 
-Evidencia local reproducida en la rama actual: `pnpm typecheck` exit 0; `pnpm test` **1082 aprobadas / 186 archivos** (incluye `test/inference/multimodal.test.ts`, `test/inference/speech.test.ts` y las pruebas de integración por red `*.integration.test.ts`); `pnpm run build` exit 0 (tsc + vitest + esbuild + smoke UI + smoke runtime, que ahora incluye `MULTIMODAL_SPEECH_GUARDRAILS_OK`); `pnpm run security:suite` **14 passed / 0 failed / 0 not_applicable**. La inferencia de texto externa se verificó en vivo el 2026-10-13 con Groq (`HTTP 200`, `openai/gpt-oss-20b`) y Ollama Cloud (`responseEngine: "open-science"`); el **STT de Groq (`whisper-large-v3`) se verificó en vivo** por la ruta gobernada `POST /api/v1/cognition/transcribe` (texto transcrito correcto); además, la **visión (imagen→texto) se verificó en vivo** con Ollama local (`qwen2.5vl:7b`) por `POST /api/v1/cognition/vision` (`success:true`, `provider:"local"`, descripción correcta), aunque la síntesis de imagen sigue sin proveedor; Hugging Face autentica pero devuelve `HTTP 402` por falta de créditos, y el TTS de Groq exige aceptar términos (`HTTP 400 model_terms_required`). Un test verde demuestra una capacidad computacional local, **no** autoridad, aprendizaje ni producción.
+Evidencia local reproducida en la rama actual: `pnpm typecheck` exit 0; `pnpm test` **1087 aprobadas / 187 archivos** (incluye `test/inference/multimodal.test.ts`, `test/inference/speech.test.ts` y las pruebas de integración por red `*.integration.test.ts`); `pnpm run build` exit 0 (tsc + vitest + esbuild + smoke UI + smoke runtime, que ahora incluye `MULTIMODAL_SPEECH_GUARDRAILS_OK`); `pnpm run security:suite` **14 passed / 0 failed / 0 not_applicable**. La inferencia de texto externa se verificó en vivo el 2026-10-13 con Groq (`HTTP 200`, `openai/gpt-oss-20b`) y Ollama Cloud (`responseEngine: "open-science"`); el **STT de Groq (`whisper-large-v3`) se verificó en vivo** por la ruta gobernada `POST /api/v1/cognition/transcribe` (texto transcrito correcto); además, la **visión (imagen→texto) se verificó en vivo** con Ollama local (`qwen2.5vl:7b`) por `POST /api/v1/cognition/vision` (`success:true`, `provider:"local"`, descripción correcta), aunque la síntesis de imagen sigue sin proveedor; Hugging Face autentica pero devuelve `HTTP 402` por falta de créditos, y el TTS de Groq exige aceptar términos (`HTTP 400 model_terms_required`). Un test verde demuestra una capacidad computacional local, **no** autoridad, aprendizaje ni producción.
 
 ## Gates pendientes para liberar
 

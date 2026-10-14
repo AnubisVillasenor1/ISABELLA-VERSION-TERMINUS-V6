@@ -78,5 +78,8 @@
   "POST /api/v1/sanitization/scan",
   "POST /api/v1/security/triangulate",
   "POST /api/v1/tools/execute",
-  "POST /api/v1/triple-blockade/scan"
+  "POST /api/v1/triple-blockade/scan",
+  "GET /v1/models",
+  "POST /v1/chat/completions",
+  "POST /v1/completions"
 ]

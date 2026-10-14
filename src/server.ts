@@ -41,6 +41,7 @@ import { createReinaRuntime, type ReinaRequest } from "./reina";
 import { SubscriptionStore, UsageMeter, checkFeature, checkQuota, planEntitlements, PLANS, type PlanId, type QuotaKey, type SubscriptionRecord } from "./commerce";
 import { GAMEOVER_CONSTITUTION, passportAuthority, uagpGateway, type UagpRequestInput } from "./gameover";
 import { registerHyperCoreRoutes } from "./routes/hypercore";
+import { registerOpenAiCompatibleRoutes } from "./routes/openai";
 
 const app: Application = express();
 app.disable("x-powered-by");
@@ -5092,6 +5093,23 @@ registerHyperCoreRoutes({
   rateLimiter: publicScanLimiter,
   commerceStringField,
   ...(process.env.HYPERCORE_SIGNING_KEY ? { signingKey: process.env.HYPERCORE_SIGNING_KEY } : {}),
+});
+
+// ── OpenAI-compatible surface (state: draft | engine-generated) ─ hace de Isabella
+// un modelo sustituible para cualquier cliente OpenAI SDK. No es un producto OpenAI;
+// solo es compatible a nivel de cable. Todo pasa por la mediación canónica del runtime.
+registerOpenAiCompatibleRoutes({
+  app,
+  mediate: (input, profile) => {
+    const result = runtime.mediateIsabella({ input, profile });
+    return { answer: result.answer, profile: result.profile, safeguards: result.safeguards };
+  },
+  modelId: process.env.OPENAI_COMPAT_MODEL_ID ?? "isabella-genesis",
+  ownedBy: "tamv-isabella",
+  enforceRateLimit,
+  rateLimiter: publicCognitionLimiter,
+  authorizeApiToken,
+  ...(process.env.OPENAI_COMPAT_API_TOKEN ? { apiTokenEnvName: "OPENAI_COMPAT_API_TOKEN" } : {}),
 });
 
 // ── REINA (state: draft | engine-generated) ─ adjudicación previa a la ejecución; NO ejecuta acciones.
