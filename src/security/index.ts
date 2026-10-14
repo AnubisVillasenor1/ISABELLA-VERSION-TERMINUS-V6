@@ -29,3 +29,19 @@ export {
   type DerivedKey,
   type SealedEnvelope,
 } from "./triangulated-crypto";
+export {
+  DOCUMENT_SEAL_SCHEMA,
+  DOCUMENT_SEAL_STATE,
+  BOOKPI_GENESIS_SEAL_PREFIX,
+  contentDigest,
+  base32Encode,
+  base32Decode,
+  sealDocument,
+  verifyDocumentSeal,
+  documentSealEnablement,
+  type DocumentSealManifest,
+  type DocumentSealEnablement,
+  type SealDocumentInput,
+  type VerifySealInput,
+  type SealVerificationReport,
+} from "./document-seal";
