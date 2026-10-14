@@ -1,3 +1,7 @@
+> **AVISO DE TRAZABILIDAD — REGISTRO HISTÓRICO.** Este informe conserva el snapshot que declara en su encabezado (repositorio `isabella-V6-TINA-h6`, SHA `deb26b9` y 746 pruebas). No representa el estado actual de `ISABELLA-VERSION-TERMINUS-V6` ni debe utilizarse como evidencia de la rama actual. Para los hallazgos y correcciones de la revisión del 13 de octubre de 2026, consulte [TECHNICAL-OPERATIONAL-AUDIT-2026-10-13.md](./TECHNICAL-OPERATIONAL-AUDIT-2026-10-13.md). Las métricas posteriores solo son válidas si se reproducen y vinculan al SHA exacto evaluado.
+
+---
+
 # Auditoría total — Isabella V6 / TINA / Genesis
 
 **Fecha:** 13 de octubre de 2026
