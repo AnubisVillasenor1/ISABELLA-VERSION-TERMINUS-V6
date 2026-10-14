@@ -64,6 +64,7 @@ import { CANONICAL_SKILLS, FOUNDATIONAL_SKILLS } from "../skills";
 import { assessEpistemicState, passesEriGate, type SophiaSignals, type SophiaAssessment } from "../cognition/sophia";
 import { detectContradictions as runContradictionDetection, type CanonicalClaim, type ContradictionOptions, type ContradictionReport } from "../cognition/contradiction";
 import { federationById, listFederations, type TamvFederation } from "../federation";
+import { MagpieBus, type MagpieDeliveryReport, type MagpieHandler, type MagpiePublishInput } from "../messaging";
 import { hardenSanitization, buildQuarantineRecord, type HardeningResult } from "../sanitization";
 import { triangulateDigest, sealEnvelope, openEnvelope, evaluateVigia, type TriangulatedDigest, type SealedEnvelope, type VigiaVerdict } from "../security";
 import { buildOpsSnapshot, assessProductionReadiness, TokenBucket, CircuitBreaker, type DependencyHealth, type MaintenanceWindow, type OpsSnapshot, type ProductionReadinessReport } from "../deployment";
@@ -123,6 +124,7 @@ export class IsabellaGenesisRuntime {
   readonly knowledgeFabric = new KnowledgeFabric();
   readonly lsp = new LspValidationAdapter();
   readonly mutations = new EntityMutationManager();
+  readonly events = new MagpieBus();
 
   constructor(
     telemetry: TelemetrySink = new InMemoryTelemetry(),
@@ -371,6 +373,21 @@ export class IsabellaGenesisRuntime {
         return value.id === undefined ? listFederations() : this.federation(value.id);
       },
     });
+    this.capabilities.register({
+      descriptor: low("hsf.messaging.bus", "integration", "MAGPIE-X: bus de eventos gobernado en proceso; transporta intención, no autoriza ejecución."),
+      health: () => "ready",
+      execute: async (input) => {
+        const value = input as Partial<MagpiePublishInput>;
+        if (!value.topic?.trim() || !value.type?.trim()) throw new Error("MAGPIE_PUBLISH_INPUT_REQUIRED");
+        return this.publishEvent({
+          topic: value.topic,
+          type: value.type,
+          payload: value.payload,
+          correlationId: value.correlationId,
+          causationId: value.causationId,
+        });
+      },
+    });
   }
 
   private registerCanonicalProtocols(): void {
@@ -506,6 +523,12 @@ export class IsabellaGenesisRuntime {
       attributes: { stage: "governed-evaluation" },
     });
 
+    this.events.publish({
+      topic: "runtime.evaluated",
+      type: admitted ? "admitted" : "refused",
+      payload: { admitted, risk: input.riskTier, complexity: plan.complexity, aegis: aegis.decision },
+    });
+
     return { crown, aegis, plan, memory, admitted };
   }
 
@@ -589,6 +612,7 @@ export class IsabellaGenesisRuntime {
         at: new Date().toISOString(),
         attributes: { stage: "tool-input", toolId: id },
       });
+      this.events.publish({ topic: "tool.blocked", type: "security", payload: { toolId: id, decision: aegis.decision } });
       return { admitted: false, aegis };
     }
 
@@ -606,6 +630,7 @@ export class IsabellaGenesisRuntime {
         at: new Date().toISOString(),
         attributes: { stage: "tool-execution" },
       });
+      this.events.publish({ topic: "tool.executed", type: result.receipt.status, payload: { toolId: id } });
       return { admitted: true, aegis, output: result.output, receipt: result.receipt };
     } catch (error) {
       const receipt = (error as { receipt?: ToolReceipt }).receipt;
@@ -615,6 +640,7 @@ export class IsabellaGenesisRuntime {
         at: new Date().toISOString(),
         attributes: { toolId: id, status: receipt?.status ?? "error" },
       });
+      this.events.publish({ topic: "tool.failed", type: "error", payload: { toolId: id } });
       return { admitted: false, aegis, receipt };
     }
   }
@@ -722,6 +748,16 @@ export class IsabellaGenesisRuntime {
   /** Registro canónico de las 7 federaciones TAMV (id ↔ código YUN). */
   federation(id: number): TamvFederation {
     return federationById(id);
+  }
+
+  /** MAGPIE-X: publica un evento gobernado en el bus en proceso. Transporta intención, no autoriza ejecución. */
+  publishEvent<T>(input: MagpiePublishInput<T>): MagpieDeliveryReport {
+    return this.events.publish(input);
+  }
+
+  /** MAGPIE-X: suscribe un handler en proceso; devuelve la función de baja. */
+  subscribeEvent<T>(topic: string, handler: MagpieHandler<T>): () => void {
+    return this.events.subscribe(topic, handler);
   }
 
   /* ------------------------------------------------------------------ */

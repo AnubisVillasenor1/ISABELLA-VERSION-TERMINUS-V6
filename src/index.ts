@@ -57,6 +57,7 @@ export * from "./protocols";
 export * from "./modules";
 export * from "./osiris";
 export * from "./capabilities";
+export * from "./messaging";
 export * from "./sanitization";
 export * from "./governance";
 export * from "./plugins";
