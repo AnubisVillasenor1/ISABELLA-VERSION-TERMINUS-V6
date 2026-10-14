@@ -145,6 +145,15 @@ app.get("/ui/app.js", (_req, res) => {
     res.status(404).type("js").send("// Cinematic JavaScript unavailable");
   }
 });
+app.get("/assets/audio/IntroIsabella.mp3", (_req, res) => {
+  const audioPath = path.resolve(process.cwd(), "src/assets/musica/IntroIsabella.mp3");
+  if (!fs.existsSync(audioPath)) {
+    res.status(404).type("text").send("Intro audio unavailable");
+    return;
+  }
+  res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+  res.type("audio/mpeg").sendFile(audioPath);
+});
 app.get("/styles/crystal-clear.css", (_req, res) => {
   if (crystalClearCss === null) {
     res.status(404).type("text/css").send("/* CSS module not found */");
@@ -586,7 +595,7 @@ const CROWN_NODES = [
   { id: "MNEMOSYNE", name: "Mnemosyne Memory", role: "Memoria episódica, semántica y procedencia IKES", federation: "FED-3 Datos/IA", status: "DECLARED", weight: 0.90, icon: "📜" },
   { id: "TELLUS", name: "Tellus Territorio", role: "Territorio, cartografía y Nodo Cero (RDM)", federation: "FED-6 Inmersión", status: "DECLARED", weight: 0.94, icon: "🏔️" },
   { id: "CHRONOS", name: "Chronos Auditor", role: "Temporalidad, secuenciación y hash-chain BookPI en memoria", federation: "FED-7 Auditoría", status: "DECLARED", weight: 0.91, icon: "⏳" },
-  { id: "HERMES", name: "Hermes Relayer", role: "Comunicación inter-nodos, eventos y telemetría", federation: "FED-5 Infraestructura", status: "DECLARED", weight: 0.93, icon: "⚡" },
+  { id: "HERMES", name: "Hermes Relayer", role: "Comunicación inter-nodos, eventos y telemetr��a", federation: "FED-5 Infraestructura", status: "DECLARED", weight: 0.93, icon: "⚡" },
   { id: "AXIOMA", name: "Axioma Lógica", role: "Validación lógica formal y Veritas proofs", federation: "FED-3 Datos/IA", status: "DECLARED", weight: 0.89, icon: "📐" },
   { id: "KAIROS", name: "Kairos Oportunidad", role: "Optimización de inferencia y balance de carga", federation: "FED-4 Economía", status: "DECLARED", weight: 0.88, icon: "⏱️" },
   { id: "HARMONIA", name: "Harmonia Consenso", role: "Arbitraje ético y reconciliación de divergencias", federation: "FED-2 Patrimonio", status: "DECLARED", weight: 0.97, icon: "⚖️" },

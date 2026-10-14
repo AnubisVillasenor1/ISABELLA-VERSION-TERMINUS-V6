@@ -32,6 +32,7 @@
   "GET /health",
   "GET /styles/cinematic.css",
   "GET /styles/crystal-clear.css",
+  "GET /assets/audio/IntroIsabella.mp3",
   "GET /ui/app.js",
   "POST /api/v1/audio-overview/generate",
   "POST /api/v1/billing/cancel",

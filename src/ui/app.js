@@ -1,6 +1,7 @@
 const byId = (id) => document.getElementById(id);
 
 const intro = byId('cinematicIntro');
+const introAudio = byId('introAudio');
 const introScenes = [...document.querySelectorAll('.intro-scene')];
 const introProgressBar = byId('introProgressBar');
 const introSceneLabel = byId('introSceneLabel');
@@ -21,8 +22,21 @@ const formatIntroTime = (milliseconds) => {
   const seconds = Math.floor(Math.max(0, milliseconds) / 1000);
   return `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
 };
+const startIntroAudio = () => {
+  if (!introAudio) return;
+  introAudio.volume = 0.35;
+  void introAudio.play().catch(() => {
+    // Browsers can block autoplay; the first intro interaction retries playback.
+  });
+};
+const stopIntroAudio = () => {
+  if (!introAudio) return;
+  introAudio.pause();
+  introAudio.currentTime = 0;
+};
 const dismissIntro = () => {
   window.clearInterval(introTimer);
+  stopIntroAudio();
   intro?.classList.add('is-dismissed');
   document.body.classList.remove('intro-lock');
 };
@@ -53,6 +67,9 @@ if (intro) {
     introScenes.forEach((scene, index) => scene.setAttribute('aria-hidden', String(index !== 0)));
     skipIntro?.addEventListener('click', dismissIntro);
     intro.querySelector('.intro-enter')?.addEventListener('click', dismissIntro);
+    intro.addEventListener('pointerdown', startIntroAudio, { once: true });
+    intro.addEventListener('keydown', startIntroAudio, { once: true });
+    startIntroAudio();
     introStartedAt = performance.now();
     introTimer = window.setInterval(() => {
       if (document.hidden) {
