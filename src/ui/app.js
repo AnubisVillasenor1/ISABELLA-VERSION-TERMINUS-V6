@@ -43,10 +43,10 @@ const advanceIntro = (elapsed = performance.now() - introStartedAt) => {
 };
 if (intro) {
   const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-  const cinematicRequested = new URLSearchParams(window.location.search).get('intro') === '1';
-  // The enterprise workspace loads immediately by default. The cinematic sequence
-  // remains available as an explicit experience with ?intro=1.
-  if (reducedMotion || !cinematicRequested) {
+  const cinematicDisabled = new URLSearchParams(window.location.search).get('intro') === '0';
+  // The cinematic sequence is the initial experience. Users can bypass it with
+  // reduced-motion preferences or the explicit ?intro=0 escape hatch.
+  if (reducedMotion || cinematicDisabled) {
     dismissIntro();
   } else {
     document.body.classList.add('intro-lock');

@@ -128,20 +128,22 @@ app.get("/", (_req, res, next) => {
   }
 });
 app.get("/styles/cinematic.css", (_req, res) => {
-  if (cinematicCss === null) {
+  try {
+    const css = fs.readFileSync(path.join(uiPath, "cinematic.css"), "utf-8");
+    res.setHeader("Cache-Control", "no-store");
+    res.type("css").send(css);
+  } catch {
     res.status(404).type("css").send("/* Cinematic CSS unavailable */");
-    return;
   }
-  res.setHeader("Cache-Control", "no-store");
-  res.type("css").send(cinematicCss);
 });
 app.get("/ui/app.js", (_req, res) => {
-  if (cinematicJs === null) {
+  try {
+    const js = fs.readFileSync(path.join(uiPath, "app.js"), "utf-8");
+    res.setHeader("Cache-Control", "no-store");
+    res.type("js").send(js);
+  } catch {
     res.status(404).type("js").send("// Cinematic JavaScript unavailable");
-    return;
   }
-  res.setHeader("Cache-Control", "no-store");
-  res.type("js").send(cinematicJs);
 });
 app.get("/styles/crystal-clear.css", (_req, res) => {
   if (crystalClearCss === null) {

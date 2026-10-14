@@ -20,7 +20,7 @@ assert.ok(js.includes("fetch('/api/v1/cognition/route'"), 'Chat must call the ex
 assert.ok(js.includes("fetch('/api/v1/health'"), 'UI must check the health endpoint');
 assert.ok(server.includes('app.get("/api/v1/health"'), 'The runtime health endpoint must exist');
 assert.ok(server.includes('res.type("html").send(cinematicHtml)'), 'The root UI must use the startup-cached HTML asset');
-assert.ok(server.includes('res.type("css").send(cinematicCss)'), 'The stylesheet route must use the startup-cached CSS asset');
+assert.ok(server.includes('fs.readFileSync(path.join(uiPath, "cinematic.css")'), 'The stylesheet route must serve the current CSS asset');
 assert.ok(css.includes('.nav-links.is-open'), 'Responsive menu open state must be styled');
 assert.ok(!html.includes('class="side-rail '), 'The interface must not render the duplicated left/right navigation rails');
 assert.ok(html.includes('class="command-palette"'), 'A native command palette must be available');
@@ -42,7 +42,7 @@ assert.ok(css.includes('@media(max-width:680px)'), 'A compact mobile workspace l
 
 assert.ok(!css.includes('hebbkx1anhila5yf'), 'Enterprise UI must not depend on the unowned external intro background asset');
 assert.ok(css.includes('.message-copy'), 'Assistant replies must expose the copy affordance styling');
-assert.ok(js.includes("!cinematicRequested"), 'The default workspace must not force a lengthy cinematic intro before interaction');
+assert.ok(js.includes("cinematicDisabled"), 'The default workspace must expose the cinematic intro with an explicit bypass');
 assert.ok(css.includes('position:sticky;top:12px'), 'Navbar must use the modern floating sticky workspace shell');
 assert.ok(!html.includes('LATENCIA<br><b>12ms</b>'), 'UI must not publish an unverified fixed latency');
 console.log('UI_NAVIGATION_SMOKE_OK');
