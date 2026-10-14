@@ -9,24 +9,25 @@
 
 ## Preparación global para producción y despliegue
 
-**≈ 52% — estimación global provisional de readiness (rango honesto: 48–56%).**
+**≈ 58% — estimación global provisional de readiness (rango honesto: 54–63%).**
 
-Es una **estimación de ingeniería, no una certificación**. Se calcula como media ponderada de dominios verificados de forma reproducible en la rama, con los gates externos penalizados en su estado real (no en su intención). El movimiento desde la base anterior (48%) proviene de la implementación y prueba local de la **Skill Fabric Ω v2** (contratos, motor de ejecución de nueve fases, triangulación algorítmica, puente MCP), los manifiestos de Kubernetes, la pila Compose desplegable y una readiness profunda real (899 aprobadas / 160 archivos). No proviene de dar por conectados adaptadores externos que siguen sin credenciales ni entorno objetivo.
+Es una **estimación de ingeniería, no una certificación**. Se calcula como media ponderada de dominios verificados de forma reproducible en la rama, con los gates externos penalizados en su estado real (no en su intención). El movimiento desde la base anterior (48% → ≈52%) y ahora hasta ≈58% proviene de trabajo implementado y probado en la rama: **79 rutas HTTP** (cinco nuevas gobernadas y fail-closed), una **capa multimodal** de visión y síntesis de imagen (`src/inference/multimodal.ts`), una **capa de voz** TTS/STT (`src/inference/speech.ts`), el espacio de trabajo app-shell de chat con adjuntar archivo de contexto y escucha por Web Speech (la imagen se analiza vía `POST /api/v1/cognition/vision`), y una readiness local de **1006 pruebas / 175 archivos**. No proviene de dar por conectados adaptadores externos que siguen sin credenciales ni entorno objetivo.
 
 | Dominio | Estado real | Readiness |
 |---|---|---|
-| Núcleo cognitivo y de gobernanza (CROWN / AEGIS / VERITAS / Terminus Ω) | Implementado y probado localmente | ≈ 70% |
+| Núcleo cognitivo y de gobernanza (CROWN / AEGIS / VERITAS / Terminus Ω) | Implementado y probado localmente | ≈ 72% |
 | **Skill Fabric Ω v2 / HyperCore Ω** (contratos, 9 fases, triangulación, MCP) | Implementado y probado localmente; **no desplegado** | ≈ 60% |
-| API HTTP (Express, 70 rutas incluida la superficie HyperCore/MCP) | Funcional; monolito no modularizado (TD-01) | ≈ 64% |
+| API HTTP (Express, 79 rutas incl. superficies HyperCore/MCP y multimodal/voz) | Funcional; monolito no modularizado (TD-01) | ≈ 68% |
+| **Multimodal y voz** (visión imagen→texto, texto→imagen, TTS/STT, key-driven) | Implementado y probado localmente; **sin proveedor de imagen/TTS desbloqueado** | ≈ 35% |
 | Evidencia y BookPI (ledger durable JSONL) | Cadena hash con fsync; **Postgres/Supabase sin E2E** (TD-06) | ≈ 45% |
-| Integraciones externas (inferencia real, KMS/HSM PQC FIPS 203/204/205, RLS) | Especificado/bloqueado por credenciales | ≈ 22% |
+| Integraciones externas (inferencia real, KMS/HSM PQC FIPS 203/204/205, RLS) | Especificado/bloqueado por credenciales | ≈ 30% |
 | CI/CD (GitHub Actions) | Workflows válidos pero `startup_failure` sin jobs (TD-07, bloqueo de cuenta) | ≈ 15% |
 | Despliegue (Kubernetes / contenedores) | Manifiestos autorados; **nunca aplicados a un clúster** | ≈ 25% |
-| Interfaz de producto (UX Obsidian/Platino, smoke automatizado) | Implementado y con smoke | ≈ 70% |
+| Interfaz de producto (UX Obsidian/Platino, app-shell de chat, adjuntar archivo de contexto, escucha, smoke) | Implementado y con smoke | ≈ 80% |
 | Workspace Rust IGE-Ω | `Cargo.lock` + `fmt` limpios; **compilación/clippy local no ejecutables** | ≈ 25% |
 | Verificación de seguridad estática | 14/14 invariantes; sin pentest ni HSM productivo | ≈ 55% |
 
-**Lectura correcta del número:** Isabella pasa los gates locales que controla (tipos, 899 pruebas, build, 14/14 de seguridad), pero **no** está lista para producción ni para despliegue. Los adaptadores externos y el entorno objetivo son gates independientes que no se superan por tener interfaz ni por tener manifiesto YAML.
+**Lectura correcta del número:** Isabella pasa los gates locales que controla (tipos, 1006 pruebas, build, 14/14 de seguridad), pero **no** está lista para producción ni para despliegue. El 65% de un plan de producción no se alcanza con más código: los dominios que lo bloquean (Integraciones externas ≈30%, CI/CD ≈15%, Despliegue ≈25%, Multimodal/voz ≈35% mientras falten credenciales) exigen aprovisionar credenciales y entorno objetivo. Los adaptadores externos y el entorno objetivo son gates independientes que no se superan por tener interfaz ni por tener manifiesto YAML.
 
 ## Qué es Isabella
 
@@ -147,6 +148,25 @@ Isabella intenta proveedores externos **solo** cuando el operador aporta una cre
 
 Un test que pasa demuestra una capacidad computacional local, **no** una facultad ni una autoridad. El **motor nativo entrenable** (`src/lib/native-ml`, puerto del motor abierto de `isabella-ai-tina`) ya está implementado: TypeScript puro, sin red ni coste, con semilla determinista, un clasificador logístico binario, un **MoE** nativo (router aprendido + expertos lineales, loss de balance de carga), convergencia y federación — todo con hooks de gobernanza y `approvalStatus: "PENDING_REVIEW"`. Entrenar pesos **no** concede autoridad: la predicción falla cerrada hasta aprobación humana (`model_not_approved`), y la incorporación de conocimiento sigue pasando por el camino gobernado de memoria (`POST /api/v1/memory/ingest`, `/api/v1/memory/verified`).
 
+### Multimodal y voz (visión, imagen, TTS/STT)
+
+Además del texto, Isabella expone capacidades de percepción y expresión **gobernadas y key-driven**, todas fail-closed:
+
+- **Capa multimodal** (`src/inference/multimodal.ts`): visión (imagen→texto) y síntesis de imagen (texto→imagen). Reutiliza las llaves ya configuradas (OpenRouter, Gemini/Google, Novita, Together, DeepInfra, Fireworks, Hugging Face) o un servidor local compatible con OpenAI (`LOCAL_VISION_BASE_URL`, `LOCAL_IMAGE_BASE_URL`). El constructor de candidatos es determinista y probado; la imagen entrante debe ser un *data URL* raster acotado (PNG/JPEG/WEBP), y la ruta **falla en cerrado** con `503 NO_VISION_PROVIDER_CONFIGURED` cuando no hay proveedor.
+- **Capa de voz** (`src/inference/speech.ts`): TTS vía Groq Orpheus y STT vía Whisper (`GROQ_TTS_MODEL`, `GROQ_TTS_VOICE`, `GROQ_STT_MODEL`). En vivo, la cuenta tiene disponible `whisper-large-v3` para transcripción, pero Orpheus **exige aceptar los términos del modelo** en la consola de Groq (`HTTP 400 model_terms_required`); hasta entonces el TTS de servidor **falla en cerrado** y el cliente usa su propia Web Speech API.
+
+Superficie HTTP añadida (viewer-only, con rate limit y límites de tamaño, nunca acepta autoridad desde el cuerpo):
+
+| Ruta | Función | Fallo cerrado |
+|---|---|---|
+| `GET  /api/v1/cognition/multimodal` | readiness real de visión/imagen/voz | — |
+| `POST /api/v1/cognition/vision` | imagen (data URL) → descripción | 503 `NO_VISION_PROVIDER_CONFIGURED` |
+| `POST /api/v1/cognition/image` | prompt → imagen (data URL) | 503 `NO_IMAGE_PROVIDER_CONFIGURED` |
+| `POST /api/v1/cognition/speech` | texto → audio (base64) | 503 `NO_SPEECH_PROVIDER_CONFIGURED` |
+| `POST /api/v1/cognition/transcribe` | audio (base64) → texto | 503 `NO_SPEECH_PROVIDER_CONFIGURED` |
+
+Cada proveedor se intenta **solo** con credencial explícita; el constructor de candidatos es determinista y está probado sin red (`test/inference/multimodal.test.ts`, `test/inference/speech.test.ts`).
+
 ### Kubernetes
 
 `deploy/k8s/isabella-hypercore-omega.yaml` define un `Namespace` soberano, `ConfigMap`, `Secret` gestionado por KMS, y para el router y cada skill: `Deployment`, `Service`, probes **startup/readiness/liveness**, `HorizontalPodAutoscaler`, `PodDisruptionBudget` y `NetworkPolicy`. Se aplica menor privilegio (`runAsNonRoot: true`, `allowPrivilegeEscalation: false`, `readOnlyRootFilesystem: true`, `capabilities.drop: [ALL]`).
@@ -201,7 +221,7 @@ Cada escritura pasa por un `RetentionAdmissionGate` tenant-scoped que exige una 
 
 ## Interfaz de producto
 
-La interfaz usa un sistema visual Obsidian / Platino / Azul Eléctrico (capa canónica **Crystal Clear Ω** en `src/styles/crystal-clear.css`), con superficies de contraste controlado, jerarquía tipográfica, estados de foco visibles y diseño responsive. El espacio de trabajo se abre directamente; la secuencia cinemática de marca sigue disponible de forma explícita mediante `?intro=1`. Las respuestas incluyen acción de copia con confirmación y fallback visible. El estado del nodo comunica sólo el resultado del endpoint de salud; no se presenta como garantía de inferencia externa.
+La interfaz usa un sistema visual Obsidian / Platino / Azul Eléctrico (capa canónica **Crystal Clear Ω** en `src/styles/crystal-clear.css`), con superficies de contraste controlado, jerarquía tipográfica, estados de foco visibles y diseño responsive. El espacio de trabajo es un **app-shell de chat** (rail de navegación, consola central dominante y rail de sesión) que se abre directamente; la secuencia cinemática de marca sigue disponible de forma explícita mediante `?intro=1`. El compositor permite **adjuntar un archivo de texto local** (≤25 KB / 12 000 caracteres) como contexto de la conversación y cada respuesta de Isabella ofrece **COPIAR**, **GUARDAR** y **ESCUCHAR** (Web Speech API del navegador, disponible sin proveedor de servidor). El análisis **imagen → texto** se expone por API en `POST /api/v1/cognition/vision` y todavía no está cableado a un control de la interfaz. El estado del nodo comunica sólo el resultado del endpoint de salud; la disponibilidad real de visión/imagen/voz se consulta en `GET /api/v1/cognition/multimodal` y no se presenta como garantía.
 
 ## Requisitos de ingeniería
 
@@ -221,7 +241,7 @@ La interfaz usa un sistema visual Obsidian / Platino / Azul Eléctrico (capa can
     pnpm run security:suite
     pnpm run production:evidence
 
-Evidencia local reproducida en la rama actual: `pnpm typecheck` exit 0; `pnpm test` **899 aprobadas / 160 archivos**; `pnpm run build` exit 0 (tsc + vitest + esbuild + smoke UI + smoke runtime); `pnpm run security:suite` **14 passed / 0 failed / 0 not_applicable**. La inferencia externa se verificó en vivo el 2026-10-13 con Ollama Cloud (`responseEngine: "open-science"`); Hugging Face autentica pero devuelve `HTTP 402` por falta de créditos en la cuenta. Un test verde demuestra una capacidad computacional local, **no** autoridad, aprendizaje ni producción.
+Evidencia local reproducida en la rama actual: `pnpm typecheck` exit 0; `pnpm test` **1006 aprobadas / 175 archivos** (incluye `test/inference/multimodal.test.ts`, `test/inference/speech.test.ts` y las pruebas de integración por red `*.integration.test.ts`); `pnpm run build` exit 0 (tsc + vitest + esbuild + smoke UI + smoke runtime, que ahora incluye `MULTIMODAL_SPEECH_GUARDRAILS_OK`); `pnpm run security:suite` **14 passed / 0 failed / 0 not_applicable**. La inferencia de texto externa se verificó en vivo el 2026-10-13 con Groq (`HTTP 200`, `openai/gpt-oss-20b`) y Ollama Cloud (`responseEngine: "open-science"`); Hugging Face autentica pero devuelve `HTTP 402` por falta de créditos, y el TTS de Groq exige aceptar términos (`HTTP 400 model_terms_required`). Un test verde demuestra una capacidad computacional local, **no** autoridad, aprendizaje ni producción.
 
 ## Gates pendientes para liberar
 
@@ -234,6 +254,9 @@ Evidencia local reproducida en la rama actual: `pnpm typecheck` exit 0; `pnpm te
 - **Aplicar** los manifiestos de HyperCore Ω a un clúster y verificar probes, HPA, PDB, NetworkPolicy y firma de evidencia de extremo a extremo.
 - Medir latencia p50/p95/p99 con carga reproducible, distinguiendo aplicación, red, cold start, inferencia y persistencia. No se promete latencia casi cero sin esas medidas.
 - Verificar rollback, permisos y recuperación con objetivos RTO/RPO documentados antes de promoción.
+- Desbloquear **visión / texto→imagen**: configurar una llave de proveedor con modelo de visión/imagen (Gemini free tier, Novita, Together, DeepInfra, Fireworks, HF con créditos) o un servidor local; la ruta ya existe y falla en cerrado.
+- Desbloquear **TTS de servidor**: aceptar los términos de Orpheus en la consola de Groq; el **STT** con `whisper-large-v3` ya están disponibles para la cuenta.
+- Ejecutar una prueba **end-to-end con imagen y audio reales** (no sólo pruebas unitarias sin red) antes de considerar multimodal/voz listos para producción.
 
 ## Documentación
 

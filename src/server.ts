@@ -5,6 +5,8 @@ import path from "path";
 import { GoogleGenAI } from "@google/genai";
 import { generateText } from "ai";
 import { boundedMilliseconds, buildOpenAICompatibleCandidates, extractAssistantText, isOpenRouterModelAllowed } from "./inference/provider-policy";
+import { MULTIMODAL_CONTRACT_VERSION, buildImageCandidates, buildVisionCandidates, describeMultimodalReadiness, parseImageDataUrl, performImage, performVision } from "./inference/multimodal";
+import { describeSpeechReadiness, synthesizeSpeech, transcribeAudio } from "./inference/speech";
 import { gateway } from "@ai-sdk/gateway";
 import { IsabellaGenesisRuntime } from "./genesis/runtime";
 import { assertBalancedAuthority, createPrincipal } from "./identity/principal";
@@ -951,6 +953,212 @@ app.post("/api/v1/cognition/route", async (req, res) => {
     });
   } catch {
     res.status(500).json({ success: false, error: "COGNITIVE_ROUTE_FAILED" });
+  }
+});
+
+// Multimodal readiness: discloses which image capabilities are actually wired for
+// the running process so the UI can hide or disable affordances honestly.
+app.get("/api/v1/cognition/multimodal", (_req, res) => {
+  res.status(200).json({
+    success: true,
+    contractVersion: MULTIMODAL_CONTRACT_VERSION,
+    readiness: describeMultimodalReadiness(process.env),
+    speech: describeSpeechReadiness(process.env),
+    note: "A capability appears only when its provider key/model are configured. Missing entries fail closed; nothing is invented.",
+  });
+});
+
+const MAX_IMAGE_BASE64_CHARS = 8_000_000;
+
+// Public image-understanding route: viewer-only. The image is a bounded raster
+// data URL; the body can never supply authority, roles or provider selection.
+app.post("/api/v1/cognition/vision", async (req, res) => {
+  if (!enforceRateLimit(req, res, publicCognitionLimiter, "cognition-vision")) return;
+  try {
+    const body = req.body ?? {};
+    const image = parseImageDataUrl(body.image);
+    if (!image) {
+      res.status(400).json({ success: false, error: "IMAGE_DATA_URL_REQUIRED" });
+      return;
+    }
+    if (image.base64.length > MAX_IMAGE_BASE64_CHARS) {
+      res.status(413).json({ success: false, error: "IMAGE_SIZE_LIMIT_EXCEEDED" });
+      return;
+    }
+    const prompt = typeof body.prompt === "string" && body.prompt.trim()
+      ? body.prompt.trim().slice(0, 2_000)
+      : "Describe la imagen con precisión: objetos, personas, texto visible, contexto y cualquier incertidumbre. No inventes detalles que no puedas ver.";
+    const candidates = buildVisionCandidates(process.env);
+    if (candidates.length === 0) {
+      res.status(503).json({
+        success: false,
+        error: "NO_VISION_PROVIDER_CONFIGURED",
+        readiness: describeMultimodalReadiness(process.env),
+      });
+      return;
+    }
+    const result = await performVision(candidates, prompt, image, Math.max(providerTimeoutMs, 20_000));
+    bookPiLedger.append({
+      id: `evt-${randomUUID()}`,
+      timestamp: new Date().toISOString(),
+      type: "MULTIMODAL_VISION",
+      methodId: "A.TWINS.E12_VISION.describe.v1.0.0.LOW.AUTONOMOUS",
+      principal: "human:public-session",
+      riskTier: "LOW",
+      status: result ? "ADMITTED" : "PROVIDER_UNAVAILABLE",
+    });
+    if (!result) {
+      res.status(502).json({ success: false, error: "VISION_PROVIDER_UNAVAILABLE" });
+      return;
+    }
+    res.status(200).json({
+      success: true,
+      provider: result.provider,
+      description: result.text,
+      contractVersion: MULTIMODAL_CONTRACT_VERSION,
+      publicAuthority: "VIEWER_ONLY",
+      routedImageBytes: image.base64.length,
+    });
+  } catch {
+    res.status(500).json({ success: false, error: "VISION_ROUTE_FAILED" });
+  }
+});
+
+// Public text-to-image route: viewer-only. The prompt is bounded and no provider
+// is ever selected from request input.
+app.post("/api/v1/cognition/image", async (req, res) => {
+  if (!enforceRateLimit(req, res, publicCognitionLimiter, "cognition-image")) return;
+  try {
+    const body = req.body ?? {};
+    const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
+    if (!prompt) {
+      res.status(400).json({ success: false, error: "prompt es requerido" });
+      return;
+    }
+    if (prompt.length > 1_500) {
+      res.status(413).json({ success: false, error: "IMAGE_PROMPT_SIZE_LIMIT_EXCEEDED" });
+      return;
+    }
+    const candidates = buildImageCandidates(process.env);
+    if (candidates.length === 0) {
+      res.status(503).json({
+        success: false,
+        error: "NO_IMAGE_PROVIDER_CONFIGURED",
+        readiness: describeMultimodalReadiness(process.env),
+      });
+      return;
+    }
+    const result = await performImage(candidates, prompt, Math.max(providerTimeoutMs, 60_000));
+    bookPiLedger.append({
+      id: `evt-${randomUUID()}`,
+      timestamp: new Date().toISOString(),
+      type: "MULTIMODAL_IMAGE",
+      methodId: "A.TWINS.E13_IMAGE.synthesize.v1.0.0.LOW.AUTONOMOUS",
+      principal: "human:public-session",
+      riskTier: "LOW",
+      status: result ? "ADMITTED" : "PROVIDER_UNAVAILABLE",
+    });
+    if (!result) {
+      res.status(502).json({ success: false, error: "IMAGE_PROVIDER_UNAVAILABLE" });
+      return;
+    }
+    res.status(200).json({
+      success: true,
+      provider: result.provider,
+      mimeType: result.mimeType,
+      image: result.dataUrl,
+      contractVersion: MULTIMODAL_CONTRACT_VERSION,
+      publicAuthority: "VIEWER_ONLY",
+    });
+  } catch {
+    res.status(500).json({ success: false, error: "IMAGE_ROUTE_FAILED" });
+  }
+});
+
+// Public text-to-speech route: viewer-only. Bounded text in, base64 audio out.
+// Fails closed with NO_SPEECH_PROVIDER_CONFIGURED when no provider is wired; the
+// client may fall back to its own offline Web Speech API without any server call.
+app.post("/api/v1/cognition/speech", async (req, res) => {
+  if (!enforceRateLimit(req, res, publicCognitionLimiter, "cognition-speech")) return;
+  try {
+    const body = req.body ?? {};
+    const text = typeof body.text === "string" ? body.text.trim() : "";
+    if (!text) {
+      res.status(400).json({ success: false, error: "text es requerido" });
+      return;
+    }
+    if (text.length > 2_000) {
+      res.status(413).json({ success: false, error: "SPEECH_TEXT_SIZE_LIMIT_EXCEEDED" });
+      return;
+    }
+    const readiness = describeSpeechReadiness(process.env);
+    if (!readiness.textToSpeech) {
+      res.status(503).json({ success: false, error: "NO_SPEECH_PROVIDER_CONFIGURED", readiness });
+      return;
+    }
+    const voice = typeof body.voice === "string" ? body.voice : undefined;
+    const format = body.format === "mp3" ? "mp3" : "wav";
+    const result = await synthesizeSpeech(process.env, { text, voice, format, timeoutMs: Math.max(providerTimeoutMs, 30_000) });
+    if (!result) {
+      res.status(502).json({ success: false, error: "SPEECH_PROVIDER_UNAVAILABLE" });
+      return;
+    }
+    bookPiLedger.append({
+      id: `evt-${randomUUID()}`,
+      timestamp: new Date().toISOString(),
+      type: "MULTIMODAL_SPEECH",
+      methodId: "A.TWINS.E14_SPEECH.synthesize.v1.0.0.LOW.AUTONOMOUS",
+      principal: "human:public-session",
+      riskTier: "LOW",
+      status: "ADMITTED",
+    });
+    res.status(200).json({
+      success: true,
+      provider: result.provider,
+      mimeType: result.mimeType,
+      audio: result.dataUrl,
+      bytes: result.bytes,
+      publicAuthority: "VIEWER_ONLY",
+    });
+  } catch {
+    res.status(500).json({ success: false, error: "SPEECH_ROUTE_FAILED" });
+  }
+});
+
+// Public speech-to-text route: viewer-only. Bounded base64 audio (max ~6 MB) in.
+app.post("/api/v1/cognition/transcribe", async (req, res) => {
+  if (!enforceRateLimit(req, res, publicCognitionLimiter, "cognition-transcribe")) return;
+  try {
+    const body = req.body ?? {};
+    const base64 = typeof body.audio === "string" ? body.audio.trim() : "";
+    const mimeType = typeof body.mimeType === "string" ? body.mimeType.trim() : "";
+    if (!base64 || !mimeType) {
+      res.status(400).json({ success: false, error: "AUDIO_BASE64_AND_MIME_REQUIRED" });
+      return;
+    }
+    if (base64.length > MAX_IMAGE_BASE64_CHARS) {
+      res.status(413).json({ success: false, error: "AUDIO_SIZE_LIMIT_EXCEEDED" });
+      return;
+    }
+    const readiness = describeSpeechReadiness(process.env);
+    if (!readiness.speechToText) {
+      res.status(503).json({ success: false, error: "NO_SPEECH_PROVIDER_CONFIGURED", readiness });
+      return;
+    }
+    const language = typeof body.language === "string" ? body.language : undefined;
+    const result = await transcribeAudio(process.env, { base64, mimeType, language, timeoutMs: Math.max(providerTimeoutMs, 30_000) });
+    if (!result) {
+      res.status(502).json({ success: false, error: "TRANSCRIPTION_PROVIDER_UNAVAILABLE" });
+      return;
+    }
+    res.status(200).json({
+      success: true,
+      provider: result.provider,
+      text: result.text,
+      publicAuthority: "VIEWER_ONLY",
+    });
+  } catch {
+    res.status(500).json({ success: false, error: "TRANSCRIBE_ROUTE_FAILED" });
   }
 });
 

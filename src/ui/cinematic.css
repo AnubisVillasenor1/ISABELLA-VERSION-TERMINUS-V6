@@ -520,8 +520,7 @@ section[id]{scroll-margin-top:100px}
 /* WORKSPACE 2026 — aplicación operativa, no landing page             */
 /* ------------------------------------------------------------------ */
 .topbar{
-  position:sticky;
-  top:12px;
+  position:sticky;top:12px;
   z-index:40;
   display:grid;
   grid-template-columns:minmax(230px,1fr) auto minmax(320px,1fr);

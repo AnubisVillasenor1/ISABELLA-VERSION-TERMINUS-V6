@@ -172,6 +172,59 @@ try {
   }
   console.log("PUBLIC_API_GUARDRAILS_OK", JSON.stringify({ blankInput: emptyInput.status, oversizedInput: oversizedInput.status, unscopedMemory: unscopedMemory.status, destructiveRequest: destructiveRequest.status }));
   console.log("LOCAL_CONVERSATION_SMOKE_OK", JSON.stringify({ health: health.status, chat: chat.status, followUp: followUp.status, responseEngine: chatBody.responseEngine }));
+
+  // Multimodal + speech HTTP surface: readiness is always disclosed; generation
+  // capabilities must fail closed (HTTP 503) whenever no provider is configured.
+  const multimodalReadiness = await fetch(`${baseUrl}/api/v1/cognition/multimodal`, { signal: AbortSignal.timeout(5_000) });
+  assert.equal(multimodalReadiness.status, 200, "multimodal readiness must be publicly readable");
+  const readinessBody = await multimodalReadiness.json();
+  assert.equal(typeof readinessBody.contractVersion, "string", "multimodal readiness must disclose its contract version");
+  assert.ok(readinessBody.readiness && Array.isArray(readinessBody.readiness.vision) && Array.isArray(readinessBody.readiness.image), "readiness must list vision and image providers");
+  assert.ok(readinessBody.speech && typeof readinessBody.speech.textToSpeech === "boolean", "readiness must disclose speech TTS availability");
+
+  const invalidImage = await fetch(`${baseUrl}/api/v1/cognition/vision`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ image: "data:image/svg+xml;base64,PHN2Zz4=" }),
+    signal: AbortSignal.timeout(5_000),
+  });
+  assert.equal(invalidImage.status, 400, "a non-raster data URL must be rejected before any provider call");
+
+  if (readinessBody.readiness.vision.length === 0) {
+    const noVision = await fetch(`${baseUrl}/api/v1/cognition/vision`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ image: "data:image/png;base64,iVBORw0KGgo=" }),
+      signal: AbortSignal.timeout(5_000),
+    });
+    assert.equal(noVision.status, 503, "vision must fail closed without a configured provider");
+  }
+  if (readinessBody.readiness.image.length === 0) {
+    const noImage = await fetch(`${baseUrl}/api/v1/cognition/image`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ prompt: "un gato" }),
+      signal: AbortSignal.timeout(5_000),
+    });
+    assert.equal(noImage.status, 503, "image synthesis must fail closed without a configured provider");
+  }
+  if (!readinessBody.speech.textToSpeech) {
+    const noSpeech = await fetch(`${baseUrl}/api/v1/cognition/speech`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ text: "hola" }),
+      signal: AbortSignal.timeout(5_000),
+    });
+    assert.equal(noSpeech.status, 503, "server TTS must fail closed without a configured provider");
+  }
+  const badAudio = await fetch(`${baseUrl}/api/v1/cognition/transcribe`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ audio: "", mimeType: "" }),
+    signal: AbortSignal.timeout(5_000),
+  });
+  assert.equal(badAudio.status, 400, "transcription must reject missing audio/mime before any provider call");
+  console.log("MULTIMODAL_SPEECH_GUARDRAILS_OK", JSON.stringify({ visionProviders: readinessBody.readiness.vision.length, imageProviders: readinessBody.readiness.image.length, tts: readinessBody.speech.textToSpeech }));
   const gatewayCredentialsAvailable = Boolean(process.env.OPENROUTER_API_KEY || (process.env.HF_TOKEN && process.env.HF_FREE_MODELS));
   if (gatewayCredentialsAvailable) {
     try {
