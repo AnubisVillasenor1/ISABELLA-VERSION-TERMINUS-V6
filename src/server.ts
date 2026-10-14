@@ -183,6 +183,7 @@ void runtime.initPersistence().catch((error) => {
 const apiKey = process.env.GEMINI_API_KEY || process.env.MODEL_API_KEY;
 const genAi = apiKey ? new GoogleGenAI({ apiKey }) : null;
 const providerTimeoutMs = boundedMilliseconds(process.env.INFERENCE_TIMEOUT_MS, 8_000, 3_000, 30_000);
+const multimodalTimeoutMs = boundedMilliseconds(process.env.MULTIMODAL_TIMEOUT_MS, 120_000, 20_000, 600_000);
 const providerCooldownMs = boundedMilliseconds(process.env.PROVIDER_FAILURE_COOLDOWN_MS, 60_000, 10_000, 300_000);
 let gatewayCooldownUntil = 0;
 let openRouterCooldownUntil = 0;
@@ -1034,7 +1035,7 @@ app.post("/api/v1/cognition/vision", async (req, res) => {
       });
       return;
     }
-    const result = await performVision(candidates, prompt, image, Math.max(providerTimeoutMs, 20_000));
+    const result = await performVision(candidates, prompt, image, multimodalTimeoutMs);
     bookPiLedger.append({
       id: `evt-${randomUUID()}`,
       timestamp: new Date().toISOString(),
@@ -1086,7 +1087,7 @@ app.post("/api/v1/cognition/image", async (req, res) => {
       });
       return;
     }
-    const result = await performImage(candidates, prompt, Math.max(providerTimeoutMs, 60_000));
+    const result = await performImage(candidates, prompt, multimodalTimeoutMs);
     bookPiLedger.append({
       id: `evt-${randomUUID()}`,
       timestamp: new Date().toISOString(),
