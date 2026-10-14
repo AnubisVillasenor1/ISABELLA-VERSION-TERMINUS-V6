@@ -221,7 +221,7 @@ Cada escritura pasa por un `RetentionAdmissionGate` tenant-scoped que exige una 
 
 ## Interfaz de producto
 
-La interfaz usa un sistema visual Obsidian / Platino / Azul Eléctrico (capa canónica **Crystal Clear Ω** en `src/styles/crystal-clear.css`), con superficies de contraste controlado, jerarquía tipográfica, estados de foco visibles y diseño responsive. El espacio de trabajo es un **app-shell de chat** (rail de navegación, consola central dominante y rail de sesión) que se abre directamente; la secuencia cinemática de marca sigue disponible de forma explícita mediante `?intro=1`. El compositor permite **adjuntar un archivo de texto local** (≤25 KB / 12 000 caracteres) como contexto de la conversación y cada respuesta de Isabella ofrece **COPIAR**, **GUARDAR** y **ESCUCHAR** (Web Speech API del navegador, disponible sin proveedor de servidor). El análisis **imagen → texto** se expone por API en `POST /api/v1/cognition/vision` y todavía no está cableado a un control de la interfaz. El estado del nodo comunica sólo el resultado del endpoint de salud; la disponibilidad real de visión/imagen/voz se consulta en `GET /api/v1/cognition/multimodal` y no se presenta como garantía.
+La interfaz usa un sistema visual Obsidian / Platino / Azul Eléctrico (capa canónica **Crystal Clear Ω** en `src/styles/crystal-clear.css`), con superficies de contraste controlado, jerarquía tipográfica, estados de foco visibles y diseño responsive. El espacio de trabajo es un **app-shell de chat** (rail de navegación, consola central dominante y rail de sesión); la secuencia cinemática de marca se muestra inicialmente y puede omitirse con `?intro=0` o reduced motion. El compositor permite **adjuntar un archivo de texto local** (≤25 KB / 12 000 caracteres) como contexto de la conversación y cada respuesta de Isabella ofrece **COPIAR**, **GUARDAR** y **ESCUCHAR** (Web Speech API del navegador, disponible sin proveedor de servidor). El análisis **imagen → texto** se expone por API en `POST /api/v1/cognition/vision` y todavía no está cableado a un control de la interfaz. El estado del nodo comunica sólo el resultado del endpoint de salud; la disponibilidad real de visión/imagen/voz se consulta en `GET /api/v1/cognition/multimodal` y no se presenta como garantía.
 
 ## Requisitos de ingeniería
 
@@ -230,6 +230,10 @@ La interfaz usa un sistema visual Obsidian / Platino / Azul Eléctrico (capa can
 - Rust y PostgreSQL de prueba para validar el workspace IGE-Ω y sus pruebas de integración.
 - Para almacenar objetos con Terminus: nueve adaptadores independientes, cuotas reales verificadas, un KMS durable y un BookPI duradero configurado.
 - Para desplegar HyperCore Ω: un clúster Kubernetes, un gestor de secretos (KMS) para `HYPERCORE_SIGNING_KEY` y `HYPERCORE_API_TOKEN`, y las imágenes referenciadas en `deploy/k8s/`.
+
+### Seguridad de rutas de inferencia
+
+En producción, las rutas con coste o capacidades de proveedor (`/api/v1/tools/execute`, visión, imagen, voz, transcripción y selección de modelos externos) requieren `Authorization: Bearer ...` mediante `GENESIS_PUBLIC_API_TOKEN`. En desarrollo sin esa variable se mantiene el modo local para permitir el smoke test; no se debe publicar así. Las rutas administrativas continúan usando sus tokens específicos. La autenticación no sustituye autorización por usuario/tenant ni persistencia durable.
 
 ### Validación
 

@@ -359,6 +359,12 @@ function authorizeApiToken(req: Request, res: Response, envName: string): boolea
   return true;
 }
 
+/** Provider-backed capabilities fail closed in production unless explicitly authenticated. */
+function authorizeProviderRoute(req: Request, res: Response): boolean {
+  if (process.env.NODE_ENV !== "production" && !process.env.GENESIS_PUBLIC_API_TOKEN) return true;
+  return authorizeApiToken(req, res, "GENESIS_PUBLIC_API_TOKEN");
+}
+
 const publicCognitionLimiter = new FixedWindowRateLimiter(30, 60_000);
 const publicModelLimiter = new FixedWindowRateLimiter(8, 60_000);
 const publicProposalLimiter = new FixedWindowRateLimiter(10, 60_000);
@@ -778,6 +784,7 @@ app.get("/api/v1/bookpi/events/admin", (req, res) => {
 
 // Tool execution
 app.post("/api/v1/tools/execute", async (req, res) => {
+  if (!authorizeProviderRoute(req, res)) return;
   if (!enforceRateLimit(req, res, publicCognitionLimiter, "public-tool")) return;
   try {
     const { toolId = "rdm_territory_query", input = {} } = req.body ?? {};
@@ -833,6 +840,7 @@ app.post("/api/v1/cognition/route", async (req, res) => {
   try {
     const body = req.body ?? {};
     const modelEngine = ["auto", "sovereign", "open-science", "gemini"].includes(body.modelEngine) ? body.modelEngine : "auto";
+    if (modelEngine !== "sovereign" && !authorizeProviderRoute(req, res)) return;
     if (modelEngine !== "sovereign" && !enforceRateLimit(req, res, publicModelLimiter, "public-model")) return;
     const history = sanitizePublicHistory(body.history);
     const input = typeof body.input === "string" ? body.input.trim() : "";
@@ -975,6 +983,7 @@ const MAX_IMAGE_BASE64_CHARS = 8_000_000;
 // Public image-understanding route: viewer-only. The image is a bounded raster
 // data URL; the body can never supply authority, roles or provider selection.
 app.post("/api/v1/cognition/vision", async (req, res) => {
+  if (!authorizeProviderRoute(req, res)) return;
   if (!enforceRateLimit(req, res, publicCognitionLimiter, "cognition-vision")) return;
   try {
     const body = req.body ?? {};
@@ -1029,6 +1038,7 @@ app.post("/api/v1/cognition/vision", async (req, res) => {
 // Public text-to-image route: viewer-only. The prompt is bounded and no provider
 // is ever selected from request input.
 app.post("/api/v1/cognition/image", async (req, res) => {
+  if (!authorizeProviderRoute(req, res)) return;
   if (!enforceRateLimit(req, res, publicCognitionLimiter, "cognition-image")) return;
   try {
     const body = req.body ?? {};
@@ -1081,6 +1091,7 @@ app.post("/api/v1/cognition/image", async (req, res) => {
 // Fails closed with NO_SPEECH_PROVIDER_CONFIGURED when no provider is wired; the
 // client may fall back to its own offline Web Speech API without any server call.
 app.post("/api/v1/cognition/speech", async (req, res) => {
+  if (!authorizeProviderRoute(req, res)) return;
   if (!enforceRateLimit(req, res, publicCognitionLimiter, "cognition-speech")) return;
   try {
     const body = req.body ?? {};
@@ -1129,6 +1140,7 @@ app.post("/api/v1/cognition/speech", async (req, res) => {
 
 // Public speech-to-text route: viewer-only. Bounded base64 audio (max ~6 MB) in.
 app.post("/api/v1/cognition/transcribe", async (req, res) => {
+  if (!authorizeProviderRoute(req, res)) return;
   if (!enforceRateLimit(req, res, publicCognitionLimiter, "cognition-transcribe")) return;
   try {
     const body = req.body ?? {};
