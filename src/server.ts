@@ -42,6 +42,7 @@ import { SubscriptionStore, UsageMeter, checkFeature, checkQuota, planEntitlemen
 import { GAMEOVER_CONSTITUTION, passportAuthority, uagpGateway, type UagpRequestInput } from "./gameover";
 import { registerHyperCoreRoutes } from "./routes/hypercore";
 import { registerOpenAiCompatibleRoutes } from "./routes/openai";
+import { registerOrderPermissionRoutes } from "./routes/governance-permissions";
 
 const app: Application = express();
 app.disable("x-powered-by");
@@ -5110,6 +5111,17 @@ registerOpenAiCompatibleRoutes({
   rateLimiter: publicCognitionLimiter,
   authorizeApiToken,
   ...(process.env.OPENAI_COMPAT_API_TOKEN ? { apiTokenEnvName: "OPENAI_COMPAT_API_TOKEN" } : {}),
+});
+
+// ── Permission Map Ω (state: draft | engine-generated) ─ mapea una orden a sus permisos
+// por nivel y sella la autorización humana explícita. Mapear NO autoriza; autorizar NO ejecuta.
+registerOrderPermissionRoutes({
+  app,
+  mapOrderPermissions: (order) => runtime.mapOrderPermissions(order),
+  verifyOrderAuthorization: (envelope, catalog) => runtime.verifyOrderAuthorization(envelope, catalog),
+  enforceRateLimit,
+  rateLimiter: publicScanLimiter,
+  authorizeAdmin: (req, res) => authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN"),
 });
 
 // ── REINA (state: draft | engine-generated) ─ adjudicación previa a la ejecución; NO ejecuta acciones.

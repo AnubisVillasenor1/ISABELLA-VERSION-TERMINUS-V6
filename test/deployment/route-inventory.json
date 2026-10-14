@@ -52,6 +52,8 @@
   "POST /api/v1/governance/deployment",
   "POST /api/v1/governance/git",
   "POST /api/v1/governance/lifecycle-plan",
+  "POST /api/v1/governance/order-authorize",
+  "POST /api/v1/governance/order-permissions",
   "POST /api/v1/governance/quality-gates",
   "POST /api/v1/governance/verify-agent-app",
   "POST /api/v1/hsf/invoke",

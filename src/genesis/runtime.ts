@@ -66,6 +66,14 @@ import { assessEpistemicState, passesEriGate, type SophiaSignals, type SophiaAss
 import { detectContradictions as runContradictionDetection, type CanonicalClaim, type ContradictionOptions, type ContradictionReport } from "../cognition/contradiction";
 import { federationById, listFederations, type TamvFederation } from "../federation";
 import { MagpieBus, type MagpieDeliveryReport, type MagpieHandler, type MagpiePublishInput } from "../messaging";
+import {
+  mapOrderPermissions as buildPermissionMap,
+  verifyAuthorizationEnvelope as runVerifyAuthorization,
+  type OrderIntent,
+  type PermissionCatalog,
+  type AuthorizationEnvelope,
+  type AuthorizationVerification,
+} from "../governance/permission-map";
 import { hardenSanitization, buildQuarantineRecord, type HardeningResult } from "../sanitization";
 import { triangulateDigest, sealEnvelope, openEnvelope, evaluateVigia, type TriangulatedDigest, type SealedEnvelope, type VigiaVerdict } from "../security";
 import { buildOpsSnapshot, assessProductionReadiness, TokenBucket, CircuitBreaker, type DependencyHealth, type MaintenanceWindow, type OpsSnapshot, type ProductionReadinessReport } from "../deployment";
@@ -395,6 +403,24 @@ export class IsabellaGenesisRuntime {
       execute: async (input) => {
         const value = input as { answer?: string; evidence?: GroundingEvidence[]; options?: GroundingOptions };
         return this.assessGrounding(value.answer ?? "", value.evidence ?? [], value.options);
+      },
+    });
+    this.capabilities.register({
+      descriptor: low("hsf.governance.permission-map", "architecture", "PERMISSION MAP Ω: expande una orden en sus permisos requeridos y los cataloga por nivel (NEUTRO→CRÍTICO); mapear no autoriza."),
+      health: () => "ready",
+      execute: async (input) => {
+        const value = input as { order?: OrderIntent };
+        if (!value.order) throw new Error("ORDER_REQUIRED");
+        return this.mapOrderPermissions(value.order);
+      },
+    });
+    this.capabilities.register({
+      descriptor: low("hsf.governance.consent-envelope", "verification", "Verifica el sobre de autorización humana (fail-closed) y atribuye la responsabilidad al principal."),
+      health: () => "ready",
+      execute: async (input) => {
+        const value = input as { envelope?: AuthorizationEnvelope; catalog?: PermissionCatalog };
+        if (!value.envelope || !value.catalog) throw new Error("AUTHORIZATION_INPUT_REQUIRED");
+        return this.verifyOrderAuthorization(value.envelope, value.catalog);
       },
     });
   }
@@ -768,6 +794,48 @@ export class IsabellaGenesisRuntime {
   /** Registro canónico de las 7 federaciones TAMV (id ↔ código YUN). */
   federation(id: number): TamvFederation {
     return federationById(id);
+  }
+
+  /**
+   * PERMISSION MAP Ω: expande una orden de alto nivel en su catálogo de permisos por
+   * nivel de riesgo y su checklist. Mapear NO autoriza; prepara la decisión humana.
+   */
+  mapOrderPermissions(order: OrderIntent): PermissionCatalog {
+    const catalog = buildPermissionMap(order);
+    this.events.publish({
+      topic: "governance.permissions.mapped",
+      type: catalog.highestLevel,
+      payload: {
+        orderId: catalog.orderId,
+        total: catalog.totalPermissions,
+        totalAuthorizations: catalog.totalAuthorizations,
+        highestLevel: catalog.highestLevel,
+        requiresHumanAcceptance: catalog.requiresHumanAcceptance,
+        digest: catalog.digest,
+      },
+    });
+    return catalog;
+  }
+
+  /**
+   * Verifica el sobre de autorización humana. Fail-closed: solo `AUTHORIZED` procede;
+   * cualquier hueco, denegación o manipulación bloquea la ejecución.
+   */
+  verifyOrderAuthorization(envelope: AuthorizationEnvelope, catalog: PermissionCatalog): AuthorizationVerification {
+    const verification = runVerifyAuthorization(envelope, catalog);
+    this.events.publish({
+      topic: "governance.permissions.authorized",
+      type: verification.status,
+      payload: {
+        orderId: envelope.orderId,
+        status: verification.status,
+        mayProceed: verification.mayProceed,
+        authorized: verification.authorizedPermissions.length,
+        denied: verification.deniedPermissions.length,
+        reason: verification.reason,
+      },
+    });
+    return verification;
   }
 
   /** MAGPIE-X: publica un evento gobernado en el bus en proceso. Transporta intención, no autoriza ejecución. */

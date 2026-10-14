@@ -9,9 +9,9 @@
 
 ## Preparación global para producción y despliegue
 
-**≈ 59% — estimación global provisional de readiness (rango honesto: 54–63%).**
+**≈ 59.5% — estimación global provisional de readiness (rango honesto: 54–63%).**
 
-Es una **estimación de ingeniería, no una certificación**. Se calcula como media ponderada de dominios verificados de forma reproducible en la rama, con los gates externos penalizados en su estado real (no en su intención). El movimiento desde la base anterior (48% → ≈52%) y ahora hasta ≈59% proviene de trabajo implementado y probado en la rama: **82 rutas HTTP** (incluida la superficie OpenAI-compatible `/v1`), un **bus de eventos gobernado en proceso** (`src/messaging/magpie.ts`), un **guard de anclaje de evidencia** fail-closed (`src/veritas/grounding.ts`), una **superficie compatible con OpenAI** (`src/routes/openai.ts`), una **capa multimodal** de visión y síntesis de imagen (`src/inference/multimodal.ts`), una **capa de voz** TTS/STT (`src/inference/speech.ts`), el espacio de trabajo app-shell de chat con adjuntar archivo de contexto y escucha por Web Speech (la imagen se analiza vía `POST /api/v1/cognition/vision`), y una readiness local de **1087 pruebas / 187 archivos**. No proviene de dar por conectados adaptadores externos que siguen sin credenciales ni entorno objetivo.
+Es una **estimación de ingeniería, no una certificación**. Se calcula como media ponderada de dominios verificados de forma reproducible en la rama, con los gates externos penalizados en su estado real (no en su intención). El movimiento desde la base anterior (48% → ≈52%) y ahora hasta ≈59.5% proviene de trabajo implementado y probado en la rama: **85 rutas HTTP** (incluidas la superficie OpenAI-compatible `/v1` y los endpoints de Permission Map Ω), un **bus de eventos gobernado en proceso** (`src/messaging/magpie.ts`), un **guard de anclaje de evidencia** fail-closed (`src/veritas/grounding.ts`), una **superficie compatible con OpenAI** (`src/routes/openai.ts`), un **motor de mapeo de permisos con consentimiento humano** (`src/governance/permission-map.ts`), una **capa multimodal** de visión y síntesis de imagen (`src/inference/multimodal.ts`), una **capa de voz** TTS/STT (`src/inference/speech.ts`), el espacio de trabajo app-shell de chat con adjuntar archivo de contexto y escucha por Web Speech (la imagen se analiza vía `POST /api/v1/cognition/vision`), y una readiness local de **1106 pruebas / 189 archivos**. No proviene de dar por conectados adaptadores externos que siguen sin credenciales ni entorno objetivo.
 
 | Dominio | Estado real | Readiness |
 |---|---|---|
@@ -197,6 +197,27 @@ de cognición pública; token opcional con `OPENAI_COMPAT_API_TOKEN`. La superfi
 
 `src/skills/mcp-server.ts` expone la fábrica como herramientas Model Context Protocol: `initialize`, `tools/list` y `tools/call`. Cada llamada se enruta a través de HyperCore Ω, de modo que CROWN, triangulación y BookPI siguen aplicándose. **MCP transporta intención; no concede autoridad.**
 
+### Permission Map Ω (mapeo de permisos y consentimiento humano)
+
+`src/governance/permission-map.ts` resuelve la tensión entre **fricción cero** y
+**seguridad**: pedir permiso 30 veces por una orden de 30 acciones mata la adopción;
+ejecutar sin permiso es peligroso. El motor toma una **orden de alto nivel** (p. ej.
+"enviar un email a 30 clientes"), la expande en sus operaciones atómicas, **cataloga
+cada permiso por nivel** (`NEUTRO · BAJO · MEDIO · ALTO · CRÍTICO`), **amplifica el
+riesgo por volumen** (una acción inocua repetida 30 veces sube un nivel; 300 sube dos)
+y produce un **checklist** que el humano revisa de una sola vez. El principal marca
+qué autoriza y el sistema sella un **sobre de autorización** con digest determinista y
+firma inyectable (HMAC en tiempo constante). Invariante: **mapear no autoriza;
+autorizar es un acto explícito y fechado; autorizar no ejecuta.** La verificación es
+fail-closed — huecos, denegaciones o manipulación devuelven `INVALID`/`PARTIAL`/`DENIED`
+y bloquean la ejecución — y la **responsabilidad por las consecuencias recae en quien
+otorga la luz verde**, no en Isabella, que transportó y evidenció la orden. Se expone
+como facultades `hsf.governance.permission-map` y `hsf.governance.consent-envelope`,
+como métodos `runtime.mapOrderPermissions()` / `runtime.verifyOrderAuthorization()`, y
+como endpoints `POST /api/v1/governance/order-permissions` y
+`POST /api/v1/governance/order-authorize` (admin-gated); emite los eventos
+`governance.permissions.mapped` y `governance.permissions.authorized`.
+
 ### Superficie HTTP (admin-gated)
 
 Requieren `HYPERCORE_API_TOKEN` (`Authorization: Bearer …`) y aplican rate limit:
@@ -346,7 +367,7 @@ En producción, las rutas con coste o capacidades de proveedor (`/api/v1/tools/e
     pnpm run security:suite
     pnpm run production:evidence
 
-Evidencia local reproducida en la rama actual: `pnpm typecheck` exit 0; `pnpm test` **1087 aprobadas / 187 archivos** (incluye `test/inference/multimodal.test.ts`, `test/inference/speech.test.ts` y las pruebas de integración por red `*.integration.test.ts`); `pnpm run build` exit 0 (tsc + vitest + esbuild + smoke UI + smoke runtime, que ahora incluye `MULTIMODAL_SPEECH_GUARDRAILS_OK`); `pnpm run security:suite` **14 passed / 0 failed / 0 not_applicable**. La inferencia de texto externa se verificó en vivo el 2026-10-13 con Groq (`HTTP 200`, `openai/gpt-oss-20b`) y Ollama Cloud (`responseEngine: "open-science"`); el **STT de Groq (`whisper-large-v3`) se verificó en vivo** por la ruta gobernada `POST /api/v1/cognition/transcribe` (texto transcrito correcto); además, la **visión (imagen→texto) se verificó en vivo** con Ollama local (`qwen2.5vl:7b`) por `POST /api/v1/cognition/vision` (`success:true`, `provider:"local"`, descripción correcta), aunque la síntesis de imagen sigue sin proveedor; Hugging Face autentica pero devuelve `HTTP 402` por falta de créditos, y el TTS de Groq exige aceptar términos (`HTTP 400 model_terms_required`). Un test verde demuestra una capacidad computacional local, **no** autoridad, aprendizaje ni producción.
+Evidencia local reproducida en la rama actual: `pnpm typecheck` exit 0; `pnpm test` **1106 aprobadas / 189 archivos** (incluye `test/inference/multimodal.test.ts`, `test/inference/speech.test.ts` y las pruebas de integración por red `*.integration.test.ts`); `pnpm run build` exit 0 (tsc + vitest + esbuild + smoke UI + smoke runtime, que ahora incluye `MULTIMODAL_SPEECH_GUARDRAILS_OK`); `pnpm run security:suite` **14 passed / 0 failed / 0 not_applicable**. La inferencia de texto externa se verificó en vivo el 2026-10-13 con Groq (`HTTP 200`, `openai/gpt-oss-20b`) y Ollama Cloud (`responseEngine: "open-science"`); el **STT de Groq (`whisper-large-v3`) se verificó en vivo** por la ruta gobernada `POST /api/v1/cognition/transcribe` (texto transcrito correcto); además, la **visión (imagen→texto) se verificó en vivo** con Ollama local (`qwen2.5vl:7b`) por `POST /api/v1/cognition/vision` (`success:true`, `provider:"local"`, descripción correcta), aunque la síntesis de imagen sigue sin proveedor; Hugging Face autentica pero devuelve `HTTP 402` por falta de créditos, y el TTS de Groq exige aceptar términos (`HTTP 400 model_terms_required`). Un test verde demuestra una capacidad computacional local, **no** autoridad, aprendizaje ni producción.
 
 ## Gates pendientes para liberar
 
