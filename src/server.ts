@@ -1,4 +1,4 @@
-import express, { type Application, type Request, type Response } from "express";
+import express, { type Application, type NextFunction, type Request, type Response } from "express";
 import { randomUUID, timingSafeEqual } from "node:crypto";
 import fs from "fs";
 import path from "path";
@@ -36,6 +36,7 @@ import { MetricsRegistry } from "./observability/metrics";
 import { SessionMemory, formatSessionContext, deriveSessionId } from "./memory/session-memory";
 import { VerifiedKnowledgeStore, formatVerifiedKnowledgeContext } from "./memory/verified-knowledge";
 import { osirisSentinel } from "./osiris";
+import { AuthFailureThrottle, classifyHttpError, isApiPath, parseTrustProxy, securityHeadersFor } from "./security/http-hardening";
 import { createReinaRuntime, type ReinaRequest } from "./reina";
 import { SubscriptionStore, UsageMeter, checkFeature, checkQuota, planEntitlements, PLANS, type PlanId, type QuotaKey, type SubscriptionRecord } from "./commerce";
 import { GAMEOVER_CONSTITUTION, passportAuthority, uagpGateway, type UagpRequestInput } from "./gameover";
@@ -43,11 +44,16 @@ import { registerHyperCoreRoutes } from "./routes/hypercore";
 
 const app: Application = express();
 app.disable("x-powered-by");
-app.use((_req, res, next) => {
-  res.setHeader("X-Content-Type-Options", "nosniff");
-  res.setHeader("X-Frame-Options", "DENY");
-  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
-  res.setHeader("Permissions-Policy", "camera=(), microphone=(self)");
+// Detrás de un balanceador, req.ip sería la IP del proxy y todos los clientes compartirían cubeta de rate limit.
+// TRUST_PROXY=<saltos> (entero 1..10) habilita X-Forwarded-For; sin valor válido NO se confía en él.
+const trustProxyHops = parseTrustProxy(process.env.TRUST_PROXY);
+if (trustProxyHops !== false) app.set("trust proxy", trustProxyHops);
+// Conjuntos de cabeceras constantes (precalculados al arrancar); la ruta solo elige cuál aplicar.
+const BASE_SECURITY_HEADERS = Object.entries(securityHeadersFor("/", process.env));
+const API_SECURITY_HEADERS = Object.entries(securityHeadersFor("/api/", process.env));
+app.use((req, res, next) => {
+  const headerSet = isApiPath(req.path) ? API_SECURITY_HEADERS : BASE_SECURITY_HEADERS;
+  for (const [name, value] of headerSet) res.setHeader(name, value);
   next();
 });
 const latencyRegistry = new LatencyRegistry(100, 512);
@@ -355,8 +361,19 @@ async function generateGatewayNarrative(systemPrompt: string, input: string, his
 }
 
 /** Server-side bearer-token gate for mutating or privileged API routes. */
+const authFailureThrottle = new AuthFailureThrottle();
+
 function authorizeApiToken(req: Request, res: Response, envName: string): boolean {
+  const throttleKey = req.ip || "unknown";
+  const blockedMs = authFailureThrottle.blockedFor(throttleKey);
+  if (blockedMs > 0) {
+    res.setHeader("Retry-After", String(Math.ceil(blockedMs / 1000)));
+    res.status(429).json({ success: false, error: "TOO_MANY_AUTH_FAILURES" });
+    return false;
+  }
   const verdict = verifyBearerToken(req.get("authorization"), process.env[envName]);
+  if (verdict === "AUTHORIZED") authFailureThrottle.recordSuccess(throttleKey);
+  else if (verdict === "INVALID") authFailureThrottle.recordFailure(throttleKey);
   if (verdict === "NOT_CONFIGURED") {
     res.status(503).json({ success: false, error: "API_TOKEN_NOT_CONFIGURED" });
     return false;
@@ -5133,6 +5150,17 @@ app.get("/api/v1/reina/log/proof/:index", (req, res) => {
   } catch (error) {
     res.status(400).json({ success: false, error: error instanceof Error ? error.message : "REINA_PROOF_ERROR" });
   }
+});
+
+// Manejador de errores final: JSON seguro, sin stack ni detalles internos (parse errors → 400, tamaño → 413).
+app.use((error: unknown, _req: Request, res: Response, next: NextFunction) => {
+  if (res.headersSent) {
+    next(error);
+    return;
+  }
+  const safe = classifyHttpError(error);
+  if (safe.status >= 500) console.error("[Isabella] Unhandled request error", error instanceof Error ? error.message : "unknown");
+  res.status(safe.status).json(safe.body);
 });
 
 if (!process.env.VERCEL) app.listen(port, host, () => {
