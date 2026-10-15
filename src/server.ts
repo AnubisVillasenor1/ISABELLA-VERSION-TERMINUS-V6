@@ -4,6 +4,7 @@ import fs from "fs";
 import path from "path";
 import { GoogleGenAI } from "@google/genai";
 import { generateText } from "ai";
+import Stripe from "stripe";
 import { boundedMilliseconds, buildOpenAICompatibleCandidates, extractAssistantText, isOpenRouterModelAllowed } from "./inference/provider-policy";
 import { MULTIMODAL_CONTRACT_VERSION, buildImageCandidates, buildVisionCandidates, describeMultimodalReadiness, parseImageDataUrl, performImage, performVision } from "./inference/multimodal";
 import { describeSpeechReadiness, synthesizeSpeech, transcribeAudio } from "./inference/speech";
@@ -38,7 +39,7 @@ import { VerifiedKnowledgeStore, formatVerifiedKnowledgeContext } from "./memory
 import { osirisSentinel } from "./osiris";
 import { AuthFailureThrottle, classifyHttpError, isApiPath, parseTrustProxy, securityHeadersFor } from "./security/http-hardening";
 import { createReinaRuntime, type ReinaRequest } from "./reina";
-import { SubscriptionStore, UsageMeter, checkFeature, checkQuota, planEntitlements, PLANS, type PlanId, type QuotaKey, type SubscriptionRecord } from "./commerce";
+import { SubscriptionStore, UsageMeter, billingPriceById, billingPricesPublic, billingPriceIsConfigured, checkFeature, checkQuota, planEntitlements, PLANS, type PlanId, type QuotaKey, type SubscriptionRecord } from "./commerce";
 import { GAMEOVER_CONSTITUTION, passportAuthority, uagpGateway, type UagpRequestInput } from "./gameover";
 import { registerHyperCoreRoutes } from "./routes/hypercore";
 import { registerOpenAiCompatibleRoutes } from "./routes/openai";
@@ -94,6 +95,8 @@ app.use((req, res, next) => {
   });
   next();
 });
+
+app.use("/api/v1/billing/stripe/webhook", express.raw({ type: "application/json", limit: "256kb" }));
 
 app.use(
   express.json({
@@ -4855,6 +4858,119 @@ function effectiveEntitlements(record: SubscriptionRecord | null): {
     quotas: entitlements.quotas,
   };
 }
+
+const stripeClient = process.env.STRIPE_SECRET_KEY?.trim()
+  ? new Stripe(process.env.STRIPE_SECRET_KEY.trim())
+  : null;
+const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET?.trim() ?? "";
+
+app.get("/api/v1/billing/prices", (_req, res) => {
+  res.json({ success: true, prices: billingPricesPublic(), currency: "usd", source: "server_catalog" });
+});
+
+app.post("/api/v1/billing/checkout", async (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  if (!stripeClient) {
+    res.status(503).json({ success: false, error: "STRIPE_NOT_CONFIGURED" });
+    return;
+  }
+  const body = (req.body ?? {}) as Record<string, unknown>;
+  const priceId = commerceStringField(body, "priceId");
+  const workspaceId = commerceStringField(body, "workspaceId");
+  const customerEmail = commerceStringField(body, "customerEmail");
+  const price = priceId ? billingPriceById(priceId) : undefined;
+  if (!price || !workspaceId || (customerEmail && !customerEmail.includes("@"))) {
+    res.status(400).json({ success: false, error: "PRICE_WORKSPACE_OR_EMAIL_INVALID" });
+    return;
+  }
+  if (!billingPriceIsConfigured(price)) {
+    res.status(503).json({ success: false, error: "STRIPE_PRICE_NOT_CONFIGURED", priceId: price.id });
+    return;
+  }
+  try {
+    const origin = process.env.APP_PUBLIC_URL?.trim() || `${req.protocol}://${req.get("host")}`;
+    const session = await stripeClient.checkout.sessions.create({
+      mode: "subscription",
+      line_items: [{ price: price.stripePriceId, quantity: 1 }],
+      ...(customerEmail ? { customer_email: customerEmail } : {}),
+      metadata: { workspaceId, planCode: price.planId, catalogPriceId: price.id },
+      subscription_data: { metadata: { workspaceId, planCode: price.planId, catalogPriceId: price.id } },
+      success_url: `${origin}/?billing=success&session_id={CHECKOUT_SESSION_ID}#economy`,
+      cancel_url: `${origin}/?billing=canceled#economy`,
+    }, { idempotencyKey: `checkout-${workspaceId}-${price.id}-${String(body.idempotencyKey ?? randomUUID()).slice(0, 120)}` });
+    res.status(201).json({ success: true, checkoutUrl: session.url, sessionId: session.id, priceId: price.id });
+  } catch (error) {
+    console.error("[Billing] Stripe checkout creation failed", error instanceof Error ? error.message : error);
+    res.status(502).json({ success: false, error: "STRIPE_CHECKOUT_FAILED" });
+  }
+});
+
+app.post("/api/v1/billing/portal", async (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  if (!stripeClient) {
+    res.status(503).json({ success: false, error: "STRIPE_NOT_CONFIGURED" });
+    return;
+  }
+  const body = (req.body ?? {}) as Record<string, unknown>;
+  const customerId = commerceStringField(body, "customerId");
+  if (!customerId || !customerId.startsWith("cus_")) {
+    res.status(400).json({ success: false, error: "STRIPE_CUSTOMER_REQUIRED" });
+    return;
+  }
+  try {
+    const origin = process.env.APP_PUBLIC_URL?.trim() || `${req.protocol}://${req.get("host")}`;
+    const session = await stripeClient.billingPortal.sessions.create({ customer: customerId, return_url: `${origin}/#economy` });
+    res.json({ success: true, url: session.url });
+  } catch (error) {
+    console.error("[Billing] Stripe portal creation failed", error instanceof Error ? error.message : error);
+    res.status(502).json({ success: false, error: "STRIPE_PORTAL_FAILED" });
+  }
+});
+
+app.post("/api/v1/billing/stripe/webhook", async (req, res) => {
+  if (!stripeClient || !stripeWebhookSecret || !Buffer.isBuffer(req.body)) {
+    res.status(503).json({ success: false, error: "STRIPE_WEBHOOK_NOT_CONFIGURED" });
+    return;
+  }
+  const signature = req.header("stripe-signature");
+  if (!signature) {
+    res.status(400).json({ success: false, error: "STRIPE_SIGNATURE_REQUIRED" });
+    return;
+  }
+  let event: Stripe.Event;
+  try {
+    event = stripeClient.webhooks.constructEvent(req.body, signature, stripeWebhookSecret);
+  } catch {
+    res.status(400).json({ success: false, error: "STRIPE_SIGNATURE_INVALID" });
+    return;
+  }
+  try {
+    if (event.type === "checkout.session.completed") {
+      const session = event.data.object as Stripe.Checkout.Session;
+      const workspaceId = session.metadata?.workspaceId;
+      const planCode = session.metadata?.planCode;
+      if (workspaceId && isPlanCode(planCode ?? "") && session.subscription) {
+        await subscriptionStore.subscribe({ workspaceId, planCode: planCode as PlanId, provider: "stripe", externalRef: String(session.subscription), status: "active", contract: false });
+      }
+    } else if (event.type === "customer.subscription.updated" || event.type === "customer.subscription.created") {
+      const subscription = event.data.object as Stripe.Subscription;
+      const workspaceId = subscription.metadata?.workspaceId;
+      const planCode = subscription.metadata?.planCode;
+      if (workspaceId && isPlanCode(planCode ?? "")) {
+        await subscriptionStore.subscribe({ workspaceId, planCode: planCode as PlanId, provider: "stripe", externalRef: subscription.id, status: subscription.status === "trialing" ? "trialing" : "active", contract: false });
+      }
+    } else if (event.type === "customer.subscription.deleted") {
+      const subscription = event.data.object as Stripe.Subscription;
+      const workspaceId = subscription.metadata?.workspaceId;
+      if (workspaceId) await subscriptionStore.cancel(workspaceId, "stripe_subscription_deleted");
+    }
+    bookPiLedger.append({ id: `stripe-${event.id}`, timestamp: new Date().toISOString(), type: `commerce.stripe.${event.type}`, methodId: COMMERCE_METHOD_IDS.webhookSubscription, principal: "stripe", riskTier: "MEDIUM", status: "VERIFIED" });
+    res.json({ received: true });
+  } catch (error) {
+    console.error("[Billing] Stripe webhook handling failed", error instanceof Error ? error.message : error);
+    res.status(500).json({ success: false, error: "STRIPE_WEBHOOK_PROCESSING_FAILED" });
+  }
+});
 
 app.get("/api/v1/billing/plans", (_req, res) => {
   const plans = Object.values(PLANS).map((plan) => ({
