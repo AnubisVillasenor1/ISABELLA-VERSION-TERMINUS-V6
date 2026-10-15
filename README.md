@@ -1,13 +1,12 @@
-# Isabella Villaseñor AI — Genesis TINA / Terminus Ω / HyperCore Ω
+# Isabella Villaseñor AI — Genesis TINA / Terminus Ω
 
-**Runtime cognitivo gobernado para TAMV Online Network.** Este es el repositorio autorizado para la evolución de Isabella V6: https://github.com/OsoPanda1/ISABELLA-VERSION-TERMINUS-V6
+Runtime cognitivo gobernado para TAMV Online Network. Este repositorio contiene el núcleo operativo, API HTTP, BookPI, HyperCore Ω, superficies multimodales y el workspace de interacción de Isabella V6.
 
-[![Repository Assurance](https://github.com/OsoPanda1/ISABELLA-VERSION-TERMINUS-V6/actions/workflows/repository-assurance.yml/badge.svg)](https://github.com/OsoPanda1/ISABELLA-VERSION-TERMINUS-V6/actions/workflows/repository-assurance.yml)
-[![Genesis CI](https://github.com/OsoPanda1/ISABELLA-VERSION-TERMINUS-V6/actions/workflows/ci.yml/badge.svg)](https://github.com/OsoPanda1/ISABELLA-VERSION-TERMINUS-V6/actions/workflows/ci.yml)
+> **Invariante operativa:** CAPABILITY ≠ AUTHORITY ≠ EXECUTION ≠ EVIDENCE ≠ LEARNING ≠ PRODUCTION.
 
-> **Invariante:** CAPABILITY ≠ AUTHORITY ≠ EXECUTION ≠ EVIDENCE ≠ LEARNING ≠ PRODUCTION
+La inteligencia propone, calcula y evalúa. La autoridad humana decide, aprueba, arbitra y ejecuta. Un test verde demuestra capacidad computacional; no demuestra autoridad humana ni producción.
 
-## Preparación global para producción y despliegue
+## Estado honesto de producción
 
 **≈ 60% — estimación global provisional de readiness (rango honesto: 54–64%).**
 
@@ -336,117 +335,121 @@ Cada proveedor se intenta **solo** con credencial explícita; el constructor de 
 
 ### Kubernetes
 
-`deploy/k8s/isabella-hypercore-omega.yaml` define un `Namespace` soberano, `ConfigMap`, `Secret` gestionado por KMS, y para el router y cada skill: `Deployment`, `Service`, probes **startup/readiness/liveness**, `HorizontalPodAutoscaler`, `PodDisruptionBudget` y `NetworkPolicy`. Se aplica menor privilegio (`runAsNonRoot: true`, `allowPrivilegeEscalation: false`, `readOnlyRootFilesystem: true`, `capabilities.drop: [ALL]`).
+Los veredictos canónicos son `ALLOW`, `DENY`, `ESCALATE` y `DEGRADE`. MCP transporta intención; no concede autoridad.
 
-> **state: draft | engine-generated.** Los manifiestos están autorados y validados estructuralmente por prueba, pero **no se han aplicado a ningún clúster**. Un YAML no prueba un despliegue.
+### BookPI
 
-## Arquitectura operativa
+El ledger JSONL mantiene una cadena hash, `fsync`, backups atómicos, restauración y mantenimiento fail-closed. El backend local no debe considerarse fuente compartida para réplicas serverless hasta validar el adaptador Postgres, concurrencia, backup y restauración.
 
-    Solicitud / cliente / agente
-             |
-    Validación y límites de entrada
-             |
-    Identidad, tenant y scopes
-             |
-    CROWN / AEGIS / política de riesgo
-             |
-    Terminus Ω — mandato acotado y decisión
-             |
-    HyperCore Ω — skill gobernada (contrato → ejecución → triangulación)
-             |
-    Inferencia / memoria / capacidad autorizada
-             |
-    VERITAS / validación de evidencia
-             |
-    BookPI — eventos de decisión y trazabilidad
-             |
-    Respuesta / decisión / alerta operacional
+## API principal
 
-### Terminus Ω: autoridad antes de ejecución
+- `GET /health` — liveness estático.
+- `GET /api/v1/health` — readiness superficial.
+- `GET /api/v1/healthz` — readiness profunda.
+- `GET /api/v1/readyz` — dependencias observadas.
+- `GET /api/v1/hypercore/skills` — catálogo gobernado.
+- `POST /api/v1/hypercore/skills/execute` — ejecución con mandato.
+- `POST /api/v1/mcp` — JSON-RPC MCP.
+- `POST /api/v1/cognition/vision` — imagen a descripción.
+- `POST /api/v1/cognition/image` — prompt a imagen.
+- `POST /api/v1/cognition/speech` — texto a audio.
+  - `POST /api/v1/cognition/transcribe` — audio a texto.
+  - `POST /api/v1/yun/events` — recibe un evento YUN canónico, verifica integridad y lo registra en BookPI; requiere `GENESIS_ADMIN_API_TOKEN`.
+  - `GET /api/v1/yun/events?limit=20` — expone únicamente metadatos saneados de eventos YUN recientes.
 
-`src/terminus/mandate.ts` define el contrato del mandato: política versionada, presupuestos de recursos, evidencia, separación de actores y límites de riesgo. Una decisión de riesgo elevado pasa a **ESCALATE** si no existe aprobación humana vigente ligada a la evidencia declarada. Las operaciones prohibidas se rechazan independientemente del nombre de la capacidad solicitada.
+Las rutas mutantes fallan cerrado cuando falta configuración. `X-Request-ID` se genera o propaga en cada respuesta; en producción se añade HSTS. Ningún request ID sustituye autenticación, autorización humana o evidencia de despliegue.
 
-**TerminusRuntime** no ejecuta la acción gobernada. Antes de devolver **ALLOW** exige que los adaptadores verifiquen identidad y evidencia, que un contador durable reserve una ejecución de forma atómica y que el resultado pueda registrarse en BookPI. Si falla una dependencia necesaria, aplica **fail-closed**.
+Las rutas sensibles aplican autenticación, límites de tamaño, rate limiting y fallo cerrado cuando falta una dependencia.
 
-Los adaptadores `verifyIdentity`, `verifyEvidence` y `ExecutionCounter` son dependencias externas deliberadas. No hay identidad verificada ni contador distribuido sólo por implementar una interfaz: deben conectarse al proveedor de identidad y a la base de datos autorizados y someterse a pruebas de concurrencia y revocación.
+## Workspace visual
 
-### BookPI: evidencia duradera y mantenimiento
+La interfaz de `src/ui` es un workspace de interacción, no una landing page:
 
-BookPI conserva el ledger JSONL durable existente, seleccionable mediante **BOOKPI_LEDGER_PATH**. Sus eventos forman una cadena hash y el mantenimiento permite verificar, respaldar, restaurar y planear la retención de prefijos. La retención del ledger necesita conservar un archivo y un checkpoint; no se debe borrar su historia desde una rutina de limpieza.
+- Intro con consentimiento explícito.
+- Video `src/assets/musica/IsabellaVideoIntro.mp4` servido como `/assets/video/IsabellaVideoIntro.mp4`.
+- Intro textual superpuesto y degradado visual para fusionar ambas capas.
+- Chat como superficie primaria.
+- Seis rails plegables: tres izquierdos y tres derechos.
+- Modos `CHAT`, `CHAT + DISEÑO` y `CHAT + DISEÑO + CONTROL`.
+- Soporte de escucha por Web Speech y superficies multimodales gobernadas.
 
-El ledger durable agrega cada fila con `fsync` y usa reemplazos atómicos para backup, restauración y poda. Un marcador de mantenimiento pendiente bloquea el uso del ledger tras una interrupción de operaciones de dos archivos, hasta que se valide y reconcilie explícitamente la cadena. El backend JSONL local usa `fsync`, pero **no** es una fuente compartida para réplicas/serverless. **BookPI no es un dispositivo WORM:** la cadena de hashes detecta modificaciones que no reencadenen, pero no impide que un administrador privilegiado cambie archivo, permisos o respaldos.
+El navegador puede bloquear autoplay; por eso el video inicia después de la acción explícita de inmersión. La reproducción de audio no debe depender de autoplay silencioso.
 
-El adaptador PostgreSQL utiliza trece campos por evento, incluido **canonical**. Para que PostgreSQL sea autoritativo aún deben probarse el esquema real, permisos append-only, concurrencia, propagación de errores, respaldo y restauración contra una instancia de prueba.
+## Pagos y donaciones
 
-### Terminus Sharded Store: cifrado, 6+3 y cuotas
+Stripe está conectado al proyecto. Antes de habilitar monetización real:
 
-**src/terminus/erasure-code.ts** implementa Reed–Solomon sobre GF(2^8): seis shards de datos y tres de paridad, con cifrado AES-256-GCM antes de codificar. Se reconstruye desde cualquier seis shards válidos, tolerando hasta tres pérdidas. Es redundancia, no almacenamiento gratuito: nueve shards ocupan más que el objeto y nueve aliases en una sola cuenta **no** son nueve dominios de fallo. El coordinador requiere `ShardStore`, `DataKeyManager`, `BookPiStorage` durable y `maxObjectBytes` explícito; las pruebas locales usan proveedores en memoria y no cuentan como conexión externa.
+1. Definir productos/precios en servidor.
+2. Validar precio y cantidad en servidor.
+3. Crear Checkout con idempotency key.
+4. Procesar `checkout.session.completed` y pagos asíncronos mediante webhook firmado.
+5. Registrar el evento en BookPI y, si corresponde, en una tabla durable con RLS.
+6. Probar sandbox, reintentos, duplicados, reembolsos y estados incompletos.
 
-### Admisión bajo cuotas concurrentes
+No se presenta una donación como completada desde la página de éxito; la confirmación válida proviene del webhook.
 
-Cada escritura pasa por un `RetentionAdmissionGate` tenant-scoped que exige una reserva durable transaccional de bytes y objetos; sin ella, bloquea la escritura (fail-closed ante carreras entre réplicas/serverless). El **borrado criptográfico** sólo queda confirmado cuando el KMS real destruye durablemente todas las copias de la clave; la eliminación de shards físicos se informa por separado, con fallos visibles.
+## Autenticación y datos
 
-## Interfaz de producto
+Supabase y Neon están disponibles en el entorno. La implementación debe conservar estas reglas:
 
-La interfaz usa un sistema visual Obsidian / Platino / Azul Eléctrico (capa canónica **Crystal Clear Ω** en `src/styles/crystal-clear.css`), con superficies de contraste controlado, jerarquía tipográfica, estados de foco visibles y diseño responsive. El espacio de trabajo es un **app-shell de chat** (rail de navegación, consola central dominante y rail de sesión); la secuencia cinemática de marca se muestra inicialmente y puede omitirse con `?intro=0` o reduced motion. El compositor permite **adjuntar un archivo de texto local** (≤25 KB / 12 000 caracteres) como contexto de la conversación y cada respuesta de Isabella ofrece **COPIAR**, **GUARDAR** y **ESCUCHAR** (Web Speech API del navegador, disponible sin proveedor de servidor). El análisis **imagen → texto** se expone por API en `POST /api/v1/cognition/vision` y todavía no está cableado a un control de la interfaz. El estado del nodo comunica sólo el resultado del endpoint de salud; la disponibilidad real de visión/imagen/voz se consulta en `GET /api/v1/cognition/multimodal` y no se presenta como garantía.
+- Email + contraseña como método base salvo solicitud explícita.
+- Callback de autenticación y cookies seguras.
+- RLS para toda tabla expuesta.
+- `user_id` obligatorio en consultas de datos de usuario.
+- Nunca usar `user_metadata` para autorización.
+- Nunca enviar `service_role` al navegador.
+- No insertar usuarios directamente en `auth.users`.
 
-## Requisitos de ingeniería
+## Kubernetes
 
-- Node.js 24.x.
-- pnpm 10.28.0.
-- Rust y PostgreSQL de prueba para validar el workspace IGE-Ω y sus pruebas de integración.
-- Para almacenar objetos con Terminus: nueve adaptadores independientes, cuotas reales verificadas, un KMS durable y un BookPI duradero configurado.
-- Para desplegar HyperCore Ω: un clúster Kubernetes, un gestor de secretos (KMS) para `HYPERCORE_SIGNING_KEY` y `HYPERCORE_API_TOKEN`, y las imágenes referenciadas en `deploy/k8s/`.
+`deploy/k8s/isabella-hypercore-omega.yaml` contiene namespace, configuración, secretos referenciados, Deployments, Services, probes, HPA, PDB y NetworkPolicies. Los manifiestos son `draft | engine-generated` hasta que una persona los revise y se apliquen en un clúster de staging con evidencia.
 
-### Seguridad de rutas de inferencia
+```bash
+kubectl apply --dry-run=server -f deploy/k8s/isabella-hypercore-omega.yaml
+```
 
-En producción, las rutas con coste o capacidades de proveedor (`/api/v1/tools/execute`, visión, imagen, voz, transcripción y selección de modelos externos) requieren `Authorization: Bearer ...` mediante `GENESIS_PUBLIC_API_TOKEN`. En desarrollo sin esa variable se mantiene el modo local para permitir el smoke test; no se debe publicar así. Las rutas administrativas continúan usando sus tokens específicos. La autenticación no sustituye autorización por usuario/tenant ni persistencia durable.
+No aplicar a producción sin revisar secretos, límites, dominios, persistencia, migraciones, observabilidad y rollback.
 
-### Validación
+## Verificación
 
-    corepack enable
-    pnpm install --frozen-lockfile
-    pnpm run typecheck
-    pnpm test
-    pnpm run build
-    pnpm run security:suite
-    pnpm run production:evidence
+```bash
+pnpm typecheck
+pnpm test
+pnpm run smoke:ui
+pnpm run smoke:runtime
+pnpm run security:suite
+pnpm run build
+```
 
 Evidencia local reproducida en la rama actual: `pnpm typecheck` exit 0; `pnpm test` **1133 aprobadas / 193 archivos** (incluye `test/intelligence/turbo-planner.test.ts`, `test/security/document-seal-runtime.test.ts`, `test/routes/document-seal.test.ts`, `test/inference/multimodal.test.ts`, `test/inference/speech.test.ts` y las pruebas de integración por red `*.integration.test.ts`); `pnpm run build` exit 0 (tsc + vitest + esbuild + smoke UI + smoke runtime, que ahora incluye `MULTIMODAL_SPEECH_GUARDRAILS_OK`); `pnpm run security:suite` **14 passed / 0 failed / 0 not_applicable**. La inferencia de texto externa se verificó en vivo el 2026-10-13 con Groq (`HTTP 200`, `openai/gpt-oss-20b`) y Ollama Cloud (`responseEngine: "open-science"`); el **STT de Groq (`whisper-large-v3`) se verificó en vivo** por la ruta gobernada `POST /api/v1/cognition/transcribe` (texto transcrito correcto); además, la **visión (imagen→texto) se verificó en vivo** con Ollama local (`qwen2.5vl:7b`) por `POST /api/v1/cognition/vision` (`success:true`, `provider:"local"`, descripción correcta), aunque la síntesis de imagen sigue sin proveedor; Hugging Face autentica pero devuelve `HTTP 402` por falta de créditos, y el TTS de Groq exige aceptar términos (`HTTP 400 model_terms_required`). Un test verde demuestra una capacidad computacional local, **no** autoridad, aprendizaje ni producción.
 
-## Gates pendientes para liberar
+```bash
+SMOKE_BASE_URL=https://tu-dominio.example pnpm run smoke:production
+```
 
-- Ejecutar typecheck, pruebas, build, seguridad y production-evidence sobre el **mismo SHA** en un runner CI operativo (hoy en `startup_failure`).
-- Probar con **PostgreSQL real** el contrato de trece campos, el rol append-only, restricciones, aislamiento multi-tenant, concurrencia, backup y restore.
-- Aprovisionar **nueve dominios de fallo** independientes y validar cuotas y límites de escritura reales.
-- Integrar un **gestor de claves real** con rotación, destrucción duradera y prueba de restauración; confirmar que no quedan copias recuperables no autorizadas.
-- Ensayar pérdida de tres shards, pérdida por encima del quórum, proveedores fuera de cuota, fallo de KMS, fallo de BookPI, restauración y retención legal.
-- Ejecutar formato, Clippy, tests y build release del workspace Rust con lockfile comprometido y **--locked**.
-- **Aplicar** los manifiestos de HyperCore Ω a un clúster y verificar probes, HPA, PDB, NetworkPolicy y firma de evidencia de extremo a extremo.
-- Medir latencia p50/p95/p99 con carga reproducible, distinguiendo aplicación, red, cold start, inferencia y persistencia. No se promete latencia casi cero sin esas medidas.
-- Verificar rollback, permisos y recuperación con objetivos RTO/RPO documentados antes de promoción.
-- Desbloquear **visión / texto→imagen**: configurar una llave de proveedor con modelo de visión/imagen (Gemini free tier, Novita, Together, DeepInfra, Fireworks, HF con créditos) o un servidor local; la ruta ya existe y falla en cerrado.
-- Desbloquear **TTS de servidor**: aceptar los términos de Orpheus en la consola de Groq; el **STT** con `whisper-large-v3` ya están disponibles para la cuenta.
-- Ejecutar una prueba **end-to-end con imagen y audio reales** (no sólo pruebas unitarias sin red) antes de considerar multimodal/voz listos para producción.
+Un resultado verde es evidencia de capacidad computacional del entorno de prueba, no aprobación humana ni certificación de producción.
 
-## Documentación
+## Estructura relevante
 
-- [Auditoría total de la iteración](docs/audits/TOTAL-AUDIT-2026-10-13.md)
-- [Auditoría global del perfil GitHub y plano Terminus](docs/audits/GLOBAL-PROFILE-TERMINUS-2026-10-12.md)
-- [BookPI: ledger durable, retención y backup/restore](docs/bookpi/DURABLE-LEDGER.md)
-- [Estado real de Isabella y gates previos](docs/ESTADO-REAL-ACTUAL.md)
-- [Auditoría P0 de arquitectura](docs/audits/P0-ARCHITECTURE-HARDENING-2026-10-12.md)
-- [Inventario de API](docs/api/README.md) · [OpenAPI](docs/api/openapi.yaml)
-- [Política de seguridad](SECURITY.md)
+- `src/server.ts` — API y rutas runtime.
+- `src/ui/` — workspace, intro y estilos.
+- `src/skills/` — HyperCore, contratos, CROWN, triangulación y MCP.
+- `src/terminus/` — mandatos, autoridad, store y cuotas.
+- `src/inference/` — proveedores, multimodal y voz.
+- `src/commerce/` — planes, locks, eventos y webhooks.
+- `infra/db/migrations/` — persistencia SQL.
+- `deploy/k8s/` — manifiestos Kubernetes.
+- `test/` — evidencia automatizada.
+- `docs/runbooks/` — operaciones y despliegue.
 
-## Contrato de veracidad, reproducibilidad y evolución
+## Contribución y gobernanza
 
-El **Contrato de veracidad** distingue código declarado, código conectado, pruebas ejecutadas y comportamiento observable. La presencia de un módulo en el árbol no prueba que esté desplegado ni conectado a un proveedor real.
+Cada cambio debe declarar intención, implementar el mínimo verificable, conservar estado `draft`, aportar evidencia, recibir revisión humana con nombre y solo entonces pasar a `verified` o `wired`.
 
-El **Bloqueo de instalación reproducible** exige lockfiles versionados, instalación congelada y toolchains fijadas para reducir cambios no intencionales en las dependencias.
+No borrar historia compartida, no ocultar fallos, no añadir `TODO` sin dueño y fecha, no declarar capacidades como facultades y no presentar un manifiesto como despliegue real.
 
-Las **Fases de evolución** siguen una secuencia verificable: contrato, implementación, pruebas unitarias, integración de adaptadores, validación E2E, evidencia del mismo SHA, revisión humana, despliegue y observación posterior. No se marca una fase como terminada por la sola creación de archivos.
+Repositorio: https://github.com/OsoPanda1/ISABELLA-VERSION-TERMINUS-V6
 
-## Principio de liberación
+Licencia y términos de operación: revisar los documentos canónicos en `docs/spec` y `docs/evolution` antes de redistribuir o conectar nuevos proveedores.
 
-**SPECIFIED ≠ IMPLEMENTED ≠ TESTED ≠ INTEGRATED ≠ VERIFIED ≠ DEPLOYED ≠ CERTIFIED.** Ninguna capacidad se declara lista para producción por su nombre, por tener un archivo o por aparecer en un diagrama. La promoción exige evidencia reproducible vinculada al SHA liberable, integración real en el entorno objetivo, pruebas de fallo y rollback, y supervisión humana para operaciones privilegiadas.
+**Estado del documento:** `state: draft | auto_generated`, pendiente de revisión humana.

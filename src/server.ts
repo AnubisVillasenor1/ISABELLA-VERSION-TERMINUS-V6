@@ -157,12 +157,15 @@ app.get("/ui/app.js", (_req, res) => {
 });
 app.get("/assets/audio/IntroIsabella.mp3", (_req, res) => {
   const audioPath = path.resolve(process.cwd(), "src/assets/musica/IntroIsabella.mp3");
-  if (!fs.existsSync(audioPath)) {
-    res.status(404).type("text").send("Intro audio unavailable");
-    return;
-  }
+  if (!fs.existsSync(audioPath)) { res.status(404).type("text").send("Intro audio unavailable"); return; }
   res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
   res.type("audio/mpeg").sendFile(audioPath);
+});
+app.get("/assets/video/IsabellaVideoIntro.mp4", (_req, res) => {
+  const videoPath = path.resolve(process.cwd(), "src/assets/musica/IsabellaVideoIntro.mp4");
+  if (!fs.existsSync(videoPath)) { res.status(404).type("text").send("Intro video unavailable"); return; }
+  res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+  res.type("video/mp4").sendFile(videoPath);
 });
 app.get("/styles/crystal-clear.css", (_req, res) => {
   if (crystalClearCss === null) {
@@ -612,7 +615,7 @@ const CROWN_NODES = [
   { id: "ISA", name: "Isa Musa", role: "Empatía, percepción e identidad biocultural", federation: "FED-1 Identidad", status: "DECLARED", weight: 0.95, icon: "🌸" },
   { id: "SOPHIA", name: "Sophia Dialéctica", role: "Razonamiento dialéctico, debate y síntesis", federation: "FED-3 Datos/IA", status: "DECLARED", weight: 0.98, icon: "🦉" },
   { id: "ORION", name: "Orion Executor", role: "Ejecución de herramientas y acciones coordinadas", federation: "FED-5 Infraestructura", status: "DECLARED", weight: 0.92, icon: "⚔️" },
-  { id: "ARGUS", name: "Argus Sentinel", role: "Seguridad Zero Trust y firewall ético", federation: "FED-1 Gobernanza", status: "DECLARED", weight: 1.00, icon: "🛡️" },
+  { id: "ARGUS", name: "Argus Sentinel", role: "Seguridad Zero Trust y firewall ético", federation: "FED-1 Gobernanza", status: "DECLARED", weight: 1.00, icon: "🛡���" },
   { id: "CROWN", name: "Crown Gateway", role: "Gateway soberano, arbitraje y control de flujo", federation: "FED-1 Gobernanza", status: "DECLARED", weight: 0.96, icon: "👑" },
   { id: "MNEMOSYNE", name: "Mnemosyne Memory", role: "Memoria episódica, semántica y procedencia IKES", federation: "FED-3 Datos/IA", status: "DECLARED", weight: 0.90, icon: "📜" },
   { id: "TELLUS", name: "Tellus Territorio", role: "Territorio, cartografía y Nodo Cero (RDM)", federation: "FED-6 Inmersión", status: "DECLARED", weight: 0.94, icon: "🏔️" },
@@ -813,8 +816,44 @@ app.get("/api/v1/bookpi/events/admin", (req, res) => {
   res.json({ ...bookPiLedger.snapshot(), visibility: "ADMIN_FULL_AUDIT" });
 });
 
-// Tool execution
-app.post("/api/v1/tools/execute", async (req, res) => {
+  // YUN event fabric: validate a canonical event, verify its content hash, and
+  // append an auditable BookPI record without exposing cross-domain storage.
+  app.post("/api/v1/yun/events", (req, res) => {
+    if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+    try {
+      const event = createYunEvent(req.body as YunEventInput);
+      if (!verifyYunEvent(event)) {
+        res.status(500).json({ error: "YUN_EVENT_INTEGRITY_FAILURE" });
+        return;
+      }
+      const record = bookPiLedger.append({
+        id: `yun-${event.event_id}`,
+        timestamp: event.timestamp,
+        type: `YUN.${event.event_type}`,
+        methodId: "TINA.YUN.FABRIC.append_event.v1.0.0.MEDIUM.HUMAN_IN_THE_LOOP",
+        principal: event.federation_id,
+        riskTier: event.severity === "critical" ? "CRITICAL" : "MEDIUM",
+        status: "ACCEPTED",
+      });
+      res.status(201).json({ event, ledger: { id: record.id, hash: record.hash, sequence: record.sequence } });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "invalid YUN event";
+      res.status(400).json({ error: "YUN_EVENT_INVALID", message });
+    }
+  });
+
+  app.get("/api/v1/yun/events", (req, res) => {
+    if (!enforceRateLimit(req, res, publicScanLimiter, "yun-events")) return;
+    const limit = Math.min(Math.max(Number(req.query.limit) || 20, 1), 100);
+    const events = bookPiLedger.snapshot().events
+      .filter((event) => event.type.startsWith("YUN."))
+      .slice(-limit)
+      .map((event) => ({ id: event.id, timestamp: event.timestamp, type: event.type, hash: event.hash, sequence: event.sequence }));
+    res.json({ schemaVersion: "1.0.0", count: events.length, events });
+  });
+
+  // Tool execution
+  app.post("/api/v1/tools/execute", async (req, res) => {
   if (!authorizeProviderRoute(req, res)) return;
   if (!enforceRateLimit(req, res, publicCognitionLimiter, "public-tool")) return;
   try {

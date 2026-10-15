@@ -11,9 +11,23 @@
 <body>
   <a class="skip-link" href="#chat">Saltar a la conversación</a>
   <section id="cinematicIntro" class="cinematic-intro" data-scene="0" aria-labelledby="intro-title">
-    <audio id="introAudio" preload="auto" loop aria-label="Música de introducción de Isabella">
+    <div id="immersionGate" class="immersion-gate" role="dialog" aria-modal="true" aria-labelledby="immersion-title">
+      <div class="immersion-card">
+        <span class="immersion-mark" aria-hidden="true">IS</span>
+        <p class="eyebrow">ISABELLA V6 GENESIS</p>
+        <h1 id="immersion-title">Bienvenido a la inmersión.</h1>
+        <p>Para iniciar necesitamos tu permiso para reproducir audio y mostrar la experiencia visual de bienvenida.</p>
+        <button id="startImmersion" class="immersion-start" type="button">ACEPTAR / INICIAR INMERSIÓN <span>↗</span></button>
+        <small>Proyecto desarrollado con <span aria-label="amor">amor</span> y orgullo latinoamericano.</small>
+      </div>
+    </div>
+    <video id="introVideo" class="intro-video" preload="auto" playsinline aria-hidden="true">
+      <source src="/assets/video/IsabellaVideoIntro.mp4" type="video/mp4" />
+    </video>
+    <audio id="introAudioFallback" preload="auto" aria-hidden="true">
       <source src="/assets/audio/IntroIsabella.mp3" type="audio/mpeg" />
     </audio>
+    <div class="intro-video-tint" aria-hidden="true"></div>
     <div class="intro-backdrop" aria-hidden="true">
       <span class="intro-grid"></span><span class="intro-sun"></span><span class="intro-scan"></span>
       <span class="intro-vignette"></span><span class="intro-light intro-light-a"></span><span class="intro-light intro-light-b"></span>
@@ -68,6 +82,20 @@
         <button id="navToggle" class="nav-toggle" type="button" aria-expanded="false" aria-controls="primaryLinks" aria-label="Abrir navegación">Menú <span aria-hidden="true">⌄</span></button>
       </div>
     </nav>
+    <button class="rail-launcher rail-launcher-left" type="button" aria-expanded="false" aria-controls="leftRail">◀ <span>NAVEGACIÓN</span></button>
+    <div id="leftRail" class="side-rail rail-left" aria-label="Navegación lateral izquierda">
+      <div class="rail-heading">COMANDOS <span>01—03</span></div>
+      <details class="rail-panel"><summary><span class="rail-index">01</span> CONTEXTO</summary><nav><a href="#chat">Conversación</a><a href="#studio">Memoria local</a></nav></details>
+      <details class="rail-panel"><summary><span class="rail-index">02</span> CREACIÓN</summary><nav><a href="#design">Diseño</a><a href="#chat">Redacción</a></nav></details>
+      <details class="rail-panel"><summary><span class="rail-index">03</span> GOBERNANZA</summary><nav><a href="#governance">Evidencia</a><a href="#control">Control humano</a></nav></details>
+    </div>
+    <button class="rail-launcher rail-launcher-right" type="button" aria-expanded="false" aria-controls="rightRail"><span>NAVEGACIÓN</span> ▶</button>
+    <div id="rightRail" class="side-rail rail-right" aria-label="Navegación lateral derecha">
+      <div class="rail-heading">SURFACES <span>04—06</span></div>
+      <details class="rail-panel"><summary><span class="rail-index">04</span> RUNTIME</summary><nav><a href="#chat">Estado</a><a href="#control">Métricas</a></nav></details>
+      <details class="rail-panel"><summary><span class="rail-index">05</span> HERRAMIENTAS</summary><nav><a href="#tools">Tools</a><a href="#skills">Skills</a></nav></details>
+      <details class="rail-panel"><summary><span class="rail-index">06</span> SESIÓN</summary><nav><a href="#chat">Nueva sesión</a><a href="#top">Cerrar contexto</a></nav></details>
+    </div>
     <div class="workspace-context-bar" role="region" aria-label="Estado del espacio de trabajo">
       <div class="context-identity"><span class="context-dot"></span><span>WORKSPACE</span><strong>GENESIS V6</strong><span class="context-divider">/</span><span id="sessionBadge">SESSION · ACTIVE</span></div>
       <div class="context-capabilities" aria-label="Capacidades de esta sesión">
@@ -78,6 +106,12 @@
         <button id="contextExport" class="context-button" type="button">Exportar</button>
       </div>
     </div>
+    <section class="workspace-modebar" aria-label="Modo de espacio de trabajo">
+      <span>ESPACIO ACTIVO</span>
+      <button type="button" class="workspace-mode is-active" data-layout="chat">CHAT</button>
+      <button type="button" class="workspace-mode" data-layout="split-2">CHAT + DISEÑO</button>
+      <button type="button" class="workspace-mode" data-layout="split-3">CHAT + DISEÑO + CONTROL</button>
+    </section>
     <section class="hero hero-product" aria-labelledby="hero-title">
       <canvas id="quantumMesh" class="quantum-mesh" aria-hidden="true"></canvas>
       <div class="hero-copy">
@@ -102,6 +136,14 @@
       </div>
     </section>
     <section id="chat" class="console" aria-labelledby="chat-title"><div class="console-head"><div><div class="console-overline"><span class="eyebrow">CONVERSATION WORKSPACE</span><span class="console-state">SESSION-BOUNDED</span></div><h2 id="chat-title">Habla con Isabella</h2></div><div class="console-actions"><button id="exportChat" class="subtle-action" type="button" title="Descargar esta conversación como Markdown">Exportar .md</button><button id="clearChat" class="subtle-action" type="button" title="Vaciar esta conversación y comenzar otra">Reiniciar</button><div class="modes"><button class="mode active" type="button" data-mode="text" aria-pressed="true">TEXTO</button><button class="mode" type="button" data-mode="voice" aria-pressed="false">VOZ NATIVA</button></div></div></div><div id="messages" class="messages" aria-live="polite"><article class="message isabella"><span class="avatar">IS</span><div><span class="speaker">ISABELLA · AHORA</span><p>Estoy aquí. Puedes escribirme o activar tu micrófono para hablar de forma natural.</p></div></article></div><div class="prompt-starters" aria-label="Atajos para iniciar una solicitud"><span>EMPEZAR CON</span><button type="button" data-starter="Investiga este tema con una estructura de preguntas, evidencias necesarias, posibles contradicciones y conclusiones provisionales: ">Investigar</button><button type="button" data-starter="Ayúdame a redactar un documento claro y profesional. Objetivo, audiencia, tono y resultado esperado: ">Redactar</button><button type="button" data-starter="Analiza este problema paso a paso, identifica supuestos, riesgos, alternativas y una recomendación verificable: ">Analizar</button><button type="button" data-starter="Revisa este código o diseño técnico. Busca errores, riesgos, deuda técnica y pruebas que faltan: ">Código</button><button type="button" data-starter="Crea un plan de trabajo por fases con entregables, dependencias, criterios de aceptación y riesgos: ">Planificar</button></div><div id="attachmentChip" class="attachment-chip" hidden><span aria-hidden="true">▤</span><span id="attachmentName"></span><span class="attachment-scope">CONTEXTO LOCAL</span><button id="removeAttachment" type="button" aria-label="Quitar archivo adjunto">×</button></div><form id="chatForm" class="composer"><label class="sr-only" for="prompt">Mensaje para Isabella</label><button id="attachText" class="icon-button attach-button" type="button" aria-label="Adjuntar archivo de texto" title="Adjuntar un archivo de texto, Markdown, CSV o JSON">＋</button><input id="localFile" type="file" accept=".txt,.md,.csv,.json,.log,text/plain,text/markdown,text/csv,application/json" hidden /><textarea id="prompt" rows="1" placeholder="Escribe lo que necesitas…" autocomplete="off"></textarea><button id="mic" class="icon-button" type="button" aria-label="Activar micrófono" title="Dictar mensaje">◉</button><button class="send" type="submit" aria-label="Enviar mensaje">↑</button></form><p class="disclaimer">Sesión pública protegida · No compartas credenciales ni información sensible.</p></section>
+    <section id="design" class="workspace-pane design-pane" aria-labelledby="design-title">
+      <div class="pane-label">DESIGN SURFACE <span>REPLEGADO</span></div>
+      <h2 id="design-title">Diseño y artefactos</h2><p>Espacio preparado para explorar documentos, interfaces y entregables junto a la conversación.</p>
+    </section>
+    <section id="control" class="workspace-pane control-pane" aria-labelledby="control-title">
+      <div class="pane-label">CONTROL SURFACE <span>REPLEGADO</span></div>
+      <h2 id="control-title">Panel de control</h2><p>Estado, gobernanza, herramientas y evidencia de la sesión activa.</p>
+    </section>
     <section id="studio" class="studio-panel" aria-labelledby="studio-title">
       <div class="studio-head"><div><p class="eyebrow">ESPACIO PERSONAL · ALMACENAMIENTO LOCAL</p><h2 id="studio-title">Studio <em>de trabajo.</em></h2><p class="studio-description">Guarda respuestas que quieras reutilizar. Los borradores se conservan en este navegador; no se sincronizan con una cuenta ni con otros dispositivos.</p></div><button id="clearDrafts" class="subtle-action" type="button">Vaciar guardados</button></div>
       <div id="draftShelf" class="draft-shelf" aria-live="polite"><p class="empty-shelf">Tus respuestas guardadas aparecerán aquí. Usa «Guardar» debajo de una respuesta para conservarla.</p></div>
