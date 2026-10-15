@@ -20,9 +20,7 @@ export function canonicalJson(value: unknown): string {
   return JSON.stringify(sortValue(value));
 }
 
-export function sha256Hex(value: string | Uint8Array): string {
-  return createHash("sha256").update(value).digest("hex");
-}
+export { sha256Hex } from "../lib/sha256";
 
 export function sha3Hex(value: string | Uint8Array): string {
   return createHash("sha3-256").update(value).digest("hex");

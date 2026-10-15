@@ -1,6 +1,5 @@
 [
   "GET /",
-  "GET /",
   "GET /api/v1/billing/entitlements",
   "GET /api/v1/billing/plans",
   "GET /api/v1/billing/prices",
@@ -34,7 +33,6 @@
   "GET /api/v1/yun/events",
   "GET /health",
   "GET /styles/cinematic.css",
-  "GET /styles/crystal-clear.css",
   "GET /assets/audio/IntroIsabella.mp3",
   "GET /assets/video/IsabellaVideoIntro.mp4",
   "GET /ui/app.js",
@@ -82,6 +80,7 @@
   "POST /api/v1/notebook/generate",
   "POST /api/v1/ops/readiness",
   "POST /api/v1/osiris/inspect",
+  "POST /api/v1/pipeline/execute",
   "POST /api/v1/quantum/pennylane/execute",
   "POST /api/v1/reina/adjudicate",
   "POST /api/v1/sanitization/harden",

@@ -24,12 +24,44 @@ let introTimer = 0;
 let introPausedAt = 0;
 let introAudioContext = null;
 let introGain = null;
+const MUX_STREAM_URL = introVideo?.querySelector('source[type="application/x-mpegURL"]')?.src || '';
+let introHls = null;
+const ensureIntroHls = async () => {
+  if (!introVideo || !MUX_STREAM_URL) return null;
+  if (introVideo.canPlayType('application/vnd.apple.mpegurl')) return null;
+  if (!window.Hls) {
+    await new Promise((resolve) => {
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js';
+      script.async = true;
+      script.onload = resolve;
+      script.onerror = resolve;
+      document.head.appendChild(script);
+    });
+  }
+  if (!window.Hls || !window.Hls.isSupported()) return null;
+  if (!introHls) {
+    introHls = new window.Hls({
+      enableWorker: true,
+      lowLatencyMode: true,
+      capLevelToPlayerSize: true,
+      startLevel: -1,
+      abrEwmaDefaultEstimate: 600_000,
+      maxBufferLength: 12,
+      backBufferLength: 30,
+    });
+    introHls.loadSource(MUX_STREAM_URL);
+    introHls.attachMedia(introVideo);
+  }
+  return introHls;
+};
 const formatIntroTime = (milliseconds) => {
   const seconds = Math.floor(Math.max(0, milliseconds) / 1000);
   return `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
 };
 const startIntroMedia = async () => {
   if (!introVideo) return;
+  await ensureIntroHls().catch(() => null);
   introVideo.currentTime = 0;
   introVideo.muted = false;
   introVideo.volume = 1;
@@ -102,6 +134,9 @@ if (intro) {
   } else {
     document.body.classList.add('intro-lock');
     introScenes.forEach((scene, index) => scene.setAttribute('aria-hidden', String(index !== 0)));
+    // Pre-warm the Mux HLS buffer while the welcome gate is on screen so the
+    // stream starts near-instantly once the user accepts the immersion.
+    void ensureIntroHls().catch(() => null);
     skipIntro?.addEventListener('click', dismissIntro);
     intro.querySelector('.intro-enter')?.addEventListener('click', dismissIntro);
     const beginImmersion = () => {

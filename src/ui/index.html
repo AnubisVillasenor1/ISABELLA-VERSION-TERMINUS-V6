@@ -5,8 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#080d14" />
   <title>Isabella Villaseñor AI | Genesis TINA V6</title>
+  <link rel="preconnect" href="https://stream.mux.com" />
+  <link rel="preconnect" href="https://image.mux.com" />
+  <link rel="dns-prefetch" href="https://stream.mux.com" />
+  <link rel="dns-prefetch" href="https://image.mux.com" />
+  <link rel="preload" as="image" href="https://image.mux.com/VYG2uWF2xUNnZ6hQMS1Hv27biVYI2jNbfltQ45C400028/thumbnail.jpg?width=1280&fit_mode=preserve" />
   <link rel="stylesheet" href="/styles/cinematic.css" />
-  <link rel="stylesheet" href="/styles/crystal-clear.css" />
 </head>
 <body>
   <a class="skip-link" href="#chat">Saltar a la conversación</a>
@@ -16,13 +20,16 @@
         <span class="immersion-mark" aria-hidden="true">IS</span>
         <p class="eyebrow">ISABELLA V6 GENESIS</p>
         <h1 id="immersion-title">Bienvenido a la inmersión.</h1>
-        <p>Para iniciar necesitamos tu permiso para reproducir audio y mostrar la experiencia visual de bienvenida.</p>
-        <button id="startImmersion" class="immersion-start" type="button">ACEPTAR / INICIAR INMERSIÓN <span>↗</span></button>
-        <small>Proyecto desarrollado con <span aria-label="amor">amor</span> y orgullo latinoamericano.</small>
+        <p>Para iniciar necesitamos tu permiso para reproducir el <strong>audio</strong> y mostrar la experiencia visual (<strong>video</strong>) de bienvenida.</p>
+        <button id="startImmersion" class="immersion-start" type="button">INICIAR INMERSIÓN <span>↗</span></button>
+        <div class="immersion-dedication">
+          <div class="immersion-network">TAMV ONLINE NETWORK <span>«Orgullosamente Realmontenses»</span></div>
+          <div class="immersion-tribute">Proyecto desarrollado entre neblina y montaña, dedicado a Reyna Trejo Serrano; levanta el rostro y sonríe, hoy tu oveja negra logró algo por lo que puedas sentir orgullo. Te amo, madre.</div>
+        </div>
       </div>
     </div>
-    <video id="introVideo" class="intro-video" preload="auto" playsinline aria-hidden="true">
-      <source src="https://stream.mux.com/VYG2uWF2xUNnZ6hQMS1Hv27biVYI2jNbfltQ45C400028.m3u8" type="application/x-mpegURL" />
+    <video id="introVideo" class="intro-video" preload="auto" playsinline aria-hidden="true" poster="https://image.mux.com/VYG2uWF2xUNnZ6hQMS1Hv27biVYI2jNbfltQ45C400028/thumbnail.jpg?width=1280&fit_mode=preserve">
+      <source src="https://stream.mux.com/VYG2uWF2xUNnZ6hQMS1Hv27biVYI2jNbfltQ45C400028.m3u8?max_resolution=1080p&redundant_streams=true" type="application/x-mpegURL" />
     </video>
     <audio id="introAudioFallback" preload="auto" aria-hidden="true">
       <source src="/assets/audio/IntroIsabella.mp3" type="audio/mpeg" />

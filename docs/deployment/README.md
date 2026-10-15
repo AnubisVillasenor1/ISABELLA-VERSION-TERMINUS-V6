@@ -77,7 +77,7 @@ runtime distroless nodejs22  USER 10001:10001, NODE_ENV=production, sin shell/np
   extensiones relativas y Node ESM requiere extensiones. `REQUIERE_VERIFICACION`.
 - **Sin `HEALTHCHECK` Docker** (documentado): distroless no trae `wget`/`curl`; la orquestación
   (k8s probes) es la autoridad de salud.
-- **RSI / no-write**: el runtime solo lee `src/styles/crystal-clear.css` y mantiene BookPI en
+- **RSI / no-write**: el runtime solo lee los assets de la interfaz (`src/ui/index.html`, `src/ui/cinematic.css`, `src/ui/app.js`) al arrancar y mantiene BookPI en
   memoria (volátil); no escribe en disco ⇒ válido `readOnlyRootFilesystem: true`. Verificado en
   `src/bookpi/ledger.ts` (singleton en memoria) y `src/server.ts`.
 - `REQUIERE_VERIFICACION`: `node_modules` incluye devDependencies porque `tsx` es hoy

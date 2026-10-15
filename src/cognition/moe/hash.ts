@@ -6,11 +6,9 @@
  * hash determinista de integridad de artefactos y digest de replay. El gating
  * (router.ts) es matemática pura sin aleatoriedad ni dependencia de crypto.
  */
-import { createHash } from "node:crypto";
+import { sha256Hex } from "../../lib/sha256";
 
-export function sha256Hex(value: string): string {
-  return createHash("sha256").update(value, "utf8").digest("hex");
-}
+export { sha256Hex };
 
 /**
  * Serialización canónica determinista (claves de objeto ordenadas) de modo

@@ -55,6 +55,4 @@ export function manifestDigest(parts: readonly unknown[]): string {
 }
 
 /** SHA-256 of a raw string without canonicalization (for byte-exact content). */
-export function sha256Hex(input: string): string {
-  return createHash("sha256").update(input, "utf8").digest("hex");
-}
+export { sha256Hex } from "../lib/sha256";

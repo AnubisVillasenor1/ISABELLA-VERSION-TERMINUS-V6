@@ -10,13 +10,13 @@ La inteligencia propone, calcula y evalúa. La autoridad humana decide, aprueba,
 
 **≈ 60% — estimación global provisional de readiness (rango honesto: 54–64%).**
 
-Es una **estimación de ingeniería, no una certificación**. Se calcula como media ponderada de dominios verificados de forma reproducible en la rama, con los gates externos penalizados en su estado real (no en su intención). El movimiento desde la base anterior (48% → ≈52%) y ahora hasta ≈60% proviene de trabajo implementado y probado en la rama: **89 rutas HTTP** (incluidas la superficie OpenAI-compatible `/v1`, los endpoints de Permission Map Ω, el planificador de ruta turbo y el sello documental IGDS-v1), un **bus de eventos gobernado en proceso** (`src/messaging/magpie.ts`), un **guard de anclaje de evidencia** fail-closed (`src/veritas/grounding.ts`), una **superficie compatible con OpenAI** (`src/routes/openai.ts`), un **motor de mapeo de permisos con consentimiento humano** (`src/governance/permission-map.ts`), un **planificador de ruta de baja latencia, federado y ético** (`src/intelligence/turbo-planner.ts`), un **sello de procedencia documental** (integridad SHA-256 + firma Ed25519 + marca de agua, `src/security/document-seal.ts`), una **capa multimodal** de visión y síntesis de imagen (`src/inference/multimodal.ts`), una **capa de voz** TTS/STT (`src/inference/speech.ts`), el espacio de trabajo app-shell de chat con adjuntar archivo de contexto y escucha por Web Speech (la imagen se analiza vía `POST /api/v1/cognition/vision`), y una readiness local de **1133 pruebas / 193 archivos**. No proviene de dar por conectados adaptadores externos que siguen sin credenciales ni entorno objetivo.
+Es una **estimación de ingeniería, no una certificación**. Se calcula como media ponderada de dominios verificados de forma reproducible en la rama, con los gates externos penalizados en su estado real (no en su intención). El movimiento desde la base anterior (48% → ≈52%) y ahora hasta ≈60% proviene de trabajo implementado y probado en la rama: **96 rutas HTTP** (incluidas la superficie OpenAI-compatible `/v1`, los endpoints de Permission Map Ω, el planificador de ruta turbo y el sello documental IGDS-v1) y el **conductor de pipeline gobernado** (6 etapas INGRESS→ARGUS_CROWN→TRINITY_MOE→SOPHIA_ERI→ORION_SANDBOX→BOOKPI_IGDS, `src/pipeline/conductor.ts`, `POST /api/v1/pipeline/execute`), un **bus de eventos gobernado en proceso** (`src/messaging/magpie.ts`), un **guard de anclaje de evidencia** fail-closed (`src/veritas/grounding.ts`), una **superficie compatible con OpenAI** (`src/routes/openai.ts`), un **motor de mapeo de permisos con consentimiento humano** (`src/governance/permission-map.ts`), un **planificador de ruta de baja latencia, federado y ético** (`src/intelligence/turbo-planner.ts`), un **sello de procedencia documental** (integridad SHA-256 + firma Ed25519 + marca de agua, `src/security/document-seal.ts`), una **capa multimodal** de visión y síntesis de imagen (`src/inference/multimodal.ts`), una **capa de voz** TTS/STT (`src/inference/speech.ts`), el espacio de trabajo app-shell de chat con adjuntar archivo de contexto y escucha por Web Speech (la imagen se analiza vía `POST /api/v1/cognition/vision`), y una readiness local de **1141 pruebas / 195 archivos**. No proviene de dar por conectados adaptadores externos que siguen sin credenciales ni entorno objetivo.
 
 | Dominio | Estado real | Readiness |
 |---|---|---|
 | Núcleo cognitivo y de gobernanza (CROWN / AEGIS / VERITAS / Terminus Ω) | Implementado y probado localmente | ≈ 72% |
 | **Skill Fabric Ω v2 / HyperCore Ω** (contratos, 9 fases, triangulación, MCP) | Implementado y probado localmente; **no desplegado** | ≈ 60% |
-| API HTTP (Express, 79 rutas incl. superficies HyperCore/MCP y multimodal/voz) | Funcional; monolito no modularizado (TD-01) | ≈ 68% |
+| API HTTP (Express, 96 rutas incl. superficies HyperCore/MCP y multimodal/voz) | Funcional; monolito no modularizado (TD-01) | ≈ 68% |
 | **Multimodal y voz** (visión imagen→texto, texto→imagen, TTS/STT, key-driven) | Implementado y probado localmente; **sin proveedor de imagen/TTS desbloqueado** | ≈ 35% |
 | Evidencia y BookPI (ledger durable JSONL) | Cadena hash con fsync; **Postgres/Supabase sin E2E** (TD-06) | ≈ 45% |
 | Integraciones externas (inferencia real, KMS/HSM PQC FIPS 203/204/205, RLS) | Especificado/bloqueado por credenciales | ≈ 30% |
@@ -26,7 +26,7 @@ Es una **estimación de ingeniería, no una certificación**. Se calcula como me
 | Workspace Rust IGE-Ω | `Cargo.lock` + `fmt` limpios; **compilación/clippy local no ejecutables** | ≈ 25% |
 | Verificación de seguridad estática | 14/14 invariantes; sin pentest ni HSM productivo | ≈ 55% |
 
-**Lectura correcta del número:** Isabella pasa los gates locales que controla (tipos, 1016 pruebas, build, 14/14 de seguridad), pero **no** está lista para producción ni para despliegue. El 65% de un plan de producción no se alcanza con más código: los dominios que lo bloquean (Integraciones externas ≈30%, CI/CD ≈15%, Despliegue ≈25%, Multimodal/voz ≈35% mientras falten credenciales) exigen aprovisionar credenciales y entorno objetivo. Los adaptadores externos y el entorno objetivo son gates independientes que no se superan por tener interfaz ni por tener manifiesto YAML.
+**Lectura correcta del número:** Isabella pasa los gates locales que controla (tipos, 1141 pruebas, build, 14/14 de seguridad), pero **no** está lista para producción ni para despliegue. El ≈60% de un plan de producción no se alcanza con más código: los dominios que lo bloquean (Integraciones externas ≈30%, CI/CD ≈15%, Despliegue ≈25%, Multimodal/voz ≈35% mientras falten credenciales) exigen aprovisionar credenciales y entorno objetivo. Los adaptadores externos y el entorno objetivo son gates independientes que no se superan por tener interfaz ni por tener manifiesto YAML.
 
 ## Qué es Isabella
 
@@ -149,6 +149,19 @@ La divergencia con los nombres de `isabella/engine` queda documentada como
 `ISABELLA_ENGINE_FEDERATION_LABELS` para arbitraje humano; **no** se reescribe
 código existente en silencio.
 
+### Registro de divergencias código ↔ especificación
+
+`docs/spec/canonical/DIVERGENCE-REGISTER.md` **archiva en lugar de adivinar** los
+conflictos entre código y spec (AGENTS.md §6). Hoy documenta **DIV-0001**: la
+gramática de la identidad de método. El parser estricto
+(`src/authority/method-id.ts`) exige `[T].[YUN].[MODULO].[FUNCION].[VERSION].[RISK].[GOV]`
+sobre `TINA_TYPES = {T, I, N, A}` y `YUN_FEDERATIONS`, mientras varios literales de
+namespace (`TINA.YUN.*`, `Q.QUANTUM.*`, `T.TOOL.*`, el tier `HUMAN_IN_THE_LOOP`) no
+cumplen esa gramática y se usan como **metadata** (manifiestos de skill, eventos
+BookPI), nunca como entrada del parser. Las opciones de arbitraje (A: ampliar la
+spec/parser; B: migrar los literales; C: formalizar el namespace textual) están
+listadas y **ninguna se aplica sin decisión humana**.
+
 ### MAGPIE-X — bus de eventos gobernado en proceso
 
 `src/messaging/magpie.ts` es un bus de eventos **en proceso** con orden determinista
@@ -262,6 +275,29 @@ métodos `runtime.sealDocument()` / `runtime.verifyDocumentSeal()` /
 `GET /api/v1/security/document-seal` (admin-gated); emite los eventos
 `security.document.sealed` y `security.document.seal.verified`.
 
+### Pipeline Conductor gobernado (seis etapas)
+
+`src/pipeline/conductor.ts` (`conductPipeline`) cablea la **cadena de autoridad
+completa** sobre módulos reales en **seis etapas fail-closed**:
+
+    INGRESS → ARGUS_CROWN → TRINITY_MOE → SOPHIA_ERI → ORION_SANDBOX → BOOKPI_IGDS
+
+- **INGRESS** — normaliza y sanea la solicitud (`src/ingress/request.ts`); una entrada inválida detiene el pipeline.
+- **ARGUS_CROWN** — `evaluateCrown` resuelve scopes/riesgo: sin aprobación de la gate y verificación completa, la etapa falla.
+- **TRINITY_MOE** — rutea el `methodId` al módulo experto (`E00–E23`); un método irresoluble falla.
+- **SOPHIA_ERI** — exige consentimiento de memoria cuando hay registro de consentimiento.
+- **ORION_SANDBOX** — representa la propuesta en sandbox con los controles vigentes; no la aplica.
+- **BOOKPI_IGDS** — **sólo** sella el ledger si *todas* las etapas previas pasaron; un pipeline bloqueado no deja evidencia de éxito.
+
+Devuelve `ConductorResult { requestId, traceId, methodId, demanded, verdicts[], passed, ledger?, reason }`
+con un veredicto por etapa (`passed`/`reason`/`evidenceRef`). Invariante: **el
+pipeline decide y registra; no ejecuta efectos externos, no concede autoridad y no
+salta etapas.** El ledger es JSONL durable si se configura
+`BOOKPI_PIPELINE_LEDGER_PATH`; en su defecto usa una cadena hash SHA-256 **en
+memoria** (volátil, no WORM). Se expone como endpoint `POST /api/v1/pipeline/execute`
+(admin-gated). Honestidad: la cadena de autoridad y el sellado son locales y
+probados; no es una integración de producción.
+
 ### Superficie HTTP (admin-gated)
 
 Requieren `HYPERCORE_API_TOKEN` (`Authorization: Bearer …`) y aplican rate limit:
@@ -353,11 +389,12 @@ El ledger JSONL mantiene una cadena hash, `fsync`, backups atómicos, restauraci
 - `POST /api/v1/cognition/vision` — imagen a descripción.
 - `POST /api/v1/cognition/image` — prompt a imagen.
 - `POST /api/v1/cognition/speech` — texto a audio.
-  - `POST /api/v1/cognition/transcribe` — audio a texto.
-  - `POST /api/v1/yun/events` — recibe un evento YUN canónico, verifica integridad y lo registra en BookPI; requiere `GENESIS_ADMIN_API_TOKEN`.
-  - `GET /api/v1/yun/events?limit=20` — expone únicamente metadatos saneados de eventos YUN recientes.
+- `POST /api/v1/cognition/transcribe` — audio a texto.
+- `POST /api/v1/pipeline/execute` — ejecuta el pipeline gobernado de seis etapas y sella evidencia; admin-gated.
+- `POST /api/v1/yun/events` — recibe un evento YUN canónico, verifica integridad y lo registra en BookPI; requiere `GENESIS_ADMIN_API_TOKEN`.
+- `GET /api/v1/yun/events?limit=20` — expone únicamente metadatos saneados de eventos YUN recientes.
 
-Las rutas mutantes fallan cerrado cuando falta configuración. `X-Request-ID` se genera o propaga en cada respuesta; en producción se añade HSTS. Ningún request ID sustituye autenticación, autorización humana o evidencia de despliegue.
+Las superficies extraídas del monolito (TD-01) viven en `src/routes/`: OpenAI `/v1` (`openai.ts`), HyperCore/MCP (`hypercore.ts`), Permission Map (`governance-permissions.ts`), Document Seal (`document-seal.ts`), eventos YUN (`yun-events.ts`) y el Pipeline (`pipeline.ts`); el contrato HTTP no cambia al extraerlas. Las rutas mutantes fallan cerrado cuando falta configuración. `X-Request-ID` se genera o propaga en cada respuesta; en producción se añade HSTS. Ningún request ID sustituye autenticación, autorización humana o evidencia de despliegue.
 
 Las rutas sensibles aplican autenticación, límites de tamaño, rate limiting y fallo cerrado cuando falta una dependencia.
 
@@ -421,7 +458,7 @@ pnpm run security:suite
 pnpm run build
 ```
 
-Evidencia local reproducida en la rama actual: `pnpm typecheck` exit 0; `pnpm test` **1133 aprobadas / 193 archivos** (incluye `test/intelligence/turbo-planner.test.ts`, `test/security/document-seal-runtime.test.ts`, `test/routes/document-seal.test.ts`, `test/inference/multimodal.test.ts`, `test/inference/speech.test.ts` y las pruebas de integración por red `*.integration.test.ts`); `pnpm run build` exit 0 (tsc + vitest + esbuild + smoke UI + smoke runtime, que ahora incluye `MULTIMODAL_SPEECH_GUARDRAILS_OK`); `pnpm run security:suite` **14 passed / 0 failed / 0 not_applicable**. La inferencia de texto externa se verificó en vivo el 2026-10-13 con Groq (`HTTP 200`, `openai/gpt-oss-20b`) y Ollama Cloud (`responseEngine: "open-science"`); el **STT de Groq (`whisper-large-v3`) se verificó en vivo** por la ruta gobernada `POST /api/v1/cognition/transcribe` (texto transcrito correcto); además, la **visión (imagen→texto) se verificó en vivo** con Ollama local (`qwen2.5vl:7b`) por `POST /api/v1/cognition/vision` (`success:true`, `provider:"local"`, descripción correcta), aunque la síntesis de imagen sigue sin proveedor; Hugging Face autentica pero devuelve `HTTP 402` por falta de créditos, y el TTS de Groq exige aceptar términos (`HTTP 400 model_terms_required`). Un test verde demuestra una capacidad computacional local, **no** autoridad, aprendizaje ni producción.
+Evidencia local reproducida en la rama actual: `pnpm typecheck` exit 0; `pnpm test` **1141 aprobadas / 195 archivos** (incluye `test/intelligence/turbo-planner.test.ts`, `test/security/document-seal-runtime.test.ts`, `test/routes/document-seal.test.ts`, `test/routes/pipeline.test.ts`, `test/routes/yun-events.test.ts`, `test/inference/multimodal.test.ts`, `test/inference/speech.test.ts` y las pruebas de integración por red `*.integration.test.ts`); `pnpm run build` exit 0 (tsc + vitest + esbuild + smoke UI + smoke runtime, que ahora incluye `MULTIMODAL_SPEECH_GUARDRAILS_OK`); `pnpm run security:suite` **14 passed / 0 failed / 0 not_applicable**. La inferencia de texto externa se verificó en vivo el 2026-10-13 con Groq (`HTTP 200`, `openai/gpt-oss-20b`) y Ollama Cloud (`responseEngine: "open-science"`); el **STT de Groq (`whisper-large-v3`) se verificó en vivo** por la ruta gobernada `POST /api/v1/cognition/transcribe` (texto transcrito correcto); además, la **visión (imagen→texto) se verificó en vivo** con Ollama local (`qwen2.5vl:7b`) por `POST /api/v1/cognition/vision` (`success:true`, `provider:"local"`, descripción correcta), aunque la síntesis de imagen sigue sin proveedor; Hugging Face autentica pero devuelve `HTTP 402` por falta de créditos, y el TTS de Groq exige aceptar términos (`HTTP 400 model_terms_required`). Un test verde demuestra una capacidad computacional local, **no** autoridad, aprendizaje ni producción.
 
 ```bash
 SMOKE_BASE_URL=https://tu-dominio.example pnpm run smoke:production
@@ -429,9 +466,50 @@ SMOKE_BASE_URL=https://tu-dominio.example pnpm run smoke:production
 
 Un resultado verde es evidencia de capacidad computacional del entorno de prueba, no aprobación humana ni certificación de producción.
 
+## Contrato de evidencia
+
+Cada capacidad se declara en tres estados **distintos y no intercambiables**:
+
+    SPECIFIED ≠ IMPLEMENTED ≠ TESTED
+
+- **SPECIFIED** — descrita en el canon (`docs/spec`, `docs/evolution`).
+- **IMPLEMENTED** — con código real en `src/`.
+- **TESTED** — con evidencia automatizada reproducible en `test/` y el gate local en verde.
+
+Especificar no implementa; implementar no prueba; probar en local **no** es producción.
+En conflicto entre código y spec gana la spec, y el conflicto se **archiva** (no se
+reescribe en silencio) en `docs/spec/canonical/DIVERGENCE-REGISTER.md`.
+
+## Instalación reproducible
+
+El lockfile es el contrato de reproducibilidad del árbol de dependencias:
+
+```bash
+pnpm install --frozen-lockfile
+```
+
+Si `package.json` y `pnpm-lock.yaml` divergen, la instalación congelada falla de
+forma **intencional** en un entorno limpio (bloqueo externo registrado como
+`ERR_PNPM_NO_MATCHING_VERSION`); la corrección es reconciliar el lockfile, nunca
+desactivar la congelación en producción.
+
+## Gates pendientes para liberar
+
+Los gates locales que el repositorio controla están en verde (`pnpm typecheck`,
+`pnpm test`, `pnpm run build`, `pnpm run security:suite`). Los **Gates pendientes
+para liberar** son externos y no se superan con más código: credenciales y entorno
+objetivo (integraciones de inferencia/persistencia), CI/CD operativo (GitHub
+Actions) y despliegue real (Kubernetes/contenedores) con evidencia firmada y
+revisión humana con nombre.
+
 ## Estructura relevante
 
-- `src/server.ts` — API y rutas runtime.
+- `src/server.ts` — API, montaje de rutas, gate de arranque y configuración runtime.
+- `src/routes/` — superficies HTTP extraídas: OpenAI `/v1`, HyperCore/MCP, Permission Map, Document Seal, eventos YUN y Pipeline.
+- `src/pipeline/` — conductor gobernado de seis etapas (`conductor.ts`).
+- `src/federation/` — registro canónico de las 7 federaciones TAMV y el evento YUN.
+- `src/authority/` — gramática de la identidad de método (`method-id.ts`).
+- `src/lib/` — primitivas compartidas (p. ej. `sha256.ts`).
 - `src/ui/` — workspace, intro y estilos.
 - `src/skills/` — HyperCore, contratos, CROWN, triangulación y MCP.
 - `src/terminus/` — mandatos, autoridad, store y cuotas.
@@ -441,6 +519,7 @@ Un resultado verde es evidencia de capacidad computacional del entorno de prueba
 - `deploy/k8s/` — manifiestos Kubernetes.
 - `test/` — evidencia automatizada.
 - `docs/runbooks/` — operaciones y despliegue.
+- `docs/spec/canonical/` — registro de divergencias y políticas canónicas.
 
 ## Contribución y gobernanza
 

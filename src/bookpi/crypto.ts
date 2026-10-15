@@ -1,6 +1,7 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import type { BookPiEventCore, BookPiEventRecord, JsonValue } from "./types";
 import { bookPiSecret } from "../security/secrets";
+import { sha256Hex } from "../lib/sha256";
 
 export const ZERO_HASH =
   "0000000000000000000000000000000000000000000000000000000000000000";
@@ -16,9 +17,7 @@ function stableStringify(value: unknown): string {
   return `{${Object.keys(record).sort().filter((key) => record[key] !== undefined).map((key) => `${JSON.stringify(key)}:${stableStringify(record[key])}`).join(",")}}`;
 }
 
-export function sha256Hex(input: string): string {
-  return createHash("sha256").update(input, "utf8").digest("hex");
-}
+export { sha256Hex } from "../lib/sha256";
 
 export function sha3_512Hex(input: string): string {
   return createHash("sha3-512").update(input, "utf8").digest("hex");
