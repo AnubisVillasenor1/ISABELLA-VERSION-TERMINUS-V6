@@ -11,8 +11,9 @@ metadata:
     app.kubernetes.io/name: isabella-genesisai
     app.kubernetes.io/component: runtime
   annotations:
-    # Coincide con express.json({ limit: "8mb" }) en src/server.ts.
-    nginx.ingress.kubernetes.io/proxy-body-size: 8m
+    # Debe coincidir con el límite global express.json({ limit: "256kb" }) en src/server.ts.
+    # Aumentar ambos límites requiere revisar primero los límites específicos de cada ruta.
+    nginx.ingress.kubernetes.io/proxy-body-size: 256k
     nginx.ingress.kubernetes.io/limit-rps: "20"
 spec:
   ingressClassName: nginx

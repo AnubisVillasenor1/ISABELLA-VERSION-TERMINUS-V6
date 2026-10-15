@@ -1,6 +1,7 @@
 import { evaluateCrown, type CrownEvaluationInput, type CrownVerdict } from "../crown";
 import { inspectAegis, type AegisVerdict } from "../security/aegis";
 import { planExecution, type AdaptivePlan, type AdaptiveRequest } from "../intelligence/adaptive-router";
+import { planTurboRoute as buildTurboPlan, type TurboPlan, type TurboRequest } from "../intelligence/turbo-planner";
 import { InMemoryTelemetry, sloSnapshot, type TelemetrySink } from "../observability/telemetry";
 import { IKESEngine } from "../memory/ikes";
 import { ToolRegistry, type ToolAuthorization, type ToolReceipt } from "../tools/registry";
@@ -8,6 +9,7 @@ import { SkillRegistry } from "../skills/registry";
 import { GovernedInferenceRouter } from "../inference/router";
 import type { GenerationRequest, GenerationResult } from "../inference/types";
 import { DeterministicVerifier } from "../veritas/verifier";
+import { assessGrounding, type GroundingEvidence, type GroundingOptions, type GroundingReport } from "../veritas/grounding";
 import { evaluateCompanionSafety, type CompanionSafetyVerdict } from "../companion/safety";
 import { InMemoryHumanEscalationQueue, createEscalation, type HumanEscalationQueue } from "../companion/escalation";
 import { explainPolicyDecision, type DecisionExplanation } from "../cognition/explainability";
@@ -60,10 +62,32 @@ import type { KnowledgeClaim } from "../memory/ikes";
 import { ProtocolRegistry, PROTOCOL_CATALOG } from "../protocols";
 import { GenesisModuleRegistry } from "../modules";
 import { CANONICAL_TOOLS, PROTOCOL_TOOLS } from "../tools";
-import { CANONICAL_SKILLS } from "../skills";
+import { CANONICAL_SKILLS, FOUNDATIONAL_SKILLS } from "../skills";
 import { assessEpistemicState, passesEriGate, type SophiaSignals, type SophiaAssessment } from "../cognition/sophia";
+import { detectContradictions as runContradictionDetection, type CanonicalClaim, type ContradictionOptions, type ContradictionReport } from "../cognition/contradiction";
+import { federationById, listFederations, type TamvFederation } from "../federation";
+import { MagpieBus, type MagpieDeliveryReport, type MagpieHandler, type MagpiePublishInput } from "../messaging";
+import {
+  mapOrderPermissions as buildPermissionMap,
+  verifyAuthorizationEnvelope as runVerifyAuthorization,
+  type OrderIntent,
+  type PermissionCatalog,
+  type AuthorizationEnvelope,
+  type AuthorizationVerification,
+} from "../governance/permission-map";
 import { hardenSanitization, buildQuarantineRecord, type HardeningResult } from "../sanitization";
-import { triangulateDigest, sealEnvelope, openEnvelope, type TriangulatedDigest, type SealedEnvelope } from "../security";
+import { triangulateDigest, sealEnvelope, openEnvelope, evaluateVigia, type TriangulatedDigest, type SealedEnvelope, type VigiaVerdict } from "../security";
+import {
+  sealDocument as sealDocumentManifest,
+  verifyDocumentSeal as verifyDocumentSealManifest,
+  documentSealEnablement as documentSealEnablementReport,
+  Ed25519Signer,
+  type SealDocumentInput,
+  type DocumentSealManifest,
+  type VerifySealInput,
+  type SealVerificationReport,
+  type DocumentSealEnablement,
+} from "../security";
 import { buildOpsSnapshot, assessProductionReadiness, TokenBucket, CircuitBreaker, type DependencyHealth, type MaintenanceWindow, type OpsSnapshot, type ProductionReadinessReport } from "../deployment";
 import { buildTapAct, validateTapAct, evaluateIsaPipeline, type TapActInput, type TapAct, type TapActValidation, type HighImpactTrigger } from "../ingress";
 import {
@@ -121,6 +145,9 @@ export class IsabellaGenesisRuntime {
   readonly knowledgeFabric = new KnowledgeFabric();
   readonly lsp = new LspValidationAdapter();
   readonly mutations = new EntityMutationManager();
+  readonly events = new MagpieBus();
+  /** Llave Ed25519 del sello documental IGDS; perezosa (env PEM o efímera). */
+  private documentSealSignerInstance?: Ed25519Signer;
 
   constructor(
     telemetry: TelemetrySink = new InMemoryTelemetry(),
@@ -145,7 +172,7 @@ export class IsabellaGenesisRuntime {
       if (this.tools.list().some((t) => t.id === tool.id)) continue;
       this.tools.register(tool);
     }
-    for (const skill of CANONICAL_SKILLS) {
+    for (const skill of [...CANONICAL_SKILLS, ...FOUNDATIONAL_SKILLS]) {
       if (this.skills.list().some((s) => s.id === skill.id)) continue;
       this.skills.register(skill);
     }
@@ -348,6 +375,113 @@ export class IsabellaGenesisRuntime {
       health: () => "ready",
       execute: async (input) => this.evaluateIsa(input as Parameters<typeof evaluateIsaPipeline>[0]),
     });
+    this.capabilities.register({
+      descriptor: low("hsf.vigia.integrity", "verification", "Triple bloqueo VIGIA: integridad ontológica, semántica y conductual (fail-closed)."),
+      health: () => "ready",
+      execute: async (input) => this.assessVigia((input as { content?: string }).content ?? ""),
+    });
+    this.capabilities.register({
+      descriptor: low("hsf.truth.contradiction", "verification", "Contradiction Engine Ω: contradicciones estructurales entre claims canónicos."),
+      health: () => "ready",
+      execute: async (input) => {
+        const value = input as { claims?: CanonicalClaim[]; functionalRelations?: string[] };
+        return this.detectContradictions(value.claims ?? [], { functionalRelations: value.functionalRelations });
+      },
+    });
+    this.capabilities.register({
+      descriptor: low("hsf.federation.registry", "collective", "Registro canónico de las 7 federaciones TAMV (id ↔ código YUN)."),
+      health: () => "ready",
+      execute: async (input) => {
+        const value = input as { id?: number };
+        return value.id === undefined ? listFederations() : this.federation(value.id);
+      },
+    });
+    this.capabilities.register({
+      descriptor: low("hsf.messaging.bus", "integration", "MAGPIE-X: bus de eventos gobernado en proceso; transporta intención, no autoriza ejecución."),
+      health: () => "ready",
+      execute: async (input) => {
+        const value = input as Partial<MagpiePublishInput>;
+        if (!value.topic?.trim() || !value.type?.trim()) throw new Error("MAGPIE_PUBLISH_INPUT_REQUIRED");
+        return this.publishEvent({
+          topic: value.topic,
+          type: value.type,
+          payload: value.payload,
+          correlationId: value.correlationId,
+          causationId: value.causationId,
+        });
+      },
+    });
+    this.capabilities.register({
+      descriptor: low("hsf.truth.grounding", "verification", "Evidence Grounding Guard Ω: anclaje léxico fail-closed de una respuesta a su evidencia (no verdad)."),
+      health: () => "ready",
+      execute: async (input) => {
+        const value = input as { answer?: string; evidence?: GroundingEvidence[]; options?: GroundingOptions };
+        return this.assessGrounding(value.answer ?? "", value.evidence ?? [], value.options);
+      },
+    });
+    this.capabilities.register({
+      descriptor: low("hsf.governance.permission-map", "architecture", "PERMISSION MAP Ω: expande una orden en sus permisos requeridos y los cataloga por nivel (NEUTRO→CRÍTICO); mapear no autoriza."),
+      health: () => "ready",
+      execute: async (input) => {
+        const value = input as { order?: OrderIntent };
+        if (!value.order) throw new Error("ORDER_REQUIRED");
+        return this.mapOrderPermissions(value.order);
+      },
+    });
+    this.capabilities.register({
+      descriptor: low("hsf.governance.consent-envelope", "verification", "Verifica el sobre de autorización humana (fail-closed) y atribuye la responsabilidad al principal."),
+      health: () => "ready",
+      execute: async (input) => {
+        const value = input as { envelope?: AuthorizationEnvelope; catalog?: PermissionCatalog };
+        if (!value.envelope || !value.catalog) throw new Error("AUTHORIZATION_INPUT_REQUIRED");
+        return this.verifyOrderAuthorization(value.envelope, value.catalog);
+      },
+    });
+    this.capabilities.register({
+      descriptor: low("hsf.intelligence.turbo-planner", "strategy", "TURBO ROUTE PLANNER Ω: decide la ruta (FAST/GROUNDED/AGENT/HUMAN_REVIEW) y qué filtros gobernados son obligatorios u omitibles; planificar no autoriza."),
+      health: () => "ready",
+      execute: async (input) => {
+        const value = input as { request?: TurboRequest };
+        if (!value.request) throw new Error("TURBO_REQUEST_REQUIRED");
+        return this.planTurboRoute(value.request);
+      },
+    });
+    this.capabilities.register({
+      descriptor: low("hsf.security.document-seal", "verification", "IGDS-v1: sella un documento (integridad SHA-256 + firma Ed25519) y devuelve su manifiesto; sellar no autoriza ni publica."),
+      health: () => "ready",
+      execute: async (input) => {
+        const value = input as {
+          document?: SealDocumentInput["document"];
+          contentBase64?: string;
+          createdAt?: string;
+          prevSealId?: string | null;
+          generateWatermark?: boolean;
+        };
+        if (!value.document || typeof value.contentBase64 !== "string") throw new Error("DOCUMENT_SEAL_INPUT_REQUIRED");
+        return this.sealDocument({
+          document: value.document,
+          bytes: Buffer.from(value.contentBase64, "base64"),
+          ...(value.createdAt ? { createdAt: value.createdAt } : {}),
+          ...(value.prevSealId !== undefined ? { prevSealId: value.prevSealId } : {}),
+          ...(value.generateWatermark !== undefined ? { generateWatermark: value.generateWatermark } : {}),
+        });
+      },
+    });
+    this.capabilities.register({
+      descriptor: low("hsf.security.document-seal.verify", "verification", "IGDS-v1: verifica integridad + firma Ed25519 de un manifiesto de sello documental (fail-closed)."),
+      health: () => "ready",
+      execute: async (input) => {
+        const value = input as { manifest?: DocumentSealManifest; contentBase64?: string; publicKeyPem?: string };
+        if (!value.manifest || typeof value.contentBase64 !== "string" || typeof value.publicKeyPem !== "string") {
+          throw new Error("DOCUMENT_SEAL_VERIFY_INPUT_REQUIRED");
+        }
+        return this.verifyDocumentSeal({
+          manifest: value.manifest,
+          bytes: Buffer.from(value.contentBase64, "base64"),
+          publicKeyPem: value.publicKeyPem,
+        });
+      },
+    });
   }
 
   private registerCanonicalProtocols(): void {
@@ -483,6 +617,12 @@ export class IsabellaGenesisRuntime {
       attributes: { stage: "governed-evaluation" },
     });
 
+    this.events.publish({
+      topic: "runtime.evaluated",
+      type: admitted ? "admitted" : "refused",
+      payload: { admitted, risk: input.riskTier, complexity: plan.complexity, aegis: aegis.decision },
+    });
+
     return { crown, aegis, plan, memory, admitted };
   }
 
@@ -496,6 +636,11 @@ export class IsabellaGenesisRuntime {
 
   assessCompanionSafety(input: string): CompanionSafetyVerdict {
     return evaluateCompanionSafety(input);
+  }
+
+  /** VIGIA triple bloqueo: integridad ontológica, semántica y conductual. */
+  assessVigia(input: string): VigiaVerdict {
+    return evaluateVigia(input);
   }
 
   explainPolicy(decision: "ALLOW"|"DENY"|"REVIEW", factors: readonly string[], evidenceRefs: readonly string[], policyVersion: string): DecisionExplanation {
@@ -561,6 +706,7 @@ export class IsabellaGenesisRuntime {
         at: new Date().toISOString(),
         attributes: { stage: "tool-input", toolId: id },
       });
+      this.events.publish({ topic: "tool.blocked", type: "security", payload: { toolId: id, decision: aegis.decision } });
       return { admitted: false, aegis };
     }
 
@@ -578,6 +724,7 @@ export class IsabellaGenesisRuntime {
         at: new Date().toISOString(),
         attributes: { stage: "tool-execution" },
       });
+      this.events.publish({ topic: "tool.executed", type: result.receipt.status, payload: { toolId: id } });
       return { admitted: true, aegis, output: result.output, receipt: result.receipt };
     } catch (error) {
       const receipt = (error as { receipt?: ToolReceipt }).receipt;
@@ -587,6 +734,7 @@ export class IsabellaGenesisRuntime {
         at: new Date().toISOString(),
         attributes: { toolId: id, status: receipt?.status ?? "error" },
       });
+      this.events.publish({ topic: "tool.failed", type: "error", payload: { toolId: id } });
       return { admitted: false, aegis, receipt };
     }
   }
@@ -684,6 +832,169 @@ export class IsabellaGenesisRuntime {
   assessEpistemic(signals: SophiaSignals): SophiaAssessment & { passesEriGate: boolean } {
     const assessment = assessEpistemicState(signals);
     return { ...assessment, passesEriGate: passesEriGate(assessment) };
+  }
+
+  /** Contradiction Engine Ω: detecta contradicciones estructurales entre claims canónicos. */
+  detectContradictions(claims: readonly CanonicalClaim[], options?: ContradictionOptions): ContradictionReport {
+    return runContradictionDetection(claims, options);
+  }
+
+  /** Evidence Grounding Guard Ω: mide el anclaje léxico de una respuesta a su evidencia (fail-closed). */
+  assessGrounding(answer: string, evidence: readonly GroundingEvidence[], options?: GroundingOptions): GroundingReport {
+    const report = assessGrounding(answer, evidence, options);
+    this.events.publish({
+      topic: "truth.grounding.assessed",
+      type: report.verdict,
+      payload: { verdict: report.verdict, groundedness: report.groundedness, unsupported: report.unsupportedClaimCount, digest: report.digest },
+    });
+    return report;
+  }
+
+  /** Registro canónico de las 7 federaciones TAMV (id ↔ código YUN). */
+  federation(id: number): TamvFederation {
+    return federationById(id);
+  }
+
+  /**
+   * PERMISSION MAP Ω: expande una orden de alto nivel en su catálogo de permisos por
+   * nivel de riesgo y su checklist. Mapear NO autoriza; prepara la decisión humana.
+   */
+  mapOrderPermissions(order: OrderIntent): PermissionCatalog {
+    const catalog = buildPermissionMap(order);
+    this.events.publish({
+      topic: "governance.permissions.mapped",
+      type: catalog.highestLevel,
+      payload: {
+        orderId: catalog.orderId,
+        total: catalog.totalPermissions,
+        totalAuthorizations: catalog.totalAuthorizations,
+        highestLevel: catalog.highestLevel,
+        requiresHumanAcceptance: catalog.requiresHumanAcceptance,
+        digest: catalog.digest,
+      },
+    });
+    return catalog;
+  }
+
+  /**
+   * Verifica el sobre de autorización humana. Fail-closed: solo `AUTHORIZED` procede;
+   * cualquier hueco, denegación o manipulación bloquea la ejecución.
+   */
+  verifyOrderAuthorization(envelope: AuthorizationEnvelope, catalog: PermissionCatalog): AuthorizationVerification {
+    const verification = runVerifyAuthorization(envelope, catalog);
+    this.events.publish({
+      topic: "governance.permissions.authorized",
+      type: verification.status,
+      payload: {
+        orderId: envelope.orderId,
+        status: verification.status,
+        mayProceed: verification.mayProceed,
+        authorized: verification.authorizedPermissions.length,
+        denied: verification.deniedPermissions.length,
+        reason: verification.reason,
+      },
+    });
+    return verification;
+  }
+
+  /**
+   * TURBO ROUTE PLANNER Ω: decide la ruta de baja latencia (FAST/GROUNDED/AGENT/
+   * HUMAN_REVIEW), qué filtros gobernados son obligatorios u omitibles, la política
+   * de caché y el ámbito federado. Planificar NO autoriza ni ejecuta: la ruta es una
+   * recomendación de flujo; CROWN sigue autorizando.
+   */
+  planTurboRoute(request: TurboRequest): TurboPlan {
+    const plan = buildTurboPlan(request);
+    this.events.publish({
+      topic: "intelligence.turbo.planned",
+      type: plan.route,
+      payload: {
+        route: plan.route,
+        complexity: plan.complexity,
+        mode: plan.mode,
+        requiredFilters: plan.requiredFilters,
+        skippedFilters: plan.skippedFilters,
+        cachePolicy: plan.cachePolicy,
+        federationId: plan.federationId,
+        humanReviewRequired: plan.humanReviewRequired,
+        digest: plan.digest,
+      },
+    });
+    return plan;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* IGDS-v1 Document Seal — integridad y procedencia de documentos      */
+  /* ------------------------------------------------------------------ */
+
+  /**
+   * Llave Ed25519 usada para sellar documentos. Se carga de
+   * `GENESIS_DOCUMENT_SEAL_KEY_PEM` (PKCS#8) si está presente; en caso contrario
+   * se genera una efímera en memoria. Una llave efímera NO persiste entre
+   * reinicios: la verificación posterior requiere la llave pública que viaja en
+   * el manifiesto. Estado honesto: Ed25519 real; RFC 3161/C2PA/PQC no soportados.
+   */
+  documentSealSigner(): Ed25519Signer {
+    if (!this.documentSealSignerInstance) {
+      const pem = process.env.GENESIS_DOCUMENT_SEAL_KEY_PEM?.trim();
+      this.documentSealSignerInstance = pem
+        ? Ed25519Signer.fromPem(pem, "genesis-document-seal")
+        : Ed25519Signer.generate("genesis-document-seal-ephemeral");
+    }
+    return this.documentSealSignerInstance;
+  }
+
+  /**
+   * IGDS-v1: sella un documento con integridad SHA-256 + firma Ed25519 y marca
+   * de agua textual. Sellar documenta procedencia; NO autoriza, NO publica y NO
+   * concede timestamp de confianza ni C2PA.
+   */
+  async sealDocument(input: SealDocumentInput): Promise<DocumentSealManifest> {
+    const manifest = await sealDocumentManifest(input, this.documentSealSigner());
+    this.events.publish({
+      topic: "security.document.sealed",
+      type: manifest.schema,
+      payload: {
+        sealId: manifest.sealId,
+        compactId: manifest.compactId,
+        documentId: manifest.document.id,
+        sha256: manifest.content.sha256,
+        bytes: manifest.content.bytes,
+        keyId: manifest.signer.keyId,
+      },
+    });
+    return manifest;
+  }
+
+  /** IGDS-v1: verifica un sello (fail-closed: integridad + firma Ed25519). */
+  async verifyDocumentSeal(input: VerifySealInput): Promise<SealVerificationReport> {
+    const report = await verifyDocumentSealManifest(input);
+    this.events.publish({
+      topic: "security.document.seal.verified",
+      type: report.valid ? "VALID" : "INVALID",
+      payload: {
+        sealId: report.sealId,
+        valid: report.valid,
+        integrity: report.integrity,
+        signature: report.signature,
+      },
+    });
+    return report;
+  }
+
+  /** Reporte honesto de lo implementado y lo no soportado por el sello IGDS-v1. */
+  documentSealEnablement(): DocumentSealEnablement {
+    return documentSealEnablementReport();
+  }
+
+  /** MAGPIE-X: publica un evento gobernado en el bus en proceso. Transporta intención, no autoriza ejecución. */
+  publishEvent<T>(input: MagpiePublishInput<T>): MagpieDeliveryReport {
+    return this.events.publish(input);
+  }
+
+  /** MAGPIE-X: suscribe un handler en proceso; devuelve la función de baja. */
+  subscribeEvent<T>(topic: string, handler: MagpieHandler<T>): () => void {
+    return this.events.subscribe(topic, handler);
   }
 
   /* ------------------------------------------------------------------ */

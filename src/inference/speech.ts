@@ -42,6 +42,26 @@ const DEFAULT_TTS_MODEL = "canopylabs/orpheus-v1-english";
 const DEFAULT_TTS_VOICE = "troy";
 const DEFAULT_STT_MODEL = "whisper-large-v3";
 const ALLOWED_AUDIO_MIME = /^audio\/(mpeg|mp3|mp4|m4a|x-m4a|wav|x-wav|wave|webm|ogg|oga|flac|aac)$/i;
+const AUDIO_EXTENSION: Record<string, string> = {
+  "audio/mpeg": "mp3",
+  "audio/mp3": "mp3",
+  "audio/mp4": "m4a",
+  "audio/m4a": "m4a",
+  "audio/x-m4a": "m4a",
+  "audio/wav": "wav",
+  "audio/x-wav": "wav",
+  "audio/wave": "wav",
+  "audio/webm": "webm",
+  "audio/ogg": "ogg",
+  "audio/oga": "ogg",
+  "audio/flac": "flac",
+  "audio/aac": "aac",
+};
+
+/** Provider multipart uploads require a filename with a recognized audio extension. */
+function audioFileName(mimeType: string): string {
+  return `audio.${AUDIO_EXTENSION[mimeType.toLowerCase()] ?? "wav"}`;
+}
 
 function nonEmpty(value: unknown): string | null {
   if (typeof value !== "string") return null;
@@ -133,7 +153,7 @@ export async function transcribeAudio(
     const language = nonEmpty(input.language);
     if (language) form.append("language", language);
     form.append("response_format", "json");
-    form.append("file", new Blob([bytes], { type: mimeType }), "audio");
+    form.append("file", new Blob([bytes], { type: mimeType }), audioFileName(mimeType));
     const response = await fetch(`${config.baseUrl}/audio/transcriptions`, {
       method: "POST",
       headers: { Authorization: `Bearer ${config.key}` },

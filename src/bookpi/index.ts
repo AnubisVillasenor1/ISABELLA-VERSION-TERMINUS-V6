@@ -59,6 +59,23 @@ export {
   type RoyaltySplit,
   type RoyaltySettlement,
 } from "./royalties";
+export {
+  LEGACY_LEDGER_MAX_EVENTS,
+  BOOKPI_EVENT_V5_SCHEMA,
+  BOOKPI_LEDGER_V5_SCHEMA,
+  validateLegacyLedger,
+  normalizeLegacy,
+  normalizeLedger,
+  verifyNormalizedHashes,
+  emptyLegacyLedgerHash,
+  type LegacyLedgerEvent,
+  type LegacyActorType,
+  type LedgerVerificationStatus,
+  type BookPiV5Event,
+  type LedgerValidationIssue,
+  type LedgerValidationResult,
+  type NormalizedLedger,
+} from "./legacy-verifier";
 export type {
   BookPiEventContext,
   BookPiEventMeta,

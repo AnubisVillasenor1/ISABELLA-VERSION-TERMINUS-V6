@@ -7,3 +7,4 @@ export * from "./verifier";
 export * from "./quality-gates";
 export * from "./file-schema";
 export * from "./lifecycle";
+export * from "./permission-map";

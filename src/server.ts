@@ -1,4 +1,4 @@
-import express, { type Application, type Request, type Response } from "express";
+import express, { type Application, type NextFunction, type Request, type Response } from "express";
 import { randomUUID, timingSafeEqual } from "node:crypto";
 import fs from "fs";
 import path from "path";
@@ -36,24 +36,28 @@ import { MetricsRegistry } from "./observability/metrics";
 import { SessionMemory, formatSessionContext, deriveSessionId } from "./memory/session-memory";
 import { VerifiedKnowledgeStore, formatVerifiedKnowledgeContext } from "./memory/verified-knowledge";
 import { osirisSentinel } from "./osiris";
+import { AuthFailureThrottle, classifyHttpError, isApiPath, parseTrustProxy, securityHeadersFor } from "./security/http-hardening";
 import { createReinaRuntime, type ReinaRequest } from "./reina";
 import { SubscriptionStore, UsageMeter, checkFeature, checkQuota, planEntitlements, PLANS, type PlanId, type QuotaKey, type SubscriptionRecord } from "./commerce";
 import { GAMEOVER_CONSTITUTION, passportAuthority, uagpGateway, type UagpRequestInput } from "./gameover";
 import { registerHyperCoreRoutes } from "./routes/hypercore";
-import { createYunEvent, verifyYunEvent, type YunEventInput } from "./federation/yun-event";
+import { registerOpenAiCompatibleRoutes } from "./routes/openai";
+import { registerOrderPermissionRoutes } from "./routes/governance-permissions";
+import { registerTurboPlannerRoutes } from "./routes/turbo-planner";
+import { registerDocumentSealRoutes } from "./routes/document-seal";
 
 const app: Application = express();
 app.disable("x-powered-by");
+// Detrás de un balanceador, req.ip sería la IP del proxy y todos los clientes compartirían cubeta de rate limit.
+// TRUST_PROXY=<saltos> (entero 1..10) habilita X-Forwarded-For; sin valor válido NO se confía en él.
+const trustProxyHops = parseTrustProxy(process.env.TRUST_PROXY);
+if (trustProxyHops !== false) app.set("trust proxy", trustProxyHops);
+// Conjuntos de cabeceras constantes (precalculados al arrancar); la ruta solo elige cuál aplicar.
+const BASE_SECURITY_HEADERS = Object.entries(securityHeadersFor("/", process.env));
+const API_SECURITY_HEADERS = Object.entries(securityHeadersFor("/api/", process.env));
 app.use((req, res, next) => {
-  const requestId = req.get("x-request-id")?.trim() || randomUUID();
-  res.setHeader("X-Request-ID", requestId);
-  res.setHeader("X-Content-Type-Options", "nosniff");
-  res.setHeader("X-Frame-Options", "DENY");
-  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
-  res.setHeader("Permissions-Policy", "camera=(), microphone=(self)");
-  if (process.env.NODE_ENV === "production") {
-    res.setHeader("Strict-Transport-Security", "max-age=63072000");
-  }
+  const headerSet = isApiPath(req.path) ? API_SECURITY_HEADERS : BASE_SECURITY_HEADERS;
+  for (const [name, value] of headerSet) res.setHeader(name, value);
   next();
 });
 const latencyRegistry = new LatencyRegistry(100, 512);
@@ -186,6 +190,7 @@ void runtime.initPersistence().catch((error) => {
 const apiKey = process.env.GEMINI_API_KEY || process.env.MODEL_API_KEY;
 const genAi = apiKey ? new GoogleGenAI({ apiKey }) : null;
 const providerTimeoutMs = boundedMilliseconds(process.env.INFERENCE_TIMEOUT_MS, 8_000, 3_000, 30_000);
+const multimodalTimeoutMs = boundedMilliseconds(process.env.MULTIMODAL_TIMEOUT_MS, 120_000, 20_000, 600_000);
 const providerCooldownMs = boundedMilliseconds(process.env.PROVIDER_FAILURE_COOLDOWN_MS, 60_000, 10_000, 300_000);
 let gatewayCooldownUntil = 0;
 let openRouterCooldownUntil = 0;
@@ -364,8 +369,19 @@ async function generateGatewayNarrative(systemPrompt: string, input: string, his
 }
 
 /** Server-side bearer-token gate for mutating or privileged API routes. */
+const authFailureThrottle = new AuthFailureThrottle();
+
 function authorizeApiToken(req: Request, res: Response, envName: string): boolean {
+  const throttleKey = req.ip || "unknown";
+  const blockedMs = authFailureThrottle.blockedFor(throttleKey);
+  if (blockedMs > 0) {
+    res.setHeader("Retry-After", String(Math.ceil(blockedMs / 1000)));
+    res.status(429).json({ success: false, error: "TOO_MANY_AUTH_FAILURES" });
+    return false;
+  }
   const verdict = verifyBearerToken(req.get("authorization"), process.env[envName]);
+  if (verdict === "AUTHORIZED") authFailureThrottle.recordSuccess(throttleKey);
+  else if (verdict === "INVALID") authFailureThrottle.recordFailure(throttleKey);
   if (verdict === "NOT_CONFIGURED") {
     res.status(503).json({ success: false, error: "API_TOKEN_NOT_CONFIGURED" });
     return false;
@@ -1062,7 +1078,7 @@ app.post("/api/v1/cognition/vision", async (req, res) => {
       });
       return;
     }
-    const result = await performVision(candidates, prompt, image, Math.max(providerTimeoutMs, 20_000));
+    const result = await performVision(candidates, prompt, image, multimodalTimeoutMs);
     bookPiLedger.append({
       id: `evt-${randomUUID()}`,
       timestamp: new Date().toISOString(),
@@ -1114,7 +1130,7 @@ app.post("/api/v1/cognition/image", async (req, res) => {
       });
       return;
     }
-    const result = await performImage(candidates, prompt, Math.max(providerTimeoutMs, 60_000));
+    const result = await performImage(candidates, prompt, multimodalTimeoutMs);
     bookPiLedger.append({
       id: `evt-${randomUUID()}`,
       timestamp: new Date().toISOString(),
@@ -5121,6 +5137,58 @@ registerHyperCoreRoutes({
   ...(process.env.HYPERCORE_SIGNING_KEY ? { signingKey: process.env.HYPERCORE_SIGNING_KEY } : {}),
 });
 
+// ── OpenAI-compatible surface (state: draft | engine-generated) ─ hace de Isabella
+// un modelo sustituible para cualquier cliente OpenAI SDK. No es un producto OpenAI;
+// solo es compatible a nivel de cable. Todo pasa por la mediación canónica del runtime.
+registerOpenAiCompatibleRoutes({
+  app,
+  mediate: (input, profile) => {
+    const result = runtime.mediateIsabella({ input, profile });
+    return { answer: result.answer, profile: result.profile, safeguards: result.safeguards };
+  },
+  modelId: process.env.OPENAI_COMPAT_MODEL_ID ?? "isabella-genesis",
+  ownedBy: "tamv-isabella",
+  enforceRateLimit,
+  rateLimiter: publicCognitionLimiter,
+  authorizeApiToken,
+  ...(process.env.OPENAI_COMPAT_API_TOKEN ? { apiTokenEnvName: "OPENAI_COMPAT_API_TOKEN" } : {}),
+});
+
+// ── Permission Map Ω (state: draft | engine-generated) ─ mapea una orden a sus permisos
+// por nivel y sella la autorización humana explícita. Mapear NO autoriza; autorizar NO ejecuta.
+registerOrderPermissionRoutes({
+  app,
+  mapOrderPermissions: (order) => runtime.mapOrderPermissions(order),
+  verifyOrderAuthorization: (envelope, catalog) => runtime.verifyOrderAuthorization(envelope, catalog),
+  enforceRateLimit,
+  rateLimiter: publicScanLimiter,
+  authorizeAdmin: (req, res) => authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN"),
+});
+
+// ── Turbo Route Planner Ω (state: draft | engine-generated) ─ decide la ruta de baja
+// latencia (FAST/GROUNDED/AGENT/HUMAN_REVIEW), los filtros gobernados obligatorios vs.
+// omitibles y la política de caché federada. Planificar NO autoriza ni ejecuta.
+registerTurboPlannerRoutes({
+  app,
+  planTurboRoute: (request) => runtime.planTurboRoute(request),
+  enforceRateLimit,
+  rateLimiter: publicScanLimiter,
+  authorizeAdmin: (req, res) => authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN"),
+});
+
+// ── IGDS-v1 Document Seal (state: draft | engine-generated) ─ sella un documento con
+// integridad SHA-256 + firma Ed25519 y verifica su manifiesto (fail-closed). Sellar NO
+// autoriza, NO publica; RFC 3161/C2PA/PQC quedan declarados como no soportados.
+registerDocumentSealRoutes({
+  app,
+  sealDocument: (input) => runtime.sealDocument(input),
+  verifyDocumentSeal: (input) => runtime.verifyDocumentSeal(input),
+  documentSealEnablement: () => runtime.documentSealEnablement(),
+  enforceRateLimit,
+  rateLimiter: publicScanLimiter,
+  authorizeAdmin: (req, res) => authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN"),
+});
+
 // ── REINA (state: draft | engine-generated) ─ adjudicación previa a la ejecución; NO ejecuta acciones.
 const reina = createReinaRuntime(process.env, (record) => {
   bookPiLedger.append({
@@ -5178,6 +5246,17 @@ app.get("/api/v1/reina/log/proof/:index", (req, res) => {
   } catch (error) {
     res.status(400).json({ success: false, error: error instanceof Error ? error.message : "REINA_PROOF_ERROR" });
   }
+});
+
+// Manejador de errores final: JSON seguro, sin stack ni detalles internos (parse errors → 400, tamaño → 413).
+app.use((error: unknown, _req: Request, res: Response, next: NextFunction) => {
+  if (res.headersSent) {
+    next(error);
+    return;
+  }
+  const safe = classifyHttpError(error);
+  if (safe.status >= 500) console.error("[Isabella] Unhandled request error", error instanceof Error ? error.message : "unknown");
+  res.status(safe.status).json(safe.body);
 });
 
 if (!process.env.VERCEL) app.listen(port, host, () => {
