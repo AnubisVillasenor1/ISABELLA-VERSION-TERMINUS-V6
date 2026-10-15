@@ -53,7 +53,7 @@ assert.ok(html.includes('class="intro-world"'), 'Intro must include the 3D Genes
 assert.ok(html.includes('intro-enter'), 'Final intro scene must provide a direct entrance to chat');
 assert.ok(html.includes('id="immersionGate"'), 'Cinematic intro must require an explicit immersion consent');
 assert.ok(html.includes('id="introVideo"'), 'Cinematic intro must include the governed video layer');
-assert.ok(html.includes('/assets/video/IsabellaVideoIntro.mp4'), 'Cinematic intro must reference the Isabella video');
+assert.ok(html.includes('https://stream.mux.com/VYG2uWF2xUNnZ6hQMS1Hv27biVYI2jNbfltQ45C400028.m3u8'), 'Cinematic intro must reference the configured Mux playback stream');
 assert.ok(js.includes('startIntroMedia'), 'Intro video must have an explicit media lifecycle');
 assert.ok(server.includes('app.get("/assets/video/IsabellaVideoIntro.mp4"'), 'Runtime must serve the intro video');
 assert.ok(server.includes('IsabellaVideoIntro.mp4'), 'Runtime video route must target the canonical asset');
