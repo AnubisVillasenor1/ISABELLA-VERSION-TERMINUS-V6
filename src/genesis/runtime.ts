@@ -77,6 +77,17 @@ import {
 } from "../governance/permission-map";
 import { hardenSanitization, buildQuarantineRecord, type HardeningResult } from "../sanitization";
 import { triangulateDigest, sealEnvelope, openEnvelope, evaluateVigia, type TriangulatedDigest, type SealedEnvelope, type VigiaVerdict } from "../security";
+import {
+  sealDocument as sealDocumentManifest,
+  verifyDocumentSeal as verifyDocumentSealManifest,
+  documentSealEnablement as documentSealEnablementReport,
+  Ed25519Signer,
+  type SealDocumentInput,
+  type DocumentSealManifest,
+  type VerifySealInput,
+  type SealVerificationReport,
+  type DocumentSealEnablement,
+} from "../security";
 import { buildOpsSnapshot, assessProductionReadiness, TokenBucket, CircuitBreaker, type DependencyHealth, type MaintenanceWindow, type OpsSnapshot, type ProductionReadinessReport } from "../deployment";
 import { buildTapAct, validateTapAct, evaluateIsaPipeline, type TapActInput, type TapAct, type TapActValidation, type HighImpactTrigger } from "../ingress";
 import {
@@ -135,6 +146,8 @@ export class IsabellaGenesisRuntime {
   readonly lsp = new LspValidationAdapter();
   readonly mutations = new EntityMutationManager();
   readonly events = new MagpieBus();
+  /** Llave Ed25519 del sello documental IGDS; perezosa (env PEM o efímera). */
+  private documentSealSignerInstance?: Ed25519Signer;
 
   constructor(
     telemetry: TelemetrySink = new InMemoryTelemetry(),
@@ -431,6 +444,42 @@ export class IsabellaGenesisRuntime {
         const value = input as { request?: TurboRequest };
         if (!value.request) throw new Error("TURBO_REQUEST_REQUIRED");
         return this.planTurboRoute(value.request);
+      },
+    });
+    this.capabilities.register({
+      descriptor: low("hsf.security.document-seal", "verification", "IGDS-v1: sella un documento (integridad SHA-256 + firma Ed25519) y devuelve su manifiesto; sellar no autoriza ni publica."),
+      health: () => "ready",
+      execute: async (input) => {
+        const value = input as {
+          document?: SealDocumentInput["document"];
+          contentBase64?: string;
+          createdAt?: string;
+          prevSealId?: string | null;
+          generateWatermark?: boolean;
+        };
+        if (!value.document || typeof value.contentBase64 !== "string") throw new Error("DOCUMENT_SEAL_INPUT_REQUIRED");
+        return this.sealDocument({
+          document: value.document,
+          bytes: Buffer.from(value.contentBase64, "base64"),
+          ...(value.createdAt ? { createdAt: value.createdAt } : {}),
+          ...(value.prevSealId !== undefined ? { prevSealId: value.prevSealId } : {}),
+          ...(value.generateWatermark !== undefined ? { generateWatermark: value.generateWatermark } : {}),
+        });
+      },
+    });
+    this.capabilities.register({
+      descriptor: low("hsf.security.document-seal.verify", "verification", "IGDS-v1: verifica integridad + firma Ed25519 de un manifiesto de sello documental (fail-closed)."),
+      health: () => "ready",
+      execute: async (input) => {
+        const value = input as { manifest?: DocumentSealManifest; contentBase64?: string; publicKeyPem?: string };
+        if (!value.manifest || typeof value.contentBase64 !== "string" || typeof value.publicKeyPem !== "string") {
+          throw new Error("DOCUMENT_SEAL_VERIFY_INPUT_REQUIRED");
+        }
+        return this.verifyDocumentSeal({
+          manifest: value.manifest,
+          bytes: Buffer.from(value.contentBase64, "base64"),
+          publicKeyPem: value.publicKeyPem,
+        });
       },
     });
   }
@@ -872,6 +921,70 @@ export class IsabellaGenesisRuntime {
       },
     });
     return plan;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* IGDS-v1 Document Seal — integridad y procedencia de documentos      */
+  /* ------------------------------------------------------------------ */
+
+  /**
+   * Llave Ed25519 usada para sellar documentos. Se carga de
+   * `GENESIS_DOCUMENT_SEAL_KEY_PEM` (PKCS#8) si está presente; en caso contrario
+   * se genera una efímera en memoria. Una llave efímera NO persiste entre
+   * reinicios: la verificación posterior requiere la llave pública que viaja en
+   * el manifiesto. Estado honesto: Ed25519 real; RFC 3161/C2PA/PQC no soportados.
+   */
+  documentSealSigner(): Ed25519Signer {
+    if (!this.documentSealSignerInstance) {
+      const pem = process.env.GENESIS_DOCUMENT_SEAL_KEY_PEM?.trim();
+      this.documentSealSignerInstance = pem
+        ? Ed25519Signer.fromPem(pem, "genesis-document-seal")
+        : Ed25519Signer.generate("genesis-document-seal-ephemeral");
+    }
+    return this.documentSealSignerInstance;
+  }
+
+  /**
+   * IGDS-v1: sella un documento con integridad SHA-256 + firma Ed25519 y marca
+   * de agua textual. Sellar documenta procedencia; NO autoriza, NO publica y NO
+   * concede timestamp de confianza ni C2PA.
+   */
+  async sealDocument(input: SealDocumentInput): Promise<DocumentSealManifest> {
+    const manifest = await sealDocumentManifest(input, this.documentSealSigner());
+    this.events.publish({
+      topic: "security.document.sealed",
+      type: manifest.schema,
+      payload: {
+        sealId: manifest.sealId,
+        compactId: manifest.compactId,
+        documentId: manifest.document.id,
+        sha256: manifest.content.sha256,
+        bytes: manifest.content.bytes,
+        keyId: manifest.signer.keyId,
+      },
+    });
+    return manifest;
+  }
+
+  /** IGDS-v1: verifica un sello (fail-closed: integridad + firma Ed25519). */
+  async verifyDocumentSeal(input: VerifySealInput): Promise<SealVerificationReport> {
+    const report = await verifyDocumentSealManifest(input);
+    this.events.publish({
+      topic: "security.document.seal.verified",
+      type: report.valid ? "VALID" : "INVALID",
+      payload: {
+        sealId: report.sealId,
+        valid: report.valid,
+        integrity: report.integrity,
+        signature: report.signature,
+      },
+    });
+    return report;
+  }
+
+  /** Reporte honesto de lo implementado y lo no soportado por el sello IGDS-v1. */
+  documentSealEnablement(): DocumentSealEnablement {
+    return documentSealEnablementReport();
   }
 
   /** MAGPIE-X: publica un evento gobernado en el bus en proceso. Transporta intención, no autoriza ejecución. */

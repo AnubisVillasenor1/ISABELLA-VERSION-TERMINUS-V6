@@ -11,7 +11,7 @@
 
 **≈ 60% — estimación global provisional de readiness (rango honesto: 54–64%).**
 
-Es una **estimación de ingeniería, no una certificación**. Se calcula como media ponderada de dominios verificados de forma reproducible en la rama, con los gates externos penalizados en su estado real (no en su intención). El movimiento desde la base anterior (48% → ≈52%) y ahora hasta ≈60% proviene de trabajo implementado y probado en la rama: **86 rutas HTTP** (incluidas la superficie OpenAI-compatible `/v1`, los endpoints de Permission Map Ω y el planificador de ruta turbo), un **bus de eventos gobernado en proceso** (`src/messaging/magpie.ts`), un **guard de anclaje de evidencia** fail-closed (`src/veritas/grounding.ts`), una **superficie compatible con OpenAI** (`src/routes/openai.ts`), un **motor de mapeo de permisos con consentimiento humano** (`src/governance/permission-map.ts`), un **planificador de ruta de baja latencia, federado y ético** (`src/intelligence/turbo-planner.ts`), una **capa multimodal** de visión y síntesis de imagen (`src/inference/multimodal.ts`), una **capa de voz** TTS/STT (`src/inference/speech.ts`), el espacio de trabajo app-shell de chat con adjuntar archivo de contexto y escucha por Web Speech (la imagen se analiza vía `POST /api/v1/cognition/vision`), y una readiness local de **1120 pruebas / 191 archivos**. No proviene de dar por conectados adaptadores externos que siguen sin credenciales ni entorno objetivo.
+Es una **estimación de ingeniería, no una certificación**. Se calcula como media ponderada de dominios verificados de forma reproducible en la rama, con los gates externos penalizados en su estado real (no en su intención). El movimiento desde la base anterior (48% → ≈52%) y ahora hasta ≈60% proviene de trabajo implementado y probado en la rama: **89 rutas HTTP** (incluidas la superficie OpenAI-compatible `/v1`, los endpoints de Permission Map Ω, el planificador de ruta turbo y el sello documental IGDS-v1), un **bus de eventos gobernado en proceso** (`src/messaging/magpie.ts`), un **guard de anclaje de evidencia** fail-closed (`src/veritas/grounding.ts`), una **superficie compatible con OpenAI** (`src/routes/openai.ts`), un **motor de mapeo de permisos con consentimiento humano** (`src/governance/permission-map.ts`), un **planificador de ruta de baja latencia, federado y ético** (`src/intelligence/turbo-planner.ts`), un **sello de procedencia documental** (integridad SHA-256 + firma Ed25519 + marca de agua, `src/security/document-seal.ts`), una **capa multimodal** de visión y síntesis de imagen (`src/inference/multimodal.ts`), una **capa de voz** TTS/STT (`src/inference/speech.ts`), el espacio de trabajo app-shell de chat con adjuntar archivo de contexto y escucha por Web Speech (la imagen se analiza vía `POST /api/v1/cognition/vision`), y una readiness local de **1133 pruebas / 193 archivos**. No proviene de dar por conectados adaptadores externos que siguen sin credenciales ni entorno objetivo.
 
 | Dominio | Estado real | Readiness |
 |---|---|---|
@@ -239,6 +239,30 @@ como método `runtime.planTurboRoute()`, y como endpoint
 `POST /api/v1/intelligence/turbo-plan` (admin-gated); emite el evento
 `intelligence.turbo.planned`.
 
+### IGDS-v1 Document Seal (integridad y procedencia de documentos)
+
+`src/security/document-seal.ts` resuelve la **procedencia de documentos generados**:
+sella un documento con **integridad SHA-256** del contenido, una **firma Ed25519 real**
+(`node:crypto`, FIPS 186-5) y una **marca de agua textual**, y devuelve un
+**manifiesto** auditable (schema `igds.document-seal.v1`) con identificador compacto
+base32, huella del contenido, firmante, marca de agua y encadenamiento al sello previo
+(`hashChain.prevSealId`). La verificación es **fail-closed**: recalcula el digest,
+comprueba el tamaño y valida la firma contra la llave pública del manifiesto; cualquier
+discrepancia devuelve `integridad`/`firma` inválidas y `valid:false`. **Estado honesto:**
+implementa SHA-256 + Ed25519 + base32 + marca de agua, y declara explícitamente como
+**no soportados** el timestamp de confianza **RFC 3161**, las firmas post-cuánticas
+(ML-DSA), **C2PA** y la verificación contra un registro externo — nunca se simulan.
+La llave de firma se carga de `GENESIS_DOCUMENT_SEAL_KEY_PEM` (PKCS#8) o, si falta, se
+genera una **efímera en memoria** (no persiste entre reinicios; la llave pública siempre
+viaja dentro de cada manifiesto). Invariante: **sellar documenta integridad y
+procedencia; no autoriza, no publica y no concede timestamp de confianza.** Se expone
+como facultades `hsf.security.document-seal` y `hsf.security.document-seal.verify`, como
+métodos `runtime.sealDocument()` / `runtime.verifyDocumentSeal()` /
+`runtime.documentSealEnablement()`, y como endpoints
+`POST /api/v1/security/document-seal`, `POST /api/v1/security/document-seal/verify` y
+`GET /api/v1/security/document-seal` (admin-gated); emite los eventos
+`security.document.sealed` y `security.document.seal.verified`.
+
 ### Superficie HTTP (admin-gated)
 
 Requieren `HYPERCORE_API_TOKEN` (`Authorization: Bearer …`) y aplican rate limit:
@@ -388,7 +412,7 @@ En producción, las rutas con coste o capacidades de proveedor (`/api/v1/tools/e
     pnpm run security:suite
     pnpm run production:evidence
 
-Evidencia local reproducida en la rama actual: `pnpm typecheck` exit 0; `pnpm test` **1120 aprobadas / 191 archivos** (incluye `test/intelligence/turbo-planner.test.ts`, `test/inference/multimodal.test.ts`, `test/inference/speech.test.ts` y las pruebas de integración por red `*.integration.test.ts`); `pnpm run build` exit 0 (tsc + vitest + esbuild + smoke UI + smoke runtime, que ahora incluye `MULTIMODAL_SPEECH_GUARDRAILS_OK`); `pnpm run security:suite` **14 passed / 0 failed / 0 not_applicable**. La inferencia de texto externa se verificó en vivo el 2026-10-13 con Groq (`HTTP 200`, `openai/gpt-oss-20b`) y Ollama Cloud (`responseEngine: "open-science"`); el **STT de Groq (`whisper-large-v3`) se verificó en vivo** por la ruta gobernada `POST /api/v1/cognition/transcribe` (texto transcrito correcto); además, la **visión (imagen→texto) se verificó en vivo** con Ollama local (`qwen2.5vl:7b`) por `POST /api/v1/cognition/vision` (`success:true`, `provider:"local"`, descripción correcta), aunque la síntesis de imagen sigue sin proveedor; Hugging Face autentica pero devuelve `HTTP 402` por falta de créditos, y el TTS de Groq exige aceptar términos (`HTTP 400 model_terms_required`). Un test verde demuestra una capacidad computacional local, **no** autoridad, aprendizaje ni producción.
+Evidencia local reproducida en la rama actual: `pnpm typecheck` exit 0; `pnpm test` **1133 aprobadas / 193 archivos** (incluye `test/intelligence/turbo-planner.test.ts`, `test/security/document-seal-runtime.test.ts`, `test/routes/document-seal.test.ts`, `test/inference/multimodal.test.ts`, `test/inference/speech.test.ts` y las pruebas de integración por red `*.integration.test.ts`); `pnpm run build` exit 0 (tsc + vitest + esbuild + smoke UI + smoke runtime, que ahora incluye `MULTIMODAL_SPEECH_GUARDRAILS_OK`); `pnpm run security:suite` **14 passed / 0 failed / 0 not_applicable**. La inferencia de texto externa se verificó en vivo el 2026-10-13 con Groq (`HTTP 200`, `openai/gpt-oss-20b`) y Ollama Cloud (`responseEngine: "open-science"`); el **STT de Groq (`whisper-large-v3`) se verificó en vivo** por la ruta gobernada `POST /api/v1/cognition/transcribe` (texto transcrito correcto); además, la **visión (imagen→texto) se verificó en vivo** con Ollama local (`qwen2.5vl:7b`) por `POST /api/v1/cognition/vision` (`success:true`, `provider:"local"`, descripción correcta), aunque la síntesis de imagen sigue sin proveedor; Hugging Face autentica pero devuelve `HTTP 402` por falta de créditos, y el TTS de Groq exige aceptar términos (`HTTP 400 model_terms_required`). Un test verde demuestra una capacidad computacional local, **no** autoridad, aprendizaje ni producción.
 
 ## Gates pendientes para liberar
 

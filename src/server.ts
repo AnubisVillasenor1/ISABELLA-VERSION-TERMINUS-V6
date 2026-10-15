@@ -44,6 +44,7 @@ import { registerHyperCoreRoutes } from "./routes/hypercore";
 import { registerOpenAiCompatibleRoutes } from "./routes/openai";
 import { registerOrderPermissionRoutes } from "./routes/governance-permissions";
 import { registerTurboPlannerRoutes } from "./routes/turbo-planner";
+import { registerDocumentSealRoutes } from "./routes/document-seal";
 
 const app: Application = express();
 app.disable("x-powered-by");
@@ -5131,6 +5132,19 @@ registerOrderPermissionRoutes({
 registerTurboPlannerRoutes({
   app,
   planTurboRoute: (request) => runtime.planTurboRoute(request),
+  enforceRateLimit,
+  rateLimiter: publicScanLimiter,
+  authorizeAdmin: (req, res) => authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN"),
+});
+
+// ── IGDS-v1 Document Seal (state: draft | engine-generated) ─ sella un documento con
+// integridad SHA-256 + firma Ed25519 y verifica su manifiesto (fail-closed). Sellar NO
+// autoriza, NO publica; RFC 3161/C2PA/PQC quedan declarados como no soportados.
+registerDocumentSealRoutes({
+  app,
+  sealDocument: (input) => runtime.sealDocument(input),
+  verifyDocumentSeal: (input) => runtime.verifyDocumentSeal(input),
+  documentSealEnablement: () => runtime.documentSealEnablement(),
   enforceRateLimit,
   rateLimiter: publicScanLimiter,
   authorizeAdmin: (req, res) => authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN"),
