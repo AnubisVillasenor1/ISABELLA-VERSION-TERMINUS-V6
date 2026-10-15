@@ -4,13 +4,15 @@ const intro = byId('cinematicIntro');
 const immersionGate = byId('immersionGate');
 const startImmersion = byId('startImmersion');
 const introVideo = byId('introVideo');
+const introAudioFallback = byId('introAudioFallback');
 const introScenes = [...document.querySelectorAll('.intro-scene')];
+let useAudioFallback = false;
 const introProgressBar = byId('introProgressBar');
 const introSceneLabel = byId('introSceneLabel');
 const introTimecode = byId('introTimecode');
 const skipIntro = byId('skipIntro');
 const INTRO_SCENE_MS = 4_200;
-const INTRO_TOTAL_MS = INTRO_SCENE_MS * introScenes.length;
+let introTotalMs = INTRO_SCENE_MS * introScenes.length;
 const introLabels = [
   'SECUENCIA 01 · APERTURA', 'SECUENCIA 02 · EL ORIGEN', 'SECUENCIA 03 · LA CALLE',
   'SECUENCIA 04 · NUESTRA GENTE', 'SECUENCIA 05 · RESILIENCIA', 'SECUENCIA 06 · IDENTIDAD',
@@ -43,22 +45,41 @@ const startIntroMedia = async () => {
       }
     }
     await introVideo.play();
-  } catch { introVideo.controls = true; }
+  } catch {
+    useAudioFallback = true;
+    introVideo.muted = true;
+    if (introAudioFallback) {
+      introAudioFallback.currentTime = 0;
+      introAudioFallback.volume = 1;
+      await introAudioFallback.play().catch(() => undefined);
+    }
+    await introVideo.play().catch(() => undefined);
+  }
 };
 const stopIntroMedia = () => {
-  if (!introVideo) return;
-  introVideo.pause();
-  introVideo.currentTime = 0;
+  introVideo?.pause();
+  if (introVideo) introVideo.currentTime = 0;
+  introAudioFallback?.pause();
+  if (introAudioFallback) introAudioFallback.currentTime = 0;
 };
+introVideo?.addEventListener('loadedmetadata', () => {
+  if (Number.isFinite(introVideo.duration) && introVideo.duration > 1) {
+    introTotalMs = Math.max(INTRO_SCENE_MS * introScenes.length, introVideo.duration * 1000);
+  }
+});
+introVideo?.addEventListener('ended', () => {
+  if (!useAudioFallback) dismissIntro();
+});
 const dismissIntro = () => {
   window.clearInterval(introTimer);
   stopIntroMedia();
+  immersionGate?.classList.add('is-accepted');
   intro?.classList.add('is-dismissed');
   document.body.classList.remove('intro-lock');
 };
 const advanceIntro = (elapsed = performance.now() - introStartedAt) => {
   if (!intro || !introScenes.length) return;
-  const boundedElapsed = Math.max(0, Math.min(elapsed, INTRO_TOTAL_MS));
+  const boundedElapsed = Math.max(0, Math.min(elapsed, introTotalMs));
   const sceneIndex = Math.min(introScenes.length - 1, Math.floor(boundedElapsed / INTRO_SCENE_MS));
   intro.dataset.scene = String(sceneIndex);
   introScenes.forEach((scene, index) => {
@@ -67,9 +88,9 @@ const advanceIntro = (elapsed = performance.now() - introStartedAt) => {
     scene.setAttribute('aria-hidden', String(!active));
   });
   if (introSceneLabel) introSceneLabel.textContent = introLabels[sceneIndex] || `SECUENCIA ${String(sceneIndex + 1).padStart(2, '0')}`;
-  if (introProgressBar) introProgressBar.style.width = `${(boundedElapsed / INTRO_TOTAL_MS) * 100}%`;
-  if (introTimecode) introTimecode.textContent = `${formatIntroTime(boundedElapsed)} / ${formatIntroTime(INTRO_TOTAL_MS)}`;
-  if (boundedElapsed >= INTRO_TOTAL_MS) dismissIntro();
+  if (introProgressBar) introProgressBar.style.width = `${(boundedElapsed / introTotalMs) * 100}%`;
+  if (introTimecode) introTimecode.textContent = `${formatIntroTime(boundedElapsed)} / ${formatIntroTime(introTotalMs)}`;
+  if (boundedElapsed >= introTotalMs) dismissIntro();
 };
 if (intro) {
   const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -100,6 +121,14 @@ if (intro) {
     startImmersion?.addEventListener('click', beginImmersion, { once: true });
   }
 }
+document.querySelectorAll('.rail-launcher').forEach((launcher) => {
+  launcher.addEventListener('click', () => {
+    const targetId = launcher.getAttribute('aria-controls');
+    const target = targetId ? byId(targetId) : null;
+    const isOpen = target?.classList.toggle('is-open') ?? false;
+    launcher.setAttribute('aria-expanded', String(isOpen));
+  });
+});
 document.querySelectorAll('.workspace-mode').forEach((button) => {
   button.addEventListener('click', () => {
     const layout = button.dataset.layout || 'chat';

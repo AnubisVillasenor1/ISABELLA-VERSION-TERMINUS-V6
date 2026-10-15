@@ -21,9 +21,12 @@
         <small>Proyecto desarrollado con <span aria-label="amor">amor</span> y orgullo latinoamericano.</small>
       </div>
     </div>
-    <video id="introVideo" class="intro-video" preload="auto" muted playsinline aria-hidden="true">
+    <video id="introVideo" class="intro-video" preload="auto" playsinline aria-hidden="true">
       <source src="/assets/video/IsabellaVideoIntro.mp4" type="video/mp4" />
     </video>
+    <audio id="introAudioFallback" preload="auto" aria-hidden="true">
+      <source src="/assets/audio/IntroIsabella.mp3" type="audio/mpeg" />
+    </audio>
     <div class="intro-video-tint" aria-hidden="true"></div>
     <div class="intro-backdrop" aria-hidden="true">
       <span class="intro-grid"></span><span class="intro-sun"></span><span class="intro-scan"></span>
@@ -79,12 +82,16 @@
         <button id="navToggle" class="nav-toggle" type="button" aria-expanded="false" aria-controls="primaryLinks" aria-label="Abrir navegación">Menú <span aria-hidden="true">⌄</span></button>
       </div>
     </nav>
-    <div class="side-rail rail-left" aria-label="Navegación lateral izquierda">
+    <button class="rail-launcher rail-launcher-left" type="button" aria-expanded="false" aria-controls="leftRail">◀ <span>NAVEGACIÓN</span></button>
+    <div id="leftRail" class="side-rail rail-left" aria-label="Navegación lateral izquierda">
+      <div class="rail-heading">COMANDOS <span>01—03</span></div>
       <details class="rail-panel"><summary><span class="rail-index">01</span> CONTEXTO</summary><nav><a href="#chat">Conversación</a><a href="#studio">Memoria local</a></nav></details>
       <details class="rail-panel"><summary><span class="rail-index">02</span> CREACIÓN</summary><nav><a href="#design">Diseño</a><a href="#chat">Redacción</a></nav></details>
       <details class="rail-panel"><summary><span class="rail-index">03</span> GOBERNANZA</summary><nav><a href="#governance">Evidencia</a><a href="#control">Control humano</a></nav></details>
     </div>
-    <div class="side-rail rail-right" aria-label="Navegación lateral derecha">
+    <button class="rail-launcher rail-launcher-right" type="button" aria-expanded="false" aria-controls="rightRail"><span>NAVEGACIÓN</span> ▶</button>
+    <div id="rightRail" class="side-rail rail-right" aria-label="Navegación lateral derecha">
+      <div class="rail-heading">SURFACES <span>04—06</span></div>
       <details class="rail-panel"><summary><span class="rail-index">04</span> RUNTIME</summary><nav><a href="#chat">Estado</a><a href="#control">Métricas</a></nav></details>
       <details class="rail-panel"><summary><span class="rail-index">05</span> HERRAMIENTAS</summary><nav><a href="#tools">Tools</a><a href="#skills">Skills</a></nav></details>
       <details class="rail-panel"><summary><span class="rail-index">06</span> SESIÓN</summary><nav><a href="#chat">Nueva sesión</a><a href="#top">Cerrar contexto</a></nav></details>
