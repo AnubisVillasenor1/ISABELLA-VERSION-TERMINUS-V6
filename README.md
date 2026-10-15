@@ -8,7 +8,7 @@ La inteligencia propone, calcula y evalúa. La autoridad humana decide, aprueba,
 
 ## Estado honesto de producción
 
-**Readiness estimada: 80% del código local preparado para integración y despliegue; producción no certificada.** Esta cifra distingue código implementado de dependencias externas que todavía requieren configuración, revisión humana y pruebas en un entorno real.
+**Avance global estimado: 84% de implementación local funcional; readiness de producción: 76%.** El primer porcentaje mide código operativo cubierto por contratos, tests y smoke checks; el segundo descuenta persistencia durable, configuración de infraestructura, observabilidad externa, revisión humana nominal y evidencia E2E. Producción no está certificada ni declarada `wired`.
 
 | Área | Estado | Evidencia / bloqueo |
 |---|---|---|
@@ -18,8 +18,9 @@ La inteligencia propone, calcula y evalúa. La autoridad humana decide, aprueba,
 | Workspace de Isabella | Implementado | Chat-first, intro cinematográfico, video, rails plegables y layouts |
 | Video de intro | Implementado localmente | MP4 servido con cache; Mux no está disponible como integración conectable en este proyecto |
 | Stripe | Conectado | Disponible para Checkout/donaciones; usar webhooks e idempotencia antes de producción |
-| Supabase | Disponible en el entorno | Requiere validar esquema/RLS y flujo de autenticación en entorno objetivo |
-| Neon/Postgres | Variables disponibles | Persistencia distribuida requiere prueba E2E |
+| Supabase | Variables disponibles | Requiere validar esquema/RLS y flujo de autenticación en entorno objetivo |
+| Neon/Postgres | Variables disponibles | Persistencia distribuida requiere prueba E2E y migraciones reproducibles |
+| Mux | Variables disponibles | Adaptador operativo aún requiere validar playback/asset real en entorno objetivo |
 | Kubernetes | Manifiestos autorados | No implica que exista un clúster aplicado |
 | CI/CD y despliegue | Automatizable | Requiere secretos, entorno objetivo y aprobación humana |
 
@@ -134,7 +135,11 @@ El ledger JSONL mantiene una cadena hash, `fsync`, backups atómicos, restauraci
 - `POST /api/v1/cognition/vision` — imagen a descripción.
 - `POST /api/v1/cognition/image` — prompt a imagen.
 - `POST /api/v1/cognition/speech` — texto a audio.
-- `POST /api/v1/cognition/transcribe` — audio a texto.
+  - `POST /api/v1/cognition/transcribe` — audio a texto.
+  - `POST /api/v1/yun/events` — recibe un evento YUN canónico, verifica integridad y lo registra en BookPI; requiere `GENESIS_ADMIN_API_TOKEN`.
+  - `GET /api/v1/yun/events?limit=20` — expone únicamente metadatos saneados de eventos YUN recientes.
+
+Las rutas mutantes fallan cerrado cuando falta configuración. `X-Request-ID` se genera o propaga en cada respuesta; en producción se añade HSTS. Ningún request ID sustituye autenticación, autorización humana o evidencia de despliegue.
 
 Las rutas sensibles aplican autenticación, límites de tamaño, rate limiting y fallo cerrado cuando falta una dependencia.
 

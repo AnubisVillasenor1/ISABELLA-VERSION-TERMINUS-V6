@@ -44,11 +44,16 @@ import { createYunEvent, verifyYunEvent, type YunEventInput } from "./federation
 
 const app: Application = express();
 app.disable("x-powered-by");
-app.use((_req, res, next) => {
+app.use((req, res, next) => {
+  const requestId = req.get("x-request-id")?.trim() || randomUUID();
+  res.setHeader("X-Request-ID", requestId);
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Frame-Options", "DENY");
   res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
   res.setHeader("Permissions-Policy", "camera=(), microphone=(self)");
+  if (process.env.NODE_ENV === "production") {
+    res.setHeader("Strict-Transport-Security", "max-age=63072000");
+  }
   next();
 });
 const latencyRegistry = new LatencyRegistry(100, 512);
@@ -594,7 +599,7 @@ const CROWN_NODES = [
   { id: "ISA", name: "Isa Musa", role: "Empatía, percepción e identidad biocultural", federation: "FED-1 Identidad", status: "DECLARED", weight: 0.95, icon: "🌸" },
   { id: "SOPHIA", name: "Sophia Dialéctica", role: "Razonamiento dialéctico, debate y síntesis", federation: "FED-3 Datos/IA", status: "DECLARED", weight: 0.98, icon: "🦉" },
   { id: "ORION", name: "Orion Executor", role: "Ejecución de herramientas y acciones coordinadas", federation: "FED-5 Infraestructura", status: "DECLARED", weight: 0.92, icon: "⚔️" },
-  { id: "ARGUS", name: "Argus Sentinel", role: "Seguridad Zero Trust y firewall ético", federation: "FED-1 Gobernanza", status: "DECLARED", weight: 1.00, icon: "🛡️" },
+  { id: "ARGUS", name: "Argus Sentinel", role: "Seguridad Zero Trust y firewall ético", federation: "FED-1 Gobernanza", status: "DECLARED", weight: 1.00, icon: "🛡���" },
   { id: "CROWN", name: "Crown Gateway", role: "Gateway soberano, arbitraje y control de flujo", federation: "FED-1 Gobernanza", status: "DECLARED", weight: 0.96, icon: "👑" },
   { id: "MNEMOSYNE", name: "Mnemosyne Memory", role: "Memoria episódica, semántica y procedencia IKES", federation: "FED-3 Datos/IA", status: "DECLARED", weight: 0.90, icon: "📜" },
   { id: "TELLUS", name: "Tellus Territorio", role: "Territorio, cartografía y Nodo Cero (RDM)", federation: "FED-6 Inmersión", status: "DECLARED", weight: 0.94, icon: "🏔️" },
