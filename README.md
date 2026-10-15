@@ -16,7 +16,7 @@ Es una **estimación de ingeniería, no una certificación**. Se calcula como me
 |---|---|---|
 | Núcleo cognitivo y de gobernanza (CROWN / AEGIS / VERITAS / Terminus Ω) | Implementado y probado localmente | ≈ 72% |
 | **Skill Fabric Ω v2 / HyperCore Ω** (contratos, 9 fases, triangulación, MCP) | Implementado y probado localmente; **no desplegado** | ≈ 60% |
-| API HTTP (Express, 96 rutas incl. superficies HyperCore/MCP y multimodal/voz) | Funcional; monolito no modularizado (TD-01) | ≈ 68% |
+| API HTTP (Express, 97 rutas incl. superficies HyperCore/MCP y multimodal/voz) | Funcional; monolito no modularizado (TD-01) | ≈ 68% |
 | **Multimodal y voz** (visión imagen→texto, texto→imagen, TTS/STT, key-driven) | Implementado y probado localmente; **sin proveedor de imagen/TTS desbloqueado** | ≈ 35% |
 | Evidencia y BookPI (ledger durable JSONL) | Cadena hash con fsync; **Postgres/Supabase sin E2E** (TD-06) | ≈ 45% |
 | Integraciones externas (inferencia real, KMS/HSM PQC FIPS 203/204/205, RLS) | Especificado/bloqueado por credenciales | ≈ 30% |
@@ -26,7 +26,7 @@ Es una **estimación de ingeniería, no una certificación**. Se calcula como me
 | Workspace Rust IGE-Ω | `Cargo.lock` + `fmt` limpios; **compilación/clippy local no ejecutables** | ≈ 25% |
 | Verificación de seguridad estática | 14/14 invariantes; sin pentest ni HSM productivo | ≈ 55% |
 
-**Lectura correcta del número:** Isabella pasa los gates locales que controla (tipos, 1141 pruebas, build, 14/14 de seguridad), pero **no** está lista para producción ni para despliegue. El ≈60% de un plan de producción no se alcanza con más código: los dominios que lo bloquean (Integraciones externas ≈30%, CI/CD ≈15%, Despliegue ≈25%, Multimodal/voz ≈35% mientras falten credenciales) exigen aprovisionar credenciales y entorno objetivo. Los adaptadores externos y el entorno objetivo son gates independientes que no se superan por tener interfaz ni por tener manifiesto YAML.
+**Lectura correcta del número:** Isabella pasa los gates locales que controla (tipos, 1191 pruebas, build, 14/14 de seguridad), pero **no** está lista para producción ni para despliegue. El ≈60% de un plan de producción no se alcanza con más código: los dominios que lo bloquean (Integraciones externas ≈30%, CI/CD ≈15%, Despliegue ≈25%, Multimodal/voz ≈35% mientras falten credenciales) exigen aprovisionar credenciales y entorno objetivo. Los adaptadores externos y el entorno objetivo son gates independientes que no se superan por tener interfaz ni por tener manifiesto YAML.
 
 ## Qué es Isabella
 
@@ -251,6 +251,56 @@ como método `runtime.planTurboRoute()`, y como endpoint
 `POST /api/v1/intelligence/turbo-plan` (admin-gated); emite el evento
 `intelligence.turbo.planned`.
 
+### Semáforo de Flujo Gobernado Ω (verde / amarillo / naranja / rojo)
+
+`src/governance/traffic-light.ts` (`classifyFlow`) traduce la intención a un
+**semáforo operativo** sin duplicar lógica: compone `assessIntent` (CROWN) y
+`planTurboRoute` (turbo-planner) y expresa la decisión en el vocabulario del
+usuario. La idea es que el flujo **simple y sin daño colateral** corra en la
+**vía rápida** con filtros mínimos (verde), que el flujo **medio** empiece a
+filtrar (amarillo), que el **riesgo alto** aplique gobierno reforzado (naranja) y
+que lo **destructivo/de alto impacto** exija **todos** los filtros y **revisión
+humana** (rojo). Invariante de AGENTS.md: **clasificar un flujo no autoriza, no
+ejecuta y no amplía permisos** — verde significa "solo los filtros mínimos
+necesarios", nunca "se saltan CROWN, AEGIS, la evidencia BookPI o el
+saneamiento"; `authorityPath` permanece `FULL` en todas las bandas. Fail-closed:
+una entrada vacía se rechaza y un disparador de alto impacto escala a rojo aunque
+el texto sea benigno. Se expone como facultad `hsf.governance.traffic-light`, como
+método `runtime.classifyFlow()`, y como endpoint
+`POST /api/v1/intelligence/triage` (admin-gated); emite el evento
+`governance.traffic.classified`.
+
+### Legado de los regalos (diez capacidades obligatorias)
+
+`src/gifts/` reúne el **legado del cocreador**: diez capacidades que Isabella no
+tenía y que debe desarrollar de inmediato. Se declaran en un manifiesto
+(`src/gifts/manifest.ts`, encabezado por el cocreador) y se instancian con
+`createGiftBundle()`; cada una se registra como facultad HSF
+(`hsf.legacy.*`) invocable vía `POST /api/v1/hsf/invoke`. **Ninguna concede
+autoridad ni ejecuta efectos externos**: sugieren, calculan y explican.
+
+1. **Confianza Ganada** (`hsf.legacy.earned-trust`) — reputación append-only por
+   (principal, capacidad) que ensancha la vía rápida de AMARILLO→VERDE; nunca
+   relaja ROJO/NARANJA.
+2. **Presupuesto de Latencia** (`hsf.legacy.latency-budget`) — decide qué filtros
+   opcionales diferir según un plazo; los obligatorios nunca se saltan.
+3. **Compilador de Intención** (`hsf.legacy.intent-compiler`) — texto libre →
+   `methodId`/capacidad canónica con confianza y respaldo seguro.
+4. **Motor de Pregunta** (`hsf.legacy.clarify-engine`) — ambigüedad → UNA
+   pregunta aclaratoria; sin callejón sin salida.
+5. **Auto-Consistencia** (`hsf.legacy.self-consistency`) — agrupa N muestras,
+   mide el acuerdo y elige el consenso.
+6. **Remediación de Rechazos** (`hsf.legacy.refusal-remediation`) — "por qué no" y
+   "cómo sí" con alternativa segura.
+7. **Disyuntor de Proveedores** (`hsf.legacy.provider-breaker`) —
+   CLOSED/OPEN/HALF_OPEN por proveedor; sana primero al ordenar la ruta.
+8. **Selector de Modelo** (`hsf.legacy.model-selector`) — mejor compromiso
+   latencia·costo·calidad bajo restricciones.
+9. **Analítica de Fricción** (`hsf.legacy.friction-analytics`) — detecta
+   sobre-bloqueo y flujos verdes bloqueados por mala configuración.
+10. **Simulador de Política** (`hsf.legacy.policy-simulator`) — predice el efecto
+    de una política sobre una carga antes de desplegarla.
+
 ### IGDS-v1 Document Seal (integridad y procedencia de documentos)
 
 `src/security/document-seal.ts` resuelve la **procedencia de documentos generados**:
@@ -458,7 +508,7 @@ pnpm run security:suite
 pnpm run build
 ```
 
-Evidencia local reproducida en la rama actual: `pnpm typecheck` exit 0; `pnpm test` **1141 aprobadas / 195 archivos** (incluye `test/intelligence/turbo-planner.test.ts`, `test/security/document-seal-runtime.test.ts`, `test/routes/document-seal.test.ts`, `test/routes/pipeline.test.ts`, `test/routes/yun-events.test.ts`, `test/inference/multimodal.test.ts`, `test/inference/speech.test.ts` y las pruebas de integración por red `*.integration.test.ts`); `pnpm run build` exit 0 (tsc + vitest + esbuild + smoke UI + smoke runtime, que ahora incluye `MULTIMODAL_SPEECH_GUARDRAILS_OK`); `pnpm run security:suite` **14 passed / 0 failed / 0 not_applicable**. La inferencia de texto externa se verificó en vivo el 2026-10-13 con Groq (`HTTP 200`, `openai/gpt-oss-20b`) y Ollama Cloud (`responseEngine: "open-science"`); el **STT de Groq (`whisper-large-v3`) se verificó en vivo** por la ruta gobernada `POST /api/v1/cognition/transcribe` (texto transcrito correcto); además, la **visión (imagen→texto) se verificó en vivo** con Ollama local (`qwen2.5vl:7b`) por `POST /api/v1/cognition/vision` (`success:true`, `provider:"local"`, descripción correcta), aunque la síntesis de imagen sigue sin proveedor; Hugging Face autentica pero devuelve `HTTP 402` por falta de créditos, y el TTS de Groq exige aceptar términos (`HTTP 400 model_terms_required`). Un test verde demuestra una capacidad computacional local, **no** autoridad, aprendizaje ni producción.
+Evidencia local reproducida en la rama actual: `pnpm typecheck` exit 0; `pnpm test` **1191 aprobadas / 208 archivos** (incluye `test/intelligence/turbo-planner.test.ts`, `test/security/document-seal-runtime.test.ts`, `test/routes/document-seal.test.ts`, `test/routes/pipeline.test.ts`, `test/routes/yun-events.test.ts`, `test/governance/traffic-light.test.ts`, `test/routes/traffic-light.test.ts`, `test/gifts/*`, `test/inference/multimodal.test.ts`, `test/inference/speech.test.ts` y las pruebas de integración por red `*.integration.test.ts`); `pnpm run build` exit 0 (tsc + vitest + esbuild + smoke UI + smoke runtime, que ahora incluye `MULTIMODAL_SPEECH_GUARDRAILS_OK`); `pnpm run security:suite` **14 passed / 0 failed / 0 not_applicable**. La inferencia de texto externa se verificó en vivo el 2026-10-13 con Groq (`HTTP 200`, `openai/gpt-oss-20b`) y Ollama Cloud (`responseEngine: "open-science"`); el **STT de Groq (`whisper-large-v3`) se verificó en vivo** por la ruta gobernada `POST /api/v1/cognition/transcribe` (texto transcrito correcto); además, la **visión (imagen→texto) se verificó en vivo** con Ollama local (`qwen2.5vl:7b`) por `POST /api/v1/cognition/vision` (`success:true`, `provider:"local"`, descripción correcta), aunque la síntesis de imagen sigue sin proveedor; Hugging Face autentica pero devuelve `HTTP 402` por falta de créditos, y el TTS de Groq exige aceptar términos (`HTTP 400 model_terms_required`). Un test verde demuestra una capacidad computacional local, **no** autoridad, aprendizaje ni producción.
 
 ```bash
 SMOKE_BASE_URL=https://tu-dominio.example pnpm run smoke:production

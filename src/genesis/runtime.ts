@@ -2,6 +2,7 @@ import { evaluateCrown, type CrownEvaluationInput, type CrownVerdict } from "../
 import { inspectAegis, type AegisVerdict } from "../security/aegis";
 import { planExecution, type AdaptivePlan, type AdaptiveRequest } from "../intelligence/adaptive-router";
 import { planTurboRoute as buildTurboPlan, type TurboPlan, type TurboRequest } from "../intelligence/turbo-planner";
+import { classifyFlow as classifyTrafficFlow, type TrafficLightInput, type TrafficLightVerdict } from "../governance/traffic-light";
 import { InMemoryTelemetry, sloSnapshot, type TelemetrySink } from "../observability/telemetry";
 import { IKESEngine } from "../memory/ikes";
 import { ToolRegistry, type ToolAuthorization, type ToolReceipt } from "../tools/registry";
@@ -104,6 +105,7 @@ import {
   selfEvaluate,
   verifyClaim,
 } from "../capabilities";
+import { createGiftBundle, type GiftBundle } from "../gifts";
 
 export interface GenesisRuntimeInput extends CrownEvaluationInput, AdaptiveRequest {
   memoryQuery?: string;
@@ -146,6 +148,8 @@ export class IsabellaGenesisRuntime {
   readonly lsp = new LspValidationAdapter();
   readonly mutations = new EntityMutationManager();
   readonly events = new MagpieBus();
+  /** Legado de los regalos: diez capacidades que Isabella debe desarrollar. */
+  readonly gifts: GiftBundle = createGiftBundle();
   /** Llave Ed25519 del sello documental IGDS; perezosa (env PEM o efímera). */
   private documentSealSignerInstance?: Ed25519Signer;
 
@@ -164,6 +168,7 @@ export class IsabellaGenesisRuntime {
     this.registerHyperSkillFabric();
     this.registerGovernanceCapabilities();
     this.registerCanonicalCatalogs();
+    this.registerGiftCapabilities();
   }
 
   /** Registra los catálogos canónicos de tools, skills y protocolos. */
@@ -225,6 +230,24 @@ export class IsabellaGenesisRuntime {
         "lifecycle",
       ],
     });
+  }
+
+  /**
+   * Registra los diez regalos del legado como capacidades HSF invocables vía
+   * `POST /api/v1/hsf/invoke`. El manifiesto va encabezado por el cocreador.
+   * Invariante: registrar una capacidad no concede autoridad ni ejecuta efectos.
+   */
+  private registerGiftCapabilities(): void {
+    const low = (id: string, domain: import("../capabilities").CapabilityDomain, description: string) => ({
+      id, version: "1.0.0", domain, description, riskTier: "LOW" as const, requiresAuthority: true,
+    });
+    for (const gift of this.gifts.manifest) {
+      this.capabilities.register({
+        descriptor: low(gift.capabilityId, gift.domain, `[Legado #${gift.order}] ${gift.title}: ${gift.summary}`),
+        health: () => "ready",
+        execute: async (input) => this.gifts.invoke(gift.capabilityId, input),
+      });
+    }
   }
 
   private registerHyperSkillFabric(): void {
@@ -444,6 +467,15 @@ export class IsabellaGenesisRuntime {
         const value = input as { request?: TurboRequest };
         if (!value.request) throw new Error("TURBO_REQUEST_REQUIRED");
         return this.planTurboRoute(value.request);
+      },
+    });
+    this.capabilities.register({
+      descriptor: low("hsf.governance.traffic-light", "strategy", "SEMÁFORO DE FLUJO GOBERNADO Ω: clasifica la solicitud (verde/amarillo/naranja/rojo) y decide cuántos filtros gobernados corren; clasificar no autoriza ni ejecuta."),
+      health: () => "ready",
+      execute: async (input) => {
+        const value = input as { input?: TrafficLightInput };
+        if (!value.input) throw new Error("TRAFFIC_INPUT_REQUIRED");
+        return this.classifyFlow(value.input);
       },
     });
     this.capabilities.register({
@@ -921,6 +953,30 @@ export class IsabellaGenesisRuntime {
       },
     });
     return plan;
+  }
+
+  /**
+   * SEMÁFORO DE FLUJO GOBERNADO Ω: clasifica la solicitud en verde/amarillo/naranja/
+   * rojo y decide cuántos filtros gobernados deben ejecutarse (vía rápida gobernada vs.
+   * filtrado vs. gobierno reforzado vs. revisión humana). Clasificar NO autoriza ni
+   * ejecuta: solo enruta el flujo; CROWN sigue autorizando y BookPI sigue evidenciando.
+   */
+  classifyFlow(input: TrafficLightInput): TrafficLightVerdict {
+    const verdict = classifyTrafficFlow(input);
+    this.events.publish({
+      topic: "governance.traffic.classified",
+      type: verdict.band,
+      payload: {
+        band: verdict.band,
+        route: verdict.route,
+        riskTier: verdict.riskTier,
+        fastLane: verdict.fastLane,
+        requiredFilters: verdict.requiredFilters,
+        cachePolicy: verdict.cachePolicy,
+        digest: verdict.digest,
+      },
+    });
+    return verdict;
   }
 
   /* ------------------------------------------------------------------ */

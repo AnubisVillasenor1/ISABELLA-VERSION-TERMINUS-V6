@@ -44,6 +44,7 @@ import { registerHyperCoreRoutes } from "./routes/hypercore";
 import { registerOpenAiCompatibleRoutes } from "./routes/openai";
 import { registerOrderPermissionRoutes } from "./routes/governance-permissions";
 import { registerTurboPlannerRoutes } from "./routes/turbo-planner";
+import { registerTrafficLightRoutes } from "./routes/traffic-light";
 import { registerDocumentSealRoutes } from "./routes/document-seal";
 import { registerPipelineRoutes, createInMemoryBookPiStorage } from "./routes/pipeline";
 import { registerYunEventRoutes } from "./routes/yun-events";
@@ -994,8 +995,30 @@ app.post("/api/v1/cognition/route", async (req, res) => {
       generativeNarrative = generateSovereignFallback(input, history, focusLens);
       responseEngine = modelEngine === "sovereign" ? "sovereign" : "sovereign-fallback";
     }
+    // Semáforo de flujo gobernado: clasifica la solicitud (verde/amarillo/naranja/rojo)
+    // como señal operativa de CUÁNTO gobierno aplica y CUÁN RÁPIDO fluye. Es observabilidad
+    // honesta: NO concede autoridad, NO amplía permisos y NO ejecuta efectos externos.
+    let trafficLight: {
+      band: string; route: string; riskTier: string; fastLane: boolean; friction: string;
+      requiredFilters: readonly string[]; humanReviewRequired: boolean;
+    } | null = null;
+    try {
+      const triage = runtime.classifyFlow({
+        input,
+        principalId: principal.id,
+        inputTokens: Math.max(1, Math.ceil(input.length / 4)),
+        expectedOutputTokens: 256,
+      });
+      trafficLight = {
+        band: triage.band, route: triage.route, riskTier: triage.riskTier,
+        fastLane: triage.fastLane, friction: triage.friction,
+        requiredFilters: triage.requiredFilters, humanReviewRequired: triage.humanReviewRequired,
+      };
+    } catch {
+      trafficLight = null;
+    }
     res.status(decision.admitted ? 200 : 403).json({
-      success: decision.admitted, decision, principal, generativeNarrative, responseEngine,
+      success: decision.admitted, decision, principal, generativeNarrative, responseEngine, trafficLight,
       modelConfigured: Boolean(genAi || process.env.OPENROUTER_API_KEY || (process.env.HF_TOKEN && process.env.HF_FREE_MODELS) || process.env.OLLAMA_API_KEY || process.env.GROQ_API_KEY || process.env.CEREBRAS_API_KEY || process.env.TOGETHER_API_KEY || process.env.DEEPINFRA_API_KEY || process.env.FIREWORKS_API_KEY || process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN),
       openModelConfigured: Boolean(process.env.OPENROUTER_API_KEY || (process.env.HF_TOKEN && process.env.HF_FREE_MODELS) || process.env.OLLAMA_API_KEY || process.env.GROQ_API_KEY || process.env.CEREBRAS_API_KEY || process.env.TOGETHER_API_KEY || process.env.DEEPINFRA_API_KEY || process.env.FIREWORKS_API_KEY),
       paidProviderConfigured: Boolean(genAi || process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN),
@@ -2901,6 +2924,18 @@ registerOrderPermissionRoutes({
 registerTurboPlannerRoutes({
   app,
   planTurboRoute: (request) => runtime.planTurboRoute(request),
+  enforceRateLimit,
+  rateLimiter: publicScanLimiter,
+  authorizeAdmin: (req, res) => authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN"),
+});
+
+// ── Governed Flow Traffic Light Ω (state: draft | engine-generated) ─ clasifica la
+// solicitud en verde/amarillo/naranja/rojo y decide qué filtros gobernados corren
+// (vía rápida gobernada, filtrado, gobierno reforzado o revisión humana). Clasificar
+// NO autoriza ni ejecuta: CROWN sigue autorizando y BookPI sigue evidenciando.
+registerTrafficLightRoutes({
+  app,
+  classifyFlow: (input) => runtime.classifyFlow(input),
   enforceRateLimit,
   rateLimiter: publicScanLimiter,
   authorizeAdmin: (req, res) => authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN"),
