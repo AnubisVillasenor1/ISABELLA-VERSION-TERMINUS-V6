@@ -45,6 +45,7 @@ import { registerOpenAiCompatibleRoutes } from "./routes/openai";
 import { registerOrderPermissionRoutes } from "./routes/governance-permissions";
 import { registerTurboPlannerRoutes } from "./routes/turbo-planner";
 import { registerDocumentSealRoutes } from "./routes/document-seal";
+import { createYunEvent, verifyYunEvent, type YunEventInput } from "./federation/yun-event";
 
 const app: Application = express();
 app.disable("x-powered-by");

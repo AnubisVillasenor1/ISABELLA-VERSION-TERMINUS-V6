@@ -86,6 +86,7 @@
   "POST /api/v1/security/document-seal/verify",
   "POST /api/v1/security/triangulate",
   "POST /api/v1/tools/execute",
+  "POST /api/v1/yun/events",
   "POST /api/v1/triple-blockade/scan",
   "GET /v1/models",
   "POST /v1/chat/completions",
