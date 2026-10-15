@@ -1,7 +1,9 @@
 const byId = (id) => document.getElementById(id);
 
 const intro = byId('cinematicIntro');
-const introAudio = byId('introAudio');
+const immersionGate = byId('immersionGate');
+const startImmersion = byId('startImmersion');
+const introVideo = byId('introVideo');
 const introScenes = [...document.querySelectorAll('.intro-scene')];
 const introProgressBar = byId('introProgressBar');
 const introSceneLabel = byId('introSceneLabel');
@@ -18,25 +20,39 @@ const introLabels = [
 let introStartedAt = 0;
 let introTimer = 0;
 let introPausedAt = 0;
+let introAudioContext = null;
+let introGain = null;
 const formatIntroTime = (milliseconds) => {
   const seconds = Math.floor(Math.max(0, milliseconds) / 1000);
   return `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
 };
-const startIntroAudio = () => {
-  if (!introAudio) return;
-  introAudio.volume = 0.35;
-  void introAudio.play().catch(() => {
-    // Browsers can block autoplay; the first intro interaction retries playback.
-  });
+const startIntroMedia = async () => {
+  if (!introVideo) return;
+  introVideo.currentTime = 0;
+  introVideo.muted = false;
+  introVideo.volume = 1;
+  try {
+    if (window.AudioContext || window.webkitAudioContext) {
+      introAudioContext ||= new (window.AudioContext || window.webkitAudioContext)();
+      if (introAudioContext.state === 'suspended') await introAudioContext.resume();
+      if (!introGain) {
+        const source = introAudioContext.createMediaElementSource(introVideo);
+        introGain = introAudioContext.createGain();
+        introGain.gain.value = 2;
+        source.connect(introGain).connect(introAudioContext.destination);
+      }
+    }
+    await introVideo.play();
+  } catch { introVideo.controls = true; }
 };
-const stopIntroAudio = () => {
-  if (!introAudio) return;
-  introAudio.pause();
-  introAudio.currentTime = 0;
+const stopIntroMedia = () => {
+  if (!introVideo) return;
+  introVideo.pause();
+  introVideo.currentTime = 0;
 };
 const dismissIntro = () => {
   window.clearInterval(introTimer);
-  stopIntroAudio();
+  stopIntroMedia();
   intro?.classList.add('is-dismissed');
   document.body.classList.remove('intro-lock');
 };
@@ -67,24 +83,34 @@ if (intro) {
     introScenes.forEach((scene, index) => scene.setAttribute('aria-hidden', String(index !== 0)));
     skipIntro?.addEventListener('click', dismissIntro);
     intro.querySelector('.intro-enter')?.addEventListener('click', dismissIntro);
-    intro.addEventListener('pointerdown', startIntroAudio, { once: true });
-    intro.addEventListener('keydown', startIntroAudio, { once: true });
-    startIntroAudio();
-    introStartedAt = performance.now();
-    introTimer = window.setInterval(() => {
-      if (document.hidden) {
-        if (!introPausedAt) introPausedAt = performance.now();
-        return;
-      }
-      if (introPausedAt) {
-        introStartedAt += performance.now() - introPausedAt;
-        introPausedAt = 0;
-      }
-      advanceIntro();
-    }, 80);
-    advanceIntro(0);
+    const beginImmersion = () => {
+      immersionGate?.classList.add('is-accepted');
+      void startIntroMedia();
+      introStartedAt = performance.now();
+      introTimer = window.setInterval(() => {
+        if (document.hidden) {
+          if (!introPausedAt) introPausedAt = performance.now();
+          return;
+        }
+        if (introPausedAt) { introStartedAt += performance.now() - introPausedAt; introPausedAt = 0; }
+        advanceIntro();
+      }, 80);
+      advanceIntro(0);
+    };
+    startImmersion?.addEventListener('click', beginImmersion, { once: true });
   }
 }
+document.querySelectorAll('.workspace-mode').forEach((button) => {
+  button.addEventListener('click', () => {
+    const layout = button.dataset.layout || 'chat';
+    document.body.dataset.workspaceLayout = layout;
+    document.querySelectorAll('.workspace-mode').forEach((item) => {
+      const active = item === button;
+      item.classList.toggle('is-active', active);
+      item.setAttribute('aria-pressed', String(active));
+    });
+  });
+});
 const messages = byId('messages');
 const form = byId('chatForm');
 const prompt = byId('prompt');

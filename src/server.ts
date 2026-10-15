@@ -147,12 +147,15 @@ app.get("/ui/app.js", (_req, res) => {
 });
 app.get("/assets/audio/IntroIsabella.mp3", (_req, res) => {
   const audioPath = path.resolve(process.cwd(), "src/assets/musica/IntroIsabella.mp3");
-  if (!fs.existsSync(audioPath)) {
-    res.status(404).type("text").send("Intro audio unavailable");
-    return;
-  }
+  if (!fs.existsSync(audioPath)) { res.status(404).type("text").send("Intro audio unavailable"); return; }
   res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
   res.type("audio/mpeg").sendFile(audioPath);
+});
+app.get("/assets/video/IsabellaVideoIntro.mp4", (_req, res) => {
+  const videoPath = path.resolve(process.cwd(), "src/assets/musica/IsabellaVideoIntro.mp4");
+  if (!fs.existsSync(videoPath)) { res.status(404).type("text").send("Intro video unavailable"); return; }
+  res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+  res.type("video/mp4").sendFile(videoPath);
 });
 app.get("/styles/crystal-clear.css", (_req, res) => {
   if (crystalClearCss === null) {
