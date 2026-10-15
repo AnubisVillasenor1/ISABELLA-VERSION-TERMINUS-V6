@@ -21,6 +21,7 @@ import {
 import { HYPERCORE_OMEGA_PHASES, HyperCoreEngine, SkillMcpServer, type SkillRegistry } from "../skills";
 import type { BookPiLedgerPort } from "../bookpi/ledger";
 import type { FixedWindowRateLimiter } from "../security/rate-limit";
+import { buildIsabellaCapabilityManifest } from "../isabella/recognition";
 
 export interface HyperCoreRoutesDeps {
   readonly app: Application;
@@ -62,6 +63,7 @@ export function registerHyperCoreRoutes(deps: HyperCoreRoutesDeps): void {
       version: HYPERCORE_VERSION,
       modes: HYPERCORE_OMEGA_MODES,
       disclaimer: HYPERCORE_DISCLAIMER,
+      capabilityManifest: buildIsabellaCapabilityManifest(),
     });
   });
 
