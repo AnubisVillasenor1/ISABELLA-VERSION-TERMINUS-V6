@@ -29,6 +29,7 @@
   "GET /api/v1/reina/status",
   "GET /api/v1/status",
   "GET /api/v1/territory/rdm",
+  "GET /api/v1/yun/events",
   "GET /health",
   "GET /styles/cinematic.css",
   "GET /styles/crystal-clear.css",
@@ -79,5 +80,6 @@
   "POST /api/v1/sanitization/scan",
   "POST /api/v1/security/triangulate",
   "POST /api/v1/tools/execute",
-  "POST /api/v1/triple-blockade/scan"
+  "POST /api/v1/triple-blockade/scan",
+  "POST /api/v1/yun/events"
 ]
