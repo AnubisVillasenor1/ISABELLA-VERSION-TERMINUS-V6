@@ -9,6 +9,7 @@
   "GET /api/v1/bookpi/events",
   "GET /api/v1/bookpi/events/admin",
   "GET /api/v1/cognition/multimodal",
+  "GET /api/v1/cognition/native-runtime",
   "GET /api/v1/gameover/constitution",
   "GET /api/v1/gameover/passports",
   "GET /api/v1/health",
