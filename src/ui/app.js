@@ -134,6 +134,17 @@ const soundToggle = byId('soundToggle');
 const navToggle = byId('navToggle');
 const navLinks = byId('primaryLinks');
 const runtimeStatus = byId('runtimeStatus');
+const setRuntimeStatus = (label, state, title) => {
+  if (!runtimeStatus) return;
+  runtimeStatus.dataset.state = state;
+  runtimeStatus.replaceChildren();
+  const indicator = document.createElement('i');
+  indicator.setAttribute('aria-hidden', 'true');
+  const text = document.createElement('span');
+  text.textContent = label;
+  runtimeStatus.append(indicator, text);
+  runtimeStatus.title = title;
+};
 const sessionBadge = byId('sessionBadge');
 const voiceCapability = byId('voiceCapability');
 const contextInspector = byId('contextInspector');
@@ -400,6 +411,7 @@ const sendCurrentMessage = async () => {
 };
 form?.addEventListener('submit', (event) => {
   event.preventDefault();
+  if (event.nativeEvent?.isComposing || event.keyCode === 229) return;
   if (event.submitter?.disabled || isSending) return;
   void sendCurrentMessage();
 });
@@ -420,18 +432,30 @@ navToggle?.addEventListener('click', () => {
   navToggle.setAttribute('aria-label', opening ? 'Cerrar navegación' : 'Abrir navegación');
   navLinks?.classList.toggle('is-open', opening);
 });
-document.querySelectorAll('a[href^="#"]').forEach((link) => {
-  link.addEventListener('click', (event) => {
-    const selector = link.getAttribute('href');
-    const target = selector ? document.querySelector(selector) : null;
-    if (!target) return;
-    event.preventDefault();
+const navigateToHash = (selector, event) => {
+  if (!selector || !selector.startsWith('#')) return false;
+  const target = document.getElementById(selector.slice(1));
+  if (!target) return false;
+  event?.preventDefault();
+  closeNav();
+  document.querySelectorAll('.side-rail.is-open').forEach((rail) => rail.classList.remove('is-open'));
+  document.querySelectorAll('.rail-launcher[aria-expanded="true"]').forEach((launcher) => launcher.setAttribute('aria-expanded', 'false'));
+  target.scrollIntoView({ behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+  window.history.replaceState(null, '', selector);
+  return true;
+};
+document.addEventListener('click', (event) => {
+  const target = event.target;
+  if (!(target instanceof Element)) return;
+  const link = target.closest('a[href^="#"]');
+  if (link) navigateToHash(link.getAttribute('href'), event);
+});
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') {
     closeNav();
     document.querySelectorAll('.side-rail.is-open').forEach((rail) => rail.classList.remove('is-open'));
     document.querySelectorAll('.rail-launcher[aria-expanded="true"]').forEach((launcher) => launcher.setAttribute('aria-expanded', 'false'));
-    target.scrollIntoView({ behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
-    window.history.replaceState(null, '', selector);
-  });
+  }
 });
 document.addEventListener('click', (event) => {
   if (navToggle?.getAttribute('aria-expanded') !== 'true') return;
@@ -459,15 +483,11 @@ const updateRuntimeStatus = async () => {
   try {
     const response = await fetch('/api/v1/health', { headers: { accept: 'application/json' }, cache: 'no-store' });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    runtimeStatus.dataset.state = 'ready';
-    runtimeStatus.innerHTML = '<i aria-hidden="true"></i><span>NODO CERO · API DISPONIBLE</span>';
+    setRuntimeStatus('NODO CERO · API DISPONIBLE', 'ready', 'El endpoint de salud respondió correctamente. Esto no garantiza disponibilidad de inferencia externa.');
     if (inspectorRuntime) inspectorRuntime.textContent = 'READY';
-    runtimeStatus.title = 'El endpoint de salud respondió correctamente. Esto no garantiza disponibilidad de inferencia externa.';
   } catch {
-    runtimeStatus.dataset.state = 'degraded';
-    runtimeStatus.innerHTML = '<i aria-hidden="true"></i><span>NODO CERO · ESTADO LIMITADO</span>';
+    setRuntimeStatus('NODO CERO · ESTADO LIMITADO', 'degraded', 'No se pudo verificar el endpoint de salud.');
     if (inspectorRuntime) inspectorRuntime.textContent = 'LIMITED';
-    runtimeStatus.title = 'No se pudo verificar el endpoint de salud.';
   }
 };
 refreshWorkspaceContext();

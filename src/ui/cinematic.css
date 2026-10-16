@@ -177,6 +177,40 @@ button:disabled{opacity:.55;cursor:wait}
 @media(max-width:600px){.side-rail{grid-template-columns:1fr 1fr}.rail-panel summary{font-size:8px}.rail-panel a{font-size:10px}}
 @media(prefers-reduced-motion:reduce){.rail-panel,.rail-panel a{transition:none}}
 
+/* Product surface: hierarchy, focus clarity and responsive density. */
+.console{position:relative;overflow:hidden}
+.console::after{content:"LIVE CONTEXT / ENCRYPTED SESSION";position:absolute;top:18px;right:28px;color:rgba(145,207,255,.42);font:700 8px/1 ui-monospace,SFMono-Regular,monospace;letter-spacing:.14em;pointer-events:none}
+.console-head{align-items:flex-start}
+.messages{scrollbar-color:rgba(145,207,255,.35) transparent;scrollbar-width:thin}
+.messages:empty::before{content:"Preparando contexto…";display:block;color:var(--muted);font:10px/1.5 ui-monospace,monospace;letter-spacing:.12em}
+.message{animation:messageIn .35s ease both}
+@keyframes messageIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.composer textarea:focus-visible{outline:none}
+.composer .send:focus-visible,.composer .icon-button:focus-visible,.context-button:focus-visible,.subtle-action:focus-visible,.workspace-mode:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
+.prompt-starters{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:16px;color:var(--muted);font:700 9px/1 ui-monospace,monospace;letter-spacing:.1em}
+.prompt-starters button{border:1px solid rgba(145,207,255,.16);border-radius:999px;padding:8px 11px;background:rgba(145,207,255,.035);color:#b9cce0;font:inherit;letter-spacing:.04em;cursor:pointer;transition:border-color .18s ease,background .18s ease,color .18s ease}
+.prompt-starters button:hover,.prompt-starters button:focus-visible{border-color:rgba(145,207,255,.55);background:rgba(145,207,255,.1);color:#e7f5ff;outline:none}
+.workspace-context-bar{border-color:rgba(145,207,255,.13);border-radius:12px;background:rgba(9,16,26,.7);box-shadow:0 10px 30px rgba(0,0,0,.12)}
+.capability-pill.is-active{box-shadow:0 0 0 3px rgba(114,214,172,.08)}
+@media(max-width:860px){
+  .console::after{display:none}
+  .workspace-context-bar{gap:12px;align-items:flex-start;flex-wrap:wrap}
+  .context-capabilities,.context-actions{width:100%}
+  .context-actions{justify-content:flex-start}
+}
+@media(max-width:600px){
+  .stage{padding-inline:12px}
+  .topbar{border-radius:12px}
+  .console{padding:18px;margin-bottom:64px;border-radius:14px}
+  .console-head{display:flex;flex-direction:column;gap:18px}
+  .console-actions{width:100%;justify-content:flex-start;flex-wrap:wrap}
+  .messages{max-height:52vh;padding-inline:0}
+  .message{max-width:96%}
+  .prompt-starters{margin-top:12px}
+  .prompt-starters>span{width:100%}
+}
+@media(prefers-reduced-motion:reduce){.message{animation:none}.prompt-starters button{transition:none}}
+
 
 
 /* ISABELLA ENTERPRISE — Obsidian / Platinum / Electric Azure */

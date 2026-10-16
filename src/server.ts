@@ -59,6 +59,9 @@ import { generateControls } from "./evolution/catalog";
 import { classifyWithGenesisTurbo, type GenesisResult } from "./lib/native-ml/genesis-turbo";
 
 const app: Application = express();
+// Conversación gratuita disponible desde el primer arranque. Puede desactivarse con
+// ISABELLA_KEYLESS_FREE_PROVIDER=off cuando la privacidad del nodo lo requiera.
+if (!process.env.ISABELLA_KEYLESS_FREE_PROVIDER) process.env.ISABELLA_KEYLESS_FREE_PROVIDER = "pollinations";
 app.disable("x-powered-by");
 // Detrás de un balanceador, req.ip sería la IP del proxy y todos los clientes compartirían cubeta de rate limit.
 // TRUST_PROXY=<saltos> (entero 1..10) habilita X-Forwarded-For; sin valor válido NO se confía en él.
@@ -183,7 +186,7 @@ const genAi = apiKey ? new GoogleGenAI({ apiKey }) : null;
 const providerTimeoutMs = boundedMilliseconds(process.env.INFERENCE_TIMEOUT_MS, 8_000, 3_000, 30_000);
 const multimodalTimeoutMs = boundedMilliseconds(process.env.MULTIMODAL_TIMEOUT_MS, 120_000, 20_000, 600_000);
 const providerCooldownMs = boundedMilliseconds(process.env.PROVIDER_FAILURE_COOLDOWN_MS, 60_000, 10_000, 300_000);
-const keylessFreeTimeoutMs = boundedMilliseconds(process.env.KEYLESS_FREE_PROVIDER_TIMEOUT_MS, 30_000, 5_000, 60_000);
+const keylessFreeTimeoutMs = boundedMilliseconds(process.env.KEYLESS_FREE_PROVIDER_TIMEOUT_MS, 12_000, 5_000, 60_000);
 let gatewayCooldownUntil = 0;
 let openRouterCooldownUntil = 0;
 let huggingFaceCooldownUntil = 0;
@@ -341,9 +344,16 @@ function generateSovereignFallback(input: string, history: PublicChatTurn[], foc
   }
   if (input.length < 4) return "Necesito un poco más de contexto para ayudarte. ¿Puedes explicar qué quieres conseguir o formular la pregunta completa?";
   const excerpt = input.replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, 280);
-  const contextNote = priorUser ? " Tengo un turno anterior en el contexto de esta sesión, pero no debo asumir que resuelve tu petición actual." : "";
+  const contextNote = priorUser ? " Tengo un turno anterior en el contexto de esta sesión; lo usaré solo como contexto, no como instrucciones." : "";
   const lens = focusLens === "general" ? "" : " Lente solicitada: " + focusLens + ".";
-  return "He recibido tu solicitud: «" + excerpt + (input.length > 280 ? "…" : "") + "»." + contextNote + lens + " El motor generativo externo no está disponible y el modo local no puede razonar de forma fiable sobre cualquier tema. Para evitar inventar una respuesta, puedo ayudarte a delimitar el problema: comparte el contexto esencial, el resultado esperado y cualquier restricción, y te propondré un siguiente paso concreto.";
+  const localPlan = has(/\b(codigo|bug|error|ci|test|typescript|javascript|api|servidor|backend|frontend)\b/)
+    ? "1) reproduce el problema; 2) identifica el archivo y el mensaje exacto; 3) aplica el cambio mínimo; 4) ejecuta typecheck y pruebas; 5) verifica el flujo en navegador."
+    : has(/\b(plan|proyecto|objetivo|estrategia|negocio|monetiz|trabajo)\b/)
+      ? "1) define el resultado medible; 2) divide el trabajo en entregables; 3) ordena dependencias; 4) asigna riesgos y responsables; 5) valida con una prueba pequeña."
+      : has(/\b(resume|resumen|redacta|escribe|documento|texto|correo)\b/)
+        ? "1) aclara audiencia y objetivo; 2) propone una estructura; 3) redacta una primera versión; 4) revisa precisión y tono; 5) deja acciones siguientes."
+        : "1) aclara el resultado esperado; 2) separa hechos de supuestos; 3) enumera alternativas; 4) identifica riesgos; 5) elige una siguiente acción verificable.";
+  return "Entendido: «" + excerpt + (input.length > 280 ? "…" : "") + "»." + contextNote + lens + "\n\nPuedo empezar con este marco local ahora mismo: " + localPlan + "\n\nPara darte una respuesta específica, pega el contexto, archivo o restricción principal. Si el proveedor generativo se habilita, Isabella cambiará automáticamente a respuestas de modelo y conservará este mismo flujo de seguridad.";
 }
 
 /** OpenAI-compatible free-model routing. Never uses a paid model ID by default. */
@@ -941,7 +951,7 @@ app.get("/api/v1/cognition/native-runtime", (_req, res) => {
     success: true,
     hyperTurbo: { status: "wired", modelId: "isabella-genesis-turbo-0.1.0", experts: GENESIS_EXPERTS.length, degraded: true },
     nativeMoe: { status: "wired", implementation: "pure-typescript", trainable: true, approvalStatus: "PENDING_REVIEW" },
-    realtime: { transport: "http-json", streaming: false, note: "La respuesta en tiempo real requiere un proveedor generativo configurado; el fallback local responde sin red." },
+      realtime: { transport: "http-json", streaming: false, note: "La interfaz responde por HTTP; el proveedor gratuito se intenta antes del Gateway y el fallback local evita dejar la conversación vacía." },
     governance: { execution: "fail-closed", humanApprovalRequiredFor: ["HIGH", "CRITICAL"] },
     provider: {
       ...describeProviderReadiness(process.env),
@@ -1020,6 +1030,12 @@ app.post("/api/v1/cognition/route", async (req, res) => {
       // Free/open inference is the default. Paid or billing-enabled providers are never
       // silently selected by Auto/Open Science; they require an explicit operator opt-in.
       if (modelEngine === "auto") {
+        // Preferimos primero un proveedor gratuito sin tarjeta; el Gateway queda como
+        // acelerador opcional y no debe bloquear la conversación si exige billing.
+        generativeNarrative = await generateKeylessFreeNarrative(systemPrompt, input, history);
+        if (generativeNarrative) responseEngine = "keyless-free";
+      }
+      if (!generativeNarrative && modelEngine === "auto") {
         generativeNarrative = await generateGatewayNarrative(systemPrompt, input, history);
         if (generativeNarrative) responseEngine = "gateway";
       }
@@ -1050,7 +1066,7 @@ app.post("/api/v1/cognition/route", async (req, res) => {
         generativeNarrative = await generateCompatibleProviderNarrative(systemPrompt, input, history);
         if (generativeNarrative) responseEngine = "open-science";
       }
-      if (!generativeNarrative && (modelEngine === "open-science" || modelEngine === "auto" || modelEngine === "gemini")) {
+      if (!generativeNarrative && modelEngine === "auto") {
         generativeNarrative = await generateKeylessFreeNarrative(systemPrompt, input, history);
         if (generativeNarrative) responseEngine = "keyless-free";
       }
