@@ -20,7 +20,7 @@ jobs:
       ATLAS_READ_TOKEN: ${{ secrets.ATLAS_READ_TOKEN }}
       GITHUB_OWNER: ${{ vars.GITHUB_OWNER }}
       INCLUDE_FORKS: "false"
-      MAX_REPOS: "500"
+      MAX_REPOS: "700"
       NODE_ENV: production
 
     steps:
