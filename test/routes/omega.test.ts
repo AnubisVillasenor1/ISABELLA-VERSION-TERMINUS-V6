@@ -36,7 +36,7 @@ function harness() {
 
 const call = (handlers: Map<string, Handler>, key: string, body: unknown) => {
   const { res, captured } = makeRes();
-  handlers.get(key)!({ body } as unknown as Request, res);
+  handlers.get(key)!({ body, query: {} } as unknown as Request, res);
   return captured;
 };
 
@@ -62,7 +62,7 @@ const validAssertions = [
 
 describe("Ω∞ Omega routes", () => {
   it("expone una versión de superficie", () => {
-    expect(OMEGA_ROUTES_VERSION).toBe("1.0.0");
+    expect(OMEGA_ROUTES_VERSION).toBe("1.1.0");
   });
 
   it("GET omega/constitution publica artículos y flujo", () => {
@@ -120,8 +120,59 @@ describe("Ω∞ Omega routes", () => {
       resilience: 1,
       territorialImpact: 1,
     });
-    const body = captured.body as Record<string, unknown>;
-    expect((body.equation as Record<string, unknown>).value).toBe(0);
-    expect((body.equation as Record<string, unknown>).zeroFactors).toEqual(["trust"]);
+    const equation = (captured.body as { equation: { value: number; zeroFactors: string[] } }).equation;
+    expect(equation.value).toBe(0);
+    expect(equation.zeroFactors).toEqual(["trust"]);
+  });
+
+  it("GET omega/nexus devuelve el modelo de vista", () => {
+    const handlers = harness();
+    const captured = call(handlers, "GET /api/v3/omega/nexus", undefined);
+    const view = (captured.body as { view: { panelCount: number; panels: unknown[] } }).view;
+    expect(view.panelCount).toBe(8);
+    expect(view.panels.length).toBe(8);
+  });
+
+  it("POST twins/federate autoriza con aprobación humana", () => {
+    const handlers = harness();
+    const captured = call(handlers, "POST /api/v3/omega/twins/federate", {
+      nodes: [{ id: "a", capabilities: ["read"], dataResidency: "eu" }],
+      grants: [{ fromTwin: "a", toTwin: "a", scope: "read", approvedByHuman: true }],
+    });
+    const federation = (captured.body as { federation: { edges: Array<{ authorized: boolean }> } }).federation;
+    expect(federation.edges[0]?.authorized).toBe(true);
+  });
+
+  it("POST memory/store + memory/query usa la memoria en proceso", () => {
+    const handlers = harness();
+    call(handlers, "POST /api/v3/omega/memory/store", { id: "m1", layer: "semantic", content: "hola mundo", importance: 0.7 });
+    const captured = call(handlers, "POST /api/v3/omega/memory/query", { text: "hola" });
+    expect((captured.body as Record<string, unknown>).count).toBe(1);
+  });
+
+  it("POST trust/analyze calcula el puntaje verificado", () => {
+    const handlers = harness();
+    const captured = call(handlers, "POST /api/v3/omega/trust/analyze", {
+      attestations: [{ subject: "s", issuer: "i", claim: "c", weight: 0.8, verified: true }],
+    });
+    const mesh = (captured.body as { mesh: { nodes: Array<{ score: number; grade: string }> } }).mesh;
+    expect(mesh.nodes[0]?.score).toBe(1);
+    expect(mesh.nodes[0]?.grade).toBe("high");
+  });
+
+  it("POST research/run selecciona la hipótesis con evidencia suficiente", () => {
+    const handlers = harness();
+    const captured = call(handlers, "POST /api/v3/omega/research/run", {
+      hypotheses: [{ id: "h1", statement: "x", novelty: 0.9, feasibility: 0.9, evidence: 0.9, risk: 0.1 }],
+    });
+    expect((captured.body as Record<string, unknown>).selectedId).toBe("h1");
+  });
+
+  it("POST territory/fabricate nunca autoriza despliegue", () => {
+    const handlers = harness();
+    const captured = call(handlers, "POST /api/v3/omega/territory/fabricate", {
+      territories: [{ id: "t", name: "Territorio", population: 1000, readiness: 0.9, sovereignty: "RDM" }],
+    });
+    expect((captured.body as Record<string, unknown>).deploymentAuthorized).toBe(false);
   });
 });
