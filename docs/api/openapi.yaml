@@ -1245,6 +1245,71 @@ paths:
         "502":
           description: El Hub no respondió 2xx
 
+  /api/v1/customization/catalog:
+    get:
+      summary: Catálogo nativo de customización (reglas, skills, plugins, hooks, MCP)
+      description: >
+        Enumera los descriptores de customización de solo lectura derivados del modelo de
+        Antigravity. CAPABILITY ≠ AUTHORITY: catalogar no autoriza, no instala y no ejecuta.
+      operationId: getCustomizationCatalog
+      security: []
+      responses:
+        "200": { description: "Entidades de customización con conteos por tipo" }
+
+  /api/v1/customization/catalog/{id}:
+    get:
+      summary: Detalle de una entidad de customización
+      operationId: getCustomizationDetail
+      security: []
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: "Entidad de customización" }
+        "404": { description: CUSTOMIZATION_NOT_FOUND }
+
+  /api/v1/marketplace:
+    get:
+      summary: Instantánea del marketplace de capacidades
+      description: >
+        Agrega el catálogo nativo y el inventario vivo del runtime con un digest determinista.
+        Solo lectura; no autoriza ni ejecuta.
+      operationId: getMarketplace
+      security: []
+      responses:
+        "200": { description: "Conteos, inventario y digest" }
+
+  /api/v1/marketplace/{packId}:
+    get:
+      summary: Resuelve un pack de plugin contra el catálogo nativo
+      operationId: getMarketplacePack
+      security: []
+      parameters:
+        - { name: packId, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: "Pack resuelto (enabled:false, missing[])" }
+        "404": { description: MARKETPLACE_PACK_NOT_FOUND }
+
+  /api/v1/marketplace/plan:
+    post:
+      summary: Plan de habilitación de un pack (no habilita ni ejecuta)
+      operationId: postMarketplacePlan
+      security:
+        - AdminBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [packId]
+              properties:
+                packId: { type: string, example: "isabella.plugin.antigravity-kit" }
+      responses:
+        "200": { description: "Plan PLANNED_NOT_ENABLED (authorizationPerformed:false)" }
+        "400": { description: MARKETPLACE_PACK_ID_REQUIRED }
+        "401": { description: No autorizado }
+        "404": { description: MARKETPLACE_PACK_NOT_FOUND }
+
   /api/v1/emergency/status:
     get:
       summary: Estado global del Hyper Emergency Core (IHEC v3.1)

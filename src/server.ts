@@ -48,6 +48,7 @@ import { registerTrafficLightRoutes } from "./routes/traffic-light";
 import { registerCivilizationRoutes } from "./routes/civilization";
 import { registerHfHubRoutes } from "./routes/hf-hub";
 import { registerIhecRoutes } from "./routes/ihec";
+import { registerMarketplaceRoutes } from "./routes/marketplace";
 import { registerDocumentSealRoutes } from "./routes/document-seal";
 import { registerPipelineRoutes, createInMemoryBookPiStorage } from "./routes/pipeline";
 import { registerYunEventRoutes } from "./routes/yun-events";
@@ -3037,6 +3038,22 @@ registerHfHubRoutes({
 registerIhecRoutes({
   app,
   ihec: runtime.ihec,
+  enforceRateLimit,
+  rateLimiter: publicScanLimiter,
+  authorizeAdmin: (req, res) => authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN"),
+});
+
+// ── ISABELLA Ω · Customización nativa + Marketplace (state: draft | engine-generated)
+// cataloga reglas, skills, plugins, hooks y servidores MCP (modelo de Antigravity) y
+// resuelve packs de solo lectura. Los GET son viewer; el POST de plan es admin-gated.
+// Invariante: catalogar/resolver/planificar NO autoriza, NO instala y NO ejecuta.
+registerMarketplaceRoutes({
+  app,
+  catalog: () => runtime.customizationCatalog(),
+  detail: (id) => runtime.customizationDetail(id),
+  snapshot: () => runtime.marketplaceSnapshot(),
+  pack: (id) => runtime.marketplacePack(id),
+  plan: (id) => runtime.marketplacePlan(id),
   enforceRateLimit,
   rateLimiter: publicScanLimiter,
   authorizeAdmin: (req, res) => authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN"),

@@ -132,6 +132,20 @@ import {
   type IhecGiftPayload,
   type IhecRunResult,
 } from "../ihec";
+import {
+  CUSTOMIZATION_CATALOG,
+  CustomizationRegistry,
+  buildMarketplaceCatalog,
+  buildMarketplaceSnapshot,
+  planMarketplaceEnablement,
+  resolveMarketplacePack,
+  type CustomizationEntry,
+  type MarketplaceCatalog,
+  type MarketplaceInventory,
+  type MarketplacePack,
+  type MarketplacePlan,
+  type MarketplaceSnapshot,
+} from "../customization";
 
 export interface GenesisRuntimeInput extends CrownEvaluationInput, AdaptiveRequest {
   memoryQuery?: string;
@@ -171,6 +185,11 @@ export class IsabellaGenesisRuntime {
   readonly memoryFabric = new InMemoryMemoryFabric();
   readonly executionFabric = new ExecutionFabric();
   readonly knowledgeFabric = new KnowledgeFabric();
+  /**
+   * Catálogo nativo de customización (reglas, skills, plugins, hooks, servidores MCP)
+   * derivado de Antigravity. Solo lectura: enumerar/clasificar no autoriza ni ejecuta.
+   */
+  readonly customizations = new CustomizationRegistry();
   /**
    * Cliente READ-ONLY del Hugging Face Hub. Usa la infraestructura de INFORMACIÓN y
    * DATOS del Hub (gratuita); nunca el router de inferencia (de pago). Leer no
@@ -212,6 +231,8 @@ export class IsabellaGenesisRuntime {
     this.registerCivilizationCapabilities();
     this.registerHfHubCapabilities();
     this.registerIhecCapabilities();
+    this.registerCustomizationCatalog();
+    this.registerCustomizationCapabilities();
   }
 
   /** Registra los catálogos canónicos de tools, skills y protocolos. */
@@ -364,6 +385,87 @@ export class IsabellaGenesisRuntime {
         return this.runCivilizationCycleWithIhec(cycleInput, value.payload ?? {});
       },
     });
+  }
+
+  /** Registra el catálogo canónico de customización nativa (declarativo, inmutable). */
+  private registerCustomizationCatalog(): void {
+    for (const entry of CUSTOMIZATION_CATALOG) {
+      if (this.customizations.has(entry.id)) continue;
+      this.customizations.register(entry);
+    }
+  }
+
+  /**
+   * Registra el marketplace de customización como capacidad HSF invocable vía
+   * `POST /api/v1/hsf/invoke`. Cataloga, resuelve packs y produce un plan.
+   * Invariante: no autoriza, no instala y no ejecuta.
+   */
+  private registerCustomizationCapabilities(): void {
+    const low = (id: string, domain: import("../capabilities").CapabilityDomain, description: string) => ({
+      id, version: "1.0.0", domain, description, riskTier: "LOW" as const, requiresAuthority: true,
+    });
+    this.capabilities.register({
+      descriptor: low(
+        "hsf.integration.marketplace",
+        "integration",
+        "Customización nativa + Marketplace: cataloga reglas, skills, hooks, plugins y servidores MCP como descriptores de solo lectura; resuelve packs y produce un plan. No autoriza, no instala, no ejecuta.",
+      ),
+      health: () => "ready",
+      execute: async (input) => {
+        const value = (input ?? {}) as { operation?: string; id?: string };
+        if (value.operation === "snapshot") return this.marketplaceSnapshot();
+        if (value.operation === "detail" && typeof value.id === "string") {
+          return this.customizationDetail(value.id) ?? null;
+        }
+        if (value.operation === "pack" && typeof value.id === "string") {
+          return this.marketplacePack(value.id) ?? null;
+        }
+        if (value.operation === "plan" && typeof value.id === "string") {
+          return this.marketplacePlan(value.id) ?? null;
+        }
+        return this.customizationCatalog();
+      },
+    });
+  }
+
+  /** Catálogo nativo de customización (solo lectura). */
+  customizationCatalog(): MarketplaceCatalog {
+    return buildMarketplaceCatalog(this.customizations);
+  }
+
+  /** Detalle de una entidad de customización por id, o `undefined`. */
+  customizationDetail(id: string): CustomizationEntry | undefined {
+    return this.customizations.get(id);
+  }
+
+  /** Inventario vivo de los registros que el marketplace agrega. */
+  private marketplaceInventory(): MarketplaceInventory {
+    return {
+      customizations: this.customizations.list().length,
+      skills: this.skills.list().length,
+      tools: this.tools.list().length,
+      protocols: this.protocols.list().length,
+      modules: this.modules.list().length,
+      capabilities: this.capabilities.list().length,
+    };
+  }
+
+  /** Instantánea del marketplace: conteos + digest determinista (solo lectura). */
+  marketplaceSnapshot(): MarketplaceSnapshot {
+    return buildMarketplaceSnapshot(this.customizations, this.marketplaceInventory());
+  }
+
+  /** Resuelve un pack de plugin contra el catálogo nativo, o `undefined`. */
+  marketplacePack(id: string): MarketplacePack | undefined {
+    const entry = this.customizations.get(id);
+    if (!entry || entry.kind !== "plugin") return undefined;
+    return resolveMarketplacePack(entry, this.customizations);
+  }
+
+  /** Plan de habilitación de un pack; nunca habilita ni ejecuta. */
+  marketplacePlan(id: string): MarketplacePlan | undefined {
+    const pack = this.marketplacePack(id);
+    return pack ? planMarketplaceEnablement(pack) : undefined;
   }
 
   private registerHyperSkillFabric(): void {
