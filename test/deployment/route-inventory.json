@@ -46,6 +46,7 @@
   "GET /api/v1/territory/rdm",
   "GET /api/v1/yun/events",
   "GET /api/v3/economy/ledger",
+  "GET /api/v3/treasury/balance/:partyId",
   "GET /assets/video/IsabellaVideoIntro.mp4",
   "GET /health",
   "GET /styles/cinematic.css",
@@ -115,8 +116,13 @@
   "POST /api/v1/tools/execute",
   "POST /api/v1/triple-blockade/scan",
   "POST /api/v1/yun/events",
+  "POST /api/v3/affiliates/attribute",
+  "POST /api/v3/affiliates/register",
   "POST /api/v3/economy/calculate",
   "POST /api/v3/economy/settle",
+  "POST /api/v3/fraud/analyze",
+  "POST /api/v3/treasury/credit",
+  "POST /api/v3/treasury/debit",
   "POST /v1/chat/completions",
   "POST /v1/completions"
 ]

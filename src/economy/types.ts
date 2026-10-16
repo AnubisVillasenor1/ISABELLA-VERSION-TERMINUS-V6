@@ -105,7 +105,10 @@ export type EconomicEventKind =
   | "pricing.quote"
   | "royalty.plan"
   | "settlement.computed"
-  | "treasury.credit";
+  | "treasury.credit"
+  | "treasury.debit"
+  | "affiliate.commission"
+  | "fraud.analysis";
 
 /** Asiento del libro económico con encadenamiento por hash (BookPI-style). */
 export interface EconomicEvent {

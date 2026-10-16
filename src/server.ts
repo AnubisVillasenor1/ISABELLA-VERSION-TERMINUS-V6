@@ -53,7 +53,8 @@ import { registerDocumentSealRoutes } from "./routes/document-seal";
 import { registerPipelineRoutes, createInMemoryBookPiStorage } from "./routes/pipeline";
 import { registerYunEventRoutes } from "./routes/yun-events";
 import { registerEconomyRoutes } from "./routes/economy";
-import { EconomicLedger } from "./economy";
+import { registerTreasuryRoutes } from "./routes/treasury";
+import { EconomicLedger, TreasuryRuntime, AffiliateLedger } from "./economy";
 import { generateControls } from "./evolution/catalog";
 import { classifyWithGenesisTurbo, type GenesisResult } from "./lib/native-ml/genesis-turbo";
 
@@ -465,6 +466,10 @@ const publicEconomyLimiter = new FixedWindowRateLimiter(20, 60_000);
 // SCER · libro económico append-only (evidencia, no movimiento de fondos). En proceso;
 // la persistencia durable se delega al ledger BookPI en una iteración posterior.
 const economicLedger = new EconomicLedger();
+// SCER · tesorería interna (saldos, no fondos reales) y red de afiliados, ambos
+// auditados en el mismo libro económico.
+const treasuryRuntime = new TreasuryRuntime(economicLedger);
+const affiliateLedger = new AffiliateLedger(economicLedger);
 
 function enforceRateLimit(req: Request, res: Response, limiter: FixedWindowRateLimiter, bucket: string): boolean {
   const result = limiter.consume(bucket + ":" + (req.ip || "unknown"));
@@ -3158,6 +3163,20 @@ registerYunEventRoutes({
 registerEconomyRoutes({
   app,
   ledger: economicLedger,
+  enforceRateLimit,
+  rateLimiter: publicEconomyLimiter,
+  authorizeAdmin: (req, res) => authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN"),
+});
+
+// ── SCER Treasury + Affiliates + Fraud (state: draft | engine-generated) ─ bóveda de
+// saldos internos por parte, atribución de comisiones de afiliados (con veredicto
+// antifraude) y análisis del grafo de colusión. Las rutas mutantes son admin-gated;
+// mover saldos es contabilidad interna (`fundsMoved:false`), NO transfiere dinero real.
+registerTreasuryRoutes({
+  app,
+  ledger: economicLedger,
+  treasury: treasuryRuntime,
+  affiliates: affiliateLedger,
   enforceRateLimit,
   rateLimiter: publicEconomyLimiter,
   authorizeAdmin: (req, res) => authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN"),
