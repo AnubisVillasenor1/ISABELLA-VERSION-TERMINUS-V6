@@ -44,3 +44,13 @@ DROP TRIGGER IF EXISTS trg_bookpi_require_canonical ON bookpi_events;
 CREATE TRIGGER trg_bookpi_require_canonical
 BEFORE INSERT ON bookpi_events
 FOR EACH ROW EXECUTE FUNCTION bookpi_require_canonical_on_insert();
+
+-- Runtime sessions must identify the actor that owns each evidence record.
+ALTER TABLE bookpi_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE bookpi_events FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS bookpi_actor_read ON bookpi_events;
+DROP POLICY IF EXISTS bookpi_actor_append ON bookpi_events;
+CREATE POLICY bookpi_actor_read ON bookpi_events
+  FOR SELECT USING (actor_id = current_setting('app.actor_id', true));
+CREATE POLICY bookpi_actor_append ON bookpi_events
+  FOR INSERT WITH CHECK (actor_id = current_setting('app.actor_id', true));

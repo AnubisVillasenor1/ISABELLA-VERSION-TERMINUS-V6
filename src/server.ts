@@ -32,7 +32,7 @@ import type { ProviderConfig, SignatureScheme, TenantMapping } from "./commerce/
 import { LatencyRegistry } from "./deployment/latency-metrics";
 import { TtlSingleFlight } from "./deployment/ttl-single-flight";
 import { collectDependencyReadiness } from "./health/dependency-readiness";
-import { MetricsRegistry } from "./observability/metrics";
+import { MetricsRegistry, createMetricsSnapshotHash } from "./observability/metrics";
 import { SessionMemory, formatSessionContext, deriveSessionId } from "./memory/session-memory";
 import { VerifiedKnowledgeStore, formatVerifiedKnowledgeContext } from "./memory/verified-knowledge";
 import { osirisSentinel } from "./osiris";
@@ -204,6 +204,8 @@ function describeProviderReadiness(env: NodeJS.ProcessEnv): {
   publicRouteRequiresToken: boolean;
 } {
   const openModelConfigured = Boolean(
+    env.AI_GATEWAY_API_KEY ||
+    env.VERCEL_OIDC_TOKEN ||
     env.OPENROUTER_API_KEY ||
       (env.HF_TOKEN && env.HF_FREE_MODELS) ||
       env.OLLAMA_API_KEY ||
@@ -373,7 +375,7 @@ async function generateGatewayNarrative(systemPrompt: string, input: string, his
   if (Date.now() < gatewayCooldownUntil) return null;
   try {
     const result = await generateText({
-      model: gateway("inclusionai/ling-3.1-flash-free"),
+      model: gateway("nvidia/nemotron-3.5-lightning-free"),
       abortSignal: AbortSignal.timeout(providerTimeoutMs),
       system: systemPrompt,
       prompt: buildConversationPrompt(input, history),
@@ -906,7 +908,7 @@ app.get("/api/v1/cognition/native-runtime", (_req, res) => {
     provider: {
       ...describeProviderReadiness(process.env),
       localFallback: true,
-      note: "La interfaz pública usa el motor local soberano salvo que exista un proveedor abierto y la ruta pública esté disponible sin bearer.",
+      note: "La interfaz pública intenta el agente configurado y conserva el motor soberano como fallback explícito cuando el proveedor no está disponible.",
     },
   });
 });
@@ -917,7 +919,8 @@ app.post("/api/v1/cognition/route", async (req, res) => {
   try {
     const body = req.body ?? {};
     const modelEngine = ["auto", "sovereign", "open-science", "gemini"].includes(body.modelEngine) ? body.modelEngine : "auto";
-    if (modelEngine !== "sovereign" && !authorizeProviderRoute(req, res)) return;
+    const gatewayAutoRoute = modelEngine === "auto";
+    if (!gatewayAutoRoute && modelEngine !== "sovereign" && !authorizeProviderRoute(req, res)) return;
     if (modelEngine !== "sovereign" && !enforceRateLimit(req, res, publicModelLimiter, "public-model")) return;
     const history = sanitizePublicHistory(body.history);
     const input = typeof body.input === "string" ? body.input.trim() : "";
@@ -967,7 +970,7 @@ app.post("/api/v1/cognition/route", async (req, res) => {
     });
 
     let generativeNarrative: string | null = null;
-    let responseEngine: "gemini" | "open-science" | "openrouter-free" | "huggingface-free" | "sovereign-fallback" | "sovereign" | "blocked" = "blocked";
+    let responseEngine: "gemini" | "gateway" | "open-science" | "openrouter-free" | "huggingface-free" | "sovereign-fallback" | "sovereign" | "blocked" = "blocked";
     let nativeRouting: GenesisResult | null = null;
     try {
       nativeRouting = await classifyWithGenesisTurbo(input);
@@ -978,7 +981,11 @@ app.post("/api/v1/cognition/route", async (req, res) => {
     if (decision.admitted && modelEngine !== "sovereign") {
       // Free/open inference is the default. Paid or billing-enabled providers are never
       // silently selected by Auto/Open Science; they require an explicit operator opt-in.
-      if (modelEngine === "gemini" && genAi && process.env.ALLOW_PAID_PROVIDER_FALLBACK === "true") {
+      if (modelEngine === "auto") {
+        generativeNarrative = await generateGatewayNarrative(systemPrompt, input, history);
+        if (generativeNarrative) responseEngine = "gateway";
+      }
+      if (!generativeNarrative && modelEngine === "gemini" && genAi && process.env.ALLOW_PAID_PROVIDER_FALLBACK === "true") {
         try {
           const contents = [
             ...history.map((turn) => ({ role: (turn.role === "assistant" ? "model" : "user") as "model" | "user", parts: [{ text: turn.content }] })),
@@ -2427,11 +2434,36 @@ app.post("/api/v1/connectors/ingest", async (req, res) => {
   }
 });
 
-app.get("/api/v1/metrics", (_req, res) => {
+app.get("/api/v1/metrics", (req, res) => {
+  if (!authorizeApiToken(req, res, "OPS_API_TOKEN")) return;
+  res.setHeader("Cache-Control", "no-store");
+  const metrics = metricsRegistry.getSnapshot();
   res.json({
     success: true,
-    metrics: metricsRegistry.getSnapshot(),
+    metrics,
+    integrity: { snapshotHash: createMetricsSnapshotHash(metrics), algorithm: "sha256-12" },
     timestamp: new Date().toISOString(),
+  });
+});
+
+app.get("/api/v1/runtime/capabilities", (_req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  const gatewayConfigured = Boolean(process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN);
+  const bookpiDurable = Boolean(process.env.BOOKPI_LEDGER_PATH || process.env.POSTGRES_URL || process.env.SUPABASE_URL);
+  res.json({
+    runtime: "isabella-genesis-tina-v6",
+    status: "operational-with-degraded-external-dependencies",
+    capabilities: {
+      agent: { configured: gatewayConfigured, mode: gatewayConfigured ? "gateway-first" : "sovereign-fallback" },
+      bookpi: { configured: bookpiDurable, mode: bookpiDurable ? "durable-adapter-configured" : "process-memory-fallback" },
+      governance: { humanApprovalBoundary: true, failClosed: true },
+      observability: { metricsProtected: true, requestIds: true },
+    },
+    limitations: [
+      ...(gatewayConfigured ? [] : ["AI Gateway credentials are not present in this runtime"]),
+      ...(bookpiDurable ? [] : ["BookPI durable storage is not configured in this runtime"]),
+    ],
+    checkedAt: new Date().toISOString(),
   });
 });
 
