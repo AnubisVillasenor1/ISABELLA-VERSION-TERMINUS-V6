@@ -432,18 +432,30 @@ navToggle?.addEventListener('click', () => {
   navToggle.setAttribute('aria-label', opening ? 'Cerrar navegación' : 'Abrir navegación');
   navLinks?.classList.toggle('is-open', opening);
 });
-document.querySelectorAll('a[href^="#"]').forEach((link) => {
-  link.addEventListener('click', (event) => {
-    const selector = link.getAttribute('href');
-    const target = selector ? document.querySelector(selector) : null;
-    if (!target) return;
-    event.preventDefault();
+const navigateToHash = (selector, event) => {
+  if (!selector || !selector.startsWith('#')) return false;
+  const target = document.getElementById(selector.slice(1));
+  if (!target) return false;
+  event?.preventDefault();
+  closeNav();
+  document.querySelectorAll('.side-rail.is-open').forEach((rail) => rail.classList.remove('is-open'));
+  document.querySelectorAll('.rail-launcher[aria-expanded="true"]').forEach((launcher) => launcher.setAttribute('aria-expanded', 'false'));
+  target.scrollIntoView({ behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+  window.history.replaceState(null, '', selector);
+  return true;
+};
+document.addEventListener('click', (event) => {
+  const target = event.target;
+  if (!(target instanceof Element)) return;
+  const link = target.closest('a[href^="#"]');
+  if (link) navigateToHash(link.getAttribute('href'), event);
+});
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') {
     closeNav();
     document.querySelectorAll('.side-rail.is-open').forEach((rail) => rail.classList.remove('is-open'));
     document.querySelectorAll('.rail-launcher[aria-expanded="true"]').forEach((launcher) => launcher.setAttribute('aria-expanded', 'false'));
-    target.scrollIntoView({ behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
-    window.history.replaceState(null, '', selector);
-  });
+  }
 });
 document.addEventListener('click', (event) => {
   if (navToggle?.getAttribute('aria-expanded') !== 'true') return;

@@ -1066,7 +1066,7 @@ app.post("/api/v1/cognition/route", async (req, res) => {
         generativeNarrative = await generateCompatibleProviderNarrative(systemPrompt, input, history);
         if (generativeNarrative) responseEngine = "open-science";
       }
-      if (!generativeNarrative && (modelEngine === "open-science" || modelEngine === "auto" || modelEngine === "gemini")) {
+      if (!generativeNarrative && modelEngine === "auto") {
         generativeNarrative = await generateKeylessFreeNarrative(systemPrompt, input, history);
         if (generativeNarrative) responseEngine = "keyless-free";
       }
