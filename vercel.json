@@ -1,14 +1,4 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        {
-          "key": "Link",
-          "value": "<https://stream.mux.com>; rel=preconnect, <https://image.mux.com>; rel=preconnect"
-        }
-      ]
-    }
-  ]
+  "headers": []
 }

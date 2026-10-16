@@ -133,7 +133,6 @@ try {
 app.get("/", (_req, res) => {
   res.setHeader("Content-Type", "text/html; charset=utf-8");
   res.setHeader("Cache-Control", "no-store");
-  res.setHeader("Link", "<https://stream.mux.com>; rel=preconnect, <https://image.mux.com>; rel=preconnect");
   if (cinematicHtml === null) {
     res.status(503).type("html").send("<!doctype html><meta charset=\"utf-8\"><title>Isabella Genesis</title><p>La interfaz de este nodo no está disponible en el momento.</p>");
     return;
@@ -158,12 +157,6 @@ app.get("/ui/app.js", (_req, res) => {
   } catch {
     res.status(404).type("js").send("// Cinematic JavaScript unavailable");
   }
-});
-app.get("/assets/audio/IntroIsabella.mp3", (_req, res) => {
-  const audioPath = path.resolve(process.cwd(), "src/assets/musica/IntroIsabella.mp3");
-  if (!fs.existsSync(audioPath)) { res.status(404).type("text").send("Intro audio unavailable"); return; }
-  res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
-  res.type("audio/mpeg").sendFile(audioPath);
 });
 app.get("/assets/video/IsabellaVideoIntro.mp4", (_req, res) => {
   const videoPath = path.resolve(process.cwd(), "src/assets/musica/IsabellaVideoIntro.mp4");

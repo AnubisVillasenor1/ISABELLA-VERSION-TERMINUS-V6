@@ -41,7 +41,6 @@
   "GET /api/v1/status",
   "GET /api/v1/territory/rdm",
   "GET /api/v1/yun/events",
-  "GET /assets/audio/IntroIsabella.mp3",
   "GET /assets/video/IsabellaVideoIntro.mp4",
   "GET /health",
   "GET /styles/cinematic.css",
