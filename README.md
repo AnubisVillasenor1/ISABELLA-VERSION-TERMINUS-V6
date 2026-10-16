@@ -10,13 +10,13 @@ La inteligencia propone, calcula y evalúa. La autoridad humana decide, aprueba,
 
 **≈ 60% — estimación global provisional de readiness (rango honesto: 54–64%).**
 
-Es una **estimación de ingeniería, no una certificación**. Se calcula como media ponderada de dominios verificados de forma reproducible en la rama, con los gates externos penalizados en su estado real (no en su intención). El movimiento desde la base anterior (48% → ≈52%) y ahora hasta ≈60% proviene de trabajo implementado y probado en la rama: **96 rutas HTTP** (incluidas la superficie OpenAI-compatible `/v1`, los endpoints de Permission Map Ω, el planificador de ruta turbo y el sello documental IGDS-v1) y el **conductor de pipeline gobernado** (6 etapas INGRESS→ARGUS_CROWN→TRINITY_MOE→SOPHIA_ERI→ORION_SANDBOX→BOOKPI_IGDS, `src/pipeline/conductor.ts`, `POST /api/v1/pipeline/execute`), un **bus de eventos gobernado en proceso** (`src/messaging/magpie.ts`), un **guard de anclaje de evidencia** fail-closed (`src/veritas/grounding.ts`), una **superficie compatible con OpenAI** (`src/routes/openai.ts`), un **motor de mapeo de permisos con consentimiento humano** (`src/governance/permission-map.ts`), un **planificador de ruta de baja latencia, federado y ético** (`src/intelligence/turbo-planner.ts`), un **sello de procedencia documental** (integridad SHA-256 + firma Ed25519 + marca de agua, `src/security/document-seal.ts`), una **capa multimodal** de visión y síntesis de imagen (`src/inference/multimodal.ts`), una **capa de voz** TTS/STT (`src/inference/speech.ts`), el espacio de trabajo app-shell de chat con adjuntar archivo de contexto y escucha por Web Speech (la imagen se analiza vía `POST /api/v1/cognition/vision`), y una readiness local de **1141 pruebas / 195 archivos**. No proviene de dar por conectados adaptadores externos que siguen sin credenciales ni entorno objetivo.
+Es una **estimación de ingeniería, no una certificación**. Se calcula como media ponderada de dominios verificados de forma reproducible en la rama, con los gates externos penalizados en su estado real (no en su intención). El movimiento desde la base anterior (48% → ≈52%) y ahora hasta ≈60% proviene de trabajo implementado y probado en la rama: **98 rutas HTTP** (incluidas la superficie OpenAI-compatible `/v1`, los endpoints de Permission Map Ω, el planificador de ruta turbo, el sello documental IGDS-v1 y el ciclo del Cognitive Civilization Runtime Ω) y el **conductor de pipeline gobernado** (6 etapas INGRESS→ARGUS_CROWN→TRINITY_MOE→SOPHIA_ERI→ORION_SANDBOX→BOOKPI_IGDS, `src/pipeline/conductor.ts`, `POST /api/v1/pipeline/execute`), un **bus de eventos gobernado en proceso** (`src/messaging/magpie.ts`), un **guard de anclaje de evidencia** fail-closed (`src/veritas/grounding.ts`), una **superficie compatible con OpenAI** (`src/routes/openai.ts`), un **motor de mapeo de permisos con consentimiento humano** (`src/governance/permission-map.ts`), un **planificador de ruta de baja latencia, federado y ético** (`src/intelligence/turbo-planner.ts`), un **sello de procedencia documental** (integridad SHA-256 + firma Ed25519 + marca de agua, `src/security/document-seal.ts`), una **capa multimodal** de visión y síntesis de imagen (`src/inference/multimodal.ts`), una **capa de voz** TTS/STT (`src/inference/speech.ts`), el espacio de trabajo app-shell de chat con adjuntar archivo de contexto y escucha por Web Speech (la imagen se analiza vía `POST /api/v1/cognition/vision`), y una readiness local de **1218 pruebas / 213 archivos**. No proviene de dar por conectados adaptadores externos que siguen sin credenciales ni entorno objetivo.
 
 | Dominio | Estado real | Readiness |
 |---|---|---|
 | Núcleo cognitivo y de gobernanza (CROWN / AEGIS / VERITAS / Terminus Ω) | Implementado y probado localmente | ≈ 72% |
 | **Skill Fabric Ω v2 / HyperCore Ω** (contratos, 9 fases, triangulación, MCP) | Implementado y probado localmente; **no desplegado** | ≈ 60% |
-| API HTTP (Express, 97 rutas incl. superficies HyperCore/MCP y multimodal/voz) | Funcional; monolito no modularizado (TD-01) | ≈ 68% |
+| API HTTP (Express, 98 rutas incl. superficies HyperCore/MCP y multimodal/voz) | Funcional; monolito no modularizado (TD-01) | ≈ 68% |
 | **Multimodal y voz** (visión imagen→texto, texto→imagen, TTS/STT, key-driven) | Implementado y probado localmente; **sin proveedor de imagen/TTS desbloqueado** | ≈ 35% |
 | Evidencia y BookPI (ledger durable JSONL) | Cadena hash con fsync; **Postgres/Supabase sin E2E** (TD-06) | ≈ 45% |
 | Integraciones externas (inferencia real, KMS/HSM PQC FIPS 203/204/205, RLS) | Especificado/bloqueado por credenciales | ≈ 30% |
@@ -26,7 +26,7 @@ Es una **estimación de ingeniería, no una certificación**. Se calcula como me
 | Workspace Rust IGE-Ω | `Cargo.lock` + `fmt` limpios; **compilación/clippy local no ejecutables** | ≈ 25% |
 | Verificación de seguridad estática | 14/14 invariantes; sin pentest ni HSM productivo | ≈ 55% |
 
-**Lectura correcta del número:** Isabella pasa los gates locales que controla (tipos, 1191 pruebas, build, 14/14 de seguridad), pero **no** está lista para producción ni para despliegue. El ≈60% de un plan de producción no se alcanza con más código: los dominios que lo bloquean (Integraciones externas ≈30%, CI/CD ≈15%, Despliegue ≈25%, Multimodal/voz ≈35% mientras falten credenciales) exigen aprovisionar credenciales y entorno objetivo. Los adaptadores externos y el entorno objetivo son gates independientes que no se superan por tener interfaz ni por tener manifiesto YAML.
+**Lectura correcta del número:** Isabella pasa los gates locales que controla (tipos, 1218 pruebas, build, 14/14 de seguridad), pero **no** está lista para producción ni para despliegue. El ≈60% de un plan de producción no se alcanza con más código: los dominios que lo bloquean (Integraciones externas ≈30%, CI/CD ≈15%, Despliegue ≈25%, Multimodal/voz ≈35% mientras falten credenciales) exigen aprovisionar credenciales y entorno objetivo. Los adaptadores externos y el entorno objetivo son gates independientes que no se superan por tener interfaz ni por tener manifiesto YAML.
 
 ## Qué es Isabella
 
@@ -301,6 +301,33 @@ autoridad ni ejecuta efectos externos**: sugieren, calculan y explican.
 10. **Simulador de Política** (`hsf.legacy.policy-simulator`) — predice el efecto
     de una política sobre una carga antes de desplegarla.
 
+### ISABELLA Ω · Cognitive Civilization Runtime (CCR-1)
+
+`src/civilization/` implementa la **capa de composición** del spec CCR-1 v2.0.0
+("Cognitive Civilization Runtime"): unifica las **capas Ω** y los **20 regalos Ω**
+sobre subsistemas que YA existen en el repositorio, sin fabricar motores
+inexistentes. Registra las **13 capas** Ω-0..Ω-12 (`layers.ts`; el spec titula "12
+capas" pero enumera 13 — divergence declarada, no ocultada) con estado honesto
+`IMPLEMENTED | PARTIAL | SIMULATED | SPECIFIED | NOT_WIRED`, y los **20 regalos Ω**
+(`gifts.ts`) mapeados a sus capas con la afirmación del spec frente a la evaluación
+real. El contrato soberano (`contract.ts`) define `answer`, `confidence`,
+`reasoningPath`, `usedKnowledgeDomains`, `evidence`, `simulation`, `evolution`,
+`policy` y `bookpiHash`, y su validador **rechaza** cualquier respuesta que intente
+declarar autorización o ejecución. El ciclo gobernado de **9 pasos**
+(`runtime.ts`, `runCivilizationCycle`) compone kernel → memoria → conocimiento →
+razonamiento → política → confianza → realidad → evolución → contrato: clasifica
+(CROWN + semáforo), recupera memoria verificada (IKES), planifica expertos MoE,
+explica la política, evidencia con **SHA3-512** y sella un **hash BookPI canónico**.
+Invariante de AGENTS.md: **el ciclo clasifica, explica y evidencia; NO autoriza ni
+ejecuta** (`authorizationPerformed`/`executionPerformed` = `false`,
+`authorityPath` = `FULL`). Honestidad radical: la **simulación** (Ω-2) se declara
+`NOT_WIRED` (`simulation = null`), la **ciencia autónoma** (Ω-5) `NOT_WIRED`, y la
+**evolución** (Ω-11) exige aprobador humano (`humanApprovalRequired: true`). Se
+expone como facultad `hsf.civilization.runtime`, como método
+`runtime.runCivilizationCycle()` / `runtime.civilizationSummary()`, y como endpoint
+`POST /api/v1/civilization/cycle` (admin-gated); emite el evento
+`civilization.cycle.completed`.
+
 ### IGDS-v1 Document Seal (integridad y procedencia de documentos)
 
 `src/security/document-seal.ts` resuelve la **procedencia de documentos generados**:
@@ -444,7 +471,7 @@ El ledger JSONL mantiene una cadena hash, `fsync`, backups atómicos, restauraci
 - `POST /api/v1/yun/events` — recibe un evento YUN canónico, verifica integridad y lo registra en BookPI; requiere `GENESIS_ADMIN_API_TOKEN`.
 - `GET /api/v1/yun/events?limit=20` — expone únicamente metadatos saneados de eventos YUN recientes.
 
-Las superficies extraídas del monolito (TD-01) viven en `src/routes/`: OpenAI `/v1` (`openai.ts`), HyperCore/MCP (`hypercore.ts`), Permission Map (`governance-permissions.ts`), Document Seal (`document-seal.ts`), eventos YUN (`yun-events.ts`) y el Pipeline (`pipeline.ts`); el contrato HTTP no cambia al extraerlas. Las rutas mutantes fallan cerrado cuando falta configuración. `X-Request-ID` se genera o propaga en cada respuesta; en producción se añade HSTS. Ningún request ID sustituye autenticación, autorización humana o evidencia de despliegue.
+Las superficies extraídas del monolito (TD-01) viven en `src/routes/`: OpenAI `/v1` (`openai.ts`), HyperCore/MCP (`hypercore.ts`), Permission Map (`governance-permissions.ts`), Document Seal (`document-seal.ts`), eventos YUN (`yun-events.ts`), el Pipeline (`pipeline.ts`), el semáforo de flujo (`traffic-light.ts`) y el ciclo de civilización (`civilization.ts`); el contrato HTTP no cambia al extraerlas. Las rutas mutantes fallan cerrado cuando falta configuración. `X-Request-ID` se genera o propaga en cada respuesta; en producción se añade HSTS. Ningún request ID sustituye autenticación, autorización humana o evidencia de despliegue.
 
 Las rutas sensibles aplican autenticación, límites de tamaño, rate limiting y fallo cerrado cuando falta una dependencia.
 
@@ -508,7 +535,7 @@ pnpm run security:suite
 pnpm run build
 ```
 
-Evidencia local reproducida en la rama actual: `pnpm typecheck` exit 0; `pnpm test` **1191 aprobadas / 208 archivos** (incluye `test/intelligence/turbo-planner.test.ts`, `test/security/document-seal-runtime.test.ts`, `test/routes/document-seal.test.ts`, `test/routes/pipeline.test.ts`, `test/routes/yun-events.test.ts`, `test/governance/traffic-light.test.ts`, `test/routes/traffic-light.test.ts`, `test/gifts/*`, `test/inference/multimodal.test.ts`, `test/inference/speech.test.ts` y las pruebas de integración por red `*.integration.test.ts`); `pnpm run build` exit 0 (tsc + vitest + esbuild + smoke UI + smoke runtime, que ahora incluye `MULTIMODAL_SPEECH_GUARDRAILS_OK`); `pnpm run security:suite` **14 passed / 0 failed / 0 not_applicable**. La inferencia de texto externa se verificó en vivo el 2026-10-13 con Groq (`HTTP 200`, `openai/gpt-oss-20b`) y Ollama Cloud (`responseEngine: "open-science"`); el **STT de Groq (`whisper-large-v3`) se verificó en vivo** por la ruta gobernada `POST /api/v1/cognition/transcribe` (texto transcrito correcto); además, la **visión (imagen→texto) se verificó en vivo** con Ollama local (`qwen2.5vl:7b`) por `POST /api/v1/cognition/vision` (`success:true`, `provider:"local"`, descripción correcta), aunque la síntesis de imagen sigue sin proveedor; Hugging Face autentica pero devuelve `HTTP 402` por falta de créditos, y el TTS de Groq exige aceptar términos (`HTTP 400 model_terms_required`). Un test verde demuestra una capacidad computacional local, **no** autoridad, aprendizaje ni producción.
+Evidencia local reproducida en la rama actual: `pnpm typecheck` exit 0; `pnpm test` **1218 aprobadas / 213 archivos** (incluye `test/intelligence/turbo-planner.test.ts`, `test/security/document-seal-runtime.test.ts`, `test/routes/document-seal.test.ts`, `test/routes/pipeline.test.ts`, `test/routes/yun-events.test.ts`, `test/governance/traffic-light.test.ts`, `test/routes/traffic-light.test.ts`, `test/civilization/*`, `test/routes/civilization.test.ts`, `test/gifts/*`, `test/inference/multimodal.test.ts`, `test/inference/speech.test.ts` y las pruebas de integración por red `*.integration.test.ts`); `pnpm run build` exit 0 (tsc + vitest + esbuild + smoke UI + smoke runtime, que ahora incluye `MULTIMODAL_SPEECH_GUARDRAILS_OK`); `pnpm run security:suite` **14 passed / 0 failed / 0 not_applicable**. La inferencia de texto externa se verificó en vivo el 2026-10-13 con Groq (`HTTP 200`, `openai/gpt-oss-20b`) y Ollama Cloud (`responseEngine: "open-science"`); el **STT de Groq (`whisper-large-v3`) se verificó en vivo** por la ruta gobernada `POST /api/v1/cognition/transcribe` (texto transcrito correcto); además, la **visión (imagen→texto) se verificó en vivo** con Ollama local (`qwen2.5vl:7b`) por `POST /api/v1/cognition/vision` (`success:true`, `provider:"local"`, descripción correcta), aunque la síntesis de imagen sigue sin proveedor; Hugging Face autentica pero devuelve `HTTP 402` por falta de créditos, y el TTS de Groq exige aceptar términos (`HTTP 400 model_terms_required`). Un test verde demuestra una capacidad computacional local, **no** autoridad, aprendizaje ni producción.
 
 ```bash
 SMOKE_BASE_URL=https://tu-dominio.example pnpm run smoke:production
@@ -555,7 +582,7 @@ revisión humana con nombre.
 ## Estructura relevante
 
 - `src/server.ts` — API, montaje de rutas, gate de arranque y configuración runtime.
-- `src/routes/` — superficies HTTP extraídas: OpenAI `/v1`, HyperCore/MCP, Permission Map, Document Seal, eventos YUN y Pipeline.
+- `src/routes/` — superficies HTTP extraídas: OpenAI `/v1`, HyperCore/MCP, Permission Map, Document Seal, eventos YUN, Pipeline, semáforo de flujo y ciclo de civilización.
 - `src/pipeline/` — conductor gobernado de seis etapas (`conductor.ts`).
 - `src/federation/` — registro canónico de las 7 federaciones TAMV y el evento YUN.
 - `src/authority/` — gramática de la identidad de método (`method-id.ts`).

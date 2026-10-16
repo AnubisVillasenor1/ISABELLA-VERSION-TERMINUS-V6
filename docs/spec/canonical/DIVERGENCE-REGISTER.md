@@ -49,3 +49,23 @@ y una gramática estricta de 7 segmentos.
 - Retirar el único uso muerto relacionado: el `import { parseMethodId }` en
   `src/server.ts` (no se invocaba; su retiro no cambia comportamiento).
 - **Sin renombres** de literales hasta que un humano arbitre entre A / B / C.
+
+## DIV-0002 — "Cognitive Civilization Runtime (CCR-1)": 12 vs 13 capas Ω
+
+- **Estado:** abierto · **Severidad:** baja · **Detectado:** 2026-10-15
+- **Especificación:** `ISABELLA Ω · COGNITIVE CIVILIZATION RUNTIME (CCR-1)` v2.0.0,
+  §"Capas": titula **"12 capas Ω"** pero su tabla enumera **Ω-0 … Ω-12**
+  (Sovereign Kernel, Cognitive Memory Mesh, Reality Digital Twin, Planetary
+  Knowledge Graph, Meta-Reasoning Engine, Autonomous Science Engine, Civilization
+  Policy Compiler, Trust Fabric, Multi-Agent Federated Intelligence, Economic
+  Consciousness Engine, Neural Governance Layer, Self-Evolution Engine,
+  Antifragility Core) — **13 filas**.
+- **Código (`src/civilization/layers.ts`):** se registran las **13** capas
+  (`CIVILIZATION_LAYER_COUNT = 13`) y se declara la discrepancia con la constante
+  `CCR_DECLARED_LAYERS = 12`, en lugar de silenciarla o renumerar la spec.
+- **Naturaleza de la divergencia:** desajuste interno de la propia especificación
+  (título vs. tabla), no un conflicto código↔spec. Puede resolverse renumerando
+  Ω-1..Ω-12 (sin Ω-0) o corrigiendo el título a "13 capas".
+- **Opción tomada por ahora (cumple §6):** registrar ambas cifras de forma explícita
+  y honesta; **sin** modificar la estructura. Pendiente de arbitraje humano para
+  fijar la numeración canónica.

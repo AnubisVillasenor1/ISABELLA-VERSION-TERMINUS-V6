@@ -45,6 +45,7 @@ import { registerOpenAiCompatibleRoutes } from "./routes/openai";
 import { registerOrderPermissionRoutes } from "./routes/governance-permissions";
 import { registerTurboPlannerRoutes } from "./routes/turbo-planner";
 import { registerTrafficLightRoutes } from "./routes/traffic-light";
+import { registerCivilizationRoutes } from "./routes/civilization";
 import { registerDocumentSealRoutes } from "./routes/document-seal";
 import { registerPipelineRoutes, createInMemoryBookPiStorage } from "./routes/pipeline";
 import { registerYunEventRoutes } from "./routes/yun-events";
@@ -2936,6 +2937,17 @@ registerTurboPlannerRoutes({
 registerTrafficLightRoutes({
   app,
   classifyFlow: (input) => runtime.classifyFlow(input),
+  enforceRateLimit,
+  rateLimiter: publicScanLimiter,
+  authorizeAdmin: (req, res) => authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN"),
+});
+
+// ── ISABELLA Ω · Cognitive Civilization Runtime (CCR-1) (state: draft | engine-generated)
+// ejecuta el ciclo gobernado de 9 pasos sobre 13 capas Ω y 20 regalos Ω; clasifica,
+// explica y evidencia. NO autoriza ni ejecuta: CROWN sigue autorizando y BookPI evidenciando.
+registerCivilizationRoutes({
+  app,
+  runCycle: (input) => runtime.runCivilizationCycle(input),
   enforceRateLimit,
   rateLimiter: publicScanLimiter,
   authorizeAdmin: (req, res) => authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN"),

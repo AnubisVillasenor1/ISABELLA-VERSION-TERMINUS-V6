@@ -42,6 +42,7 @@
   "POST /api/v1/billing/portal",
   "POST /api/v1/billing/stripe/webhook",
   "POST /api/v1/billing/subscribe",
+  "POST /api/v1/civilization/cycle",
   "POST /api/v1/cognition/image",
   "POST /api/v1/cognition/route",
   "POST /api/v1/cognition/speech",

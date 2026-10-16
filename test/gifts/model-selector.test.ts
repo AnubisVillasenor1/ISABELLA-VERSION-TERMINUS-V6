@@ -12,7 +12,7 @@ describe("Regalo 8 — Selector de Modelo", () => {
     const selection = selectModel(models, { maxLatencyMs: 500 });
     expect(selection.feasible).toBe(true);
     expect(selection.selected?.id).toBe("fast");
-    expect(selection.ranked[0].feasible).toBe(true);
+    expect(selection.ranked[0]?.feasible).toBe(true);
   });
 
   it("falla cerrado cuando no hay modelo factible", () => {

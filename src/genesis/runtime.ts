@@ -106,6 +106,15 @@ import {
   verifyClaim,
 } from "../capabilities";
 import { createGiftBundle, type GiftBundle } from "../gifts";
+import {
+  CIVILIZATION_GIFT_COUNT,
+  CIVILIZATION_LAYER_COUNT,
+  civilizationSummary as buildCivilizationSummary,
+  runCivilizationCycle as runCivilizationCycleCore,
+  type CivilizationCycleInput,
+  type CivilizationCycleResult,
+} from "../civilization";
+import { createEngine } from "../evolution/engine";
 
 export interface GenesisRuntimeInput extends CrownEvaluationInput, AdaptiveRequest {
   memoryQuery?: string;
@@ -150,6 +159,8 @@ export class IsabellaGenesisRuntime {
   readonly events = new MagpieBus();
   /** Legado de los regalos: diez capacidades que Isabella debe desarrollar. */
   readonly gifts: GiftBundle = createGiftBundle();
+  /** Cache del fabric de evolución (Ω-11) para la auditoría de controles del ciclo CCR-1. */
+  private evolutionFabric?: { readonly controls: readonly import("../core/types").EvolutionControl[]; readonly mode: string };
   /** Llave Ed25519 del sello documental IGDS; perezosa (env PEM o efímera). */
   private documentSealSignerInstance?: Ed25519Signer;
 
@@ -169,6 +180,7 @@ export class IsabellaGenesisRuntime {
     this.registerGovernanceCapabilities();
     this.registerCanonicalCatalogs();
     this.registerGiftCapabilities();
+    this.registerCivilizationCapabilities();
   }
 
   /** Registra los catálogos canónicos de tools, skills y protocolos. */
@@ -248,6 +260,25 @@ export class IsabellaGenesisRuntime {
         execute: async (input) => this.gifts.invoke(gift.capabilityId, input),
       });
     }
+  }
+
+  private registerCivilizationCapabilities(): void {
+    const low = (id: string, domain: import("../capabilities").CapabilityDomain, description: string) => ({
+      id, version: "1.0.0", domain, description, riskTier: "LOW" as const, requiresAuthority: true,
+    });
+    this.capabilities.register({
+      descriptor: low(
+        "hsf.civilization.runtime",
+        "architecture",
+        `ISABELLA Ω · CCR-1: ciclo gobernado de 9 pasos sobre ${CIVILIZATION_LAYER_COUNT} capas Ω y ${CIVILIZATION_GIFT_COUNT} regalos; clasifica, explica y evidencia, no autoriza ni ejecuta.`,
+      ),
+      health: () => "ready",
+      execute: async (input) => {
+        const value = input as { input?: CivilizationCycleInput } | CivilizationCycleInput;
+        const cycleInput = (value as { input?: CivilizationCycleInput }).input ?? (value as CivilizationCycleInput);
+        return this.runCivilizationCycle(cycleInput);
+      },
+    });
   }
 
   private registerHyperSkillFabric(): void {
@@ -980,8 +1011,48 @@ export class IsabellaGenesisRuntime {
   }
 
   /* ------------------------------------------------------------------ */
-  /* IGDS-v1 Document Seal — integridad y procedencia de documentos      */
+  /* ISABELLA Ω · Cognitive Civilization Runtime (CCR-1)                 */
   /* ------------------------------------------------------------------ */
+
+  private getEvolutionFabric(): { readonly controls: readonly import("../core/types").EvolutionControl[]; readonly mode: string } {
+    if (!this.evolutionFabric) {
+      const engine = createEngine();
+      this.evolutionFabric = Object.freeze({ controls: [...engine.controls.values()], mode: engine.mode });
+    }
+    return this.evolutionFabric;
+  }
+
+  /**
+   * ISABELLA Ω · CCR-1: ejecuta el ciclo gobernado de 9 pasos sobre subsistemas
+   * reales (kernel → memoria → conocimiento → razonamiento → política → confianza →
+   * realidad → evolución → contrato). El ciclo clasifica, explica y evidencia; NO
+   * autoriza y NO ejecuta (`authorizationPerformed`/`executionPerformed` = false).
+   */
+  runCivilizationCycle(input: CivilizationCycleInput): CivilizationCycleResult {
+    return runCivilizationCycleCore(
+      {
+        classifyFlow: (value) => this.classifyFlow(value),
+        assessCompanionSafety: (value) => this.assessCompanionSafety(value),
+        assessVigia: (value) => this.assessVigia(value),
+        retrieveKnowledge: (query) => this.memory.retrieve(query),
+        planExperts: (ids) => this.planExpertModules(ids),
+        harden: (content) => this.harden(content),
+        explainPolicy: (decision, factors, evidenceRefs, policyVersion) =>
+          this.explainPolicy(decision, factors, evidenceRefs, policyVersion),
+        evolutionControls: () => this.getEvolutionFabric(),
+        publish: (event) => {
+          this.events.publish(event);
+        },
+      },
+      input,
+    );
+  }
+
+  /** Resumen honesto de las capas Ω y regalos Ω del CCR-1 (conteos y estado). */
+  civilizationSummary(): ReturnType<typeof buildCivilizationSummary> {
+    return buildCivilizationSummary();
+  }
+
 
   /**
    * Llave Ed25519 usada para sellar documentos. Se carga de

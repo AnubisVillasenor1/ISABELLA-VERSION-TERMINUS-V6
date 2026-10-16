@@ -2,9 +2,9 @@
   {
     "route": "/",
     "method": "GET",
-    "handler": "inline@src/server.ts:130",
+    "handler": "inline@src/server.ts:131",
     "verified": false,
-    "line": 130,
+    "line": 131,
     "sensitive": false,
     "controls": {
       "auth": false,
@@ -16,9 +16,9 @@
   {
     "route": "/styles/cinematic.css",
     "method": "GET",
-    "handler": "inline@src/server.ts:140",
+    "handler": "inline@src/server.ts:141",
     "verified": false,
-    "line": 140,
+    "line": 141,
     "sensitive": false,
     "controls": {
       "auth": false,
@@ -30,9 +30,9 @@
   {
     "route": "/ui/app.js",
     "method": "GET",
-    "handler": "inline@src/server.ts:150",
+    "handler": "inline@src/server.ts:151",
     "verified": false,
-    "line": 150,
+    "line": 151,
     "sensitive": false,
     "controls": {
       "auth": false,
@@ -44,9 +44,9 @@
   {
     "route": "/assets/audio/IntroIsabella.mp3",
     "method": "GET",
-    "handler": "inline@src/server.ts:159",
+    "handler": "inline@src/server.ts:160",
     "verified": false,
-    "line": 159,
+    "line": 160,
     "sensitive": false,
     "controls": {
       "auth": false,
@@ -58,9 +58,9 @@
   {
     "route": "/assets/video/IsabellaVideoIntro.mp4",
     "method": "GET",
-    "handler": "inline@src/server.ts:165",
+    "handler": "inline@src/server.ts:166",
     "verified": false,
-    "line": 165,
+    "line": 166,
     "sensitive": false,
     "controls": {
       "auth": true,
@@ -72,9 +72,9 @@
   {
     "route": "/health",
     "method": "GET",
-    "handler": "inline@src/server.ts:634",
+    "handler": "inline@src/server.ts:635",
     "verified": false,
-    "line": 634,
+    "line": 635,
     "sensitive": false,
     "controls": {
       "auth": false,
@@ -86,9 +86,9 @@
   {
     "route": "/api/v1/health",
     "method": "GET",
-    "handler": "inline@src/server.ts:644",
+    "handler": "inline@src/server.ts:645",
     "verified": true,
-    "line": 644,
+    "line": 645,
     "sensitive": false,
     "controls": {
       "auth": false,
@@ -100,9 +100,9 @@
   {
     "route": "/api/v1/healthz",
     "method": "GET",
-    "handler": "inline@src/server.ts:658",
+    "handler": "inline@src/server.ts:659",
     "verified": false,
-    "line": 658,
+    "line": 659,
     "sensitive": false,
     "controls": {
       "auth": false,
@@ -114,9 +114,9 @@
   {
     "route": "/api/v1/status",
     "method": "GET",
-    "handler": "inline@src/server.ts:672",
+    "handler": "inline@src/server.ts:673",
     "verified": true,
-    "line": 672,
+    "line": 673,
     "sensitive": false,
     "controls": {
       "auth": false,
@@ -128,9 +128,9 @@
   {
     "route": "/api/v1/memory",
     "method": "GET",
-    "handler": "inline@src/server.ts:718",
+    "handler": "inline@src/server.ts:719",
     "verified": true,
-    "line": 718,
+    "line": 719,
     "sensitive": false,
     "controls": {
       "auth": true,
@@ -142,9 +142,9 @@
   {
     "route": "/api/v1/memory/ingest",
     "method": "POST",
-    "handler": "inline@src/server.ts:732",
+    "handler": "inline@src/server.ts:733",
     "verified": false,
-    "line": 732,
+    "line": 733,
     "sensitive": true,
     "controls": {
       "auth": false,
@@ -156,9 +156,9 @@
   {
     "route": "/api/v1/memory/proposals",
     "method": "GET",
-    "handler": "inline@src/server.ts:758",
+    "handler": "inline@src/server.ts:759",
     "verified": false,
-    "line": 758,
+    "line": 759,
     "sensitive": false,
     "controls": {
       "auth": true,
@@ -170,9 +170,9 @@
   {
     "route": "/api/v1/memory/proposals/:proposalId/resolve",
     "method": "POST",
-    "handler": "inline@src/server.ts:763",
+    "handler": "inline@src/server.ts:764",
     "verified": false,
-    "line": 763,
+    "line": 764,
     "sensitive": true,
     "controls": {
       "auth": true,
@@ -184,9 +184,9 @@
   {
     "route": "/api/v1/bookpi/events",
     "method": "GET",
-    "handler": "inline@src/server.ts:784",
+    "handler": "inline@src/server.ts:785",
     "verified": false,
-    "line": 784,
+    "line": 785,
     "sensitive": false,
     "controls": {
       "auth": false,
@@ -198,9 +198,9 @@
   {
     "route": "/api/v1/bookpi/events/admin",
     "method": "GET",
-    "handler": "inline@src/server.ts:805",
+    "handler": "inline@src/server.ts:806",
     "verified": false,
-    "line": 805,
+    "line": 806,
     "sensitive": true,
     "controls": {
       "auth": true,
@@ -212,9 +212,9 @@
   {
     "route": "/api/v1/tools/execute",
     "method": "POST",
-    "handler": "inline@src/server.ts:811",
+    "handler": "inline@src/server.ts:812",
     "verified": false,
-    "line": 811,
+    "line": 812,
     "sensitive": true,
     "controls": {
       "auth": false,
@@ -226,9 +226,9 @@
   {
     "route": "/api/v1/cognition/native-runtime",
     "method": "GET",
-    "handler": "inline@src/server.ts:863",
+    "handler": "inline@src/server.ts:864",
     "verified": false,
-    "line": 863,
+    "line": 864,
     "sensitive": true,
     "controls": {
       "auth": false,
@@ -240,9 +240,9 @@
   {
     "route": "/api/v1/cognition/route",
     "method": "POST",
-    "handler": "inline@src/server.ts:874",
+    "handler": "inline@src/server.ts:875",
     "verified": true,
-    "line": 874,
+    "line": 875,
     "sensitive": true,
     "controls": {
       "auth": false,
@@ -254,9 +254,9 @@
   {
     "route": "/api/v1/cognition/multimodal",
     "method": "GET",
-    "handler": "inline@src/server.ts:1043",
+    "handler": "inline@src/server.ts:1044",
     "verified": false,
-    "line": 1043,
+    "line": 1044,
     "sensitive": true,
     "controls": {
       "auth": false,
@@ -268,9 +268,9 @@
   {
     "route": "/api/v1/cognition/vision",
     "method": "POST",
-    "handler": "inline@src/server.ts:1057",
+    "handler": "inline@src/server.ts:1058",
     "verified": false,
-    "line": 1057,
+    "line": 1058,
     "sensitive": true,
     "controls": {
       "auth": false,
@@ -282,9 +282,9 @@
   {
     "route": "/api/v1/cognition/image",
     "method": "POST",
-    "handler": "inline@src/server.ts:1112",
+    "handler": "inline@src/server.ts:1113",
     "verified": false,
-    "line": 1112,
+    "line": 1113,
     "sensitive": true,
     "controls": {
       "auth": false,
@@ -296,9 +296,9 @@
   {
     "route": "/api/v1/cognition/speech",
     "method": "POST",
-    "handler": "inline@src/server.ts:1165",
+    "handler": "inline@src/server.ts:1166",
     "verified": false,
-    "line": 1165,
+    "line": 1166,
     "sensitive": true,
     "controls": {
       "auth": false,
@@ -310,9 +310,9 @@
   {
     "route": "/api/v1/cognition/transcribe",
     "method": "POST",
-    "handler": "inline@src/server.ts:1214",
+    "handler": "inline@src/server.ts:1215",
     "verified": false,
-    "line": 1214,
+    "line": 1215,
     "sensitive": true,
     "controls": {
       "auth": false,
@@ -324,9 +324,9 @@
   {
     "route": "/api/v1/cognitive/request",
     "method": "POST",
-    "handler": "inline@src/server.ts:1252",
+    "handler": "inline@src/server.ts:1253",
     "verified": false,
-    "line": 1252,
+    "line": 1253,
     "sensitive": true,
     "controls": {
       "auth": false,
@@ -338,9 +338,9 @@
   {
     "route": "/api/v1/isabella/mediate",
     "method": "POST",
-    "handler": "inline@src/server.ts:1375",
+    "handler": "inline@src/server.ts:1376",
     "verified": true,
-    "line": 1375,
+    "line": 1376,
     "sensitive": true,
     "controls": {
       "auth": true,
@@ -352,9 +352,9 @@
   {
     "route": "/api/v1/isabella/entropy",
     "method": "POST",
-    "handler": "inline@src/server.ts:1442",
+    "handler": "inline@src/server.ts:1443",
     "verified": false,
-    "line": 1442,
+    "line": 1443,
     "sensitive": true,
     "controls": {
       "auth": false,
@@ -366,9 +366,9 @@
   {
     "route": "/api/v1/isabella/status",
     "method": "GET",
-    "handler": "inline@src/server.ts:1459",
+    "handler": "inline@src/server.ts:1460",
     "verified": false,
-    "line": 1459,
+    "line": 1460,
     "sensitive": false,
     "controls": {
       "auth": false,
@@ -380,9 +380,9 @@
   {
     "route": "/api/v1/hsf/status",
     "method": "GET",
-    "handler": "inline@src/server.ts:1469",
+    "handler": "inline@src/server.ts:1470",
     "verified": false,
-    "line": 1469,
+    "line": 1470,
     "sensitive": false,
     "controls": {
       "auth": false,
@@ -394,9 +394,9 @@
   {
     "route": "/api/v1/hsf/invoke",
     "method": "POST",
-    "handler": "inline@src/server.ts:1482",
+    "handler": "inline@src/server.ts:1483",
     "verified": false,
-    "line": 1482,
+    "line": 1483,
     "sensitive": true,
     "controls": {
       "auth": true,
@@ -408,9 +408,9 @@
   {
     "route": "/api/v1/quantum/pennylane/status",
     "method": "GET",
-    "handler": "inline@src/server.ts:1546",
+    "handler": "inline@src/server.ts:1547",
     "verified": false,
-    "line": 1546,
+    "line": 1547,
     "sensitive": false,
     "controls": {
       "auth": false,
@@ -422,9 +422,9 @@
   {
     "route": "/api/v1/quantum/pennylane/execute",
     "method": "POST",
-    "handler": "inline@src/server.ts:1558",
+    "handler": "inline@src/server.ts:1559",
     "verified": false,
-    "line": 1558,
+    "line": 1559,
     "sensitive": true,
     "controls": {
       "auth": true,
@@ -436,9 +436,9 @@
   {
     "route": "/api/v1/triple-blockade/scan",
     "method": "POST",
-    "handler": "inline@src/server.ts:1611",
+    "handler": "inline@src/server.ts:1612",
     "verified": false,
-    "line": 1611,
+    "line": 1612,
     "sensitive": true,
     "controls": {
       "auth": false,
@@ -450,9 +450,9 @@
   {
     "route": "/api/v1/notebook/generate",
     "method": "POST",
-    "handler": "inline@src/server.ts:1645",
+    "handler": "inline@src/server.ts:1646",
     "verified": false,
-    "line": 1645,
+    "line": 1646,
     "sensitive": true,
     "controls": {
       "auth": false,
@@ -464,9 +464,9 @@
   {
     "route": "/api/v1/audio-overview/generate",
     "method": "POST",
-    "handler": "inline@src/server.ts:1715",
+    "handler": "inline@src/server.ts:1716",
     "verified": false,
-    "line": 1715,
+    "line": 1716,
     "sensitive": true,
     "controls": {
       "auth": false,
@@ -478,9 +478,9 @@
   {
     "route": "/api/v1/territory/rdm",
     "method": "GET",
-    "handler": "inline@src/server.ts:1763",
+    "handler": "inline@src/server.ts:1764",
     "verified": false,
-    "line": 1763,
+    "line": 1764,
     "sensitive": false,
     "controls": {
       "auth": false,
@@ -492,9 +492,9 @@
   {
     "route": "/api/v1/sanitization/scan",
     "method": "POST",
-    "handler": "inline@src/server.ts:1784",
+    "handler": "inline@src/server.ts:1785",
     "verified": false,
-    "line": 1784,
+    "line": 1785,
     "sensitive": true,
     "controls": {
       "auth": false,
@@ -506,9 +506,9 @@
   {
     "route": "/api/v1/knowledge/admit",
     "method": "POST",
-    "handler": "inline@src/server.ts:1807",
+    "handler": "inline@src/server.ts:1808",
     "verified": false,
-    "line": 1807,
+    "line": 1808,
     "sensitive": true,
     "controls": {
       "auth": true,
@@ -520,9 +520,9 @@
   {
     "route": "/api/v1/governance/git",
     "method": "POST",
-    "handler": "inline@src/server.ts:1902",
+    "handler": "inline@src/server.ts:1903",
     "verified": false,
-    "line": 1902,
+    "line": 1903,
     "sensitive": true,
     "controls": {
       "auth": false,
@@ -534,9 +534,9 @@
   {
     "route": "/api/v1/governance/quality-gates",
     "method": "POST",
-    "handler": "inline@src/server.ts:1913",
+    "handler": "inline@src/server.ts:1914",
     "verified": false,
-    "line": 1913,
+    "line": 1914,
     "sensitive": true,
     "controls": {
       "auth": false,
@@ -548,9 +548,9 @@
   {
     "route": "/api/v1/governance/deployment",
     "method": "POST",
-    "handler": "inline@src/server.ts:1932",
+    "handler": "inline@src/server.ts:1933",
     "verified": false,
-    "line": 1932,
+    "line": 1933,
     "sensitive": true,
     "controls": {
       "auth": false,
@@ -562,9 +562,9 @@
   {
     "route": "/api/v1/governance/verify-agent-app",
     "method": "POST",
-    "handler": "inline@src/server.ts:1952",
+    "handler": "inline@src/server.ts:1953",
     "verified": false,
-    "line": 1952,
+    "line": 1953,
     "sensitive": true,
     "controls": {
       "auth": false,
@@ -576,9 +576,9 @@
   {
     "route": "/api/v1/governance/lifecycle-plan",
     "method": "POST",
-    "handler": "inline@src/server.ts:1972",
+    "handler": "inline@src/server.ts:1973",
     "verified": false,
-    "line": 1972,
+    "line": 1973,
     "sensitive": true,
     "controls": {
       "auth": false,
@@ -590,9 +590,9 @@
   {
     "route": "/api/v1/diff/observe",
     "method": "POST",
-    "handler": "inline@src/server.ts:1983",
+    "handler": "inline@src/server.ts:1984",
     "verified": false,
-    "line": 1983,
+    "line": 1984,
     "sensitive": true,
     "controls": {
       "auth": false,
@@ -604,9 +604,9 @@
   {
     "route": "/api/v1/sanitization/harden",
     "method": "POST",
-    "handler": "inline@src/server.ts:2007",
+    "handler": "inline@src/server.ts:2008",
     "verified": false,
-    "line": 2007,
+    "line": 2008,
     "sensitive": true,
     "controls": {
       "auth": false,
@@ -618,9 +618,9 @@
   {
     "route": "/api/v1/security/triangulate",
     "method": "POST",
-    "handler": "inline@src/server.ts:2022",
+    "handler": "inline@src/server.ts:2023",
     "verified": false,
-    "line": 2022,
+    "line": 2023,
     "sensitive": true,
     "controls": {
       "auth": false,
@@ -632,9 +632,9 @@
   {
     "route": "/api/v1/ops/readiness",
     "method": "POST",
-    "handler": "inline@src/server.ts:2085",
+    "handler": "inline@src/server.ts:2086",
     "verified": false,
-    "line": 2085,
+    "line": 2086,
     "sensitive": true,
     "controls": {
       "auth": false,
@@ -646,9 +646,9 @@
   {
     "route": "/api/v1/readyz",
     "method": "GET",
-    "handler": "inline@src/server.ts:2096",
+    "handler": "inline@src/server.ts:2097",
     "verified": false,
-    "line": 2096,
+    "line": 2097,
     "sensitive": false,
     "controls": {
       "auth": false,
@@ -660,9 +660,9 @@
   {
     "route": "/api/v1/ops/snapshot",
     "method": "GET",
-    "handler": "inline@src/server.ts:2108",
+    "handler": "inline@src/server.ts:2109",
     "verified": false,
-    "line": 2108,
+    "line": 2109,
     "sensitive": false,
     "controls": {
       "auth": false,
@@ -674,9 +674,9 @@
   {
     "route": "/api/v1/ops/latency",
     "method": "GET",
-    "handler": "inline@src/server.ts:2118",
+    "handler": "inline@src/server.ts:2119",
     "verified": false,
-    "line": 2118,
+    "line": 2119,
     "sensitive": false,
     "controls": {
       "auth": true,
@@ -688,9 +688,9 @@
   {
     "route": "/api/v1/isa/pipeline",
     "method": "POST",
-    "handler": "inline@src/server.ts:2130",
+    "handler": "inline@src/server.ts:2131",
     "verified": false,
-    "line": 2130,
+    "line": 2131,
     "sensitive": true,
     "controls": {
       "auth": false,
@@ -702,9 +702,9 @@
   {
     "route": "/api/v1/isa/act",
     "method": "POST",
-    "handler": "inline@src/server.ts:2140",
+    "handler": "inline@src/server.ts:2141",
     "verified": false,
-    "line": 2140,
+    "line": 2141,
     "sensitive": true,
     "controls": {
       "auth": false,
@@ -716,9 +716,9 @@
   {
     "route": "/api/v1/litle/attest",
     "method": "POST",
-    "handler": "inline@src/server.ts:2169",
+    "handler": "inline@src/server.ts:2170",
     "verified": false,
-    "line": 2169,
+    "line": 2170,
     "sensitive": true,
     "controls": {
       "auth": true,
@@ -730,9 +730,9 @@
   {
     "route": "/api/v1/litle/verify",
     "method": "POST",
-    "handler": "inline@src/server.ts:2219",
+    "handler": "inline@src/server.ts:2220",
     "verified": false,
-    "line": 2219,
+    "line": 2220,
     "sensitive": true,
     "controls": {
       "auth": false,
@@ -744,9 +744,9 @@
   {
     "route": "/api/v1/connectors/ingest",
     "method": "POST",
-    "handler": "inline@src/server.ts:2307",
+    "handler": "inline@src/server.ts:2308",
     "verified": false,
-    "line": 2307,
+    "line": 2308,
     "sensitive": true,
     "controls": {
       "auth": false,
@@ -758,9 +758,9 @@
   {
     "route": "/api/v1/metrics",
     "method": "GET",
-    "handler": "inline@src/server.ts:2391",
+    "handler": "inline@src/server.ts:2392",
     "verified": false,
-    "line": 2391,
+    "line": 2392,
     "sensitive": false,
     "controls": {
       "auth": false,
@@ -772,9 +772,9 @@
   {
     "route": "/api/v1/memory/verified",
     "method": "POST",
-    "handler": "inline@src/server.ts:2399",
+    "handler": "inline@src/server.ts:2400",
     "verified": false,
-    "line": 2399,
+    "line": 2400,
     "sensitive": true,
     "controls": {
       "auth": true,
@@ -786,9 +786,9 @@
   {
     "route": "/api/v1/memory/verified",
     "method": "GET",
-    "handler": "inline@src/server.ts:2419",
+    "handler": "inline@src/server.ts:2420",
     "verified": false,
-    "line": 2419,
+    "line": 2420,
     "sensitive": false,
     "controls": {
       "auth": true,
@@ -800,9 +800,9 @@
   {
     "route": "/api/v1/osiris/status",
     "method": "GET",
-    "handler": "inline@src/server.ts:2433",
+    "handler": "inline@src/server.ts:2434",
     "verified": false,
-    "line": 2433,
+    "line": 2434,
     "sensitive": false,
     "controls": {
       "auth": true,
@@ -814,9 +814,9 @@
   {
     "route": "/api/v1/osiris/inspect",
     "method": "POST",
-    "handler": "inline@src/server.ts:2438",
+    "handler": "inline@src/server.ts:2439",
     "verified": false,
-    "line": 2438,
+    "line": 2439,
     "sensitive": true,
     "controls": {
       "auth": true,
@@ -828,9 +828,9 @@
   {
     "route": "/api/v1/billing/prices",
     "method": "GET",
-    "handler": "inline@src/server.ts:2503",
+    "handler": "inline@src/server.ts:2504",
     "verified": false,
-    "line": 2503,
+    "line": 2504,
     "sensitive": false,
     "controls": {
       "auth": false,
@@ -842,9 +842,9 @@
   {
     "route": "/api/v1/billing/checkout",
     "method": "POST",
-    "handler": "inline@src/server.ts:2507",
+    "handler": "inline@src/server.ts:2508",
     "verified": false,
-    "line": 2507,
+    "line": 2508,
     "sensitive": true,
     "controls": {
       "auth": true,
@@ -856,9 +856,9 @@
   {
     "route": "/api/v1/billing/portal",
     "method": "POST",
-    "handler": "inline@src/server.ts:2544",
+    "handler": "inline@src/server.ts:2545",
     "verified": false,
-    "line": 2544,
+    "line": 2545,
     "sensitive": true,
     "controls": {
       "auth": true,
@@ -870,9 +870,9 @@
   {
     "route": "/api/v1/billing/stripe/webhook",
     "method": "POST",
-    "handler": "inline@src/server.ts:2566",
+    "handler": "inline@src/server.ts:2567",
     "verified": false,
-    "line": 2566,
+    "line": 2567,
     "sensitive": true,
     "controls": {
       "auth": false,
@@ -884,9 +884,9 @@
   {
     "route": "/api/v1/billing/plans",
     "method": "GET",
-    "handler": "inline@src/server.ts:2611",
+    "handler": "inline@src/server.ts:2612",
     "verified": false,
-    "line": 2611,
+    "line": 2612,
     "sensitive": false,
     "controls": {
       "auth": false,
@@ -898,9 +898,9 @@
   {
     "route": "/api/v1/billing/entitlements",
     "method": "GET",
-    "handler": "inline@src/server.ts:2623",
+    "handler": "inline@src/server.ts:2624",
     "verified": false,
-    "line": 2623,
+    "line": 2624,
     "sensitive": false,
     "controls": {
       "auth": false,
@@ -912,9 +912,9 @@
   {
     "route": "/api/v1/billing/subscription",
     "method": "GET",
-    "handler": "inline@src/server.ts:2633",
+    "handler": "inline@src/server.ts:2634",
     "verified": false,
-    "line": 2633,
+    "line": 2634,
     "sensitive": false,
     "controls": {
       "auth": true,
@@ -926,9 +926,9 @@
   {
     "route": "/api/v1/billing/subscribe",
     "method": "POST",
-    "handler": "inline@src/server.ts:2645",
+    "handler": "inline@src/server.ts:2646",
     "verified": false,
-    "line": 2645,
+    "line": 2646,
     "sensitive": true,
     "controls": {
       "auth": true,
@@ -940,9 +940,9 @@
   {
     "route": "/api/v1/billing/cancel",
     "method": "POST",
-    "handler": "inline@src/server.ts:2687",
+    "handler": "inline@src/server.ts:2688",
     "verified": false,
-    "line": 2687,
+    "line": 2688,
     "sensitive": true,
     "controls": {
       "auth": true,
@@ -954,9 +954,9 @@
   {
     "route": "/api/v1/billing/usage",
     "method": "GET",
-    "handler": "inline@src/server.ts:2713",
+    "handler": "inline@src/server.ts:2714",
     "verified": false,
-    "line": 2713,
+    "line": 2714,
     "sensitive": false,
     "controls": {
       "auth": true,
@@ -968,9 +968,9 @@
   {
     "route": "/api/v1/commerce/offers",
     "method": "POST",
-    "handler": "inline@src/server.ts:2731",
+    "handler": "inline@src/server.ts:2732",
     "verified": false,
-    "line": 2731,
+    "line": 2732,
     "sensitive": true,
     "controls": {
       "auth": true,
@@ -982,9 +982,9 @@
   {
     "route": "/api/v1/gameover/constitution",
     "method": "GET",
-    "handler": "inline@src/server.ts:2783",
+    "handler": "inline@src/server.ts:2784",
     "verified": false,
-    "line": 2783,
+    "line": 2784,
     "sensitive": false,
     "controls": {
       "auth": true,
@@ -996,9 +996,9 @@
   {
     "route": "/api/v1/gameover/passports",
     "method": "GET",
-    "handler": "inline@src/server.ts:2788",
+    "handler": "inline@src/server.ts:2789",
     "verified": false,
-    "line": 2788,
+    "line": 2789,
     "sensitive": false,
     "controls": {
       "auth": true,
@@ -1010,9 +1010,9 @@
   {
     "route": "/api/v1/gameover/passports",
     "method": "POST",
-    "handler": "inline@src/server.ts:2799",
+    "handler": "inline@src/server.ts:2800",
     "verified": false,
-    "line": 2799,
+    "line": 2800,
     "sensitive": true,
     "controls": {
       "auth": true,
@@ -1024,9 +1024,9 @@
   {
     "route": "/api/v1/gameover/passports/revoke",
     "method": "POST",
-    "handler": "inline@src/server.ts:2830",
+    "handler": "inline@src/server.ts:2831",
     "verified": false,
-    "line": 2830,
+    "line": 2831,
     "sensitive": true,
     "controls": {
       "auth": true,
@@ -1038,9 +1038,9 @@
   {
     "route": "/api/v1/gameover/govern",
     "method": "POST",
-    "handler": "inline@src/server.ts:2848",
+    "handler": "inline@src/server.ts:2849",
     "verified": false,
-    "line": 2848,
+    "line": 2849,
     "sensitive": true,
     "controls": {
       "auth": true,
@@ -1052,9 +1052,9 @@
   {
     "route": "/api/v1/reina/status",
     "method": "GET",
-    "handler": "inline@src/server.ts:3006",
+    "handler": "inline@src/server.ts:3018",
     "verified": false,
-    "line": 3006,
+    "line": 3018,
     "sensitive": false,
     "controls": {
       "auth": false,
@@ -1066,9 +1066,9 @@
   {
     "route": "/api/v1/reina/adjudicate",
     "method": "POST",
-    "handler": "inline@src/server.ts:3013",
+    "handler": "inline@src/server.ts:3025",
     "verified": false,
-    "line": 3013,
+    "line": 3025,
     "sensitive": true,
     "controls": {
       "auth": true,
@@ -1080,13 +1080,27 @@
   {
     "route": "/api/v1/reina/log/proof/:index",
     "method": "GET",
-    "handler": "inline@src/server.ts:3041",
+    "handler": "inline@src/server.ts:3053",
     "verified": false,
-    "line": 3041,
+    "line": 3053,
     "sensitive": false,
     "controls": {
       "auth": true,
       "rateLimit": false,
+      "inputValidation": true
+    },
+    "verificationBasis": "sin contrato de tipo, doc o prueba que lo ejercite"
+  },
+  {
+    "route": "/api/v1/civilization/cycle",
+    "method": "POST",
+    "handler": "inline@src/routes/civilization.ts:25",
+    "verified": false,
+    "line": 25,
+    "sensitive": true,
+    "controls": {
+      "auth": false,
+      "rateLimit": true,
       "inputValidation": true
     },
     "verificationBasis": "sin contrato de tipo, doc o prueba que lo ejercite"
