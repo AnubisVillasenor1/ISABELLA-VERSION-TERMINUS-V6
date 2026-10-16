@@ -161,6 +161,7 @@ const ENGINE_LABELS = {
   'openrouter-free': 'MOTOR · OPENROUTER (GRATIS)',
   'huggingface-free': 'MOTOR · HUGGING FACE (GRATIS)',
   'open-science': 'MOTOR · PASARELA ABIERTA',
+  'keyless-free': 'MOTOR · PROVEEDOR LIBRE SIN CLAVE',
   gemini: 'MOTOR · GEMINI',
   gateway: 'MOTOR · VERCEL AI GATEWAY',
   blocked: 'MOTOR · BLOQUEADO POR GOBERNANZA'
@@ -187,10 +188,10 @@ const setResponseMeta = (paragraph, meta) => {
     chip.textContent = `${BAND_LABELS[band] || band}${meta.trafficLight.humanReviewRequired ? ' · REVISIÓN HUMANA' : ''}`;
     row.append(chip);
   }
-  if (engine.startsWith('sovereign') || engine === 'gateway' || engine === 'open-science') {
+  if (engine.startsWith('sovereign') || engine === 'gateway' || engine === 'open-science' || engine === 'keyless-free') {
     const note = document.createElement('span');
     note.className = 'meta-chip engine-note';
-    note.textContent = engine === 'gateway' || engine === 'open-science' ? 'AGENTE EXTERNO · RESPUESTA GENERATIVA' : meta.modelConfigured ? 'PROVEEDOR DISPONIBLE · FALLBACK LOCAL' : 'MODO LOCAL (SIN PROVEEDOR EXTERNO)';
+    note.textContent = engine === 'gateway' || engine === 'open-science' || engine === 'keyless-free' ? 'AGENTE EXTERNO · RESPUESTA GENERATIVA' : meta.modelConfigured ? 'PROVEEDOR DISPONIBLE · FALLBACK LOCAL' : 'MODO LOCAL (SIN PROVEEDOR EXTERNO)';
     row.append(note);
   }
   row.hidden = row.childElementCount === 0;

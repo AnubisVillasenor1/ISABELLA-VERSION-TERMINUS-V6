@@ -5,7 +5,7 @@ import path from "path";
 import { GoogleGenAI } from "@google/genai";
 import { generateText } from "ai";
 import Stripe from "stripe";
-import { boundedMilliseconds, buildOpenAICompatibleCandidates, extractAssistantText, isOpenRouterModelAllowed } from "./inference/provider-policy";
+import { boundedMilliseconds, buildKeylessFreeMessages, buildOpenAICompatibleCandidates, extractAssistantText, extractKeylessFreeText, isOpenRouterModelAllowed, resolveKeylessFreeProvider } from "./inference/provider-policy";
 import { MULTIMODAL_CONTRACT_VERSION, buildImageCandidates, buildVisionCandidates, describeMultimodalReadiness, parseImageDataUrl, performImage, performVision } from "./inference/multimodal";
 import { describeSpeechReadiness, synthesizeSpeech, transcribeAudio } from "./inference/speech";
 import { gateway } from "@ai-sdk/gateway";
@@ -52,6 +52,8 @@ import { registerMarketplaceRoutes } from "./routes/marketplace";
 import { registerDocumentSealRoutes } from "./routes/document-seal";
 import { registerPipelineRoutes, createInMemoryBookPiStorage } from "./routes/pipeline";
 import { registerYunEventRoutes } from "./routes/yun-events";
+import { registerEconomyRoutes } from "./routes/economy";
+import { EconomicLedger } from "./economy";
 import { generateControls } from "./evolution/catalog";
 import { classifyWithGenesisTurbo, type GenesisResult } from "./lib/native-ml/genesis-turbo";
 
@@ -180,10 +182,12 @@ const genAi = apiKey ? new GoogleGenAI({ apiKey }) : null;
 const providerTimeoutMs = boundedMilliseconds(process.env.INFERENCE_TIMEOUT_MS, 8_000, 3_000, 30_000);
 const multimodalTimeoutMs = boundedMilliseconds(process.env.MULTIMODAL_TIMEOUT_MS, 120_000, 20_000, 600_000);
 const providerCooldownMs = boundedMilliseconds(process.env.PROVIDER_FAILURE_COOLDOWN_MS, 60_000, 10_000, 300_000);
+const keylessFreeTimeoutMs = boundedMilliseconds(process.env.KEYLESS_FREE_PROVIDER_TIMEOUT_MS, 30_000, 5_000, 60_000);
 let gatewayCooldownUntil = 0;
 let openRouterCooldownUntil = 0;
 let huggingFaceCooldownUntil = 0;
 let compatibleProviderCooldownUntil = 0;
+let keylessFreeCooldownUntil = 0;
 
 /**
  * Single source of truth for "which generation providers can this process use".
@@ -195,6 +199,7 @@ function describeProviderReadiness(env: NodeJS.ProcessEnv): {
   modelConfigured: boolean;
   openModelConfigured: boolean;
   paidProviderConfigured: boolean;
+  keylessFreeProviderConfigured: boolean;
   publicRouteRequiresToken: boolean;
 } {
   const openModelConfigured = Boolean(
@@ -210,10 +215,12 @@ function describeProviderReadiness(env: NodeJS.ProcessEnv): {
       env.FIREWORKS_API_KEY,
   );
   const paidProviderConfigured = Boolean(genAi || env.AI_GATEWAY_API_KEY || env.VERCEL_OIDC_TOKEN);
+  const keylessFreeProviderConfigured = resolveKeylessFreeProvider(env) !== null;
   return {
-    modelConfigured: openModelConfigured || paidProviderConfigured,
+    modelConfigured: openModelConfigured || paidProviderConfigured || keylessFreeProviderConfigured,
     openModelConfigured,
     paidProviderConfigured,
+    keylessFreeProviderConfigured,
     // authorizeProviderRoute() only opens the public provider route in
     // non-production runs that do not configure a public bearer token.
     publicRouteRequiresToken: env.NODE_ENV === "production" || Boolean(env.GENESIS_PUBLIC_API_TOKEN),
@@ -248,6 +255,34 @@ async function generateCompatibleProviderNarrative(systemPrompt: string, input: 
   }
   compatibleProviderCooldownUntil = Date.now() + providerCooldownMs;
   return null;
+}
+
+/**
+ * Keyless free text provider (operator-gated via ISABELLA_KEYLESS_FREE_PROVIDER).
+ * Produces REAL generative text without any credential, so a node can converse
+ * before a keyed provider is configured. It is disclosed as an external engine
+ * ("keyless-free") and never presented as sovereign inference.
+ */
+async function generateKeylessFreeNarrative(systemPrompt: string, input: string, history: PublicChatTurn[] = []): Promise<string | null> {
+  const config = resolveKeylessFreeProvider(process.env);
+  if (!config || Date.now() < keylessFreeCooldownUntil) return null;
+  try {
+    const response = await fetch(`${config.endpoint}/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", accept: "text/plain" },
+      body: JSON.stringify({ model: config.model, messages: buildKeylessFreeMessages(systemPrompt, input, history) }),
+      signal: AbortSignal.timeout(keylessFreeTimeoutMs),
+    });
+    if (!response.ok) throw new Error(`${config.name} HTTP ${response.status}`);
+    const text = extractKeylessFreeText(await response.text());
+    if (!text) throw new Error(`${config.name} returned empty content`);
+    return text;
+  } catch (error) {
+    keylessFreeCooldownUntil = Date.now() + providerCooldownMs;
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn("[Isabella] keyless free provider unavailable; cooldown activated", { provider: config.name, message: message.slice(0, 180) });
+    return null;
+  }
 }
 
 // Verified knowledge store (Supabase-backed when configured, in-memory otherwise).
@@ -426,6 +461,10 @@ const publicCognitionLimiter = new FixedWindowRateLimiter(30, 60_000);
 const publicModelLimiter = new FixedWindowRateLimiter(8, 60_000);
 const publicProposalLimiter = new FixedWindowRateLimiter(10, 60_000);
 const publicScanLimiter = new FixedWindowRateLimiter(30, 60_000);
+const publicEconomyLimiter = new FixedWindowRateLimiter(20, 60_000);
+// SCER · libro económico append-only (evidencia, no movimiento de fondos). En proceso;
+// la persistencia durable se delega al ledger BookPI en una iteración posterior.
+const economicLedger = new EconomicLedger();
 
 function enforceRateLimit(req: Request, res: Response, limiter: FixedWindowRateLimiter, bucket: string): boolean {
   const result = limiter.consume(bucket + ":" + (req.ip || "unknown"));
@@ -964,7 +1003,7 @@ app.post("/api/v1/cognition/route", async (req, res) => {
     });
 
     let generativeNarrative: string | null = null;
-    let responseEngine: "gemini" | "gateway" | "open-science" | "openrouter-free" | "huggingface-free" | "sovereign-fallback" | "sovereign" | "blocked" = "blocked";
+    let responseEngine: "gemini" | "gateway" | "open-science" | "openrouter-free" | "huggingface-free" | "keyless-free" | "sovereign-fallback" | "sovereign" | "blocked" = "blocked";
     let nativeRouting: GenesisResult | null = null;
     try {
       nativeRouting = await classifyWithGenesisTurbo(input);
@@ -1005,6 +1044,10 @@ app.post("/api/v1/cognition/route", async (req, res) => {
       if (!generativeNarrative && (modelEngine === "open-science" || modelEngine === "auto" || modelEngine === "gemini")) {
         generativeNarrative = await generateCompatibleProviderNarrative(systemPrompt, input, history);
         if (generativeNarrative) responseEngine = "open-science";
+      }
+      if (!generativeNarrative && (modelEngine === "open-science" || modelEngine === "auto" || modelEngine === "gemini")) {
+        generativeNarrative = await generateKeylessFreeNarrative(systemPrompt, input, history);
+        if (generativeNarrative) responseEngine = "keyless-free";
       }
       if (!generativeNarrative && process.env.ALLOW_PAID_PROVIDER_FALLBACK === "true") {
         if (genAi && modelEngine !== "gemini") {
@@ -3106,6 +3149,18 @@ registerYunEventRoutes({
   authorizeAdmin: (req, res) => authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN"),
   enforceRateLimit,
   rateLimiter: publicScanLimiter,
+});
+
+// ── SCER Economy API v3 (state: draft | engine-generated) ─ núcleo económico aditivo:
+// valúa activos cognitivos, cotiza precios dinámicos, planifica regalías por basis points
+// y sella evidencia en un libro económico encadenado por hash. Calcular/planificar NO
+// mueve fondos (fundsMoved:false); el settle es admin-gated y sólo registra el cómputo.
+registerEconomyRoutes({
+  app,
+  ledger: economicLedger,
+  enforceRateLimit,
+  rateLimiter: publicEconomyLimiter,
+  authorizeAdmin: (req, res) => authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN"),
 });
 
 // ── REINA (state: draft | engine-generated) ─ adjudicación previa a la ejecución; NO ejecuta acciones.

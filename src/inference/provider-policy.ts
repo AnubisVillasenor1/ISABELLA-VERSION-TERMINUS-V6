@@ -92,3 +92,56 @@ export function extractAssistantText(payload: unknown): string | null {
     .filter(Boolean);
   return pieces.length > 0 ? pieces.join("\n") : null;
 }
+
+export interface KeylessFreeProviderConfig {
+  readonly name: "pollinations";
+  readonly endpoint: string;
+  readonly model: string;
+}
+
+export interface KeylessFreeMessage {
+  readonly role: "system" | "user" | "assistant";
+  readonly content: string;
+}
+
+const KEYLESS_FREE_ENABLE_VALUES: ReadonlySet<string> = new Set(["on", "true", "1", "pollinations"]);
+const DEFAULT_KEYLESS_FREE_ENDPOINT = "https://text.pollinations.ai";
+const DEFAULT_KEYLESS_FREE_MODEL = "openai";
+
+/**
+ * Operator-gated keyless free text provider. This adapter emits REAL generative
+ * text WITHOUT a credential so a node can converse before an operator configures a
+ * keyed provider. It returns null unless explicitly enabled, so user content never
+ * leaves the node by default. It is disclosed as an external engine and is never
+ * presented as sovereign inference.
+ */
+export function resolveKeylessFreeProvider(
+  env: Readonly<Record<string, string | undefined>>,
+): KeylessFreeProviderConfig | null {
+  const flag = (env.ISABELLA_KEYLESS_FREE_PROVIDER ?? "").trim().toLowerCase();
+  if (!KEYLESS_FREE_ENABLE_VALUES.has(flag)) return null;
+  const endpoint = (env.KEYLESS_FREE_PROVIDER_URL?.trim() || DEFAULT_KEYLESS_FREE_ENDPOINT).replace(/\/+$/, "");
+  const model = env.KEYLESS_FREE_PROVIDER_MODEL?.trim() || DEFAULT_KEYLESS_FREE_MODEL;
+  return Object.freeze({ name: "pollinations", endpoint, model });
+}
+
+/** Builds the bounded OpenAI-style message list forwarded to a keyless provider. */
+export function buildKeylessFreeMessages(
+  systemPrompt: string,
+  input: string,
+  history: readonly { readonly role: "user" | "assistant"; readonly content: string }[] = [],
+): readonly KeylessFreeMessage[] {
+  return [
+    { role: "system", content: systemPrompt.trim().slice(0, 2_000) },
+    ...history.slice(-8).map((turn) => ({ role: turn.role, content: turn.content.slice(0, 2_000) })),
+    { role: "user", content: input.slice(0, 4_000) },
+  ];
+}
+
+/** Normalizes plain-text output from a keyless provider; returns null when empty. */
+export function extractKeylessFreeText(raw: string, maxLength = 8_000): string | null {
+  const text = raw.replace(/\r\n/g, "\n").trim();
+  if (!text) return null;
+  return maxLength > 0 ? text.slice(0, maxLength) : text;
+}
+
