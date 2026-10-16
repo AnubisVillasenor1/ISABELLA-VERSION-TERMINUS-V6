@@ -204,6 +204,8 @@ function describeProviderReadiness(env: NodeJS.ProcessEnv): {
   publicRouteRequiresToken: boolean;
 } {
   const openModelConfigured = Boolean(
+    env.AI_GATEWAY_API_KEY ||
+    env.VERCEL_OIDC_TOKEN ||
     env.OPENROUTER_API_KEY ||
       (env.HF_TOKEN && env.HF_FREE_MODELS) ||
       env.OLLAMA_API_KEY ||
@@ -373,7 +375,7 @@ async function generateGatewayNarrative(systemPrompt: string, input: string, his
   if (Date.now() < gatewayCooldownUntil) return null;
   try {
     const result = await generateText({
-      model: gateway("inclusionai/ling-3.1-flash-free"),
+      model: gateway("nvidia/nemotron-3.5-lightning-free"),
       abortSignal: AbortSignal.timeout(providerTimeoutMs),
       system: systemPrompt,
       prompt: buildConversationPrompt(input, history),
@@ -917,7 +919,8 @@ app.post("/api/v1/cognition/route", async (req, res) => {
   try {
     const body = req.body ?? {};
     const modelEngine = ["auto", "sovereign", "open-science", "gemini"].includes(body.modelEngine) ? body.modelEngine : "auto";
-    if (modelEngine !== "sovereign" && !authorizeProviderRoute(req, res)) return;
+    const gatewayAutoRoute = modelEngine === "auto";
+    if (!gatewayAutoRoute && modelEngine !== "sovereign" && !authorizeProviderRoute(req, res)) return;
     if (modelEngine !== "sovereign" && !enforceRateLimit(req, res, publicModelLimiter, "public-model")) return;
     const history = sanitizePublicHistory(body.history);
     const input = typeof body.input === "string" ? body.input.trim() : "";
@@ -967,7 +970,7 @@ app.post("/api/v1/cognition/route", async (req, res) => {
     });
 
     let generativeNarrative: string | null = null;
-    let responseEngine: "gemini" | "open-science" | "openrouter-free" | "huggingface-free" | "sovereign-fallback" | "sovereign" | "blocked" = "blocked";
+    let responseEngine: "gemini" | "gateway" | "open-science" | "openrouter-free" | "huggingface-free" | "sovereign-fallback" | "sovereign" | "blocked" = "blocked";
     let nativeRouting: GenesisResult | null = null;
     try {
       nativeRouting = await classifyWithGenesisTurbo(input);
@@ -978,7 +981,11 @@ app.post("/api/v1/cognition/route", async (req, res) => {
     if (decision.admitted && modelEngine !== "sovereign") {
       // Free/open inference is the default. Paid or billing-enabled providers are never
       // silently selected by Auto/Open Science; they require an explicit operator opt-in.
-      if (modelEngine === "gemini" && genAi && process.env.ALLOW_PAID_PROVIDER_FALLBACK === "true") {
+      if (modelEngine === "auto") {
+        generativeNarrative = await generateGatewayNarrative(systemPrompt, input, history);
+        if (generativeNarrative) responseEngine = "gateway";
+      }
+      if (!generativeNarrative && modelEngine === "gemini" && genAi && process.env.ALLOW_PAID_PROVIDER_FALLBACK === "true") {
         try {
           const contents = [
             ...history.map((turn) => ({ role: (turn.role === "assistant" ? "model" : "user") as "model" | "user", parts: [{ text: turn.content }] })),

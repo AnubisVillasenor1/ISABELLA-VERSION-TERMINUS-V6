@@ -164,6 +164,14 @@ document.querySelectorAll('.rail-launcher').forEach((launcher) => {
     launcher.setAttribute('aria-expanded', String(isOpen));
   });
 });
+document.querySelectorAll('.side-rail a[href^="#"]').forEach((link) => {
+  link.addEventListener('click', () => {
+    const rail = link.closest('.side-rail');
+    const launcher = rail ? document.querySelector(`[aria-controls="${rail.id}"]`) : null;
+    rail?.classList.remove('is-open');
+    launcher?.setAttribute('aria-expanded', 'false');
+  });
+});
 document.querySelectorAll('.workspace-mode').forEach((button) => {
   button.addEventListener('click', () => {
     const layout = button.dataset.layout || 'chat';
@@ -211,10 +219,11 @@ const ENGINE_LABELS = {
   'huggingface-free': 'MOTOR · HUGGING FACE (GRATIS)',
   'open-science': 'MOTOR · PASARELA ABIERTA',
   gemini: 'MOTOR · GEMINI',
+  gateway: 'MOTOR · VERCEL AI GATEWAY',
   blocked: 'MOTOR · BLOQUEADO POR GOBERNANZA'
 };
 const BAND_LABELS = { GREEN: 'FLUJO VERDE', YELLOW: 'FLUJO AMARILLO', ORANGE: 'FLUJO NARANJA', RED: 'FLUJO ROJO' };
-const selectEngine = () => (canUseExternalEngine ? 'auto' : 'sovereign');
+const selectEngine = () => 'auto';
 
 const setResponseMeta = (paragraph, meta) => {
   if (!paragraph || !meta) return;
@@ -447,6 +456,7 @@ const sendCurrentMessage = async () => {
 };
 form?.addEventListener('submit', (event) => {
   event.preventDefault();
+  if (event.submitter?.disabled || isSending) return;
   void sendCurrentMessage();
 });
 
@@ -466,8 +476,18 @@ navToggle?.addEventListener('click', () => {
   navToggle.setAttribute('aria-label', opening ? 'Cerrar navegación' : 'Abrir navegación');
   navLinks?.classList.toggle('is-open', opening);
 });
-navLinks?.querySelectorAll('a[href^="#"]').forEach((link) => {
-  link.addEventListener('click', () => closeNav());
+document.querySelectorAll('a[href^="#"]').forEach((link) => {
+  link.addEventListener('click', (event) => {
+    const selector = link.getAttribute('href');
+    const target = selector ? document.querySelector(selector) : null;
+    if (!target) return;
+    event.preventDefault();
+    closeNav();
+    document.querySelectorAll('.side-rail.is-open').forEach((rail) => rail.classList.remove('is-open'));
+    document.querySelectorAll('.rail-launcher[aria-expanded="true"]').forEach((launcher) => launcher.setAttribute('aria-expanded', 'false'));
+    target.scrollIntoView({ behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+    window.history.replaceState(null, '', selector);
+  });
 });
 document.addEventListener('click', (event) => {
   if (navToggle?.getAttribute('aria-expanded') !== 'true') return;
@@ -517,8 +537,8 @@ const hydrateEngineConfig = async () => {
     if (!response.ok) return;
     const body = await response.json();
     const provider = body?.provider ?? {};
-    canUseExternalEngine = provider.openModelConfigured === true && provider.publicRouteRequiresToken !== true;
-    if (inspectorRuntime && canUseExternalEngine) inspectorRuntime.textContent = 'READY · PROVIDER';
+  canUseExternalEngine = provider.modelConfigured === true && provider.publicRouteRequiresToken !== true;
+  if (inspectorRuntime && canUseExternalEngine) inspectorRuntime.textContent = 'READY · AGENT';
   } catch {
     // Keep the local sovereign engine; it always works without network or credentials.
   }
