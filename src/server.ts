@@ -190,6 +190,39 @@ let huggingFaceCooldownUntil = 0;
 let compatibleProviderCooldownUntil = 0;
 
 /**
+ * Single source of truth for "which generation providers can this process use".
+ * Reports CONFIGURATION PRESENCE only; it never asserts reachability, quota or
+ * that a provider answered. Extracted so the public cognition route, the
+ * native-runtime disclosure and the UI agree on the same truth.
+ */
+function describeProviderReadiness(env: NodeJS.ProcessEnv): {
+  modelConfigured: boolean;
+  openModelConfigured: boolean;
+  paidProviderConfigured: boolean;
+  publicRouteRequiresToken: boolean;
+} {
+  const openModelConfigured = Boolean(
+    env.OPENROUTER_API_KEY ||
+      (env.HF_TOKEN && env.HF_FREE_MODELS) ||
+      env.OLLAMA_API_KEY ||
+      env.GROQ_API_KEY ||
+      env.CEREBRAS_API_KEY ||
+      env.TOGETHER_API_KEY ||
+      env.DEEPINFRA_API_KEY ||
+      env.FIREWORKS_API_KEY,
+  );
+  const paidProviderConfigured = Boolean(genAi || env.AI_GATEWAY_API_KEY || env.VERCEL_OIDC_TOKEN);
+  return {
+    modelConfigured: openModelConfigured || paidProviderConfigured,
+    openModelConfigured,
+    paidProviderConfigured,
+    // authorizeProviderRoute() only opens the public provider route in
+    // non-production runs that do not configure a public bearer token.
+    publicRouteRequiresToken: env.NODE_ENV === "production" || Boolean(env.GENESIS_PUBLIC_API_TOKEN),
+  };
+}
+
+/**
  * Optional OpenAI-compatible free/credit-tier providers. They are attempted only
  * when an operator supplies the provider key and model explicitly; Isabella never
  * invents credentials or silently upgrades to a paid model.
@@ -868,6 +901,11 @@ app.get("/api/v1/cognition/native-runtime", (_req, res) => {
     nativeMoe: { status: "wired", implementation: "pure-typescript", trainable: true, approvalStatus: "PENDING_REVIEW" },
     realtime: { transport: "http-json", streaming: false, note: "La respuesta en tiempo real requiere un proveedor generativo configurado; el fallback local responde sin red." },
     governance: { execution: "fail-closed", humanApprovalRequiredFor: ["HIGH", "CRITICAL"] },
+    provider: {
+      ...describeProviderReadiness(process.env),
+      localFallback: true,
+      note: "La interfaz pública usa el motor local soberano salvo que exista un proveedor abierto y la ruta pública esté disponible sin bearer.",
+    },
   });
 });
 
@@ -1020,9 +1058,7 @@ app.post("/api/v1/cognition/route", async (req, res) => {
     }
     res.status(decision.admitted ? 200 : 403).json({
       success: decision.admitted, decision, principal, generativeNarrative, responseEngine, trafficLight,
-      modelConfigured: Boolean(genAi || process.env.OPENROUTER_API_KEY || (process.env.HF_TOKEN && process.env.HF_FREE_MODELS) || process.env.OLLAMA_API_KEY || process.env.GROQ_API_KEY || process.env.CEREBRAS_API_KEY || process.env.TOGETHER_API_KEY || process.env.DEEPINFRA_API_KEY || process.env.FIREWORKS_API_KEY || process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN),
-      openModelConfigured: Boolean(process.env.OPENROUTER_API_KEY || (process.env.HF_TOKEN && process.env.HF_FREE_MODELS) || process.env.OLLAMA_API_KEY || process.env.GROQ_API_KEY || process.env.CEREBRAS_API_KEY || process.env.TOGETHER_API_KEY || process.env.DEEPINFRA_API_KEY || process.env.FIREWORKS_API_KEY),
-      paidProviderConfigured: Boolean(genAi || process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN),
+      ...describeProviderReadiness(process.env),
       conversationContextTurns: history.length,
       nativeRouting: nativeRouting ? {
         modelId: nativeRouting.modelId,

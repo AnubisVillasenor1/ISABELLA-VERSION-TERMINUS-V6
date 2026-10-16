@@ -1006,4 +1006,13 @@ section[id]{scroll-margin-top:100px}
 #chat .prompt-starters{gap:8px;margin-top:10px;padding:8px 0;color:rgba(245,247,251,.45)}#chat .prompt-starters button{border-color:rgba(141,243,255,.16);background:rgba(255,255,255,.035);color:rgba(245,247,251,.72);transition:all .2s ease}#chat .prompt-starters button:hover{border-color:#8df3ff;color:#8df3ff;background:rgba(141,243,255,.08)}
 #chat .composer{margin-top:14px;padding:8px;border:1px solid rgba(141,243,255,.32);background:rgba(2,7,18,.82);box-shadow:0 0 34px rgba(56,189,248,.08),inset 0 1px rgba(255,255,255,.06)}#chat .composer:focus-within{border-color:#8df3ff;box-shadow:0 0 0 3px rgba(141,243,255,.08),0 0 42px rgba(56,189,248,.14)}#chat .prompt{min-height:58px;background:transparent;color:#f5f7fb}#chat .send{min-width:112px;border:1px solid #8df3ff;background:linear-gradient(135deg,#8df3ff,#b8a7ff);color:#07111b;box-shadow:0 0 24px rgba(141,243,255,.22)}
 @media (max-width:760px){#chat{padding:20px 14px}#chat::after{display:none}#chat .messages{min-height:360px;padding:14px}.console-head{align-items:flex-start!important}#chat .message{max-width:94%}}
+.response-badges{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.response-badges[hidden]{display:none}
+.meta-chip{display:inline-flex;align-items:center;gap:5px;border:1px solid rgba(141,243,255,.24);border-radius:999px;padding:3px 9px;background:rgba(141,243,255,.06);color:#a9d8ef;font-size:8.5px;letter-spacing:.12em;text-transform:uppercase}
+.meta-chip.engine-note{border-color:rgba(255,255,255,.14);background:rgba(255,255,255,.03);color:#8a9aac}
+.engine-chip.engine-sovereign,.engine-chip.engine-sovereign-fallback{border-color:rgba(157,140,255,.4);background:rgba(157,140,255,.1);color:#cdc4ff}
+.band-chip.band-green{border-color:rgba(114,230,164,.5);background:rgba(114,230,164,.12);color:#9ff0c1}
+.band-chip.band-yellow{border-color:rgba(240,200,139,.5);background:rgba(240,200,139,.12);color:#f2d9ac}
+.band-chip.band-orange{border-color:rgba(255,159,90,.55);background:rgba(255,159,90,.14);color:#ffc79a}
+.band-chip.band-red{border-color:rgba(255,110,130,.6);background:rgba(255,110,130,.16);color:#ffb3c0}
 

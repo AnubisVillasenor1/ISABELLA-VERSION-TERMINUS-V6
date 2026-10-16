@@ -39,9 +39,11 @@ if (existsSync(OUT) && !force) {
 const bookpiSecret = secret();
 const hypercoreSigningKey = secret();
 const genesisAdminToken = token();
+const genesisPublicToken = token();
 const hypercoreApiToken = token();
 const hsfApiToken = token();
 const humanApprovalToken = token();
+const opsApiToken = token();
 const connectorWebhookSecret = secret();
 const webhookSigningSecret = secret();
 const tokenEncryptionKey = hexKey();
@@ -71,10 +73,12 @@ const lines = [
   "",
   "# --- APIs protegidas (bearer tokens, >=32 chars) ---",
   `GENESIS_ADMIN_API_TOKEN=${quote(genesisAdminToken)}`,
+  `GENESIS_PUBLIC_API_TOKEN=${quote(genesisPublicToken)}`,
   `HYPERCORE_API_TOKEN=${quote(hypercoreApiToken)}`,
   `HSF_API_TOKEN=${quote(hsfApiToken)}`,
   `GENESIS_HUMAN_APPROVAL_TOKEN=${quote(humanApprovalToken)}`,
   `GENESIS_HUMAN_APPROVER_ID=${quote(APPROVER)}`,
+  `OPS_API_TOKEN=${quote(opsApiToken)}`,
   "",
   "# --- Webhooks de conectores (HMAC) ---",
   `CONNECTOR_WEBHOOK_SECRET=${quote(connectorWebhookSecret)}`,
@@ -110,9 +114,11 @@ const summary = [
   ["BOOKPI_INTEGRITY_SECRET", bookpiSecret],
   ["HYPERCORE_SIGNING_KEY", hypercoreSigningKey],
   ["GENESIS_ADMIN_API_TOKEN", genesisAdminToken],
+  ["GENESIS_PUBLIC_API_TOKEN", genesisPublicToken],
   ["HYPERCORE_API_TOKEN", hypercoreApiToken],
   ["HSF_API_TOKEN", hsfApiToken],
   ["GENESIS_HUMAN_APPROVAL_TOKEN", humanApprovalToken],
+  ["OPS_API_TOKEN", opsApiToken],
   ["CONNECTOR_WEBHOOK_SECRET", connectorWebhookSecret],
   ["WEBHOOK_SIGNING_SECRET", webhookSigningSecret],
   ["TOKEN_ENCRYPTION_KEY", tokenEncryptionKey],

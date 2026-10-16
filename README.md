@@ -414,6 +414,17 @@ Las claves que la propia plataforma genera y consume (secretos HMAC, tokens bear
 
 `--force` rota (sobrescribe); `--approver=<id>` fija la identidad humana vinculada. El generador **no** toca claves de proveedores externos (`OPENROUTER_API_KEY`, `HF_TOKEN`, `SUPABASE_*`, `POSTGRES_*`): esas pertenecen a cuentas del operador y se configuran aparte. Ningún valor secreto se imprime en consola ni se versiona.
 
+Salida nativa: `BOOKPI_INTEGRITY_SECRET`, `HYPERCORE_SIGNING_KEY`, `GENESIS_ADMIN_API_TOKEN`, **`GENESIS_PUBLIC_API_TOKEN`**, `HYPERCORE_API_TOKEN`, `HSF_API_TOKEN`, `GENESIS_HUMAN_APPROVAL_TOKEN`/`GENESIS_HUMAN_APPROVER_ID`, **`OPS_API_TOKEN`**, `CONNECTOR_WEBHOOK_SECRET`, `WEBHOOK_SIGNING_SECRET`, `TOKEN_ENCRYPTION_KEY` y el par Ed25519 de aprobación humana. `GENESIS_PUBLIC_API_TOKEN` y `OPS_API_TOKEN` — documentados en `.env.example` pero antes **nunca emitidos** — cierran esa brecha: sin `GENESIS_PUBLIC_API_TOKEN` la ruta pública de proveedores queda abierta solo fuera de producción; con él, toda ruta de proveedor exige `Bearer` (fail-closed) en cualquier entorno.
+
+### Arranque interactivo local (Isabella responde)
+
+Para levantar la interfaz y conversar en local sin depender de proveedores externos:
+
+    pnpm run keys:generate          # 1) emite .env.native
+    pnpm start                      # 2) tsx --env-file-if-exists=.env src/server.ts → http://localhost:3000
+
+El merge de las claves nativas en `.env` (o `pnpm run start:native` sobre el build) habilita las rutas admin/HSF/HyperCore. Si no hay proveedor externo configurado, `POST /api/v1/cognition/route` responde con `responseEngine: "sovereign"`: el **motor local determinista**, revelado honestamente en la interfaz. La ruta pública de proveedores (`auto`/`open-science`) responde `401` sin `Bearer` una vez fijado `GENESIS_PUBLIC_API_TOKEN`; la interfaz lo detecta vía `GET /api/v1/cognition/native-runtime` y usa el motor soberano por defecto, con reintento automático a soberano ante `401/403/503`. En ningún caso se presenta el fallback local como un LLM.
+
 Con las claves nativas, las dependencias **requeridas** de `GET /api/v1/healthz` (ledger BookPI durable + autoridad de firma) quedan `healthy`. La respuesta sigue en **503** hasta configurar también las dependencias opcionales (un proveedor de inferencia, persistencia Postgres/Supabase y un exportador OTLP): el contrato es fail-closed, `ready` sólo con todo `healthy`.
 
 ### Proveedores de inferencia externos
@@ -486,6 +497,7 @@ La interfaz de `src/ui` es un workspace de interacción, no una landing page:
 - Seis rails plegables: tres izquierdos y tres derechos.
 - Modos `CHAT`, `CHAT + DISEÑO` y `CHAT + DISEÑO + CONTROL`.
 - Soporte de escucha por Web Speech y superficies multimodales gobernadas.
+- **Transparencia del motor**: cada respuesta de Isabella muestra un chip con el motor real (`LOCAL SOBERANO`, `OPENROUTER (GRATIS)`, `GEMINI`, …) y, si aplica, la banda del semáforo gobernado (verde/amarillo/naranja/rojo) y si requiere revisión humana. La interfaz elige el motor externo solo cuando `/api/v1/cognition/native-runtime` confirma un proveedor abierto y una ruta pública sin `Bearer`; en cualquier otro caso usa el motor local y lo declara. Nunca presenta el fallback como un LLM.
 
 El navegador puede bloquear autoplay; por eso el video inicia después de la acción explícita de inmersión. La reproducción de audio no debe depender de autoplay silencioso.
 

@@ -200,6 +200,49 @@ let isSending = false;
 const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 let sessionId = window.crypto?.randomUUID?.() || `session-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 let activeAttachment = null;
+// The public view is a VIEWER: it may only reach an external model when a free/open
+// provider is configured AND the public route is open without a bearer token. Otherwise
+// it uses the disclosed local sovereign engine. This mirrors server-side readiness.
+let canUseExternalEngine = false;
+const ENGINE_LABELS = {
+  sovereign: 'MOTOR · LOCAL SOBERANO',
+  'sovereign-fallback': 'MOTOR · RESPALDO LOCAL',
+  'openrouter-free': 'MOTOR · OPENROUTER (GRATIS)',
+  'huggingface-free': 'MOTOR · HUGGING FACE (GRATIS)',
+  'open-science': 'MOTOR · PASARELA ABIERTA',
+  gemini: 'MOTOR · GEMINI',
+  blocked: 'MOTOR · BLOQUEADO POR GOBERNANZA'
+};
+const BAND_LABELS = { GREEN: 'FLUJO VERDE', YELLOW: 'FLUJO AMARILLO', ORANGE: 'FLUJO NARANJA', RED: 'FLUJO ROJO' };
+const selectEngine = () => (canUseExternalEngine ? 'auto' : 'sovereign');
+
+const setResponseMeta = (paragraph, meta) => {
+  if (!paragraph || !meta) return;
+  const row = paragraph.closest('.message')?.querySelector('.response-badges');
+  if (!row) return;
+  row.replaceChildren();
+  const engine = typeof meta.engine === 'string' ? meta.engine : '';
+  if (engine) {
+    const chip = document.createElement('span');
+    chip.className = `meta-chip engine-chip engine-${engine}`;
+    chip.textContent = ENGINE_LABELS[engine] || `MOTOR · ${engine.toUpperCase()}`;
+    row.append(chip);
+  }
+  const band = typeof meta.trafficLight?.band === 'string' ? meta.trafficLight.band : '';
+  if (band) {
+    const chip = document.createElement('span');
+    chip.className = `meta-chip band-chip band-${band.toLowerCase()}`;
+    chip.textContent = `${BAND_LABELS[band] || band}${meta.trafficLight.humanReviewRequired ? ' · REVISIÓN HUMANA' : ''}`;
+    row.append(chip);
+  }
+  if (engine.startsWith('sovereign')) {
+    const note = document.createElement('span');
+    note.className = 'meta-chip engine-note';
+    note.textContent = meta.modelConfigured ? 'PROVEEDOR DISPONIBLE · RESPUESTA LOCAL' : 'MODO LOCAL (SIN PROVEEDOR EXTERNO)';
+    row.append(note);
+  }
+  row.hidden = row.childElementCount === 0;
+};
 
 const refreshWorkspaceContext = () => {
   const shortSession = sessionId.slice(-6).toUpperCase();
@@ -268,6 +311,10 @@ const addMessage = (text, role) => {
       speak(paragraph.textContent || '');
     });
     content.append(copyButton, saveButton, readButton);
+    const badgeRow = document.createElement('span');
+    badgeRow.className = 'response-badges';
+    badgeRow.hidden = true;
+    content.append(badgeRow);
   }
   article.append(avatar, content);
   messages.append(article);
@@ -356,19 +403,35 @@ const sendCurrentMessage = async () => {
   if (submitButton) submitButton.disabled = true;
   if (mic) mic.disabled = true;
   try {
-    const response = await fetch('/api/v1/cognition/route', {
+    const requestCognition = (modelEngine) => fetch('/api/v1/cognition/route', {
       method: 'POST',
       headers: { 'content-type': 'application/json', accept: 'application/json', 'x-session-id': sessionId },
-      body: JSON.stringify({ input, modelEngine: 'auto', focusLens: 'general', history })
+      body: JSON.stringify({ input, modelEngine, focusLens: 'general', history })
     });
-    const body = await response.json().catch(() => ({}));
+    const engine = selectEngine();
+    let response = await requestCognition(engine);
+    let body = await response.json().catch(() => ({}));
+    // Never strand the viewer: if the provider route is closed (auth/not configured),
+    // transparently fall back to the local sovereign engine and disclose it.
+    if (!response.ok && engine !== 'sovereign' && [401, 402, 403, 503].includes(response.status)) {
+      response = await requestCognition('sovereign');
+      body = await response.json().catch(() => ({}));
+    }
     const responseText = body.generativeNarrative || body.answer || body.error;
     if (!response.ok) {
       throw new Error(typeof responseText === 'string' ? responseText : `El servicio respondió HTTP ${response.status}.`);
     }
-    if (pendingNode) pendingNode.textContent = typeof responseText === 'string' && responseText.trim()
-      ? responseText
-      : 'El servicio respondió, pero no entregó texto. Inténtalo de nuevo.';
+    if (pendingNode) {
+      pendingNode.textContent = typeof responseText === 'string' && responseText.trim()
+        ? responseText
+        : 'El servicio respondió, pero no entregó texto. Inténtalo de nuevo.';
+      setResponseMeta(pendingNode, {
+        engine: body.responseEngine,
+        trafficLight: body.trafficLight,
+        modelConfigured: body.modelConfigured,
+        openModelConfigured: body.openModelConfigured
+      });
+    }
     if (typeof responseText === 'string' && responseText.trim()) speak(responseText);
   } catch (error) {
     if (pendingNode) pendingNode.textContent = error instanceof Error && error.message
@@ -405,9 +468,6 @@ navToggle?.addEventListener('click', () => {
 });
 navLinks?.querySelectorAll('a[href^="#"]').forEach((link) => {
   link.addEventListener('click', () => closeNav());
-});
-document.addEventListener('keydown', (event) => {
-  if (event.key === 'Escape') closeNav();
 });
 document.addEventListener('click', (event) => {
   if (navToggle?.getAttribute('aria-expanded') !== 'true') return;
@@ -448,6 +508,22 @@ const updateRuntimeStatus = async () => {
 };
 refreshWorkspaceContext();
 void updateRuntimeStatus();
+
+// Learn, once, whether an external free/open model is actually reachable from this
+// viewer. The disclosure is honored exactly: no provider key or hidden route is assumed.
+const hydrateEngineConfig = async () => {
+  try {
+    const response = await fetch('/api/v1/cognition/native-runtime', { headers: { accept: 'application/json' }, cache: 'no-store' });
+    if (!response.ok) return;
+    const body = await response.json();
+    const provider = body?.provider ?? {};
+    canUseExternalEngine = provider.openModelConfigured === true && provider.publicRouteRequiresToken !== true;
+    if (inspectorRuntime && canUseExternalEngine) inspectorRuntime.textContent = 'READY · PROVIDER';
+  } catch {
+    // Keep the local sovereign engine; it always works without network or credentials.
+  }
+};
+void hydrateEngineConfig();
 
 document.querySelectorAll('.mode').forEach((button) => {
   button.addEventListener('click', () => {
@@ -943,6 +1019,10 @@ commandList?.querySelectorAll('[data-command]').forEach((button) => {
   button.addEventListener('click', () => runCommand(button.getAttribute('data-command') || ''));
 });
 document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') {
+    closeNav();
+    return;
+  }
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
     event.preventDefault();
     if (commandPalette?.open) closePalette();
