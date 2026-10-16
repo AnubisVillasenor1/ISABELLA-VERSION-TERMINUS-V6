@@ -1,63 +1,129 @@
 # deploy-production.yml — cierre de aceptación ISA-325 / ISA-378.
 #
 # GATE estricto de despliegue a producción:
-#   1. `secret-scan`       — gitleaks@v3 sobre el árbol completo (mismo SHA).
-#   2. `verify-artifact`   — descarga `production-evidence-<sha>` y
-#      `security-suite-<sha>` del run de CI que produjo ese SHA, y FALLA si
-#      `typecheck.ok !== true`, `tests.failed > 0` o `gate.ok !== true`.
-#   3. `deploy`            — `environment: production` (aprobación humana se
+#   1. `validate-source`   — valida workflow de origen, run_id y SHA.
+#   2. `secret-scan`       — gitleaks@v3 sobre el árbol completo (mismo SHA).
+#   3. `verify-artifact`   — descarga `production-evidence-<sha>`,
+#      `security-suite-<sha>` y `sbom-<sha>` del run de CI que produjo ese SHA,
+#      y FALLA si `typecheck.ok !== true`, `tests.failed > 0`, `gate.ok !== true`
+#      o si el SBOM no existe.
+#   4. `deploy`            — `environment: production` (aprobación humana se
 #      configura en el entorno de GitHub, no se puede forzar desde YAML).
 #
-# Despliegue automático: se dispara al COMPLETAR el workflow "Isabella Genesis
-# CI" (`workflow_run`). Un `push` a main no puede consumir artefactos de otro
+# Despliegue automático: se dispara al COMPLETAR el workflow "Isabella Genesis Ω Sovereign CI"
+# (`workflow_run`). Un `push` a main no puede consumir artefactos de otro
 # run (los artefactos son por-run), por eso este gate se engancha al `run`
 # completo de CI en vez de a un segundo workflow paralelo; es la forma honesta
 # de "consumir el artefacto del run anterior con nombre por SHA".
-# Manual: `workflow_dispatch` con el `run_id` del CI que generó la evidencia.
+# Manual: `workflow_dispatch` con el `run_id` y `sha` del CI que generó la evidencia.
 #
 # Sin secretos en logs: nunca se imprime el contenido de la evidencia, sólo
 # veredictos booleanos y el SHA.
-name: Deploy Production
+name: Deploy Production Ω
 
 on:
   workflow_run:
-    workflows: ["Isabella Genesis CI"]
+    workflows: ["Isabella Genesis Ω Sovereign CI"]
     types: [completed]
   workflow_dispatch:
     inputs:
       run_id:
-        description: "GitHub Actions run ID de 'Isabella Genesis CI' que produjo la evidencia"
+        description: "GitHub Actions run ID de 'Isabella Genesis Ω Sovereign CI' que produjo la evidencia"
+        required: true
+        type: string
+      sha:
+        description: "Commit SHA asociado al run de CI"
         required: true
         type: string
 
 permissions:
   contents: read
-  # actions: write es el scope mínimo necesario para subir el artefacto de
-  # despliegue; verificar/adquirir artefactos cross-run requiere `actions: read`
-  # (write implica read). No se conceden deployments/issues/etc.
-  actions: write
+  actions: read
+  checks: read
+  deployments: write
+  id-token: write
+
+concurrency:
+  group: deploy-production-${{ github.event.workflow_run.head_sha || github.event.inputs.sha }}
+  cancel-in-progress: false
 
 jobs:
+  validate-source:
+    name: Validate workflow source, run ID and SHA
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      the_sha: ${{ steps.validate.outputs.the_sha }}
+      ci_run_id: ${{ steps.validate.outputs.ci_run_id }}
+    steps:
+      - name: Validate source and identifiers
+        id: validate
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          ALLOWED_WORKFLOW="Isabella Genesis Ω Sovereign CI"
+
+          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+            EXPECTED_RUN_ID="${{ github.event.workflow_run.id }}"
+            EXPECTED_SHA="${{ github.event.workflow_run.head_sha }}"
+            ACTUAL_WORKFLOW="${{ github.event.workflow_run.name }}"
+          else
+            EXPECTED_RUN_ID="${{ inputs.run_id }}"
+            EXPECTED_SHA="${{ inputs.sha }}"
+            ACTUAL_WORKFLOW="${{ github.event.workflow_run.name || 'manual' }}"
+          fi
+
+          echo "Expected run_id: $EXPECTED_RUN_ID"
+          echo "Expected sha: $EXPECTED_SHA"
+          echo "Source workflow: $ACTUAL_WORKFLOW"
+
+          if [[ "$ACTUAL_WORKFLOW" != "$ALLOWED_WORKFLOW" ]]; then
+            echo "::error::Unauthorized workflow source: '$ACTUAL_WORKFLOW'. Expected '$ALLOWED_WORKFLOW'."
+            exit 1
+          fi
+
+          if [[ -z "$EXPECTED_RUN_ID" ]]; then
+            echo "::error::Missing run_id."
+            exit 1
+          fi
+
+          if [[ -z "$EXPECTED_SHA" ]]; then
+            echo "::error::Missing commit SHA."
+            exit 1
+          fi
+
+          echo "the_sha=$EXPECTED_SHA" >> "$GITHUB_OUTPUT"
+          echo "ci_run_id=$EXPECTED_RUN_ID" >> "$GITHUB_OUTPUT"
+          echo "Source validation passed."
+
   secret-scan:
+    name: Secret scan (gitleaks)
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    needs: validate-source
     steps:
       - name: Checkout with full history (same SHA reachable)
         uses: actions/checkout@v4
         with:
+          ref: ${{ needs.validate-source.outputs.the_sha }}
           fetch-depth: 0
+
       - name: Secret scan (gitleaks)
         uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   verify-artifact:
+    name: Verify artifacts (evidence + security + SBOM)
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: secret-scan
+    needs:
+      - validate-source
+      - secret-scan
     env:
-      CI_RUN_ID: ${{ github.event.workflow_run.id || github.event.inputs.run_id }}
-      THE_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+      CI_RUN_ID: ${{ needs.validate-source.outputs.ci_run_id }}
+      THE_SHA: ${{ needs.validate-source.outputs.the_sha }}
     steps:
       - name: Download production evidence (same SHA)
         uses: actions/download-artifact@v4
@@ -75,12 +141,23 @@ jobs:
           run-id: ${{ env.CI_RUN_ID }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Strict gate — production evidence and security suite
+      - name: Download SBOM (same SHA)
+        uses: actions/download-artifact@v4
+        with:
+          name: sbom-${{ env.THE_SHA }}
+          path: evidence/
+          run-id: ${{ env.CI_RUN_ID }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Strict gate — production evidence, security suite and SBOM
+        shell: bash
         run: |
+          set -euo pipefail
           node -e '
             const fs = require("node:fs");
             const pePath = "evidence/production-evidence.json";
             const ssPath = "evidence/security-suite.json";
+
             if (!fs.existsSync(pePath)) {
               console.error("DEPLOY GATE FAILED: missing " + pePath);
               process.exit(1);
@@ -107,6 +184,13 @@ jobs:
               console.error("DEPLOY GATE FAILED: security suite no ok.");
               process.exit(1);
             }
+            // SBOM check: al menos un archivo .spdx.json presente
+            const sbomFiles = fs.readdirSync("evidence").filter(f => f.endsWith(".spdx.json"));
+            if (sbomFiles.length === 0) {
+              console.error("DEPLOY GATE FAILED: no SBOM (.spdx.json) found in evidence/");
+              process.exit(1);
+            }
+            console.log("SBOM found: " + sbomFiles.join(", "));
             console.log("DEPLOY GATE OK for " + process.env.THE_SHA);
           '
         env:
@@ -120,14 +204,23 @@ jobs:
           if-no-files-found: error
 
   deploy:
+    name: Deploy to production
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: [secret-scan, verify-artifact]
+    needs:
+      - validate-source
+      - secret-scan
+      - verify-artifact
     if: github.ref == 'refs/heads/main'
     environment: production
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.validate-source.outputs.the_sha }}
+
       - name: Deployment step (evidence gate already verified)
+        shell: bash
         run: |
+          set -euo pipefail
           echo "Deployment approval gate reached; evidence verified for ${GITHUB_SHA}."
           echo "El despliegue real se delega al operador; nunca se imprimen secretos."
