@@ -299,7 +299,7 @@ riesgo por volumen** (una acción inocua repetida 30 veces sube un nivel; 300 su
 y produce un **checklist** que el humano revisa de una sola vez. El principal marca
 qué autoriza y el sistema sella un **sobre de autorización** con digest determinista y
 firma inyectable (HMAC en tiempo constante). Invariante: **mapear no autoriza;
-autorizar es un acto explícito y fechado; autorizar no ejecuta.** La verificación es
+autorizar es un acto explícito y fechado; autorizar no ejecuta.** La verificaci��n es
 fail-closed — huecos, denegaciones o manipulación devuelven `INVALID`/`PARTIAL`/`DENIED`
 y bloquean la ejecución — y la **responsabilidad por las consecuencias recae en quien
 otorga la luz verde**, no en Isabella, que transportó y evidenció la orden. Se expone
@@ -653,6 +653,25 @@ kubectl apply --dry-run=server -f deploy/k8s/isabella-hypercore-omega.yaml
 No aplicar a producción sin revisar secretos, límites, dominios, persistencia, migraciones, observabilidad y rollback.
 
 ## Verificación
+
+### Postgres E2E + RLS
+
+```bash
+# Requiere Docker activo
+docker compose up -d postgres
+pnpm postgres:e2e
+```
+
+`pnpm postgres:e2e` compila el adapter, conecta al Postgres del Compose, aplica/usa las migraciones de `infra/db/migrations`, inserta un evento BookPI con actor, verifica la cadena SHA-256/SHA3-512 y comprueba el aislamiento RLS por `app.actor_id`.
+
+### Deploy reproducible
+
+```bash
+pnpm deploy:verify
+```
+
+El comando ejecuta `docker build`, smoke del runtime y `kubectl apply --dry-run=server -k k8s/`. En entornos sin Docker daemon o sin acceso a un API server Kubernetes, el resultado se marca como pendiente de evidencia externa; no se declara deploy verificado por tener solo manifiestos válidos.
+
 
 ```bash
 pnpm typecheck

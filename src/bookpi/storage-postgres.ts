@@ -30,12 +30,20 @@ function isUniqueViolation(error: unknown): boolean {
  * a unique collision; the migration additionally installs a sequence and trigger.
  * Production deployments should use a dedicated append-only DB role.
  */
-export function createPostgresStorage(pool: PostgresLike, table = BOOKPI_TABLE): BookPiStorage {
+export interface PostgresStorageOptions {
+  actorId?: string;
+}
+
+export function createPostgresStorage(pool: PostgresLike, table = BOOKPI_TABLE, options: PostgresStorageOptions = {}): BookPiStorage {
   const quote = (ident: string): string => `"${ident.replaceAll('"', '""')}"`;
+  const setActor = async (): Promise<void> => {
+    if (options.actorId) await pool.query("SELECT set_config('app.actor_id', $1, false)", [options.actorId]);
+  };
 
   const eventColumns = "id, type, sequence, prev_hash, timestamp, actor_id, payload, schema_version, meta, header, hash, integrity, canonical";
 
   async function getLastEvent(): Promise<BookPiEventRecord | null> {
+    await setActor();
     const { rows } = await pool.query(`SELECT ${eventColumns} FROM ${quote(table)} ORDER BY sequence DESC LIMIT 1`);
     const row = rows[0] as PostgresBookPiRow | undefined;
     return row ? rowToRecord(row) : null;
@@ -51,6 +59,7 @@ export function createPostgresStorage(pool: PostgresLike, table = BOOKPI_TABLE):
         sequence, prevHash, timestamp: new Date().toISOString(), secret: ctx.secret,
       });
       try {
+        await setActor();
         await pool.query(
           `INSERT INTO ${quote(table)}
            (id, type, sequence, prev_hash, timestamp, actor_id, payload, schema_version, meta, header, hash, integrity, canonical)
@@ -68,6 +77,7 @@ export function createPostgresStorage(pool: PostgresLike, table = BOOKPI_TABLE):
   }
 
   async function listEvents(): Promise<BookPiEventRecord[]> {
+    await setActor();
     const { rows } = await pool.query(`SELECT * FROM ${quote(table)} ORDER BY sequence ASC`);
     return (rows as PostgresBookPiRow[]).map(rowToRecord);
   }
