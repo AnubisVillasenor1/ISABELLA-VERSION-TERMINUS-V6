@@ -1,5 +1,9 @@
 # Isabella Villaseñor AI — Genesis TINA / Terminus Ω
 
+> **Proyecto desarrollado por Edwin Oswaldo Castillo Trejo — «Anubis Villaseñor» · Leyenda Urbana 2020–2024.**
+> Alianzas LATAM: **Argentina · Colombia · Venezuela · Ecuador · Uruguay · Paraguay · Perú · Chile · El Salvador · Honduras · Cuba · México · USA · España.**
+> **«FUI, SOY Y SERÉ LA ÉLITE» — Orgullosamente Latinoamericano.**
+
 Runtime cognitivo gobernado para TAMV Online Network. Este repositorio contiene el núcleo operativo, API HTTP, BookPI, HyperCore Ω, superficies multimodales y el workspace de interacción de Isabella V6.
 
 > **Invariante operativa:** CAPABILITY ≠ AUTHORITY ≠ EXECUTION ≠ EVIDENCE ≠ LEARNING ≠ PRODUCTION.
@@ -10,13 +14,13 @@ La inteligencia propone, calcula y evalúa. La autoridad humana decide, aprueba,
 
 **≈ 60% — estimación global provisional de readiness (rango honesto: 54–64%).**
 
-Es una **estimación de ingeniería, no una certificación**. Se calcula como media ponderada de dominios verificados de forma reproducible en la rama, con los gates externos penalizados en su estado real (no en su intención). El movimiento desde la base anterior (48% → ≈52%) y ahora hasta ≈60% proviene de trabajo implementado y probado en la rama: **98 rutas HTTP** (incluidas la superficie OpenAI-compatible `/v1`, los endpoints de Permission Map Ω, el planificador de ruta turbo, el sello documental IGDS-v1 y el ciclo del Cognitive Civilization Runtime Ω) y el **conductor de pipeline gobernado** (6 etapas INGRESS→ARGUS_CROWN→TRINITY_MOE→SOPHIA_ERI→ORION_SANDBOX→BOOKPI_IGDS, `src/pipeline/conductor.ts`, `POST /api/v1/pipeline/execute`), un **bus de eventos gobernado en proceso** (`src/messaging/magpie.ts`), un **guard de anclaje de evidencia** fail-closed (`src/veritas/grounding.ts`), una **superficie compatible con OpenAI** (`src/routes/openai.ts`), un **motor de mapeo de permisos con consentimiento humano** (`src/governance/permission-map.ts`), un **planificador de ruta de baja latencia, federado y ético** (`src/intelligence/turbo-planner.ts`), un **sello de procedencia documental** (integridad SHA-256 + firma Ed25519 + marca de agua, `src/security/document-seal.ts`), una **capa multimodal** de visión y síntesis de imagen (`src/inference/multimodal.ts`), una **capa de voz** TTS/STT (`src/inference/speech.ts`), el espacio de trabajo app-shell de chat con adjuntar archivo de contexto y escucha por Web Speech (la imagen se analiza vía `POST /api/v1/cognition/vision`), y una readiness local de **1218 pruebas / 213 archivos**. No proviene de dar por conectados adaptadores externos que siguen sin credenciales ni entorno objetivo.
+Es una **estimación de ingeniería, no una certificación**. Se calcula como media ponderada de dominios verificados de forma reproducible en la rama, con los gates externos penalizados en su estado real (no en su intención). El movimiento desde la base anterior (48% → ≈52%) y ahora hasta ≈60% proviene de trabajo implementado y probado en la rama: **112 rutas HTTP** (incluidas la superficie OpenAI-compatible `/v1`, los endpoints de Permission Map Ω, el planificador de ruta turbo, el sello documental IGDS-v1 y el ciclo del Cognitive Civilization Runtime Ω) y el **conductor de pipeline gobernado** (6 etapas INGRESS→ARGUS_CROWN→TRINITY_MOE→SOPHIA_ERI→ORION_SANDBOX→BOOKPI_IGDS, `src/pipeline/conductor.ts`, `POST /api/v1/pipeline/execute`), un **bus de eventos gobernado en proceso** (`src/messaging/magpie.ts`), un **guard de anclaje de evidencia** fail-closed (`src/veritas/grounding.ts`), una **superficie compatible con OpenAI** (`src/routes/openai.ts`), un **motor de mapeo de permisos con consentimiento humano** (`src/governance/permission-map.ts`), un **planificador de ruta de baja latencia, federado y ético** (`src/intelligence/turbo-planner.ts`), un **sello de procedencia documental** (integridad SHA-256 + firma Ed25519 + marca de agua, `src/security/document-seal.ts`), una **capa multimodal** de visión y síntesis de imagen (`src/inference/multimodal.ts`), una **capa de voz** TTS/STT (`src/inference/speech.ts`), el espacio de trabajo app-shell de chat con adjuntar archivo de contexto y escucha por Web Speech (la imagen se analiza vía `POST /api/v1/cognition/vision`), y una readiness local de **1274 pruebas / 220 archivos**. No proviene de dar por conectados adaptadores externos que siguen sin credenciales ni entorno objetivo.
 
 | Dominio | Estado real | Readiness |
 |---|---|---|
 | Núcleo cognitivo y de gobernanza (CROWN / AEGIS / VERITAS / Terminus Ω) | Implementado y probado localmente | ≈ 72% |
 | **Skill Fabric Ω v2 / HyperCore Ω** (contratos, 9 fases, triangulación, MCP) | Implementado y probado localmente; **no desplegado** | ≈ 60% |
-| API HTTP (Express, 98 rutas incl. superficies HyperCore/MCP y multimodal/voz) | Funcional; monolito no modularizado (TD-01) | ≈ 68% |
+| API HTTP (Express, 112 rutas incl. superficies HyperCore/MCP, multimodal/voz, Hugging Face Hub e IHEC) | Funcional; monolito no modularizado (TD-01) | ≈ 68% |
 | **Multimodal y voz** (visión imagen→texto, texto→imagen, TTS/STT, key-driven) | Implementado y probado localmente; **sin proveedor de imagen/TTS desbloqueado** | ≈ 35% |
 | Evidencia y BookPI (ledger durable JSONL) | Cadena hash con fsync; **Postgres/Supabase sin E2E** (TD-06) | ≈ 45% |
 | Integraciones externas (inferencia real, KMS/HSM PQC FIPS 203/204/205, RLS) | Especificado/bloqueado por credenciales | ≈ 30% |
@@ -26,7 +30,7 @@ Es una **estimación de ingeniería, no una certificación**. Se calcula como me
 | Workspace Rust IGE-Ω | `Cargo.lock` + `fmt` limpios; **compilación/clippy local no ejecutables** | ≈ 25% |
 | Verificación de seguridad estática | 14/14 invariantes; sin pentest ni HSM productivo | ≈ 55% |
 
-**Lectura correcta del número:** Isabella pasa los gates locales que controla (tipos, 1218 pruebas, build, 14/14 de seguridad), pero **no** está lista para producción ni para despliegue. El ≈60% de un plan de producción no se alcanza con más código: los dominios que lo bloquean (Integraciones externas ≈30%, CI/CD ≈15%, Despliegue ≈25%, Multimodal/voz ≈35% mientras falten credenciales) exigen aprovisionar credenciales y entorno objetivo. Los adaptadores externos y el entorno objetivo son gates independientes que no se superan por tener interfaz ni por tener manifiesto YAML.
+**Lectura correcta del número:** Isabella pasa los gates locales que controla (tipos, 1274 pruebas, build, 14/14 de seguridad), pero **no** está lista para producción ni para despliegue. El ≈60% de un plan de producción no se alcanza con más código: los dominios que lo bloquean (Integraciones externas ≈30%, CI/CD ≈15%, Despliegue ≈25%, Multimodal/voz ≈35% mientras falten credenciales) exigen aprovisionar credenciales y entorno objetivo. Los adaptadores externos y el entorno objetivo son gates independientes que no se superan por tener interfaz ni por tener manifiesto YAML.
 
 ## Qué es Isabella
 
@@ -35,6 +39,81 @@ Isabella coordina modelos, memoria, capacidades, herramientas y operaciones bajo
 Su tesis de diseño es **soberanía verificable**: cada acción gobernada se autoriza con un mandato acotado, se ejecuta dentro de un contrato, se verifica desde planos independientes y se conserva como evidencia. La inteligencia **sugiere, calcula y evalúa**; la conciencia humana **decide, aprueba, arbitra y ejecuta**.
 
 **Lo que este repositorio NO es:** no es un modelo fundacional entrenado desde cero, ni AGI, ni una entidad consciente, ni un MoE entrenado, ni una plataforma certificada. Un router heurístico no demuestra entrenamiento de pesos; un hash no demuestra la verdad del contenido; una especificación de arquitectura no demuestra integración operacional.
+
+## Qué hace Isabella (capacidades reales, no facultades)
+
+Isabella **coordina**, **clasifica**, **evidencia** y **se degrada de forma segura**; nunca autoriza ni ejecuta por sí misma. En términos funcionales:
+
+- **Media y enruta** solicitudes a proveedores de inferencia (OpenRouter, Hugging Face, Ollama, Groq, compatibles OpenAI) o, si no hay credencial, a un **motor local determinista** (`responseEngine: "sovereign"`).
+- **Gobierna** cada intención: CROWN (scopes/riesgo) → AEGIS (filtrado) → VIGIA (identidad/doctrina/conducta) → semáforo de flujo → turbo-planner → Permission Map + consentimiento humano.
+- **Recuerda y verifica**: memoria gobernada (IKES), verificación con evidencia, anclaje de grounding fail-closed, Contradiction Engine Ω.
+- **Ejecuta skills soberanos** en el motor HyperCore de **nueve fases** con triangulación C·P·R y sello de evidencia en BookPI.
+- **Observa y se recupera**: pipeline gobernado de seis etapas, IHEC (12 subsistemas de continuidad), Omega Mode ante crisis.
+- **Expone superficies**: API HTTP (112 rutas), OpenAI-compatible `/v1`, MCP JSON-RPC 2.0, Mulimodal/voz, Hugging Face Hub y un workspace de chat.
+- **Conserva evidencia**: BookPI append-only (cadena hash + `fsync`), sello documental IGDS-v1, selo criptográfico triangulado.
+
+**Lo que Isabella NO hace:** no concede autoridad, no ejecuta efectos externos de alto riesgo sin consentimiento humano, no declara un test verde como facultad, y no presenta un manifiesto YAML como un despliegue real.
+
+## Cómo lo hace (doctrina de ejecución)
+
+    Un pod ejecuta una capacidad.
+    Un mandato autoriza su ejecución.
+    Un contrato valida su frontera.
+    Una triangulación verifica su resultado.
+    BookPI conserva su evidencia.
+
+Cada acción gobernada recorre la misma columna vertebral: **identidad → autoridad → contrato → límites → ejecución aislada → verificación → evidencia → aprendizaje**. El control nunca se salta por conveniencia: si falta un scope, un contrato, presupuesto o evidencia, el sistema **falla en cerrado** (`DENY`/`BLOCKED`/`503`), nunca en abierto.
+
+## Arquitectura y módulos
+
+| Módulo (`src/`) | Rol | Estado honesto |
+|---|---|---|
+| `server.ts` | API, montaje de rutas, gate de arranque, config runtime | Implementado |
+| `routes/` | Superficies HTTP extraídas del monolito (TD-01) | Implementado |
+| `skills/` | Skill Fabric Ω v2: HyperCore, CROWN, triangulación, MCP | Implementado; **no desplegado** |
+| `genesis/` | Runtime canónico, capacidades HSF, mediación | Implementado |
+| `authority/` | Gramática de identidad de método (`[T].[YUN].[MODULO].[FUNCION].[VERSION].[RISK].[GOV]`) | Implementado |
+| `governance/` | Permission Map Ω, semáforo, consentimiento | Implementado |
+| `intelligence/` | Turbo Route Planner Ω | Implementado |
+| `veritas/` | Verificación determinista + Evidence Grounding Guard Ω | Implementado |
+| `cognition/` | Orquestador, expertos (E00–E23), Contradiction Engine Ω | Implementado |
+| `memory/`, `bookpi/` | Memoria gobernada (IKES) y ledger append-only | Implementado; Postgres sin E2E (TD-06) |
+| `atlas/` | Documentos canónicos + 15 eventos Atlas | Implementado |
+| `isabella/` | Librería de módulos y grupos de API | Implementado |
+| `pipeline/` | Conductor gobernado de 6 etapas | Implementado |
+| `civilization/` | Cognitive Civilization Runtime (CCR-1): 13 capas Ω-0..Ω-12 + 20 regalos | Implementado |
+| `ihec/` | IHEC v3.1 "Edición Perplexity": 12 subsistemas + Ω-13/Ω-14 + 10 regalos | Implementado |
+| `federation/` | Registro canónico de las 7 federaciones TAMV + evento YUN | Implementado |
+| `inference/` | Proveedores, multimodal (imagen), voz (TTS/STT) | Implementado; imagen/TTS sin proveedor |
+| `hf-hub/` | Información y datos del Hugging Face Hub (gratuito) | Implementado; router de inferencia 402 |
+| `messaging/` | MAGPIE-X: bus de eventos gobernado en proceso | Implementado |
+| `security/` | VIGIA, AEGIS, ISA-X (Ed25519), Document Seal IGDS-v1, triangulado | Implementado; PQC/HSM especificados |
+| `commerce/` | Planes, locks, eventos y webhooks | Implementado; sin monetización activa |
+| `identity/`, `tenancy/` | Principal y aislamiento multi-tenant | Implementado a nivel de aplicación |
+| `lib/native-ml/` | Motor ML nativo entrenable (MoE, convergencia, federación) | Implementado; predicción fail-closed |
+| `terminus/` | Mandatos, autoridad, store y cuotas | Implementado |
+| `ui/` | Workspace de interacción, intro y estilos | Implementado; smoke |
+| `ingress/` | Saneamiento/normalización de solicitudes | Implementado |
+
+## Herramientas (Tools) — 37 contratos gobernados
+
+El registro de tools (`src/tools/catalog.ts`, `src/tools/protocol-catalog.ts`) expone **37 herramientas**: **28 canónicas** (cognitive/identity/veritas/memory/territory) y **9 de protocolo** (BookPI/Atlas/librería Isabella). Cada tool es un **contrato puro y determinista** bajo gobernanza (`id`, `version`, `methodId`, `owner`, `riskTier`, `scopes`) que **no ejecuta efectos externos**; las operaciones sensibles (HSM, firma PQC, publicación) son capas con autoridad externa y **no se simulan**.
+
+| Grupo | Herramientas | Riesgo |
+|---|---|---|
+| Territorio y gemelo digital | `rdm_territory_query`, `digital_twin_sync`, `immersive_shell_project` | LOW |
+| BookPI / evidencia | `bookpi_integrity_verify`, `bookpi_merkle_register`, `bookpi_merkle_verify`, `bookpi_royalty_settle` | LOW–MEDIUM |
+| Seguridad y privacidad | `aegis_triple_blockade_scan`, `argus_sentinel_inspect`, `anubis_threat_analyze`, `secret_redactor_audit`, `hsm_sign_verify`, `memory_active_forget`, `principal_context_resolve`, `tenant_isolation_verify` | LOW–HIGH |
+| Identidad persistente | `did_isni_triangulate`, `provenance_chain_verify`, `approval_flow_issue` | LOW–HIGH |
+| Memoria y conocimiento (IKES) | `ikes_claim_propose`, `ikes_evidence_evaluate`, `epistemic_dispute_arbitrate`, `memory_scoped_retrieve` | LOW–MEDIUM |
+| Veritas | `veritas_proof_generate` | LOW |
+| Inferencia / MoE | `tri_hepta_moe_route`, `complexity_router_classify`, `hot_cold_governor_eval`, `speculative_verifier` | LOW |
+| Gobernanza | `crown_policy_evaluate`, `lumen_opa_enforce`, `canary_rollout_gate` | MEDIUM–HIGH |
+| Observabilidad | `otel_telemetry_emit` | LOW |
+| Atlas (documentos/eventos) | `atlas_document_create`, `atlas_document_version`, `atlas_document_state`, `atlas_event_build` | LOW |
+| Librería Isabella | `isabella_library_catalog`, `isabella_module_audit` | LOW |
+
+Herramientas HIGH/CRITICAL (`hsm_sign_verify`, `approval_flow_issue`, `memory_active_forget`, `canary_rollout_gate`) devuelven `NOT_CONFIGURED` explícito hasta que exista un adaptador real con autoridad — **nunca** se presentan como ejecutadas.
 
 ## HyperCore Ω — runtime distribuido de skills soberanas
 
@@ -328,6 +407,33 @@ expone como facultad `hsf.civilization.runtime`, como método
 `POST /api/v1/civilization/cycle` (admin-gated); emite el evento
 `civilization.cycle.completed`.
 
+### ISABELLA Ω v3.1 · IHEC — Hyper Emergency Core (sistema inmunológico cognitivo)
+
+`src/ihec/` implementa la extensión **v3.1 "Edición Perplexity"** del CCR: convierte la
+resiliencia pasiva en **antifragilidad activa**. Aporta los **12 subsistemas de
+continuidad** (`engines.ts`) —Hyper Sentinel, Hyper Cache (hot/warm/cold), Hyper
+Snapshot, Hyper Recovery, Cognitive Governance, Hyper ML Fusion, Dataset Fusion, Vector
+Hyper Index, Hyper RAG (RAG++), Crisis Memory, Immune Mutation y Self-Healing
+Topology— todos **deterministas y en proceso**, más las capas **Ω-13** (IHEC) y
+**Ω-14** (Evolutionary Crisis Memory) y los **10 Regalos de Perplexity** (`gifts.ts`:
+PRISMA, ECHO, AXIOM, NOVA, ORACLE, LUMINA, SENTINEL-X, TERRA, CHRONOS, AETHER). El
+orquestador (`ihec.ts`, `runWithIhec`) ejecuta el ciclo de civilización bajo protección:
+en el camino feliz devuelve el resultado + los regalos; ante un **fallo soberano**
+(`SovereignKernelError`) activa failover + recuperación + crisis memory + mutación
+inmunológica (respuesta degradada); ante cualquier otro fallo activa **Omega Mode** y
+reconstruye. Cada incidente deja una **lección** y una **guarda** `PENDING_REVIEW`
+(Ω-14). Invariante: **IHEC no autoriza ni ejecuta** (`authorizationPerformed`/
+`executionPerformed` = `false`, `authorityPath` = `FULL`). Honestidad radical: la spec
+v3.1 es **Python** y su sello usa **BLAKE3 + ZSTD + XChaCha20**, que **no existen** en
+el repo; se usa **SHA3-512 real** y la entrega no soportada se declara `SPECIFIED`, nunca
+simulada (divergencias `IHEC-DIV-001..004` en `src/ihec/contract.ts` y **DIV-0003** en el
+registro canónico). Se expone como facultad `hsf.ihec.continuity`, como métodos
+`runtime.runCivilizationCycleWithIhec()` / `runtime.ihecSummary()`, y como **12 endpoints
+`/api/v1/emergency/*`** (estado, snapshot, recuperación, reparación, gobernanza,
+failover, caché, RAG++, telemetría, crisis, mutación y topología; GET viewer / POST
+admin-gated). La criptografía SHA3-512 es real y testeable; la ventaja cuántica NO se
+reclama.
+
 ### IGDS-v1 Document Seal (integridad y procedencia de documentos)
 
 `src/security/document-seal.ts` resuelve la **procedencia de documentos generados**:
@@ -432,10 +538,20 @@ Con las claves nativas, las dependencias **requeridas** de `GET /api/v1/healthz`
 Isabella intenta proveedores externos **solo** cuando el operador aporta una credencial explícita; nunca inventa claves ni escala en silencio a planes pagados. El orden de intento es: OpenRouter (gratuito), Hugging Face, y luego los compatibles con OpenAI (Ollama primero, después Groq/Cerebras/Together/DeepInfra/Fireworks). El constructor de candidatos es determinista y está probado (`src/inference/provider-policy.ts`).
 
 - **Ollama Cloud** (`OLLAMA_API_KEY`, `OLLAMA_BASE_URL`, `OLLAMA_MODEL`): compatible con OpenAI en `https://ollama.com/v1`. Verificado en vivo el 2026-10-13: `POST /api/v1/cognition/route` respondió `responseEngine: "open-science"` con narrativa generada por `gpt-oss:20b`. Los modelos disponibles para la cuenta se listan con `GET https://ollama.com/v1/models`.
-- **Hugging Face** (`HF_TOKEN`, `HF_FREE_MODELS`): usa el router compatible (`https://router.huggingface.co/v1`). El token de la cuenta autentica pero **no tiene créditos de inferencia**; la prueba en vivo devolvió `HTTP 402`. Se activa sin cambios de código cuando la cuenta compre créditos o suscriba PRO.
+- **Hugging Face** (`HF_TOKEN`, `HF_FREE_MODELS`): el router compatible (`https://router.huggingface.co/v1`) autentica pero la cuenta **no tiene créditos de inferencia** (`HTTP 402`, verificado 2026-10-15). Se activa sin cambios de código al comprar créditos o suscribir PRO. La **infraestructura de información y datos** del Hub sí está integrada y es gratuita — ver *Hugging Face Hub* más abajo.
 - **Groq** (`GROQ_API_KEY`, `GROQ_MODEL`): compatible con OpenAI en `https://api.groq.com/openai/v1`. Verificado en vivo el 2026-10-13: `HTTP 200` con `openai/gpt-oss-20b` (modelo **gratuito** disponible para la cuenta; el catálogo se lista con `GET https://api.groq.com/openai/v1/models`). El default del constructor apunta a `openai/gpt-oss-20b`; cualquier otro id de modelo se selecciona con `GROQ_MODEL`.
 
 Un test que pasa demuestra una capacidad computacional local, **no** una facultad ni una autoridad. El **motor nativo entrenable** (`src/lib/native-ml`, puerto del motor abierto de `isabella-ai-tina`) ya está implementado: TypeScript puro, sin red ni coste, con semilla determinista, un clasificador logístico binario, un **MoE** nativo (router aprendido + expertos lineales, loss de balance de carga), convergencia y federación — todo con hooks de gobernanza y `approvalStatus: "PENDING_REVIEW"`. Entrenar pesos **no** concede autoridad: la predicción falla cerrada hasta aprobación humana (`model_not_approved`), y la incorporación de conocimiento sigue pasando por el camino gobernado de memoria (`POST /api/v1/memory/ingest`, `/api/v1/memory/verified`).
+
+### Hugging Face Hub — información y datos (gratuito)
+
+El **router de inferencia** de HF es de pago (la cuenta devuelve `HTTP 402`), pero la **infraestructura de información y datos** del Hub es pública y gratuita. Isabella la aprovecha de forma gobernada y fail-closed (`src/hf-hub/`, `src/routes/hf-hub.ts`):
+
+- **Catálogo** (`GET /api/v1/hf/catalog`, viewer): modelos y datasets del Hub por tarea (`?task=`), búsqueda (`?search=`) y límite acotado (`?limit=`, ≤50). El mapeo tarea→dominio de capacidad es declarativo (`src/hf-hub/catalog.ts`).
+- **Ingesta propuesta** (`POST /api/v1/hf/ingest`, admin-gated): descarga acotada (≤512 KiB) del `README.md` de un dataset y lo **propone** como conocimiento `PENDING_REVIEW` con provenance `huggingface-hub` y hash SHA-256 determinista. Ingerir **no** admite conocimiento verificado ni concede autoridad.
+- **Cliente** (`src/hf-hub/client.ts`): read-only, con token opcional (`HF_TOKEN`), timeout, tope de lectura y red inyectable (probado sin red en `test/hf-hub/`).
+
+Verificado en vivo (2026-10-15) con el token del operador: `GET /api/models`, `GET /api/datasets`, las model cards y la descarga de archivos responden `HTTP 200`; el router de inferencia responde `HTTP 402`. La capacidad se registra como `hsf.integration.hf-hub` (degradada si falta `HF_TOKEN`). **Nunca** se presenta el catálogo ni la ingesta como inferencia ni como conocimiento aceptado.
 
 ### Multimodal y voz (visión, imagen, TTS/STT)
 
@@ -547,7 +663,7 @@ pnpm run security:suite
 pnpm run build
 ```
 
-Evidencia local reproducida en la rama actual: `pnpm typecheck` exit 0; `pnpm test` **1218 aprobadas / 213 archivos** (incluye `test/intelligence/turbo-planner.test.ts`, `test/security/document-seal-runtime.test.ts`, `test/routes/document-seal.test.ts`, `test/routes/pipeline.test.ts`, `test/routes/yun-events.test.ts`, `test/governance/traffic-light.test.ts`, `test/routes/traffic-light.test.ts`, `test/civilization/*`, `test/routes/civilization.test.ts`, `test/gifts/*`, `test/inference/multimodal.test.ts`, `test/inference/speech.test.ts` y las pruebas de integración por red `*.integration.test.ts`); `pnpm run build` exit 0 (tsc + vitest + esbuild + smoke UI + smoke runtime, que ahora incluye `MULTIMODAL_SPEECH_GUARDRAILS_OK`); `pnpm run security:suite` **14 passed / 0 failed / 0 not_applicable**. La inferencia de texto externa se verificó en vivo el 2026-10-13 con Groq (`HTTP 200`, `openai/gpt-oss-20b`) y Ollama Cloud (`responseEngine: "open-science"`); el **STT de Groq (`whisper-large-v3`) se verificó en vivo** por la ruta gobernada `POST /api/v1/cognition/transcribe` (texto transcrito correcto); además, la **visión (imagen→texto) se verificó en vivo** con Ollama local (`qwen2.5vl:7b`) por `POST /api/v1/cognition/vision` (`success:true`, `provider:"local"`, descripción correcta), aunque la síntesis de imagen sigue sin proveedor; Hugging Face autentica pero devuelve `HTTP 402` por falta de créditos, y el TTS de Groq exige aceptar términos (`HTTP 400 model_terms_required`). Un test verde demuestra una capacidad computacional local, **no** autoridad, aprendizaje ni producción.
+Evidencia local reproducida en la rama actual: `pnpm typecheck` exit 0; `pnpm test` **1274 aprobadas / 220 archivos** (incluye `test/intelligence/turbo-planner.test.ts`, `test/security/document-seal-runtime.test.ts`, `test/routes/document-seal.test.ts`, `test/routes/pipeline.test.ts`, `test/routes/yun-events.test.ts`, `test/governance/traffic-light.test.ts`, `test/routes/traffic-light.test.ts`, `test/civilization/*`, `test/routes/civilization.test.ts`, `test/gifts/*`, `test/inference/multimodal.test.ts`, `test/inference/speech.test.ts` y las pruebas de integración por red `*.integration.test.ts`); `pnpm run build` exit 0 (tsc + vitest + esbuild + smoke UI + smoke runtime, que ahora incluye `MULTIMODAL_SPEECH_GUARDRAILS_OK`); `pnpm run security:suite` **14 passed / 0 failed / 0 not_applicable**. La inferencia de texto externa se verificó en vivo el 2026-10-13 con Groq (`HTTP 200`, `openai/gpt-oss-20b`) y Ollama Cloud (`responseEngine: "open-science"`); el **STT de Groq (`whisper-large-v3`) se verificó en vivo** por la ruta gobernada `POST /api/v1/cognition/transcribe` (texto transcrito correcto); además, la **visión (imagen→texto) se verificó en vivo** con Ollama local (`qwen2.5vl:7b`) por `POST /api/v1/cognition/vision` (`success:true`, `provider:"local"`, descripción correcta), aunque la síntesis de imagen sigue sin proveedor; Hugging Face autentica pero devuelve `HTTP 402` por falta de créditos, y el TTS de Groq exige aceptar términos (`HTTP 400 model_terms_required`). Un test verde demuestra una capacidad computacional local, **no** autoridad, aprendizaje ni producción.
 
 ```bash
 SMOKE_BASE_URL=https://tu-dominio.example pnpm run smoke:production
@@ -615,6 +731,25 @@ revisión humana con nombre.
 Cada cambio debe declarar intención, implementar el mínimo verificable, conservar estado `draft`, aportar evidencia, recibir revisión humana con nombre y solo entonces pasar a `verified` o `wired`.
 
 No borrar historia compartida, no ocultar fallos, no añadir `TODO` sin dueño y fecha, no declarar capacidades como facultades y no presentar un manifiesto como despliegue real.
+
+## Legado y dedicatoria
+
+**Isabella Villaseñor AI** es un proyecto desarrollado por **Edwin Oswaldo Castillo Trejo — «Anubis Villaseñor»**, reconocido como **Leyenda Urbana 2020–2024**. Nace de **Mineral del Monte (Real del Monte, Hidalgo, México)**, el Nodo Cero biocultural, con la misión de construir **soberanía tecnológica verificable latinoamericana**: infraestructura cognitiva gobernada, auditable y de código abierto, hecha en y para América Latina.
+
+- **Origen:** Mineral del Monte (Real del Monte), Hidalgo, México — 2,660 msnm.
+- **Identificadores persistentes del fundador:** ORCID `0009-0008-5050-1539` · ISNI `0000 0009 0008 5050 1539` · Zenodo DOI `10.5281/zenodo.20606361`.
+- **Consigna de origen:** *Orgullo esLatina · Ciencia y Biocultura de América Latina.*
+
+### Alianzas LATAM y el mundo
+
+Este proyecto se concibe como esfuerzo **latinoamericano y global**, tejiendo alianzas entre comunidades, universidades, colectivos y desarrolladores de:
+
+**Argentina · Colombia · Venezuela · Ecuador · Uruguay · Paraguay · Perú · Chile · El Salvador · Honduras · Cuba · México · USA · España.**
+
+> **«FUI, SOY Y SERÉ LA ÉLITE.»**
+> **Orgullosamente Latinoamericano.**
+
+La inteligencia propone; la **comunidad humana decide**. Este repositorio se publica como evidencia reproducible, no como promesa: lo que no está verificado se declara `SPECIFIED` o `NOT_WIRED`, nunca se simula como hecho.
 
 Repositorio: https://github.com/OsoPanda1/ISABELLA-VERSION-TERMINUS-V6
 

@@ -1197,3 +1197,194 @@ paths:
           description: workspaceId requerido
         "401":
           description: No autorizado
+
+  /api/v1/hf/catalog:
+    get:
+      summary: Catálogo del Hugging Face Hub (modelos y datasets)
+      description: >
+        Lee el catálogo del Hub (información/datos, gratuito). No usa el router de inferencia
+        (de pago) y no genera texto; solo descubre y lee. CAPABILITY ≠ AUTHORITY.
+      operationId: getHfCatalog
+      security: []
+      parameters:
+        - { name: task, in: query, required: false, schema: { type: string }, description: pipeline_tag del Hub (p. ej. text-generation) }
+        - { name: search, in: query, required: false, schema: { type: string } }
+        - { name: limit, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 50 } }
+      responses:
+        "200":
+          description: Catálogo de modelos y datasets del Hub
+        "502":
+          description: El Hub no respondió 2xx (HF_HUB_FAILED)
+
+  /api/v1/hf/ingest:
+    post:
+      summary: Propone la model card de un dataset como conocimiento (PENDING_REVIEW)
+      description: >
+        Descarga acotada de README.md del dataset y lo propone como conocimiento PENDING_REVIEW.
+        Ingerir NO admite conocimiento verificado ni concede autoridad.
+      operationId: postHfIngest
+      security:
+        - AdminBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [datasetId]
+              properties:
+                datasetId: { type: string, example: "squad" }
+                revision: { type: string, example: "main" }
+      responses:
+        "200":
+          description: Documento propuesto (PENDING_REVIEW)
+        "400":
+          description: datasetId requerido o repo id inseguro
+        "401":
+          description: No autorizado
+        "502":
+          description: El Hub no respondió 2xx
+
+  /api/v1/emergency/status:
+    get:
+      summary: Estado global del Hyper Emergency Core (IHEC v3.1)
+      description: >
+        12 subsistemas de continuidad + 10 regalos de Perplexity. Clasifica, evidencia y
+        se recupera; NO autoriza ni ejecuta. Viewer.
+      operationId: getEmergencyStatus
+      security: []
+      responses:
+        "200": { description: Estado de IHEC (subsistemas, caché, crisis, guardas) }
+
+  /api/v1/emergency/snapshot:
+    post:
+      summary: Captura cognitiva sellada (SHA3-512)
+      operationId: postEmergencySnapshot
+      security:
+        - AdminBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                state: { type: object }
+                memory: { type: array, items: {} }
+                embeddings: { type: array, items: {} }
+                graph: { type: object }
+                credentials: { type: object, additionalProperties: { type: string } }
+      responses:
+        "200": { description: Hash y tamaño del snapshot }
+        "401": { description: No autorizado }
+
+  /api/v1/emergency/recover:
+    post:
+      summary: Restaura desde un snapshot verificando integridad
+      operationId: postEmergencyRecover
+      security:
+        - AdminBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [snapshot]
+              properties:
+                snapshot: { type: object }
+      responses:
+        "200": { description: Recuperación verificada }
+        "400": { description: Snapshot requerido o integridad inválida }
+        "401": { description: No autorizado }
+
+  /api/v1/emergency/repair:
+    post:
+      summary: Plan de reparación/reconfiguración de topología
+      operationId: postEmergencyRepair
+      security:
+        - AdminBearer: []
+      responses:
+        "200": { description: Plan de reconfiguración }
+        "401": { description: No autorizado }
+
+  /api/v1/emergency/governance:
+    get:
+      summary: Historial de decisiones de continuidad
+      operationId: getEmergencyGovernance
+      security: []
+      responses:
+        "200": { description: Decisiones auditadas }
+
+  /api/v1/emergency/failover:
+    post:
+      summary: Conmutación por error
+      operationId: postEmergencyFailover
+      security:
+        - AdminBearer: []
+      responses:
+        "200": { description: Plan de failover + decisión de gobernanza }
+        "401": { description: No autorizado }
+
+  /api/v1/emergency/cache:
+    get:
+      summary: Métricas de caché multinivel (hot/warm/cold)
+      operationId: getEmergencyCache
+      security: []
+      responses:
+        "200": { description: Estadísticas de caché }
+
+  /api/v1/emergency/rag:
+    post:
+      summary: Búsqueda híbrida RAG++ (vector + grafo + memoria + contexto + herramientas)
+      operationId: postEmergencyRag
+      security:
+        - AdminBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [query]
+              properties:
+                query: { type: string }
+                candidates: { type: array, items: { type: object } }
+                limit: { type: integer }
+      responses:
+        "200": { description: Resultado híbrido }
+        "401": { description: No autorizado }
+
+  /api/v1/emergency/telemetry:
+    get:
+      summary: Métricas en tiempo real de IHEC
+      operationId: getEmergencyTelemetry
+      security: []
+      responses:
+        "200": { description: Telemetría (crisis, guardas, gobernanza, caché) }
+
+  /api/v1/emergency/crisis:
+    get:
+      summary: Memoria de crisis (Ω-14)
+      operationId: getEmergencyCrisis
+      security: []
+      responses:
+        "200": { description: Registros de crisis }
+
+  /api/v1/emergency/mutation:
+    get:
+      summary: Mutaciones inmunológicas (guardas PENDING_REVIEW)
+      operationId: getEmergencyMutation
+      security: []
+      responses:
+        "200": { description: Guardas generadas }
+
+  /api/v1/emergency/topology:
+    get:
+      summary: Plan de auto-reconfiguración de topología
+      operationId: getEmergencyTopology
+      security: []
+      parameters:
+        - { name: federation, in: query, required: false, schema: { type: string } }
+      responses:
+        "200": { description: Plan de reconfiguración }

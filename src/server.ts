@@ -46,6 +46,8 @@ import { registerOrderPermissionRoutes } from "./routes/governance-permissions";
 import { registerTurboPlannerRoutes } from "./routes/turbo-planner";
 import { registerTrafficLightRoutes } from "./routes/traffic-light";
 import { registerCivilizationRoutes } from "./routes/civilization";
+import { registerHfHubRoutes } from "./routes/hf-hub";
+import { registerIhecRoutes } from "./routes/ihec";
 import { registerDocumentSealRoutes } from "./routes/document-seal";
 import { registerPipelineRoutes, createInMemoryBookPiStorage } from "./routes/pipeline";
 import { registerYunEventRoutes } from "./routes/yun-events";
@@ -2984,6 +2986,32 @@ registerTrafficLightRoutes({
 registerCivilizationRoutes({
   app,
   runCycle: (input) => runtime.runCivilizationCycle(input),
+  enforceRateLimit,
+  rateLimiter: publicScanLimiter,
+  authorizeAdmin: (req, res) => authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN"),
+});
+
+// ── Hugging Face Hub (state: draft | engine-generated) ─ catálogo de modelos/datasets
+// (información) y propuesta de model card como conocimiento (datos). Usa el Hub gratis;
+// NO usa el router de inferencia (de pago). El GET es viewer; el POST es admin-gated.
+// Catalogar/leer NO autoriza ni ejecuta; ingerir NO admite conocimiento verificado.
+registerHfHubRoutes({
+  app,
+  queryCatalog: (input) => runtime.queryHfHub(input),
+  ingestDataset: (input) => runtime.ingestHfDataset(input),
+  enforceRateLimit,
+  rateLimiter: publicScanLimiter,
+  authorizeAdmin: (req, res) => authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN"),
+});
+
+// ── ISABELLA Ω v3.1 · IHEC (state: draft | engine-generated) ─ Hyper Emergency Core:
+// 12 subsistemas de continuidad + 10 regalos de Perplexity (estado, snapshot,
+// recuperación, reparación, gobernanza, failover, caché, RAG++, telemetría, crisis,
+// mutación y topología). Los GET son viewer; los POST son admin-gated. IHEC NO autoriza
+// ni ejecuta: clasifica, evidencia y se recupera.
+registerIhecRoutes({
+  app,
+  ihec: runtime.ihec,
   enforceRateLimit,
   rateLimiter: publicScanLimiter,
   authorizeAdmin: (req, res) => authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN"),

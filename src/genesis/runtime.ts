@@ -115,6 +115,23 @@ import {
   type CivilizationCycleResult,
 } from "../civilization";
 import { createEngine } from "../evolution/engine";
+import {
+  createHfHubClient,
+  hfHubSummary as buildHfHubSummary,
+  ingestHfDataset as ingestHfDatasetCore,
+  queryHfHubCatalog,
+  type HfCatalogInput,
+  type HfCatalogResult,
+  type HfIngestInput,
+  type HfKnowledgeDocument,
+} from "../hf-hub";
+import {
+  createIhec,
+  ihecSummary as buildIhecSummary,
+  runWithIhec,
+  type IhecGiftPayload,
+  type IhecRunResult,
+} from "../ihec";
 
 export interface GenesisRuntimeInput extends CrownEvaluationInput, AdaptiveRequest {
   memoryQuery?: string;
@@ -154,6 +171,18 @@ export class IsabellaGenesisRuntime {
   readonly memoryFabric = new InMemoryMemoryFabric();
   readonly executionFabric = new ExecutionFabric();
   readonly knowledgeFabric = new KnowledgeFabric();
+  /**
+   * Cliente READ-ONLY del Hugging Face Hub. Usa la infraestructura de INFORMACIÓN y
+   * DATOS del Hub (gratuita); nunca el router de inferencia (de pago). Leer no
+   * admite conocimiento: el material ingerido sale PENDING_REVIEW.
+   */
+  readonly hfHub = createHfHubClient(process.env);
+  /**
+   * ISABELLA Ω v3.1 · IHEC — Hyper Emergency Core. Sistema inmunológico cognitivo:
+   * 12 subsistemas de continuidad + 10 regalos de Perplexity. Registro en proceso;
+   * NO autoriza ni ejecuta efectos externos.
+   */
+  readonly ihec = createIhec();
   readonly lsp = new LspValidationAdapter();
   readonly mutations = new EntityMutationManager();
   readonly events = new MagpieBus();
@@ -181,6 +210,8 @@ export class IsabellaGenesisRuntime {
     this.registerCanonicalCatalogs();
     this.registerGiftCapabilities();
     this.registerCivilizationCapabilities();
+    this.registerHfHubCapabilities();
+    this.registerIhecCapabilities();
   }
 
   /** Registra los catálogos canónicos de tools, skills y protocolos. */
@@ -277,6 +308,60 @@ export class IsabellaGenesisRuntime {
         const value = input as { input?: CivilizationCycleInput } | CivilizationCycleInput;
         const cycleInput = (value as { input?: CivilizationCycleInput }).input ?? (value as CivilizationCycleInput);
         return this.runCivilizationCycle(cycleInput);
+      },
+    });
+  }
+
+  private registerHfHubCapabilities(): void {
+    const low = (id: string, domain: import("../capabilities").CapabilityDomain, description: string) => ({
+      id, version: "1.0.0", domain, description, riskTier: "LOW" as const, requiresAuthority: true,
+    });
+    this.capabilities.register({
+      descriptor: low(
+        "hsf.integration.hf-hub",
+        "integration",
+        "HUGGING FACE HUB: cataloga modelos/datasets y propone model cards como conocimiento; usa información/datos del Hub (gratis), nunca el router de inferencia (de pago). Leer no admite conocimiento.",
+      ),
+      health: () => (this.hfHub.configured ? "ready" : "degraded"),
+      execute: async (input) => {
+        const value = (input ?? {}) as {
+          operation?: string; task?: string; search?: string; limit?: number; datasetId?: string; revision?: string;
+        };
+        if (value.operation === "ingest" && typeof value.datasetId === "string" && value.datasetId.trim()) {
+          return this.ingestHfDataset({
+            datasetId: value.datasetId.trim(),
+            ...(typeof value.revision === "string" && value.revision.trim() ? { revision: value.revision.trim() } : {}),
+          });
+        }
+        return this.queryHfHub({
+          ...(typeof value.task === "string" && value.task.trim() ? { task: value.task.trim() } : {}),
+          ...(typeof value.search === "string" && value.search.trim() ? { search: value.search.trim() } : {}),
+          ...(typeof value.limit === "number" ? { limit: value.limit } : {}),
+        });
+      },
+    });
+  }
+
+  /**
+   * Registra IHEC v3.1 (Hyper Emergency Core) como capacidad invocable vía
+   * `POST /api/v1/hsf/invoke`. Ejecuta el ciclo de civilización BAJO protección
+   * de IHEC y aplica los 10 regalos de Perplexity. NO autoriza ni ejecuta.
+   */
+  private registerIhecCapabilities(): void {
+    const low = (id: string, domain: import("../capabilities").CapabilityDomain, description: string) => ({
+      id, version: "1.0.0", domain, description, riskTier: "LOW" as const, requiresAuthority: true,
+    });
+    this.capabilities.register({
+      descriptor: low(
+        "hsf.ihec.continuity",
+        "architecture",
+        "ISABELLA Ω v3.1 · IHEC: 12 subsistemas de continuidad + 10 regalos de Perplexity; detecta, aísla, se recupera, aprende y muta. No autoriza ni ejecuta.",
+      ),
+      health: () => "ready",
+      execute: async (input) => {
+        const value = (input ?? {}) as { input?: CivilizationCycleInput; payload?: IhecGiftPayload };
+        const cycleInput = value.input ?? (value as unknown as CivilizationCycleInput);
+        return this.runCivilizationCycleWithIhec(cycleInput, value.payload ?? {});
       },
     });
   }
@@ -1051,6 +1136,48 @@ export class IsabellaGenesisRuntime {
   /** Resumen honesto de las capas Ω y regalos Ω del CCR-1 (conteos y estado). */
   civilizationSummary(): ReturnType<typeof buildCivilizationSummary> {
     return buildCivilizationSummary();
+  }
+
+  /**
+   * Catálogo del Hugging Face Hub (modelos + datasets). Solo lectura de información;
+   * no genera texto ni concede autoridad. Falla cerrado si el Hub responde != 2xx.
+   */
+  queryHfHub(input: HfCatalogInput = {}): Promise<HfCatalogResult> {
+    return queryHfHubCatalog(this.hfHub, input);
+  }
+
+  /** Propone la model card de un dataset del Hub como conocimiento PENDING_REVIEW. */
+  ingestHfDataset(input: HfIngestInput): Promise<HfKnowledgeDocument> {
+    return ingestHfDatasetCore(this.hfHub, input);
+  }
+
+  /** Resumen honesto de la integración HF Hub (id de método y número de tareas). */
+  hfHubSummary(): ReturnType<typeof buildHfHubSummary> {
+    return buildHfHubSummary();
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* ISABELLA Ω v3.1 · IHEC — Hyper Emergency Core                       */
+  /* ------------------------------------------------------------------ */
+
+  /**
+   * Ejecuta el ciclo de civilización Ω BAJO la protección de IHEC y aplica los 10
+   * regalos de Perplexity. En el camino feliz devuelve el ciclo + regalos; ante un
+   * `SovereignKernelError` produce respuesta degradada con recuperación; ante
+   * cualquier otro fallo activa Omega Mode. En ambos casos archiva la crisis y
+   * genera una guarda (PENDING_REVIEW). NO autoriza ni ejecuta.
+   */
+  runCivilizationCycleWithIhec(
+    input: CivilizationCycleInput,
+    giftPayload: IhecGiftPayload = {},
+  ): IhecRunResult<CivilizationCycleResult> {
+    const payload: IhecGiftPayload = { summary: input.input, ...giftPayload };
+    return runWithIhec(this.ihec, payload, () => this.runCivilizationCycle(input));
+  }
+
+  /** Resumen honesto de IHEC v3.1 (subsistemas, capas, regalos y divergencias). */
+  ihecSummary(): ReturnType<typeof buildIhecSummary> {
+    return buildIhecSummary();
   }
 
 

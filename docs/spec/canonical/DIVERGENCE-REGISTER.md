@@ -69,3 +69,31 @@ y una gramática estricta de 7 segmentos.
 - **Opción tomada por ahora (cumple §6):** registrar ambas cifras de forma explícita
   y honesta; **sin** modificar la estructura. Pendiente de arbitraje humano para
   fijar la numeración canónica.
+
+## DIV-0003 — "IHEC v3.1 (Edición Perplexity)": lenguaje, criptografía y conteo de capas
+
+- **Estado:** abierto · **Severidad:** media · **Detectado:** 2026-10-15
+- **Especificación:** `Isabella Ω · Cognitive Civilization Runtime v3.1`
+  (`isabella-core-ccr-ihec-perplexity`, §7) aporta un módulo de referencia en
+  **Python** (`isabella_omega_ihec.py`), 12 subsistemas IHEC, un supuesto "14 capas Ω"
+  y 10 "Regalos de Perplexity". El sello de snapshots se describe como
+  **BLAKE3 + ZSTD + XChaCha20**.
+- **Código (`src/ihec/`):** portado a **TypeScript** estricto y determinista; el sello
+  usa la criptografía **REAL** del repo (**SHA3-512** vía `bookpi/crypto`). Se
+  registran las capas **Ω-13** (IHEC) y **Ω-14** (Evolutionary Crisis Memory) como
+  extensión de las 13 ya registradas por CCR-1. Las divergencias se declaran en
+  `src/ihec/contract.ts` (`IHEC_DIVERGENCES`, `IHEC_SPEC_DECLARED_LAYERS = 14`).
+- **Naturaleza de la divergencia:**
+  1. **Lenguaje:** la spec es Python; el repo es TypeScript sin `any`. Se porta el
+     comportamiento (y se amplía) sin romper la invariante de tipos.
+  2. **Criptografía:** BLAKE3 / ZSTD / XChaCha20 **no existen** en el repo; no se
+     simulan. Se usa SHA3-512 real y se declara la parte no soportada.
+  3. **Conteo de capas:** la spec titula "14 capas Ω" pero su diagrama enumera 10
+     (Ω-1..Ω-10) + Ω-13 + Ω-14; CCR-1 ya usa Ω-0..Ω-12. Choque de numeraciones.
+  4. **Ventaja cuántica:** el "Q-ECTS" no se reclama aquí; el sustrato es clásico.
+- **Opción tomada por ahora (cumple §6):** implementar los 12 subsistemas y los 10
+  regalos de forma honesta en proceso, declarar las cuatro divergencias arriba y en
+  el código, y **no** renombrar las capas existentes. Pendiente de arbitraje humano
+  para fijar numeración canónica, lenguaje y criptografía objetivo. La quinta
+  entrega (BLAKE3/ZSTD/XChaCha20) queda **SPECIFIED**, nunca simulada.
+
