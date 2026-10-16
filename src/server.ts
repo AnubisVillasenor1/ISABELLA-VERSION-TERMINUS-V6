@@ -59,6 +59,9 @@ import { generateControls } from "./evolution/catalog";
 import { classifyWithGenesisTurbo, type GenesisResult } from "./lib/native-ml/genesis-turbo";
 
 const app: Application = express();
+// Conversación gratuita disponible desde el primer arranque. Puede desactivarse con
+// ISABELLA_KEYLESS_FREE_PROVIDER=off cuando la privacidad del nodo lo requiera.
+if (!process.env.ISABELLA_KEYLESS_FREE_PROVIDER) process.env.ISABELLA_KEYLESS_FREE_PROVIDER = "pollinations";
 app.disable("x-powered-by");
 // Detrás de un balanceador, req.ip sería la IP del proxy y todos los clientes compartirían cubeta de rate limit.
 // TRUST_PROXY=<saltos> (entero 1..10) habilita X-Forwarded-For; sin valor válido NO se confía en él.
@@ -948,7 +951,7 @@ app.get("/api/v1/cognition/native-runtime", (_req, res) => {
     success: true,
     hyperTurbo: { status: "wired", modelId: "isabella-genesis-turbo-0.1.0", experts: GENESIS_EXPERTS.length, degraded: true },
     nativeMoe: { status: "wired", implementation: "pure-typescript", trainable: true, approvalStatus: "PENDING_REVIEW" },
-    realtime: { transport: "http-json", streaming: false, note: "La respuesta en tiempo real requiere un proveedor generativo configurado; el fallback local responde sin red." },
+      realtime: { transport: "http-json", streaming: false, note: "La interfaz responde por HTTP; el proveedor gratuito se intenta antes del Gateway y el fallback local evita dejar la conversación vacía." },
     governance: { execution: "fail-closed", humanApprovalRequiredFor: ["HIGH", "CRITICAL"] },
     provider: {
       ...describeProviderReadiness(process.env),
@@ -1027,6 +1030,12 @@ app.post("/api/v1/cognition/route", async (req, res) => {
       // Free/open inference is the default. Paid or billing-enabled providers are never
       // silently selected by Auto/Open Science; they require an explicit operator opt-in.
       if (modelEngine === "auto") {
+        // Preferimos primero un proveedor gratuito sin tarjeta; el Gateway queda como
+        // acelerador opcional y no debe bloquear la conversación si exige billing.
+        generativeNarrative = await generateKeylessFreeNarrative(systemPrompt, input, history);
+        if (generativeNarrative) responseEngine = "keyless-free";
+      }
+      if (!generativeNarrative && modelEngine === "auto") {
         generativeNarrative = await generateGatewayNarrative(systemPrompt, input, history);
         if (generativeNarrative) responseEngine = "gateway";
       }
