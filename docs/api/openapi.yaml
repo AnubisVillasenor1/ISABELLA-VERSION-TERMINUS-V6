@@ -1453,3 +1453,18 @@ paths:
         - { name: federation, in: query, required: false, schema: { type: string } }
       responses:
         "200": { description: Plan de reconfiguración }
+
+  /api/v1/ops/preflight:
+    get:
+      summary: Preflight de configuración de producción
+      description: Valida calidad de secretos (longitud, entropía, reutilización), URL pública, TRUST_PROXY, PORT, Stripe y kill switch. Nunca devuelve valores de secretos. 503 si hay errores bloqueantes.
+      operationId: getOpsPreflight
+      security:
+        - AdminBearer: []
+      responses:
+        "200":
+          description: PASS o WARN (con hallazgos)
+        "401":
+          description: No autorizado
+        "503":
+          description: FAIL (errores bloqueantes) o token de administración no configurado

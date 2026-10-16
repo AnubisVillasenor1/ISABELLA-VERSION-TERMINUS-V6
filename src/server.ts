@@ -37,6 +37,8 @@ import { SessionMemory, formatSessionContext, deriveSessionId } from "./memory/s
 import { VerifiedKnowledgeStore, formatVerifiedKnowledgeContext } from "./memory/verified-knowledge";
 import { osirisSentinel } from "./osiris";
 import { AuthFailureThrottle, classifyHttpError, isApiPath, parseTrustProxy, securityHeadersFor } from "./security/http-hardening";
+import { EventOrderGuard, WebhookInbox } from "./ingress/webhook-inbox";
+import { assertPreflight, runPreflight } from "./health/preflight";
 import { createReinaRuntime, type ReinaRequest } from "./reina";
 import { SubscriptionStore, UsageMeter, billingPriceById, billingPricesPublic, billingPriceIsConfigured, checkFeature, checkQuota, planEntitlements, PLANS, type PlanId, type QuotaKey, type SubscriptionRecord } from "./commerce";
 import { GAMEOVER_CONSTITUTION, passportAuthority, uagpGateway, type UagpRequestInput } from "./gameover";
@@ -90,6 +92,15 @@ if (!Number.isSafeInteger(requestedPort) || requestedPort < 1 || requestedPort >
 }
 const port = requestedPort;
 const host = process.env.HOST?.trim() || "0.0.0.0";
+
+// Preflight de configuración: con STRICT_PREFLIGHT=1 un error bloqueante aborta el arranque (fail-fast);
+// en producción sin esa bandera solo se advierte (ids, nunca valores de secretos).
+if (process.env.STRICT_PREFLIGHT === "1") {
+  assertPreflight(process.env);
+} else if (process.env.NODE_ENV === "production") {
+  const preflight = runPreflight(process.env);
+  if (preflight.findings.length > 0) console.warn("[Isabella] Preflight findings:", preflight.findings.map((f) => `${f.severity}:${f.id}`).join(", "));
+}
 
 const connectorRawBodies = new WeakMap<object, string>();
 
@@ -2694,6 +2705,11 @@ app.post("/api/v1/billing/portal", async (req, res) => {
   }
 });
 
+const stripeInbox = new WebhookInbox();
+// Stripe no garantiza orden de entrega: un "updated" tardío no debe resucitar una suscripción ya cancelada.
+const stripeEventOrder = new EventOrderGuard();
+const stripeEventIsFresh = (workspaceId: string, createdSeconds: number): boolean => stripeEventOrder.accept(workspaceId, createdSeconds);
+
 app.post("/api/v1/billing/stripe/webhook", async (req, res) => {
   if (!stripeClient || !stripeWebhookSecret || !Buffer.isBuffer(req.body)) {
     res.status(503).json({ success: false, error: "STRIPE_WEBHOOK_NOT_CONFIGURED" });
@@ -2711,29 +2727,37 @@ app.post("/api/v1/billing/stripe/webhook", async (req, res) => {
     res.status(400).json({ success: false, error: "STRIPE_SIGNATURE_INVALID" });
     return;
   }
+  // Stripe reintenta entregas: un evento ya procesado se confirma sin volver a aplicarse.
+  const inboxState = stripeInbox.begin(event.id);
+  if (inboxState !== "NEW") {
+    res.json({ received: true, duplicate: true, state: inboxState });
+    return;
+  }
   try {
     if (event.type === "checkout.session.completed") {
       const session = event.data.object as Stripe.Checkout.Session;
       const workspaceId = session.metadata?.workspaceId;
       const planCode = session.metadata?.planCode;
-      if (workspaceId && isPlanCode(planCode ?? "") && session.subscription) {
+      if (workspaceId && isPlanCode(planCode ?? "") && session.subscription && stripeEventIsFresh(workspaceId, event.created)) {
         await subscriptionStore.subscribe({ workspaceId, planCode: planCode as PlanId, provider: "stripe", externalRef: String(session.subscription), status: "active", contract: false });
       }
     } else if (event.type === "customer.subscription.updated" || event.type === "customer.subscription.created") {
       const subscription = event.data.object as Stripe.Subscription;
       const workspaceId = subscription.metadata?.workspaceId;
       const planCode = subscription.metadata?.planCode;
-      if (workspaceId && isPlanCode(planCode ?? "")) {
+      if (workspaceId && isPlanCode(planCode ?? "") && stripeEventIsFresh(workspaceId, event.created)) {
         await subscriptionStore.subscribe({ workspaceId, planCode: planCode as PlanId, provider: "stripe", externalRef: subscription.id, status: subscription.status === "trialing" ? "trialing" : "active", contract: false });
       }
     } else if (event.type === "customer.subscription.deleted") {
       const subscription = event.data.object as Stripe.Subscription;
       const workspaceId = subscription.metadata?.workspaceId;
-      if (workspaceId) await subscriptionStore.cancel(workspaceId, "stripe_subscription_deleted");
+      if (workspaceId && stripeEventIsFresh(workspaceId, event.created)) await subscriptionStore.cancel(workspaceId, "stripe_subscription_deleted");
     }
     bookPiLedger.append({ id: `stripe-${event.id}`, timestamp: new Date().toISOString(), type: `commerce.stripe.${event.type}`, methodId: COMMERCE_METHOD_IDS.webhookSubscription, principal: "stripe", riskTier: "MEDIUM", status: "VERIFIED" });
+    stripeInbox.complete(event.id);
     res.json({ received: true });
   } catch (error) {
+    stripeInbox.fail(event.id); // libera el id para que el reintento de Stripe reprocese
     console.error("[Billing] Stripe webhook handling failed", error instanceof Error ? error.message : error);
     res.status(500).json({ success: false, error: "STRIPE_WEBHOOK_PROCESSING_FAILED" });
   }
@@ -3209,6 +3233,13 @@ registerOmegaRoutes({
   enforceRateLimit,
   rateLimiter: publicOmegaLimiter,
   authorizeAdmin: (req, res) => authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN"),
+});
+
+// Preflight de configuración (calidad de secretos y coherencia). Nunca devuelve valores de secretos.
+app.get("/api/v1/ops/preflight", (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  const report = runPreflight(process.env);
+  res.status(report.status === "FAIL" ? 503 : 200).json({ success: report.status !== "FAIL", ...report });
 });
 
 // ── REINA (state: draft | engine-generated) ─ adjudicación previa a la ejecución; NO ejecuta acciones.
