@@ -120,3 +120,5 @@ export {
   type IhecOmega,
   type IhecRunResult,
 } from "./ihec";
+
+export * from "./immune-system";

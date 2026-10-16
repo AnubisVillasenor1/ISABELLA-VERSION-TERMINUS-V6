@@ -41,6 +41,10 @@ const DEFAULT_GROQ_BASE = "https://api.groq.com/openai/v1";
 const DEFAULT_TTS_MODEL = "canopylabs/orpheus-v1-english";
 const DEFAULT_TTS_VOICE = "troy";
 const DEFAULT_STT_MODEL = "whisper-large-v3";
+
+// Caché LRU de síntesis para reducir latencia en textos repetidos.
+const TTS_CACHE_MAX = 64;
+const ttsCache = new Map<string, SynthesizedSpeech>();
 const ALLOWED_AUDIO_MIME = /^audio\/(mpeg|mp3|mp4|m4a|x-m4a|wav|x-wav|wave|webm|ogg|oga|flac|aac)$/i;
 const AUDIO_EXTENSION: Record<string, string> = {
   "audio/mpeg": "mp3",
@@ -103,6 +107,9 @@ export async function synthesizeSpeech(
   const text = nonEmpty(input.text)?.slice(0, 2_000);
   if (!text) return null;
   const format = input.format === "mp3" ? "mp3" : "wav";
+  const cacheKey = `${config.ttsModel}|${nonEmpty(input.voice) ?? config.ttsVoice}|${format}|${text}`;
+  const cached = ttsCache.get(cacheKey);
+  if (cached !== undefined) return cached;
   try {
     const response = await fetch(`${config.baseUrl}/audio/speech`, {
       method: "POST",
@@ -118,12 +125,18 @@ export async function synthesizeSpeech(
     if (!response.ok) throw new Error(`groq speech HTTP ${response.status}`);
     const buffer = Buffer.from(await response.arrayBuffer());
     if (buffer.byteLength === 0) throw new Error("groq speech returned empty audio");
-    return {
+    const result: SynthesizedSpeech = {
       provider: "groq",
       mimeType: format === "mp3" ? "audio/mpeg" : "audio/wav",
       dataUrl: `data:${format === "mp3" ? "audio/mpeg" : "audio/wav"};base64,${buffer.toString("base64")}`,
       bytes: buffer.byteLength,
     };
+    ttsCache.set(cacheKey, result);
+    if (ttsCache.size > TTS_CACHE_MAX) {
+      const oldest = ttsCache.keys().next().value;
+      if (oldest !== undefined) ttsCache.delete(oldest);
+    }
+    return result;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.warn("[Isabella] speech synthesis unavailable", { message: message.slice(0, 180) });

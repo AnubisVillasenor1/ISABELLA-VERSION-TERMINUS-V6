@@ -5,3 +5,4 @@ export * from "./persistence";
 export * from "./knowledge-entry";
 export * from "./verified-knowledge";
 export * from "./session-memory";
+export * from "./temporal-cognition";

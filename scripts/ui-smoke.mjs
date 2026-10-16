@@ -53,11 +53,11 @@ assert.ok(html.includes('class="intro-world"'), 'Intro must include the 3D Genes
 assert.ok(html.includes('intro-enter'), 'Final intro scene must provide a direct entrance to chat');
 assert.ok(html.includes('id="immersionGate"'), 'Cinematic intro must require an explicit immersion consent');
 assert.ok(html.includes('id="introVideo"'), 'Cinematic intro must include the governed video layer');
-assert.ok(html.includes('/assets/video/IsabellaVideoIntro.mp4'), 'Cinematic intro must reference the self-hosted intro video');
+assert.ok(html.includes('/assets/video/IntroVideoIsabella.mp4'), 'Cinematic intro must reference the self-hosted intro video');
 assert.ok(!html.includes('mux.com'), 'Cinematic intro must not depend on external Mux streaming');
 assert.ok(js.includes('startIntroMedia'), 'Intro video must have an explicit media lifecycle');
-assert.ok(server.includes('app.get("/assets/video/IsabellaVideoIntro.mp4"'), 'Runtime must serve the intro video');
-assert.ok(server.includes('IsabellaVideoIntro.mp4'), 'Runtime video route must target the canonical asset');
+assert.ok(server.includes('app.get("/assets/video/IntroVideoIsabella.mp4"'), 'Runtime must serve the intro video');
+assert.ok(server.includes('IntroVideoIsabella.mp4'), 'Runtime video route must target the canonical asset');
 assert.ok(js.includes('INTRO_SCENE_MS = 4_200'), 'Intro timing must be scene-based and bounded');
 assert.ok(js.includes("intro.dataset.scene = String(sceneIndex)"), 'Scene changes must drive camera angles');
 assert.ok(css.includes('.cinematic-intro[data-scene="11"] .intro-world'), 'Every scene camera pose must be defined through scene 12');

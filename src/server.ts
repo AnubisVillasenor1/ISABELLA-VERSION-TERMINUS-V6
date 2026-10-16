@@ -39,6 +39,13 @@ import { osirisSentinel } from "./osiris";
 import { AuthFailureThrottle, classifyHttpError, isApiPath, parseTrustProxy, securityHeadersFor } from "./security/http-hardening";
 import { EventOrderGuard, WebhookInbox } from "./ingress/webhook-inbox";
 import { assertPreflight, runPreflight } from "./health/preflight";
+import { CivilizationalEvidenceGraph } from "./civilization/evidence-graph";
+import { TemporalCognitionEngine } from "./memory/temporal-cognition";
+import { CitemeshBus } from "./fabric/citemesh";
+import { CognitiveCapitalMarket } from "./economy/cognitive-capital-market";
+import { CognitiveImmuneSystem } from "./ihec/immune-system";
+import { CognitiveFabricEngine } from "./core/cognitive-fabric-engine";
+import { ConstitutionalGovernanceFabric } from "./governance/constitutional-governance-fabric";
 import { createReinaRuntime, type ReinaRequest } from "./reina";
 import { SubscriptionStore, UsageMeter, billingPriceById, billingPricesPublic, billingPriceIsConfigured, checkFeature, checkQuota, planEntitlements, PLANS, type PlanId, type QuotaKey, type SubscriptionRecord } from "./commerce";
 import { GAMEOVER_CONSTITUTION, passportAuthority, uagpGateway, type UagpRequestInput } from "./gameover";
@@ -177,8 +184,8 @@ app.get("/ui/app.js", (_req, res) => {
     res.status(404).type("js").send("// Cinematic JavaScript unavailable");
   }
 });
-app.get("/assets/video/IsabellaVideoIntro.mp4", (_req, res) => {
-  const videoPath = path.resolve(process.cwd(), "src/assets/musica/IsabellaVideoIntro.mp4");
+app.get("/assets/video/IntroVideoIsabella.mp4", (_req, res) => {
+  const videoPath = path.resolve(process.cwd(), "src/assets/video/IntroVideoIsabella.mp4");
   if (!fs.existsSync(videoPath)) { res.status(404).type("text").send("Intro video unavailable"); return; }
   res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
   res.type("video/mp4").sendFile(videoPath);
@@ -975,6 +982,13 @@ app.get("/api/v1/cognition/native-runtime", (_req, res) => {
 });
 
 // Public cognitive route: viewer-only. Request bodies cannot supply authority, roles, action or resource.
+// Caché en memoria de respuestas cognitivas (TTL 30s) para reducir latencia en inputs repetidos.
+const COGNITION_CACHE_TTL_MS = 30_000;
+const cognitionResponseCache = new Map<string, { body: unknown; ts: number }>();
+function cognitionCacheKey(input: string, history: unknown, modelEngine: string, focusLens: string): string {
+  return `${modelEngine}|${focusLens}|${input}|${JSON.stringify(history ?? [])}`;
+}
+
 app.post("/api/v1/cognition/route", async (req, res) => {
   if (!enforceRateLimit(req, res, publicCognitionLimiter, "cognition")) return;
   try {
@@ -986,6 +1000,12 @@ app.post("/api/v1/cognition/route", async (req, res) => {
     const history = sanitizePublicHistory(body.history);
     const input = typeof body.input === "string" ? body.input.trim() : "";
     const focusLens = ["territorial", "epistemic", "security", "governance"].includes(body.focusLens) ? body.focusLens : "general";
+    const cacheKey = cognitionCacheKey(input, history, modelEngine, focusLens);
+    const cached = cognitionResponseCache.get(cacheKey);
+    if (cached !== undefined && Date.now() - cached.ts < COGNITION_CACHE_TTL_MS) {
+      res.status(200).json(cached.body);
+      return;
+    }
     if (input.length > 20_000) {
       res.status(413).json({ success: false, error: "COGNITIVE_INPUT_SIZE_LIMIT_EXCEEDED" });
       return;
@@ -1019,6 +1039,17 @@ app.post("/api/v1/cognition/route", async (req, res) => {
       requiresMemory: false,
       memoryQuery: undefined,
     });
+    const originalJson = res.json.bind(res);
+    res.json = (body: unknown) => {
+      if (decision.admitted && body && typeof body === "object" && (body as { success?: unknown }).success) {
+        cognitionResponseCache.set(cacheKey, { body, ts: Date.now() });
+        if (cognitionResponseCache.size > 500) {
+          const oldest = cognitionResponseCache.keys().next().value;
+          if (oldest !== undefined) cognitionResponseCache.delete(oldest);
+        }
+      }
+      return originalJson(body);
+    };
 
     bookPiLedger.append({
       id: `evt-${randomUUID()}`,
@@ -2710,6 +2741,15 @@ const stripeInbox = new WebhookInbox();
 const stripeEventOrder = new EventOrderGuard();
 const stripeEventIsFresh = (workspaceId: string, createdSeconds: number): boolean => stripeEventOrder.accept(workspaceId, createdSeconds);
 
+// Nuevos módulos civilizatorios (state: draft | engine-generated).
+const civilizationalEvidenceGraph = new CivilizationalEvidenceGraph();
+const temporalCognitionEngine = new TemporalCognitionEngine<unknown>();
+const citemeshBus = new CitemeshBus();
+const cognitiveCapitalMarket = new CognitiveCapitalMarket();
+const cognitiveImmuneSystem = new CognitiveImmuneSystem();
+const cognitiveFabricEngine = new CognitiveFabricEngine();
+const constitutionalGovernanceFabric = new ConstitutionalGovernanceFabric();
+
 app.post("/api/v1/billing/stripe/webhook", async (req, res) => {
   if (!stripeClient || !stripeWebhookSecret || !Buffer.isBuffer(req.body)) {
     res.status(503).json({ success: false, error: "STRIPE_WEBHOOK_NOT_CONFIGURED" });
@@ -3233,6 +3273,142 @@ registerOmegaRoutes({
   enforceRateLimit,
   rateLimiter: publicOmegaLimiter,
   authorizeAdmin: (req, res) => authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN"),
+});
+
+// ── Plataforma civilizatoria: endpoints de los nuevos módulos (state: draft | engine-generated) ──
+app.get("/api/v1/platform/capabilities", (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  res.json({ success: true, count: 30, capabilities: "see src/platform/index.ts" });
+});
+
+app.post("/api/v1/evidence-graph/append", (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  try {
+    const body = req.body ?? {};
+    const node = civilizationalEvidenceGraph.append({
+      id: String(body.id ?? ""), actor: String(body.actor ?? ""), action: String(body.action ?? ""),
+      policy: String(body.policy ?? "UNSPECIFIED"), reason: String(body.reason ?? ""),
+      evidenceHash: typeof body.evidenceHash === "string" ? body.evidenceHash : undefined,
+      impact: typeof body.impact === "string" ? body.impact : undefined,
+      consequence: typeof body.consequence === "string" ? body.consequence : undefined,
+      lineage: Array.isArray(body.lineage) ? body.lineage : undefined,
+    });
+    res.json({ success: true, node });
+  } catch (e) {
+    res.status(400).json({ success: false, error: e instanceof Error ? e.message : "ERROR" });
+  }
+});
+
+app.get("/api/v1/evidence-graph/verify", (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  res.json({ success: true, ...civilizationalEvidenceGraph.verify(), head: civilizationalEvidenceGraph.head });
+});
+
+app.post("/api/v1/temporal/record", (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  try {
+    const body = req.body ?? {};
+    const snap = temporalCognitionEngine.record(body.state, typeof body.label === "string" ? body.label : "snapshot");
+    res.json({ success: true, snapshot: snap });
+  } catch (e) {
+    res.status(400).json({ success: false, error: e instanceof Error ? e.message : "ERROR" });
+  }
+});
+
+app.get("/api/v1/temporal/versions", (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  res.json({ success: true, current: temporalCognitionEngine.currentVersion, count: temporalCognitionEngine.size, versions: temporalCognitionEngine.list() });
+});
+
+app.post("/api/v1/citemesh/publish", async (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  try {
+    const body = req.body ?? {};
+    const ev = await citemeshBus.publish({ type: String(body.type ?? ""), payload: body.payload, source: String(body.source ?? "server"), target: typeof body.target === "string" ? body.target : undefined, correlationId: typeof body.correlationId === "string" ? body.correlationId : undefined });
+    res.json({ success: true, event: ev });
+  } catch (e) {
+    res.status(400).json({ success: false, error: e instanceof Error ? e.message : "ERROR" });
+  }
+});
+
+app.get("/api/v1/citemesh/replay", (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  const type = typeof req.query.type === "string" ? req.query.type : undefined;
+  const source = typeof req.query.source === "string" ? req.query.source : undefined;
+  res.json({ success: true, events: citemeshBus.replay({ type, source }), stats: citemeshBus.stats() });
+});
+
+app.post("/api/v1/cognitive-capital/list", (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  try {
+    const body = req.body ?? {};
+    const asset = cognitiveCapitalMarket.listAsset({
+      id: String(body.id ?? ""), type: body.type, owner: String(body.owner ?? ""), title: String(body.title ?? ""),
+      valuation: Number(body.valuation ?? 0), currency: typeof body.currency === "string" ? body.currency : undefined,
+      metadata: typeof body.metadata === "object" && body.metadata !== null ? body.metadata as Record<string, unknown> : undefined,
+    });
+    res.json({ success: true, asset });
+  } catch (e) {
+    res.status(400).json({ success: false, error: e instanceof Error ? e.message : "ERROR" });
+  }
+});
+
+app.post("/api/v1/cognitive-capital/trade", (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  try {
+    const body = req.body ?? {};
+    const trade = cognitiveCapitalMarket.trade(String(body.assetId ?? ""), String(body.buyer ?? ""), Number(body.price ?? 0), typeof body.royaltyBps === "number" ? body.royaltyBps : undefined);
+    res.json({ success: true, trade });
+  } catch (e) {
+    res.status(400).json({ success: false, error: e instanceof Error ? e.message : "ERROR" });
+  }
+});
+
+app.post("/api/v1/immune/report", (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  try {
+    const body = req.body ?? {};
+    const crisis = cognitiveImmuneSystem.reportIncident({ incident: String(body.incident ?? ""), severity: body.severity ?? "low", patterns: Array.isArray(body.patterns) ? body.patterns : undefined });
+    res.json({ success: true, crisis });
+  } catch (e) {
+    res.status(400).json({ success: false, error: e instanceof Error ? e.message : "ERROR" });
+  }
+});
+
+app.post("/api/v1/immune/assess", (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  try {
+    const body = req.body ?? {};
+    const assessment = cognitiveImmuneSystem.assess(String(body.threat ?? ""), { anomalyScore: Number(body.anomalyScore ?? 0), blastRadius: Number(body.blastRadius ?? 0), recurrence: Number(body.recurrence ?? 0) });
+    res.json({ success: true, assessment });
+  } catch (e) {
+    res.status(400).json({ success: false, error: e instanceof Error ? e.message : "ERROR" });
+  }
+});
+
+app.post("/api/v1/fabric/execute", async (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  try {
+    const body = req.body ?? {};
+    const result = await cognitiveFabricEngine.execute({ kind: body.kind, input: body.input, priority: typeof body.priority === "number" ? body.priority : 0, id: typeof body.id === "string" ? body.id : undefined });
+    res.json({ success: result.success, result });
+  } catch (e) {
+    res.status(400).json({ success: false, error: e instanceof Error ? e.message : "ERROR" });
+  }
+});
+
+app.post("/api/v1/governance/evaluate", (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  try {
+    const body = req.body ?? {};
+    const dossier = constitutionalGovernanceFabric.evaluate({
+      actor: String(body.actor ?? ""), action: String(body.action ?? ""), resource: String(body.resource ?? ""),
+      riskScore: Number(body.riskScore ?? 0), policyAllowed: Boolean(body.policyAllowed), approvalGranted: Boolean(body.approvalGranted), evidencePresent: Boolean(body.evidencePresent),
+    });
+    res.json({ success: true, dossier });
+  } catch (e) {
+    res.status(400).json({ success: false, error: e instanceof Error ? e.message : "ERROR" });
+  }
 });
 
 // Preflight de configuración (calidad de secretos y coherencia). Nunca devuelve valores de secretos.

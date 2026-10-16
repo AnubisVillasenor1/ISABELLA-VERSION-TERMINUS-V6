@@ -10,3 +10,5 @@ export * from "./ledger";
 export * from "./treasury";
 export * from "./affiliates";
 export * from "./fraud";
+
+export * from "./cognitive-capital-market";

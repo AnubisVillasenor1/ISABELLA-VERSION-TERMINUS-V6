@@ -165,7 +165,7 @@ jobs:
 
       - name: Release Build
         working-directory: ige-omega
-        run: cargo build --release --locked
+        run: cargo build --release -p gateway --locked
 
   ############################################################
   # JENKINS FEDERATION

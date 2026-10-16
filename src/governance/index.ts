@@ -8,3 +8,4 @@ export * from "./quality-gates";
 export * from "./file-schema";
 export * from "./lifecycle";
 export * from "./permission-map";
+export * from "./constitutional-governance-fabric";
