@@ -134,6 +134,17 @@ const soundToggle = byId('soundToggle');
 const navToggle = byId('navToggle');
 const navLinks = byId('primaryLinks');
 const runtimeStatus = byId('runtimeStatus');
+const setRuntimeStatus = (label, state, title) => {
+  if (!runtimeStatus) return;
+  runtimeStatus.dataset.state = state;
+  runtimeStatus.replaceChildren();
+  const indicator = document.createElement('i');
+  indicator.setAttribute('aria-hidden', 'true');
+  const text = document.createElement('span');
+  text.textContent = label;
+  runtimeStatus.append(indicator, text);
+  runtimeStatus.title = title;
+};
 const sessionBadge = byId('sessionBadge');
 const voiceCapability = byId('voiceCapability');
 const contextInspector = byId('contextInspector');
@@ -400,6 +411,7 @@ const sendCurrentMessage = async () => {
 };
 form?.addEventListener('submit', (event) => {
   event.preventDefault();
+  if (event.nativeEvent?.isComposing || event.keyCode === 229) return;
   if (event.submitter?.disabled || isSending) return;
   void sendCurrentMessage();
 });
@@ -459,15 +471,11 @@ const updateRuntimeStatus = async () => {
   try {
     const response = await fetch('/api/v1/health', { headers: { accept: 'application/json' }, cache: 'no-store' });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    runtimeStatus.dataset.state = 'ready';
-    runtimeStatus.innerHTML = '<i aria-hidden="true"></i><span>NODO CERO · API DISPONIBLE</span>';
+    setRuntimeStatus('NODO CERO · API DISPONIBLE', 'ready', 'El endpoint de salud respondió correctamente. Esto no garantiza disponibilidad de inferencia externa.');
     if (inspectorRuntime) inspectorRuntime.textContent = 'READY';
-    runtimeStatus.title = 'El endpoint de salud respondió correctamente. Esto no garantiza disponibilidad de inferencia externa.';
   } catch {
-    runtimeStatus.dataset.state = 'degraded';
-    runtimeStatus.innerHTML = '<i aria-hidden="true"></i><span>NODO CERO · ESTADO LIMITADO</span>';
+    setRuntimeStatus('NODO CERO · ESTADO LIMITADO', 'degraded', 'No se pudo verificar el endpoint de salud.');
     if (inspectorRuntime) inspectorRuntime.textContent = 'LIMITED';
-    runtimeStatus.title = 'No se pudo verificar el endpoint de salud.';
   }
 };
 refreshWorkspaceContext();
