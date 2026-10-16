@@ -54,6 +54,7 @@ import { registerPipelineRoutes, createInMemoryBookPiStorage } from "./routes/pi
 import { registerYunEventRoutes } from "./routes/yun-events";
 import { registerEconomyRoutes } from "./routes/economy";
 import { registerTreasuryRoutes } from "./routes/treasury";
+import { registerOmegaRoutes } from "./routes/omega";
 import { EconomicLedger, TreasuryRuntime, AffiliateLedger } from "./economy";
 import { generateControls } from "./evolution/catalog";
 import { classifyWithGenesisTurbo, type GenesisResult } from "./lib/native-ml/genesis-turbo";
@@ -473,6 +474,7 @@ const publicModelLimiter = new FixedWindowRateLimiter(8, 60_000);
 const publicProposalLimiter = new FixedWindowRateLimiter(10, 60_000);
 const publicScanLimiter = new FixedWindowRateLimiter(30, 60_000);
 const publicEconomyLimiter = new FixedWindowRateLimiter(20, 60_000);
+const publicOmegaLimiter = new FixedWindowRateLimiter(20, 60_000);
 // SCER · libro económico append-only (evidencia, no movimiento de fondos). En proceso;
 // la persistencia durable se delega al ledger BookPI en una iteración posterior.
 const economicLedger = new EconomicLedger();
@@ -3195,6 +3197,17 @@ registerTreasuryRoutes({
   affiliates: affiliateLedger,
   enforceRateLimit,
   rateLimiter: publicEconomyLimiter,
+  authorizeAdmin: (req, res) => authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN"),
+});
+
+// ── Ω∞ (Omega Infinity) (state: draft | engine-generated) ─ Constitution Engine
+// (Ω∞-15), Hyper Simulation Fabric (Ω∞-17), Cognitive Capital Engine (Ω∞-20) y la
+// Ecuación Maestra Ω∞. Todo cálculo explicable y fail-closed: nada autoriza, nada
+// ejecuta y nada mueve fondos.
+registerOmegaRoutes({
+  app,
+  enforceRateLimit,
+  rateLimiter: publicOmegaLimiter,
   authorizeAdmin: (req, res) => authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN"),
 });
 
