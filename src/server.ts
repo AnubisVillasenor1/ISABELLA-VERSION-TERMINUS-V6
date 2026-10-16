@@ -78,11 +78,16 @@ app.disable("x-powered-by");
 const trustProxyHops = parseTrustProxy(process.env.TRUST_PROXY);
 if (trustProxyHops !== false) app.set("trust proxy", trustProxyHops);
 // Conjuntos de cabeceras constantes (precalculados al arrancar); la ruta solo elige cuál aplicar.
+app.disable("x-powered-by");
 const BASE_SECURITY_HEADERS = Object.entries(securityHeadersFor("/", process.env));
 const API_SECURITY_HEADERS = Object.entries(securityHeadersFor("/api/", process.env));
 app.use((req, res, next) => {
   const headerSet = isApiPath(req.path) ? API_SECURITY_HEADERS : BASE_SECURITY_HEADERS;
   for (const [name, value] of headerSet) res.setHeader(name, value);
+  // Cabeceras de seguridad explícitas (CSP / HSTS / X-Content-Type-Options) — deuda técnica OBS-02 resuelta.
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  if (process.env.NODE_ENV === "production") res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  res.setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");
   next();
 });
 const latencyRegistry = new LatencyRegistry(100, 512);

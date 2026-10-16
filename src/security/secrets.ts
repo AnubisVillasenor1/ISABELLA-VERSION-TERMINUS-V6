@@ -11,9 +11,6 @@ export function requiredSecret(name: string, explicit?: string): string {
 export function bookPiSecret(explicit?: string): string {
   if (explicit) return requiredSecret("BOOKPI_INTEGRITY_SECRET", explicit);
   if (process.env.BOOKPI_INTEGRITY_SECRET) return requiredSecret("BOOKPI_INTEGRITY_SECRET");
-  if (process.env.VITEST === "true" || process.env.NODE_ENV === "test") {
-    return "bookpi-test-only-secret-not-for-production-2026";
-  }
   throw new Error("BOOKPI: integrity secret is required; configure BOOKPI_INTEGRITY_SECRET or pass ctx.secret.");
 }
 
