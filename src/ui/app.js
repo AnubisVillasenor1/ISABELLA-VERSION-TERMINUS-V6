@@ -31,6 +31,8 @@ const startIntroMedia = async () => {
   introVideo.volume = 1;
   try {
     await introVideo.play();
+    // El audio del video solo es claro en los primeros 3s; mutear despues para evitar ruido.
+    window.setTimeout(() => { if (introVideo) introVideo.muted = true; }, 3200);
   } catch {
     introVideo.muted = true;
     await introVideo.play().catch(() => undefined);
