@@ -16,32 +16,143 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 12
     environment: beta-live-model-gate
+
     env:
       ISABELLA_REQUIRE_LLM_SMOKE: "true"
       ALLOW_PAID_PROVIDER_FALLBACK: "false"
+
+      # OpenRouter (opcional)
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
       OPENROUTER_FREE_MODEL: ${{ vars.OPENROUTER_FREE_MODEL }}
+
+      # Hugging Face (opcional)
       HF_TOKEN: ${{ secrets.HF_TOKEN }}
       HF_FREE_MODELS: ${{ vars.HF_FREE_MODELS }}
+
     steps:
       - name: Checkout exact branch revision
         uses: actions/checkout@v4
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 24
+
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 10.28.0
+
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile
-      - name: Require at least one eligible free provider
+
+      - name: Validate provider configuration
         shell: bash
         run: |
-          if [[ -z "$OPENROUTER_API_KEY" && ( -z "$HF_TOKEN" || -z "$HF_FREE_MODELS" ) ]]; then
-            echo "::error::Configure environment secret OPENROUTER_API_KEY or both environment secret HF_TOKEN and repository variable HF_FREE_MODELS in beta-live-model-gate. This gate intentionally does not use paid providers."
+          set -euo pipefail
+
+          has_openrouter=false
+          has_hf=false
+
+          if [[ -n "${OPENROUTER_API_KEY:-}" ]]; then
+            has_openrouter=true
+          fi
+
+          if [[ -n "${HF_TOKEN:-}" && -n "${HF_FREE_MODELS:-}" ]]; then
+            has_hf=true
+          fi
+
+          if [[ "$has_openrouter" == false && "$has_hf" == false ]]; then
+            echo "::error::No eligible free provider configured."
+            echo "::error::Configure ONE of the following in the 'beta-live-model-gate' environment:"
+            echo "::error::  - OPENROUTER_API_KEY (secret) + OPENROUTER_FREE_MODEL (variable)"
+            echo "::error::  - HF_TOKEN (secret) + HF_FREE_MODELS (variable)"
+            echo "::error::This gate intentionally does not use paid providers."
             exit 1
           fi
+
+          echo "Provider configuration OK:"
+          echo "  - OpenRouter configured: $has_openrouter"
+          echo "  - Hugging Face configured: $has_hf"
+
+      - name: Live smoke test - OpenRouter
+        if: env.OPENROUTER_API_KEY != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          MODEL="${OPENROUTER_FREE_MODEL:-meta-llama/llama-3.3-70b-instruct:free}"
+
+          echo "Testing OpenRouter model: $MODEL"
+
+          RESPONSE=$(curl -sS -w "\n%{http_code}" \
+            -X POST "https://openrouter.ai/api/v1/chat/completions" \
+            -H "Authorization: Bearer $OPENROUTER_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "model": "'"$MODEL"'",
+              "messages": [
+                {"role": "user", "content": "Reply with exactly: OK"}
+              ],
+              "max_tokens": 5
+            }')
+
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+
+          echo "HTTP status: $HTTP_CODE"
+          echo "Response body: $BODY"
+
+          if [[ "$HTTP_CODE" != "200" ]]; then
+            echo "::error::OpenRouter smoke test failed with HTTP $HTTP_CODE"
+            exit 1
+          fi
+
+          # Validar que haya contenido no vacío en la respuesta
+          CONTENT=$(echo "$BODY" | jq -r '.choices[0].message.content // empty')
+          if [[ -z "$CONTENT" ]]; then
+            echo "::error::OpenRouter returned 200 but no message content."
+            exit 1
+          fi
+
+          echo "OpenRouter smoke test passed. Content: $CONTENT"
+
+      - name: Live smoke test - Hugging Face
+        if: env.OPENROUTER_API_KEY == '' && env.HF_TOKEN != '' && env.HF_FREE_MODELS != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Tomar el primer modelo de la lista HF_FREE_MODELS (separada por comas)
+          MODEL=$(echo "$HF_FREE_MODELS" | cut -d',' -f1 | xargs)
+
+          echo "Testing Hugging Face model: $MODEL"
+
+          RESPONSE=$(curl -sS -w "\n%{http_code}" \
+            -X POST "https://api-inference.huggingface.co/models/$MODEL" \
+            -H "Authorization: Bearer $HF_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{"inputs": "Reply with exactly: OK", "parameters": {"max_new_tokens": 5}}')
+
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+
+          echo "HTTP status: $HTTP_CODE"
+          echo "Response body: $BODY"
+
+          if [[ "$HTTP_CODE" != "200" ]]; then
+            echo "::error::Hugging Face smoke test failed with HTTP $HTTP_CODE"
+            exit 1
+          fi
+
+          # Validar que haya contenido no vacío
+          CONTENT=$(echo "$BODY" | jq -r '.[0].generated_text // empty')
+          if [[ -z "$CONTENT" ]]; then
+            echo "::error::Hugging Face returned 200 but no generated_text."
+            exit 1
+          fi
+
+          echo "Hugging Face smoke test passed. Content: $CONTENT"
+
       - name: Build and require a real external model response
         run: pnpm build
