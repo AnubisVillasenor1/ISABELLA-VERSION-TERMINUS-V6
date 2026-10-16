@@ -30,6 +30,7 @@
   "GET /api/v1/memory/verified",
   "GET /api/v1/metrics",
   "GET /api/v1/ops/latency",
+  "GET /api/v1/runtime/capabilities",
   "GET /api/v1/ops/snapshot",
   "GET /api/v1/osiris/status",
   "GET /api/v1/quantum/pennylane/status",

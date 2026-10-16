@@ -32,7 +32,7 @@ import type { ProviderConfig, SignatureScheme, TenantMapping } from "./commerce/
 import { LatencyRegistry } from "./deployment/latency-metrics";
 import { TtlSingleFlight } from "./deployment/ttl-single-flight";
 import { collectDependencyReadiness } from "./health/dependency-readiness";
-import { MetricsRegistry } from "./observability/metrics";
+import { MetricsRegistry, createMetricsSnapshotHash } from "./observability/metrics";
 import { SessionMemory, formatSessionContext, deriveSessionId } from "./memory/session-memory";
 import { VerifiedKnowledgeStore, formatVerifiedKnowledgeContext } from "./memory/verified-knowledge";
 import { osirisSentinel } from "./osiris";
@@ -2434,11 +2434,36 @@ app.post("/api/v1/connectors/ingest", async (req, res) => {
   }
 });
 
-app.get("/api/v1/metrics", (_req, res) => {
+app.get("/api/v1/metrics", (req, res) => {
+  if (!authorizeApiToken(req, res, "OPS_API_TOKEN")) return;
+  res.setHeader("Cache-Control", "no-store");
+  const metrics = metricsRegistry.getSnapshot();
   res.json({
     success: true,
-    metrics: metricsRegistry.getSnapshot(),
+    metrics,
+    integrity: { snapshotHash: createMetricsSnapshotHash(metrics), algorithm: "sha256-12" },
     timestamp: new Date().toISOString(),
+  });
+});
+
+app.get("/api/v1/runtime/capabilities", (_req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  const gatewayConfigured = Boolean(process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN);
+  const bookpiDurable = Boolean(process.env.BOOKPI_LEDGER_PATH || process.env.POSTGRES_URL || process.env.SUPABASE_URL);
+  res.json({
+    runtime: "isabella-genesis-tina-v6",
+    status: "operational-with-degraded-external-dependencies",
+    capabilities: {
+      agent: { configured: gatewayConfigured, mode: gatewayConfigured ? "gateway-first" : "sovereign-fallback" },
+      bookpi: { configured: bookpiDurable, mode: bookpiDurable ? "durable-adapter-configured" : "process-memory-fallback" },
+      governance: { humanApprovalBoundary: true, failClosed: true },
+      observability: { metricsProtected: true, requestIds: true },
+    },
+    limitations: [
+      ...(gatewayConfigured ? [] : ["AI Gateway credentials are not present in this runtime"]),
+      ...(bookpiDurable ? [] : ["BookPI durable storage is not configured in this runtime"]),
+    ],
+    checkedAt: new Date().toISOString(),
   });
 });
 

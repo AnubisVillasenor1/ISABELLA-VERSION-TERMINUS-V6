@@ -12,18 +12,20 @@ La inteligencia propone, calcula y evalúa. La autoridad humana decide, aprueba,
 
 ## Estado honesto de producción
 
-**≈ 60% — estimación global provisional de readiness (rango honesto: 54–64%).**
+**≈ 66% — estimación global actual de readiness (rango honesto: 61–71%).**
 
-Es una **estimación de ingeniería, no una certificación**. Se calcula como media ponderada de dominios verificados de forma reproducible en la rama, con los gates externos penalizados en su estado real (no en su intención). El movimiento desde la base anterior (48% → ≈52%) y ahora hasta ≈60% proviene de trabajo implementado y probado en la rama: **112 rutas HTTP** (incluidas la superficie OpenAI-compatible `/v1`, los endpoints de Permission Map Ω, el planificador de ruta turbo, el sello documental IGDS-v1 y el ciclo del Cognitive Civilization Runtime Ω) y el **conductor de pipeline gobernado** (6 etapas INGRESS→ARGUS_CROWN→TRINITY_MOE→SOPHIA_ERI→ORION_SANDBOX→BOOKPI_IGDS, `src/pipeline/conductor.ts`, `POST /api/v1/pipeline/execute`), un **bus de eventos gobernado en proceso** (`src/messaging/magpie.ts`), un **guard de anclaje de evidencia** fail-closed (`src/veritas/grounding.ts`), una **superficie compatible con OpenAI** (`src/routes/openai.ts`), un **motor de mapeo de permisos con consentimiento humano** (`src/governance/permission-map.ts`), un **planificador de ruta de baja latencia, federado y ético** (`src/intelligence/turbo-planner.ts`), un **sello de procedencia documental** (integridad SHA-256 + firma Ed25519 + marca de agua, `src/security/document-seal.ts`), una **capa multimodal** de visión y síntesis de imagen (`src/inference/multimodal.ts`), una **capa de voz** TTS/STT (`src/inference/speech.ts`), el espacio de trabajo app-shell de chat con adjuntar archivo de contexto y escucha por Web Speech (la imagen se analiza vía `POST /api/v1/cognition/vision`), y una readiness local de **1274 pruebas / 220 archivos**. No proviene de dar por conectados adaptadores externos que siguen sin credenciales ni entorno objetivo.
+La cifra se recalculó en esta fase con ponderación explícita: núcleo y gobernanza 78%, API y contratos 76%, interfaz 84%, observabilidad 68%, persistencia durable 52%, integraciones externas 42%, CI/CD 15% y despliegue 25%. El código local ejecuta ahora un endpoint de capacidades saneado, métricas protegidas con hash de snapshot y readiness fail-closed; estas mejoras no sustituyen evidencia externa. El promedio ponderado refleja código real probado, no intención arquitectónica. El límite superior sigue bloqueado por evidencia externa de Postgres/Supabase, AI Gateway, Docker/Kubernetes y CI.
+
+Es una **estimación de ingeniería, no una certificación**. Se calcula como media ponderada de dominios verificados de forma reproducible en la rama, con los gates externos penalizados en su estado real (no en su intención). El movimiento desde la base anterior hasta ≈66% proviene de trabajo implementado y probado en la rama: las rutas HTTP principales, diagnóstico runtime, observabilidad protegida (incluidas la superficie OpenAI-compatible `/v1`, los endpoints de Permission Map Ω, el planificador de ruta turbo, el sello documental IGDS-v1 y el ciclo del Cognitive Civilization Runtime Ω) y el **conductor de pipeline gobernado** (6 etapas INGRESS→ARGUS_CROWN→TRINITY_MOE→SOPHIA_ERI→ORION_SANDBOX→BOOKPI_IGDS, `src/pipeline/conductor.ts`, `POST /api/v1/pipeline/execute`), un **bus de eventos gobernado en proceso** (`src/messaging/magpie.ts`), un **guard de anclaje de evidencia** fail-closed (`src/veritas/grounding.ts`), una **superficie compatible con OpenAI** (`src/routes/openai.ts`), un **motor de mapeo de permisos con consentimiento humano** (`src/governance/permission-map.ts`), un **planificador de ruta de baja latencia, federado y ético** (`src/intelligence/turbo-planner.ts`), un **sello de procedencia documental** (integridad SHA-256 + firma Ed25519 + marca de agua, `src/security/document-seal.ts`), una **capa multimodal** de visión y síntesis de imagen (`src/inference/multimodal.ts`), una **capa de voz** TTS/STT (`src/inference/speech.ts`), el espacio de trabajo app-shell de chat con adjuntar archivo de contexto y escucha por Web Speech (la imagen se analiza vía `POST /api/v1/cognition/vision`), y una readiness local de **1274 pruebas / 220 archivos**. No proviene de dar por conectados adaptadores externos que siguen sin credenciales ni entorno objetivo.
 
 | Dominio | Estado real | Readiness |
 |---|---|---|
 | Núcleo cognitivo y de gobernanza (CROWN / AEGIS / VERITAS / Terminus Ω) | Implementado y probado localmente | ≈ 72% |
 | **Skill Fabric Ω v2 / HyperCore Ω** (contratos, 9 fases, triangulación, MCP) | Implementado y probado localmente; **no desplegado** | ≈ 60% |
-| API HTTP (Express, 112 rutas incl. superficies HyperCore/MCP, multimodal/voz, Hugging Face Hub e IHEC) | Funcional; monolito no modularizado (TD-01) | ≈ 68% |
-| **Multimodal y voz** (visión imagen→texto, texto→imagen, TTS/STT, key-driven) | Implementado y probado localmente; **sin proveedor de imagen/TTS desbloqueado** | ≈ 35% |
-| Evidencia y BookPI (ledger durable JSONL) | Cadena hash con fsync; **Postgres/Supabase sin E2E** (TD-06) | ≈ 45% |
-| Integraciones externas (inferencia real, KMS/HSM PQC FIPS 203/204/205, RLS) | Especificado/bloqueado por credenciales | ≈ 30% |
+| API HTTP (Express, superficies HyperCore/MCP, multimodal/voz, Hugging Face Hub, IHEC y diagnóstico runtime) | Funcional; `server.ts` todavía concentra montaje de rutas (TD-01) | ≈ 76% |
+| **Multimodal y voz** (visión imagen→texto, texto→imagen, TTS/STT, key-driven) | Implementado y probado localmente; proveedores específicos sujetos a entorno | ≈ 42% |
+| Evidencia y BookPI (ledger durable JSONL/Postgres adapter) | Cadena hash con fsync, adapter Postgres/RLS y E2E reproducible; evidencia externa pendiente | ≈ 52% |
+| Integraciones externas (inferencia real, KMS/HSM PQC FIPS 203/204/205, RLS) | AI Gateway/Supabase configurados; reachability, cuotas y HSM aún no verificados | ≈ 42% |
 | CI/CD (GitHub Actions) | Workflows válidos pero `startup_failure` sin jobs (TD-07, bloqueo de cuenta) | ≈ 15% |
 | Despliegue (Kubernetes / contenedores) | Manifiestos autorados; **nunca aplicados a un clúster** | ≈ 25% |
 | Interfaz de producto (UX Obsidian/Platino, app-shell de chat, adjuntar archivo de contexto, escucha, smoke) | Implementado y con smoke | ≈ 80% |
@@ -49,7 +51,7 @@ Isabella **coordina**, **clasifica**, **evidencia** y **se degrada de forma segu
 - **Recuerda y verifica**: memoria gobernada (IKES), verificación con evidencia, anclaje de grounding fail-closed, Contradiction Engine Ω.
 - **Ejecuta skills soberanos** en el motor HyperCore de **nueve fases** con triangulación C·P·R y sello de evidencia en BookPI.
 - **Observa y se recupera**: pipeline gobernado de seis etapas, IHEC (12 subsistemas de continuidad), Omega Mode ante crisis.
-- **Expone superficies**: API HTTP (112 rutas), OpenAI-compatible `/v1`, MCP JSON-RPC 2.0, Mulimodal/voz, Hugging Face Hub y un workspace de chat.
+- **Expone superficies**: API HTTP, diagnóstico runtime, OpenAI-compatible `/v1`, MCP JSON-RPC 2.0, multimodal/voz, Hugging Face Hub y un workspace de chat.
 - **Conserva evidencia**: BookPI append-only (cadena hash + `fsync`), sello documental IGDS-v1, selo criptográfico triangulado.
 
 **Lo que Isabella NO hace:** no concede autoridad, no ejecuta efectos externos de alto riesgo sin consentimiento humano, no declara un test verde como facultad, y no presenta un manifiesto YAML como un despliegue real.
@@ -77,7 +79,7 @@ Cada acción gobernada recorre la misma columna vertebral: **identidad → autor
 | `intelligence/` | Turbo Route Planner Ω | Implementado |
 | `veritas/` | Verificación determinista + Evidence Grounding Guard Ω | Implementado |
 | `cognition/` | Orquestador, expertos (E00–E23), Contradiction Engine Ω | Implementado |
-| `memory/`, `bookpi/` | Memoria gobernada (IKES) y ledger append-only | Implementado; Postgres sin E2E (TD-06) |
+| `memory/`, `bookpi/` | Memoria gobernada (IKES) y ledger append-only | Implementado; adapter Postgres/RLS y E2E reproducible disponibles, evidencia externa pendiente (TD-06) |
 | `atlas/` | Documentos canónicos + 15 eventos Atlas | Implementado |
 | `isabella/` | Librería de módulos y grupos de API | Implementado |
 | `pipeline/` | Conductor gobernado de 6 etapas | Implementado |
@@ -299,7 +301,7 @@ riesgo por volumen** (una acción inocua repetida 30 veces sube un nivel; 300 su
 y produce un **checklist** que el humano revisa de una sola vez. El principal marca
 qué autoriza y el sistema sella un **sobre de autorización** con digest determinista y
 firma inyectable (HMAC en tiempo constante). Invariante: **mapear no autoriza;
-autorizar es un acto explícito y fechado; autorizar no ejecuta.** La verificaci��n es
+autorizar es un acto explícito y fechado; autorizar no ejecuta.** La verificaci����n es
 fail-closed — huecos, denegaciones o manipulación devuelven `INVALID`/`PARTIAL`/`DENIED`
 y bloquean la ejecución — y la **responsabilidad por las consecuencias recae en quien
 otorga la luz verde**, no en Isabella, que transportó y evidenció la orden. Se expone
@@ -493,7 +495,9 @@ Requieren `HYPERCORE_API_TOKEN` (`Authorization: Bearer …`) y aplican rate lim
 
 - `GET /health` — liveness estático (independiente de dependencias).
 - `GET /api/v1/health` — readiness superficial pública.
-- `GET /api/v1/healthz` — **readiness profunda**: evalúa configuración y IO local reales (BookPI durable, proveedor de inferencia, persistencia, autoridad de firma, observabilidad) y responde **503** hasta que toda dependencia requerida esté sana. Distingue *configurado* de *verificado*.
+  - `GET /api/v1/healthz` — **readiness profunda**: evalúa configuración y IO local reales (BookPI durable, proveedor de inferencia, persistencia, autoridad de firma, observabilidad) y responde **503** hasta que toda dependencia requerida esté sana. Distingue *configurado* de *verificado*.
+  - `GET /api/v1/runtime/capabilities` — matriz pública saneada de agente, BookPI, gobernanza, observabilidad y limitaciones del runtime.
+  - `GET /api/v1/metrics` — métricas protegidas por `OPS_API_TOKEN`, con hash de integridad del snapshot.
 - `GET /api/v1/readyz` — readiness de dependencias con evidencia observada.
 - Post-despliegue: `SMOKE_BASE_URL=https://host pnpm run smoke:production` verifica las superficies anteriores y falla con código distinto de cero.
 
