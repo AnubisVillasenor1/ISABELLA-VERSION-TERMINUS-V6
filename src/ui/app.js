@@ -244,10 +244,10 @@ const setResponseMeta = (paragraph, meta) => {
     chip.textContent = `${BAND_LABELS[band] || band}${meta.trafficLight.humanReviewRequired ? ' · REVISIÓN HUMANA' : ''}`;
     row.append(chip);
   }
-  if (engine.startsWith('sovereign')) {
+  if (engine.startsWith('sovereign') || engine === 'gateway' || engine === 'open-science') {
     const note = document.createElement('span');
     note.className = 'meta-chip engine-note';
-    note.textContent = meta.modelConfigured ? 'PROVEEDOR DISPONIBLE · RESPUESTA LOCAL' : 'MODO LOCAL (SIN PROVEEDOR EXTERNO)';
+    note.textContent = engine === 'gateway' || engine === 'open-science' ? 'AGENTE EXTERNO · RESPUESTA GENERATIVA' : meta.modelConfigured ? 'PROVEEDOR DISPONIBLE · FALLBACK LOCAL' : 'MODO LOCAL (SIN PROVEEDOR EXTERNO)';
     row.append(note);
   }
   row.hidden = row.childElementCount === 0;

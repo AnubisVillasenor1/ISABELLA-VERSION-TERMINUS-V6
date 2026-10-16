@@ -908,7 +908,7 @@ app.get("/api/v1/cognition/native-runtime", (_req, res) => {
     provider: {
       ...describeProviderReadiness(process.env),
       localFallback: true,
-      note: "La interfaz pública usa el motor local soberano salvo que exista un proveedor abierto y la ruta pública esté disponible sin bearer.",
+      note: "La interfaz pública intenta el agente configurado y conserva el motor soberano como fallback explícito cuando el proveedor no está disponible.",
     },
   });
 });
