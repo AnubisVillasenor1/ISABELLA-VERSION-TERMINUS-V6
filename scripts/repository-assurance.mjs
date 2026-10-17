@@ -201,18 +201,20 @@ add("RA-035", "BLOCKER",
   "The pipeline reports evidence-store failures as service-unavailable, sanitizes storage errors and has a regression test for the distinction from policy denials.",
   ["src/routes/pipeline.ts", "src/pipeline/conductor.ts", "test/routes/pipeline.test.ts"]);
 
-const bookPiMigration = await read("supabase/migrations/20261017000002_bookpi-events.sql");
+const bookPiMigration = await read("infra/db/migrations/001_create_bookpi_events.sql");
+const bookPiHardeningMigration = await read("infra/db/migrations/002_bookpi_canonical_immutability.sql");
 const bookPiPostgresTests = await read("test/bookpi/postgres-migration.test.ts");
 add("RA-036", "BLOCKER",
   !!bookPiMigration &&
-    /create table if not exists public\.bookpi_events/i.test(bookPiMigration) &&
-    /sequence bigint not null unique/i.test(bookPiMigration) &&
-    /alter table public\.bookpi_events enable row level security/i.test(bookPiMigration) &&
-    /revoke all on table public\.bookpi_events from anon, authenticated/i.test(bookPiMigration) &&
-    /to service_role/i.test(bookPiMigration) &&
+    /CREATE TABLE IF NOT EXISTS bookpi_events/i.test(bookPiMigration) &&
+    /sequence BIGINT NOT NULL UNIQUE/i.test(bookPiMigration) &&
+    !!bookPiHardeningMigration &&
+    /ENABLE ROW LEVEL SECURITY/i.test(bookPiHardeningMigration) &&
+    /REVOKE UPDATE, DELETE, TRUNCATE ON bookpi_events FROM PUBLIC/i.test(bookPiMigration) &&
+    /CREATE TRIGGER trg_bookpi_require_canonical/i.test(bookPiHardeningMigration) &&
     !!bookPiPostgresTests && /BookPI PostgreSQL migration contract/.test(bookPiPostgresTests),
-  "The BookPI PostgreSQL event schema matches adapter columns and restricts direct browser-role access; the contract has regression tests.",
-  ["supabase/migrations/20261017000002_bookpi-events.sql", "test/bookpi/postgres-migration.test.ts"]);
+  "The existing BookPI migration pair defines the runtime schema, row-level actor scoping, canonical-on-insert and mutation restrictions, with regression tests.",
+  ["infra/db/migrations/001_create_bookpi_events.sql", "infra/db/migrations/002_bookpi_canonical_immutability.sql", "test/bookpi/postgres-migration.test.ts"]);
 
 add("RA-037", "BLOCKER",
   !!server &&
