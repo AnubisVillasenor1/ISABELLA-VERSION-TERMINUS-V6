@@ -34,10 +34,11 @@ Migraciones del ledger PostgreSQL: `infra/db/migrations/001_create_bookpi_events
 El código de esta rama conecta `POST /api/v1/pipeline/execute` al puerto `createRuntimeBookPiStorage`. Selecciona PostgreSQL automáticamente con `DATABASE_URL`, `POSTGRES_URL` o `POSTGRES_URL_NON_POOLING`; también se puede indicar `BOOKPI_PIPELINE_STORAGE=postgres`.
 
 1. Aplicar las dos migraciones de BookPI a la base PostgreSQL de la aplicación.
-2. Configurar `DATABASE_URL` con TLS y privilegios mínimos; nunca incluir el valor en logs, issues ni README.
-3. Confirmar que la tabla `bookpi_events` existe y que el actor de pipeline `human:pipeline-session` puede leer/escribir bajo RLS.
-4. Ejecutar `pnpm run postgres:e2e` contra una base de pruebas desechable y comprobar cadena, inserción concurrente y reinicio.
-5. Confirmar que el probe de `pipeline-bookpi-storage` indica `POSTGRES`, cadena válida y recuento observado.
+2. Configurar `DATABASE_URL`, `POSTGRES_URL` o `POSTGRES_URL_NON_POOLING` con TLS y privilegios mínimos; nunca incluir el valor en logs, issues ni README.
+3. Configurar `BOOKPI_INTEGRITY_SECRET` como secreto de al menos 32 caracteres, generado de forma segura y gestionado en el entorno servidor. No reutilizar una clave sin verificar la procedencia/integridad de los eventos existentes.
+4. Confirmar que la tabla `bookpi_events` existe y que el actor de pipeline `human:pipeline-session` puede leer/escribir bajo RLS.
+5. Ejecutar `pnpm run postgres:e2e` contra una base de pruebas desechable y comprobar cadena, inserción concurrente y reinicio.
+6. Confirmar que el probe de `pipeline-bookpi-storage` indica `POSTGRES`, cadena válida y recuento observado.
 
 **Límite actual:** esto vuelve durable el ledger del conductor del pipeline, no sustituye todavía el singleton síncrono `bookPiLedger` utilizado por las rutas heredadas (YUN, HyperCore y otras). Ese singleton permanece degradado hasta una migración coordinada de su API síncrona o hasta que esas rutas se trasladen explícitamente al puerto asíncrono. No declarar que todo BookPI es compartido sólo porque el pipeline use PostgreSQL.
 
