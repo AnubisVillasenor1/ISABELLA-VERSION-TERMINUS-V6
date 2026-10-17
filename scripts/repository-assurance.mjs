@@ -173,7 +173,7 @@ add("RA-033", "BLOCKER",
     /atlas_knowledge_claims/.test(ikesAdapter) &&
     !!ikesMigration && /enable row level security/i.test(ikesMigration) &&
     /revoke all on table[\s\S]*from anon, authenticated/i.test(ikesMigration) &&
-    !!ikesTests && /durable hydration/.test(ikesTests),
+    !!ikesTests && /hydrates integrity-valid records/.test(ikesTests),
   "IKES hydrates and persists hash-validated claims through server-only Supabase tables; reads fail closed during hydration and write errors remain visible.",
   ["src/server.ts", "src/genesis/runtime.ts", "src/memory/ikes.ts", "src/memory/ikes-supabase.ts", "supabase/migrations/20261017000001_ikes-memory.sql", "test/memory/ikes-persistence.test.ts"]);
 
