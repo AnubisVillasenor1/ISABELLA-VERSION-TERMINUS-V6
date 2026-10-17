@@ -121,6 +121,7 @@ introVideo?.addEventListener('ended', () => {
   dismissIntro();
 });
 const dismissIntro = () => {
+  const restoreFocus = document.body.classList.contains('intro-lock');
   introActive = false;
   if (introTimer) window.cancelAnimationFrame(introTimer);
   introTimer = 0;
@@ -129,6 +130,7 @@ const dismissIntro = () => {
   immersionGate?.classList.add('is-accepted');
   intro?.classList.add('is-dismissed');
   document.body.classList.remove('intro-lock');
+  if (restoreFocus) byId('enterChat')?.focus({ preventScroll: true });
 };
 const getIntroElapsed = () => {
   if (
@@ -179,6 +181,30 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
+const trapImmersionDialogFocus = (event) => {
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    dismissIntro();
+    return;
+  }
+  if (event.key !== 'Tab' || !immersionGate) return;
+  const focusable = [...immersionGate.querySelectorAll('input:not(:disabled), button:not(:disabled), a[href], [tabindex]:not([tabindex="-1"])')]
+    .filter((node) => !node.hasAttribute('hidden') && node.getAttribute('aria-hidden') !== 'true');
+  if (!focusable.length) {
+    event.preventDefault();
+    return;
+  }
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+};
+
 if (intro) {
   const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   const cinematicDisabled = new URLSearchParams(window.location.search).get('intro') === '0';
@@ -190,6 +216,8 @@ if (intro) {
   } else {
     document.body.classList.add('intro-lock');
     introScenes.forEach((scene, index) => scene.setAttribute('aria-hidden', String(index !== 0)));
+    immersionGate?.addEventListener('keydown', trapImmersionDialogFocus);
+    immersionConsent?.focus({ preventScroll: true });
     skipIntro?.addEventListener('click', dismissIntro);
     intro.querySelector('.intro-enter')?.addEventListener('click', dismissIntro);
     const beginImmersion = () => {
