@@ -23,6 +23,9 @@ describe("runtime BookPI storage composition", () => {
     expect(runtime.backend).toBe("POSTGRES");
     expect(runtime.durable).toBe(true);
     expect(runtime.shared).toBe(true);
+    const probe = await runtime.probe();
+    expect(probe.healthy).toBe(false);
+    expect(probe.reason).toContain("BOOKPI_INTEGRITY_SECRET");
     await runtime.close();
   });
 
