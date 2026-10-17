@@ -92,9 +92,97 @@ function freezeClaim(claim: KnowledgeClaim): KnowledgeClaim {
   });
 }
 
+export interface IKESEngineSnapshot {
+  sources: KnowledgeSource[];
+  claims: KnowledgeClaim[];
+}
+
+export interface IKESEnginePersistencePort {
+  load(): Promise<IKESEngineSnapshot>;
+  saveSource(source: KnowledgeSource): Promise<void>;
+  saveClaim(claim: KnowledgeClaim): Promise<void>;
+  health(): Promise<{ healthy: boolean; reason: string }>;
+}
+
 export class IKESEngine {
   private readonly sources = new Map<string, KnowledgeSource>();
   private readonly claims = new Map<string, KnowledgeClaim>();
+  private persistence?: IKESEnginePersistencePort;
+  private persistenceInitialized = false;
+  private pendingWrites: Promise<void> = Promise.resolve();
+  private persistenceFailure: string | null = null;
+
+  constructor(persistence?: IKESEnginePersistencePort) {
+    this.persistence = persistence;
+  }
+
+  /** Hydrates only integrity-valid records. It never promotes epistemic state. */
+  async initPersistence(): Promise<void> {
+    if (!this.persistence) return;
+    const snapshot = await this.persistence.load();
+    const nextSources = new Map<string, KnowledgeSource>();
+    for (const source of snapshot.sources) {
+      if (!source.sourceId.trim() || !source.title.trim()
+        || !/^[a-f0-9]{64}$/i.test(source.contentHash)
+        || !Number.isFinite(Date.parse(source.retrievedAt))) {
+        throw new Error("IKES_PERSISTED_SOURCE_INVALID");
+      }
+      const uri = new URL(source.uri);
+      if (uri.protocol !== "https:" && uri.protocol !== "http:") throw new Error("IKES_PERSISTED_SOURCE_URI_INVALID");
+      nextSources.set(source.sourceId, Object.freeze({ ...source, uri: uri.toString() }));
+    }
+    const nextClaims = new Map<string, KnowledgeClaim>();
+    for (const claim of snapshot.claims) {
+      if (!verifyKnowledgeClaimIntegrity(claim)
+        || claim.sourceIds.some((id) => !nextSources.has(id))
+        || claim.evidenceIds.some((id) => !nextSources.has(id))
+        || !Number.isSafeInteger(claim.version) || claim.version < 1) {
+        throw new Error("IKES_PERSISTED_CLAIM_INTEGRITY_FAILURE");
+      }
+      nextClaims.set(claim.claimId, freezeClaim(claim));
+    }
+    this.sources.clear();
+    this.claims.clear();
+    for (const [id, source] of nextSources) this.sources.set(id, source);
+    for (const [id, claim] of nextClaims) this.claims.set(id, claim);
+    this.persistenceFailure = null;
+    this.persistenceInitialized = true;
+  }
+
+  private enqueuePersistence(write: () => Promise<void>): void {
+    if (!this.persistence) return;
+    this.pendingWrites = this.pendingWrites.then(write).then(() => {
+      this.persistenceFailure = null;
+    }).catch(() => {
+      this.persistenceFailure = "IKES_PERSISTENCE_WRITE_FAILED";
+    });
+  }
+
+  async flushPersistence(): Promise<void> {
+    await this.pendingWrites;
+    if (this.persistenceFailure) throw new Error(this.persistenceFailure);
+  }
+
+  async persistenceProbe(): Promise<{ healthy: boolean; backend: string; reason: string; pending: boolean }> {
+    if (!this.persistence) {
+      return { healthy: false, backend: "VOLATILE_MEMORY", reason: "IKES has no durable persistence adapter configured.", pending: false };
+    }
+    if (!this.persistenceInitialized) {
+      return { healthy: false, backend: "SUPABASE", reason: "IKES persistence has not completed startup hydration.", pending: true };
+    }
+    try {
+      await this.flushPersistence();
+      const health = await this.persistence.health();
+      return {
+        healthy: health.healthy && !this.persistenceFailure,
+        backend: "SUPABASE",
+        reason: this.persistenceFailure ?? health.reason,
+        pending: false,
+      };
+    } catch {
+      return { healthy: false, backend: "SUPABASE", reason: "IKES persistence probe failed; inspect restricted server logs.", pending: false };
+    }
+  }
 
   registerSource(source: KnowledgeSource): void {
     if (!source.sourceId.trim() || !source.title.trim()) throw new Error("IKES_SOURCE_METADATA_REQUIRED");
@@ -106,7 +194,9 @@ export class IKESEngine {
     const existing = this.sources.get(source.sourceId);
     if (existing && existing.contentHash !== source.contentHash) throw new Error("IKES_SOURCE_ID_HASH_CONFLICT");
     if (existing) return;
-    this.sources.set(source.sourceId, Object.freeze({ ...source, uri: parsedUri.toString() }));
+    const normalized = Object.freeze({ ...source, uri: parsedUri.toString() });
+    this.sources.set(source.sourceId, normalized);
+    this.enqueuePersistence(() => this.persistence!.saveSource(normalized));
   }
 
   /** Builds a candidate without mutating canonical IKES state. */
@@ -160,6 +250,7 @@ export class IKESEngine {
   propose(proposal: KnowledgeProposal): KnowledgeClaim {
     const candidate = this.prepareProposal(proposal);
     this.claims.set(candidate.claimId, candidate);
+    this.enqueuePersistence(() => this.persistence!.saveClaim(candidate));
     return candidate;
   }
 
@@ -188,6 +279,7 @@ export class IKESEngine {
     next.contentHash = claimContentHash(next);
     const frozen = freezeClaim(next);
     this.claims.set(claimId, frozen);
+    this.enqueuePersistence(() => this.persistence!.saveClaim(frozen));
     return frozen;
   }
 
@@ -197,6 +289,7 @@ export class IKESEngine {
     next.contentHash = claimContentHash(next);
     const frozen = freezeClaim(next);
     this.claims.set(claimId, frozen);
+    this.enqueuePersistence(() => this.persistence!.saveClaim(frozen));
     return frozen;
   }
 
