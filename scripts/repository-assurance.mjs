@@ -190,6 +190,17 @@ add("RA-034", "BLOCKER",
   "An authenticated operations endpoint exposes registered modules and distinguishes wiring from actual dependency health.",
   ["src/server.ts"]);
 
+const pipelineConductor = await read("src/pipeline/conductor.ts");
+const pipelineTests = await read("test/routes/pipeline.test.ts");
+add("RA-035", "BLOCKER",
+  !!pipelineRoute && /ledgerOnlyFailure/.test(pipelineRoute) &&
+    /PIPELINE_EVIDENCE_STORAGE_UNAVAILABLE/.test(pipelineRoute) &&
+    /ledgerOnlyFailure \? 503 : 403/.test(pipelineRoute) &&
+    !!pipelineConductor && /secreto de integridad no configurado/.test(pipelineConductor) &&
+    !!pipelineTests && /evidence-store outage as 503/.test(pipelineTests),
+  "The pipeline reports evidence-store failures as service-unavailable, sanitizes storage errors and has a regression test for the distinction from policy denials.",
+  ["src/routes/pipeline.ts", "src/pipeline/conductor.ts", "test/routes/pipeline.test.ts"]);
+
 const report = {
   schemaVersion: "1.0.0",
   audit: "isabella-genesis-repository-assurance",
