@@ -72,16 +72,15 @@ import { generateControls } from "./evolution/catalog";
 import { classifyWithGenesisTurbo, type GenesisResult } from "./lib/native-ml/genesis-turbo";
 
 const app: Application = express();
-// Conversación gratuita disponible desde el primer arranque. Puede desactivarse con
-// ISABELLA_KEYLESS_FREE_PROVIDER=off cuando la privacidad del nodo lo requiera.
-if (!process.env.ISABELLA_KEYLESS_FREE_PROVIDER) process.env.ISABELLA_KEYLESS_FREE_PROVIDER = "pollinations";
+// La inferencia gratuita sin clave reenvía el prompt y parte del historial a un proveedor externo.
+// Por privacidad, sólo se activa con opt-in explícito del operador:
+// ISABELLA_KEYLESS_FREE_PROVIDER=pollinations (o on/true/1).
 app.disable("x-powered-by");
 // Detrás de un balanceador, req.ip sería la IP del proxy y todos los clientes compartirían cubeta de rate limit.
 // TRUST_PROXY=<saltos> (entero 1..10) habilita X-Forwarded-For; sin valor válido NO se confía en él.
 const trustProxyHops = parseTrustProxy(process.env.TRUST_PROXY);
 if (trustProxyHops !== false) app.set("trust proxy", trustProxyHops);
 // Conjuntos de cabeceras constantes (precalculados al arrancar); la ruta solo elige cuál aplicar.
-app.disable("x-powered-by");
 const BASE_SECURITY_HEADERS = Object.entries(securityHeadersFor("/", process.env));
 const API_SECURITY_HEADERS = Object.entries(securityHeadersFor("/api/", process.env));
 app.use((req, res, next) => {
