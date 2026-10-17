@@ -12,7 +12,7 @@ assert.equal(ids.size, allIds.length, 'Every HTML id must be unique to keep navi
 const navLinks = [...html.matchAll(/<a\b[^>]*href="#([^"]+)"[^>]*>/g)].map((match) => match[1]);
 for (const target of navLinks) assert.ok(ids.has(target), `Navigation target #${target} must exist`);
 for (const id of ['top', 'chat', 'studio', 'tools', 'skills', 'economy', 'protocols', 'workspace', 'evidence', 'governance', 'contact']) assert.ok(ids.has(id), `Missing section id #${id}`);
-for (const id of ['navToggle', 'primaryLinks', 'runtimeStatus', 'soundToggle', 'chatForm', 'prompt', 'mic', 'enterChat', 'skipIntro', 'newChat', 'commandLauncher', 'commandPalette', 'commandSearch', 'studio', 'draftShelf', 'exportChat', 'clearChat', 'attachText', 'localFile', 'attachmentChip', 'attachmentName', 'removeAttachment', 'clearDrafts', 'contextInspector', 'systemInspector', 'closeSystemInspector', 'sessionBadge', 'inspectorRuntime']) {
+for (const id of ['navToggle', 'primaryLinks', 'runtimeStatus', 'soundToggle', 'chatForm', 'prompt', 'mic', 'enterChat', 'skipIntro', 'newChat', 'commandLauncher', 'commandPalette', 'commandSearch', 'studio', 'draftShelf', 'exportChat', 'clearChat', 'attachText', 'localFile', 'attachmentChip', 'attachmentName', 'removeAttachment', 'clearDrafts', 'contextInspector', 'systemInspector', 'closeSystemInspector', 'sessionBadge', 'inspectorRuntime', 'immersionConsent', 'immersionConsentStatus']) {
   assert.ok(ids.has(id), `Missing interactive UI element #${id}`);
   assert.ok(js.includes(`byId('${id}')`) || js.includes(`byId("${id}")`) || js.includes(`#${id}`), `Missing interaction wiring for #${id}`);
 }
@@ -59,6 +59,12 @@ assert.ok(html.includes('id="introVideo"'), 'Cinematic intro must include the go
 assert.ok(html.includes('/assets/video/IntroVideoIsabella.mp4'), 'Cinematic intro must reference the self-hosted intro video');
 assert.ok(!html.includes('mux.com'), 'Cinematic intro must not depend on external Mux streaming');
 assert.ok(js.includes('startIntroMedia'), 'Intro video must have an explicit media lifecycle');
+assert.ok(ids.has('immersionConsent') && ids.has('immersionConsentStatus'), 'Intro requires a clear audiovisual consent control and status');
+assert.ok(!html.includes('humanCheckCode') && !js.includes('humanCheckCode'), 'The UI must not pretend a client-side display code is identity verification');
+assert.ok(!/<video\\b[^>]*\\bloop(?:[\\s=>])/i.test(html), 'Intro video must stop at its narrative end rather than silently loop');
+assert.ok(js.includes('window.requestAnimationFrame(renderIntroFrame)'), 'Intro progress updates must use the animation frame scheduler');
+assert.ok(js.includes('introVideo.currentTime / introVideo.duration'), 'Narrative timing must follow media time to avoid scene drift during buffering');
+assert.ok(js.includes("addEventListener('waiting'"), 'Buffering must trigger a visible-media fallback instead of repeated play() attempts');
 assert.ok(server.includes('app.get("/assets/video/IntroVideoIsabella.mp4"'), 'Runtime must serve the intro video');
 assert.ok(server.includes('IntroVideoIsabella.mp4'), 'Runtime video route must target the canonical asset');
 assert.ok(js.includes('INTRO_SCENE_MS = 4_200'), 'Intro timing must be scene-based and bounded');
