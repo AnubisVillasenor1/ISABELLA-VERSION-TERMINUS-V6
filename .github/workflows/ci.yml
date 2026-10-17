@@ -45,6 +45,7 @@ jobs:
           secrets: |
             0.c5c1c1e6-b163-4fc2-a436-b4e60063331c.APINNfwKGi2FTrrFk5kf7mZLIaQtnn:FBneN3CZOl+BzzI/rUaSRw== > PERPLEXITY_API_KEY
             e3b15408-ee8e-428a-afc8-b4e600647398 > BRAINTRUST_API_KEY
+            368b12e3-3ae5-4f31-b3cb-b4e60064ba8b > BRAINTRUST_PROJECT_ID
             00000000-0000-0000-0000-000000000002 > OPENROUTER_API_KEY
       - id: meta
         shell: bash
