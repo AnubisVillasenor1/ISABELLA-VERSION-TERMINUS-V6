@@ -251,25 +251,26 @@ jobs:
       - quality-gate
       - sbom
     steps:
-      - name: Compute Readiness Score
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo "READINESS_SCORE=100"
-
-      - name: Generate Readiness Evidence
+      - name: Generate CI gate evidence (not a production-readiness score)
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p evidence
-          cat > evidence/readiness.json <<EOF
-          {
-            "sha": "${GITHUB_SHA}",
-            "score": 100,
-            "status": "READY",
-            "timestamp": "$(date -u +%FT%TZ)"
-          }
-          EOF
+          node --input-type=module <<'NODE'
+          import fs from "node:fs";
+          const evidence = {
+            schemaVersion: "1.0.0",
+            generatedBy: "github-actions-ci-gates",
+            sha: process.env.GITHUB_SHA,
+            branch: process.env.GITHUB_REF_NAME,
+            ciGatesPassed: true,
+            productionCertified: false,
+            score: null,
+            status: "CI_GATES_PASSED_NOT_PRODUCTION_CERTIFIED",
+            timestamp: new Date().toISOString(),
+          };
+          fs.writeFileSync("evidence/readiness.json", JSON.stringify(evidence, null, 2) + "\\n");
+          NODE
 
       - name: Upload readiness artifact
         uses: actions/upload-artifact@v4
@@ -282,31 +283,50 @@ jobs:
   # PRODUCTION EVIDENCE Ω
   ############################################################
   production-evidence:
-    name: Production evidence Ω
+    name: Production evidence and security artifacts Ω
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 25
     needs:
       - readiness
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
-      - name: Generate Sovereign Evidence
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p evidence
-          cat > evidence/sovereign-build.json <<EOF
-          {
-            "pipeline": "Isabella Genesis Ω",
-            "sha": "${GITHUB_SHA}",
-            "branch": "${GITHUB_REF_NAME}",
-            "verified": true
-          }
-          EOF
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
 
-      - name: Upload evidence artifact
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install reproducible dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate measured production evidence
+        run: pnpm run production:evidence
+
+      - name: Generate security suite evidence
+        run: pnpm run security:suite
+
+      - name: Upload production evidence for exact SHA
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: evidence-${{ github.sha }}
-          path: evidence/
-          if-no-files-found: error
+          name: production-evidence-${{ github.sha }}
+          path: evidence/production-evidence.json
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Upload security suite evidence for exact SHA
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-suite-${{ github.sha }}
+          path: evidence/security-suite.json
+          if-no-files-found: warn
+          retention-days: 30
