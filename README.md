@@ -119,7 +119,7 @@ La inspección estática de los workflows encontró puntos que deben resolverse 
 
 1. **Runtime y gestor — corregidos en esta rama:** package.json y los workflows principales/Atlas declaran Node 24; Atlas usa pnpm con lockfile congelado. Falta confirmar los cambios con CI verde.
 2. **Compilación TypeScript — corrección aplicada, pendiente de revalidación:** el build de Vercel reportó TS2308 por exportaciones ambiguas de ConfidenceLevel entre comercio y memoria en src/index.ts. Se hizo explícita la exportación canónica del tipo comercial y se conservaron alias por dominio.
-3. **CI previo en rojo:** el SHA anterior registró fallos en varios jobs. Los logs accesibles no demuestran la causa de todos; deben reevaluarse sobre el nuevo SHA.
+3. **GitHub Actions sin ejecución de pasos:** en el SHA `0b55ce24244b2b92539197e1bdde604b2061ccb2`, tanto CI como Repository Assurance terminaron en `failure`, incluso tras reintento. Los jobs devuelven `runner_id: 0`, `steps: []` y el endpoint de logs responde 404; no hay evidencia suficiente para atribuir la causa al código. Revisar configuración/servicio de runners y permisos de Actions, y exigir una ejecución con pasos y logs antes de mergear.
 4. **Despliegue real no demostrado:** .github/workflows/deploy-production.yml valida evidencia y llega a un paso de handoff; no prueba una promoción real a producción. Un gate de aceptación no equivale a publicar una versión en un proveedor.
 5. **Protección de rama:** la consulta de GitHub indicó que main no tenía protección habilitada. Exigir revisiones, checks obligatorios, evitar pushes directos y aplicar permisos mínimos.
 6. **Evidencia por SHA:** pruebas, SBOM, escaneo de secretos y evidencia de producción deben corresponder al mismo commit candidato.
