@@ -113,7 +113,9 @@ introVideo?.addEventListener('error', () => {
 });
 introVideo?.addEventListener('loadedmetadata', () => {
   if (Number.isFinite(introVideo.duration) && introVideo.duration > 1) {
-    introTotalMs = Math.max(INTRO_SCENE_MS * introScenes.length, introVideo.duration * 1000);
+    // Use actual duration; distributing 12 scenes proportionally prevents early end
+    // or a long tail on media whose duration differs from the fallback estimate.
+    introTotalMs = introVideo.duration * 1000;
     introMediaClockActive = !introVideo.paused;
   }
 });
@@ -148,7 +150,10 @@ const getIntroElapsed = () => {
 const advanceIntro = (elapsed = getIntroElapsed()) => {
   if (!intro || !introScenes.length) return;
   const boundedElapsed = Math.max(0, Math.min(elapsed, introTotalMs));
-  const sceneIndex = Math.min(introScenes.length - 1, Math.floor(boundedElapsed / INTRO_SCENE_MS));
+  const sceneIndex = Math.min(
+    introScenes.length - 1,
+    Math.floor((boundedElapsed / Math.max(1, introTotalMs)) * introScenes.length),
+  );
   intro.dataset.scene = String(sceneIndex);
   introScenes.forEach((scene, index) => {
     const active = index === sceneIndex;
