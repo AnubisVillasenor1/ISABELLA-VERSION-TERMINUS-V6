@@ -89,6 +89,15 @@ begin
     raise exception 'IKES_CLAIM_IDENTITY_IMMUTABLE';
   end if;
   if new.version = old.version and new.content_hash = old.content_hash then
+    if row(new.subject, new.predicate, new.object_value, new.source_ids, new.evidence_ids,
+      new.epistemic_state, new.temporal_state, new.valid_from, new.valid_until,
+      new.license, new.provenance)
+      is distinct from
+      row(old.subject, old.predicate, old.object_value, old.source_ids, old.evidence_ids,
+      old.epistemic_state, old.temporal_state, old.valid_from, old.valid_until,
+      old.license, old.provenance) then
+      raise exception 'IKES_CLAIM_SAME_VERSION_MUTATION';
+    end if;
     return new;
   end if;
   if new.version <> old.version + 1 then
