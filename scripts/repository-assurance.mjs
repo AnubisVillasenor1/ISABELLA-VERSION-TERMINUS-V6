@@ -216,13 +216,17 @@ add("RA-036", "BLOCKER",
   "The existing BookPI migration pair defines the runtime schema, row-level actor scoping, canonical-on-insert and mutation restrictions, with regression tests.",
   ["infra/db/migrations/001_create_bookpi_events.sql", "infra/db/migrations/002_bookpi_canonical_immutability.sql", "test/bookpi/postgres-migration.test.ts"]);
 
+const legacyBookPiReadiness = await read("src/bookpi/readiness.ts");
+const legacyBookPiReadinessTests = await read("test/bookpi/readiness.test.ts");
 add("RA-037", "BLOCKER",
   !!server &&
-    /const verification = bookPiLedger\.verify\(\)/.test(server) &&
+    /inspectLegacyBookPiLedger\(\(\) => bookPiLedger\.verify\(\)\)/.test(server) &&
     /status: legacyLedgerStatus/.test(server) &&
-    !/name: "bookpi-ledger", status: "degraded" as const/.test(server),
-  "Readiness evaluates the legacy BookPI chain instead of hardcoding the dependency as degraded.",
-  ["src/server.ts"]);
+    !/name: "bookpi-ledger", status: "degraded" as const/.test(server) &&
+    !!legacyBookPiReadiness && /result\.durable/.test(legacyBookPiReadiness) &&
+    !!legacyBookPiReadinessTests && /does not treat a valid in-memory chain as production-ready/.test(legacyBookPiReadinessTests),
+  "Readiness evaluates the actual legacy BookPI verification result and has regression tests for volatile, durable, corrupt and recovery states.",
+  ["src/server.ts", "src/bookpi/readiness.ts", "test/bookpi/readiness.test.ts"]);
 
 const report = {
   schemaVersion: "1.0.0",
