@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { Pool } from "pg";
 import { buildBookPiEvent } from "./emitter";
 import { verifyChainLink, ZERO_HASH } from "./crypto";
