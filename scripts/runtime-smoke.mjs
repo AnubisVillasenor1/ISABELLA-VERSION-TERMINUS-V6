@@ -234,6 +234,26 @@ try {
     assert.equal(costGuardBody.responseEngine, "sovereign-fallback", "paid-capable providers must not be used when opt-in is false");
     assert.deepEqual(contactedBillableProviders, [], "no paid-capable provider HTTP request may be sent without opt-in");
     console.log("PAID_PROVIDER_OPT_IN_GUARD_OK", JSON.stringify({ responseEngine: costGuardBody.responseEngine, externalProviderCalls: 0 }));
+
+    // An explicit open-science selection remains open-only even if the operator
+    // enabled paid fallbacks for other modes such as Auto or Gemini.
+    process.env.ALLOW_PAID_PROVIDER_FALLBACK = "true";
+    const openScienceGuard = await originalGlobalFetch(`${baseUrl}/api/v1/cognition/route`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        input: "Comprueba que Open Science no cambia a un proveedor facturable.",
+        modelEngine: "open-science",
+        focusLens: "general",
+        history: [],
+      }),
+      signal: AbortSignal.timeout(10_000),
+    });
+    const openScienceBody = await openScienceGuard.json();
+    assert.equal(openScienceGuard.status, 200);
+    assert.equal(openScienceBody.responseEngine, "sovereign-fallback", "Open Science mode must not fall through to paid-capable providers");
+    assert.deepEqual(contactedBillableProviders, [], "Open Science mode must remain open-only even when paid fallback is globally enabled");
+    console.log("OPEN_SCIENCE_PAID_ISOLATION_OK", JSON.stringify({ responseEngine: openScienceBody.responseEngine, externalProviderCalls: 0 }));
   } finally {
     globalThis.fetch = originalGlobalFetch;
     for (const key of costEnvKeys) {
