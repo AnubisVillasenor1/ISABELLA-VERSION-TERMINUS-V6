@@ -21,6 +21,7 @@ import { bookPiSecret } from "./security/secrets";
 import { verifyBearerToken } from "./security/api-token";
 import { FixedWindowRateLimiter } from "./security/rate-limit";
 import { hashSourceContent } from "./memory/ikes";
+import { createSupabaseIkesPersistence } from "./memory/ikes-supabase";
 import { bookPiLedger } from "./bookpi";
 import { createRuntimeBookPiStorage } from "./bookpi/runtime-storage";
 import { evaluateEpistemicState, EPISTEMIC_LADDER_SPEC } from "./cognition/epistemic-evaluator";
@@ -200,7 +201,8 @@ app.get("/assets/video/IntroVideoIsabella.mp4", (_req, res) => {
 const atlasPersistence = process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
   ? createAtlasStoreFromEnv()
   : undefined;
-const runtime = new IsabellaGenesisRuntime(undefined, atlasPersistence);
+const ikesPersistence = createSupabaseIkesPersistence(process.env);
+const runtime = new IsabellaGenesisRuntime(undefined, atlasPersistence, undefined, undefined, ikesPersistence);
 void runtime.initPersistence().catch((error) => {
   console.error("[Genesis] Atlas persistence initialization failed:", error);
 });
@@ -842,12 +844,16 @@ app.get("/api/v1/status", (_req, res) => {
 app.get("/api/v1/memory", (req, res) => {
   if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
   const query = typeof req.query.q === "string" ? req.query.q : "TAMV";
-  const results = runtime.memory.retrieve(query);
-  res.json({
-    query,
-    count: results.length,
-    claims: results,
-  });
+  try {
+    const results = runtime.memory.retrieve(query);
+    res.json({ query, count: results.length, claims: results, persistence: ikesPersistence ? "SUPABASE_BACKED" : "VOLATILE_MEMORY" });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    res.status(message === "IKES_PERSISTENCE_NOT_INITIALIZED" ? 503 : 500).json({
+      success: false,
+      error: message === "IKES_PERSISTENCE_NOT_INITIALIZED" ? message : "IKES_RETRIEVAL_FAILED",
+    });
+  }
 });
 
 // Public claims enter a bounded review queue; they do not mutate canonical IKES memory.
@@ -2245,18 +2251,20 @@ async function currentOpsState() {
 
   const pipelineLedgerProbe = await pipelineBookPi.probe();
   const pipelineLedgerStatus = pipelineLedgerProbe.healthy ? "healthy" as const : "degraded" as const;
+  const ikesProbe = await runtime.memory.persistenceProbe();
+  const ikesStatus = ikesProbe.healthy ? "healthy" as const : "degraded" as const;
   const dependencies = [
     { name: "bookpi-ledger", status: "degraded" as const, required: true },
     { name: "pipeline-bookpi-storage", status: pipelineLedgerStatus, required: true },
     { name: "atlas-persistence", status: atlasStatus, required: true },
-    { name: "ikes-memory", status: "degraded" as const, required: true },
+    { name: "ikes-memory", status: ikesStatus, required: true },
     { name: "observability", status: "degraded" as const, required: false },
   ];
   const readinessEvidence = [
     { dependency: "bookpi-ledger", status: "degraded", backend: bookPiBackend, reason: bookPiReason },
     { dependency: "pipeline-bookpi-storage", status: pipelineLedgerStatus, backend: pipelineLedgerProbe.backend, durable: pipelineBookPi.durable, shared: pipelineBookPi.shared, reason: pipelineLedgerProbe.reason, ...(pipelineLedgerProbe.eventCount !== undefined ? { eventCount: pipelineLedgerProbe.eventCount } : {}) },
     { dependency: "atlas-persistence", status: atlasStatus, reason: atlasReason },
-    { dependency: "ikes-memory", status: "degraded", reason: "IKES is process-local; persistence and restart recovery are not yet wired into this runtime." },
+    { dependency: "ikes-memory", status: ikesStatus, backend: ikesProbe.backend, pending: ikesProbe.pending, reason: ikesProbe.reason },
     { dependency: "observability", status: "degraded", reason: "No live telemetry exporter probe is wired into the readiness path." },
   ];
   return { snapshot: runtime.opsSnapshot(dependencies), readinessEvidence };
