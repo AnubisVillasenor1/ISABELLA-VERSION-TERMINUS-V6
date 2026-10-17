@@ -1,5 +1,5 @@
 import { boundedBudgetMs, DeadlineBudget } from "./inference/deadline";
-import { CognitionResponseCache } from "./inference/cognition-response-cache";
+import { buildCognitionCacheKey, CognitionResponseCache } from "./inference/cognition-response-cache";
 import { buildAsset, contentHash, serveAsset, type StaticAsset } from "./http/static-assets";
 import express, { type Application, type NextFunction, type Request, type Response } from "express";
 import { randomUUID, timingSafeEqual } from "node:crypto";
@@ -1032,11 +1032,6 @@ app.get("/api/v1/cognition/native-runtime", (_req, res) => {
 // Public cognitive route: viewer-only. Request bodies cannot supply authority, roles, action or resource.
 // Cache entries are process-local optimizations, not permissions, evidence, or durable memory.
 const cognitionResponseCache = new CognitionResponseCache<unknown>(30_000, 500);
-function cognitionCacheKey(input: string, history: unknown, modelEngine: string, focusLens: string, methodId: string): string {
-  // JSON tuple avoids delimiter collisions and binds cache reuse to the governance method.
-  return JSON.stringify([modelEngine, focusLens, methodId, input, history ?? []]);
-}
-
 app.post("/api/v1/cognition/route", async (req, res) => {
   if (!enforceRateLimit(req, res, publicCognitionLimiter, "cognition")) return;
   try {
@@ -1065,7 +1060,7 @@ app.post("/api/v1/cognition/route", async (req, res) => {
     const destructiveMethodId = "T.TWINS.E08_DATA.remove.permanent_delete.v1.0.0.CRITICAL.CONSTITUTIONAL";
     const destructiveIntent = body.methodId === destructiveMethodId;
     const methodId = destructiveIntent ? destructiveMethodId : safeMethodId;
-    const cacheKey = cognitionCacheKey(input, history, modelEngine, focusLens, methodId);
+    const cacheKey = buildCognitionCacheKey(input, history, modelEngine, focusLens, methodId);
     const principal = createPrincipal({ id: "human:public-session", kind: "human", roles: ["viewer"] });
 
     const decision = runtime.evaluate({
