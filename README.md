@@ -12,7 +12,7 @@
 
 Estimación ponderada de preparación operativa —no es una métrica de calidad del modelo ni una garantía de disponibilidad— calculada sobre la evidencia del último build de aplicación validado en el preview, SHA `d6228890d57156062366430fc5c13e843801d308`. El build terminó en estado READY; ejecutó 1,543 pruebas en 258 archivos, 31/31 comprobaciones estructurales, 14/14 invariantes de seguridad y smoke local de conversación e interfaz. Esto valida el build de ese SHA, no el despliegue productivo.
 
-**Estado: preproducción; no declarar listo para producción.** La comprobación live de `/api/v1/readyz` devolvió HTTP 503: BookPI sigue volátil, la consulta Atlas/Supabase devolvió HTTP 404, IKES carece de persistencia durable conectada y no se verifica exportación de telemetría. El smoke de gateway LLM externo se omitió por ausencia de credenciales de proveedor. Las últimas correcciones de CI/CD aún requieren una ejecución GitHub Actions verde sobre el SHA final.
+**Estado: preproducción; no declarar listo para producción.** El runtime ya incorpora en esta rama un adaptador PostgreSQL seleccionable para el ledger del pipeline y un adaptador Supabase para hidratar/persistir fuentes y claims IKES. Eso es integración de código, no prueba de configuración remota: la última lectura de `/api/v1/readyz` devolvió HTTP 503, Atlas/Supabase respondió HTTP 404, el ledger BookPI síncrono que usan rutas heredadas sigue siendo volátil y no se verifica exportación de telemetría. La migración IKES debe aplicarse y probarse; el smoke del gateway LLM externo se omitió por ausencia de credenciales. Los cambios de esta rama aún requieren un build verde del SHA final y una ejecución GitHub Actions válida.
 
 - Repositorio: https://github.com/OsoPanda1/ISABELLA-VERSION-TERMINUS-V6
 - Rama principal: main
@@ -91,7 +91,9 @@ Las variables que el README previo declara incluyen:
 | DATABASE_URL | PostgreSQL, incluida opción Neon | TLS, mínimo privilegio, migraciones controladas y secretos gestionados. |
 | REDIS_URL | Redis/Upstash | Autenticación, límites, expiración y comportamiento ante indisponibilidad. |
 | ISABELLA_KEYLESS_FREE_PROVIDER | Inferencia externa gratuita sin clave | Desactivada por defecto. Configurar explícitamente `pollinations`, `on`, `true` o `1` sólo si el operador autoriza enviar prompt/historial acotados a ese proveedor. |
-| BOOKPI_LEDGER_PATH | Ruta del ledger BookPI | Permisos, persistencia, backup, recuperación e integridad. |
+| BOOKPI_LEDGER_PATH | Ledger síncrono heredado; JSONL local cuando se configura | No es almacenamiento compartido en serverless. Requiere volumen persistente y recuperación verificada. |
+| BOOKPI_PIPELINE_STORAGE | Adaptador del pipeline: `postgres`, `jsonl` o `memory`; selección automática de PostgreSQL cuando existe `DATABASE_URL` | Para despliegue multiinstancia usar PostgreSQL y aplicar `infra/db/migrations/001_create_bookpi_events.sql` y `002_bookpi_canonical_immutability.sql`. Memoria no está lista para producción. |
+| SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY | Atlas y persistencia de IKES del lado servidor | Nunca exponer la service-role key al navegador. Aplicar migraciones Supabase y validar RLS/probes.
 | STRICT_PREFLIGHT=1 | Abortar el arranque si preflight detecta errores bloqueantes | Confirmar que identifica dependencias realmente obligatorias. |
 | NODE_ENV=production | Activar validaciones de producción | No sustituye configuración segura ni gestión de secretos. |
 
@@ -126,7 +128,7 @@ La inspección estática de los workflows encontró puntos que deben resolverse 
 7. **Integraciones externas:** validar PostgreSQL, Redis, proveedores de modelos, secretos, almacenamiento, Kubernetes y observabilidad en staging, incluyendo recuperación y rollback.
 8. **Interacción funcional:** comprobar una conversación de extremo a extremo con configuración real, timeouts, manejo de errores y fallback; una interfaz visible no prueba que la inferencia esté operativa.
 
-**Readiness operativo observado:** el preview verificado respondió HTTP 503 en `/api/v1/readyz`. El informe indicó BookPI volátil, probe Atlas/Supabase sin éxito confirmado, ausencia de persistencia durable de IKES y ausencia de probe de exportación de telemetría. Se añadió la migración inicial `supabase/migrations/20261017000000_atlas-store-core.sql`, pero **no se ha aplicado a la base remota** y no resuelve por sí sola BookPI/IKES. Seguir [el runbook de cierre de bloqueos](docs/ops/PRODUCTION-READINESS-RUNBOOK.md).
+**Readiness operativo observado:** el último preview medido devolvió HTTP 503 en `/api/v1/readyz`. Esta rama conecta el almacenamiento del pipeline a un adaptador PostgreSQL transaccional (si se configura `DATABASE_URL`) y conecta IKES con persistencia Supabase, hidratación validada por hash, cola de escritura y errores visibles. Todavía no se ha demostrado que las migraciones estén aplicadas en la base remota, que los probes pasen ni que el ledger síncrono heredado deje de ser volátil. Las migraciones requeridas son `supabase/migrations/20261017000000_atlas-store-core.sql`, `supabase/migrations/20261017000001_ikes-memory.sql` e `infra/db/migrations/001_create_bookpi_events.sql` + `002_bookpi_canonical_immutability.sql` para PostgreSQL. Seguir [el runbook de cierre de bloqueos](docs/ops/PRODUCTION-READINESS-RUNBOOK.md).
 
 ### Gates pendientes para liberar
 
@@ -175,7 +177,7 @@ La estimación de **54.0%** usa esta rúbrica ponderada (puntos disponibles = pe
 |---|---:|---|
 | Runtime, compilación y pruebas | 22 / 25 | Build READY, 1,543 pruebas, 258 archivos y smoke local; faltan E2E con dependencias productivas. |
 | Seguridad y CI | 14 / 20 | 14 invariantes de seguridad aprobados; auditoría Rust/Trivy bloqueantes configurados, pero la ejecución final de GitHub Actions sigue pendiente y main requiere protección. |
-| Persistencia e integridad de datos | 3 / 20 | BookPI volátil, Atlas health query 404, IKES sin persistencia durable. La migración SQL está en el repo, no aplicada remotamente. |
+| Persistencia e integridad de datos | 3 / 20 | Los adaptadores BookPI/IKES ya están cableados en esta rama, pero el estado remoto sigue sin verificar: Atlas health query 404, migraciones sin aplicación confirmada y ledger síncrono heredado volátil. |
 | Inferencia y conversación | 7 / 15 | Chat local y seguimiento funcionan; smoke generativo externo omitido por falta de credenciales configuradas. |
 | Despliegue y recuperación | 5 / 10 | Preview READY; no se ha demostrado promoción real a producción ni rollback. |
 | Observabilidad y operación | 3 / 10 | Readiness y métricas en proceso disponibles; exportación OTLP y alertas no verificadas. |
