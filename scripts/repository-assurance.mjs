@@ -155,6 +155,7 @@ add("RA-032", "BLOCKER",
     /VOLATILE_MEMORY/.test(bookPiRuntime) &&
     !!bookPiPostgres && /pg_advisory_xact_lock/.test(bookPiPostgres) &&
     /BOOKPI_ACTOR_SCOPE_MISMATCH/.test(bookPiPostgres) &&
+    /Number\(row\.sequence\)/.test(bookPiPostgres) &&
     !!pipelineRoute && /await resolveStorage\(\)/.test(pipelineRoute),
   "The governed pipeline uses the environment-selected BookPI adapter; Postgres append is transactional and actor-scoped, while volatile fallback stays explicitly degraded.",
   ["src/server.ts", "src/bookpi/runtime-storage.ts", "src/bookpi/storage-postgres.ts", "src/routes/pipeline.ts"]);
