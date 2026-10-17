@@ -20,25 +20,53 @@ const introLabels = [
 let introStartedAt = 0;
 let introTimer = 0;
 let introPausedAt = 0;
+let introWatchdog = 0;
+let introLastVideoTime = -1;
+let introLastVideoProgressAt = 0;
 const formatIntroTime = (milliseconds) => {
   const seconds = Math.floor(Math.max(0, milliseconds) / 1000);
   return `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
 };
+const markIntroVideoReady = () => {
+  intro?.classList.add('media-ready');
+  intro?.classList.remove('media-stalled');
+  introLastVideoProgressAt = performance.now();
+};
 const startIntroMedia = async () => {
   if (!introVideo) return;
+  window.clearInterval(introWatchdog);
   introVideo.currentTime = 0;
   introVideo.muted = false;
   introVideo.volume = 1;
-  try {
-    await introVideo.play();
-    intro?.classList.add('media-ready');
-  } catch {
-    // Autoplay con audio puede ser bloqueado; el segundo intento conserva el video.
-    introVideo.muted = true;
-    await introVideo.play().then(() => intro?.classList.add('media-ready')).catch(() => intro?.classList.add('media-unavailable'));
-  }
+  const playVideo = async () => {
+    try {
+      await introVideo.play();
+      markIntroVideoReady();
+    } catch {
+      introVideo.muted = true;
+      await introVideo.play().then(markIntroVideoReady).catch(() => intro?.classList.add('media-unavailable'));
+    }
+  };
+  await playVideo();
+  introLastVideoTime = introVideo.currentTime;
+  introWatchdog = window.setInterval(() => {
+    if (!introVideo || introVideo.paused || introVideo.ended) return;
+    const now = performance.now();
+    if (introVideo.currentTime !== introLastVideoTime) {
+      introLastVideoTime = introVideo.currentTime;
+      introLastVideoProgressAt = now;
+      intro?.classList.remove('media-stalled');
+      return;
+    }
+    if (now - introLastVideoProgressAt > 1200) {
+      intro?.classList.add('media-stalled');
+      void playVideo();
+      introLastVideoProgressAt = now;
+    }
+  }, 500);
 };
 const stopIntroMedia = () => {
+  window.clearInterval(introWatchdog);
   introVideo?.pause();
   if (introVideo) introVideo.currentTime = 0;
 };
