@@ -20,7 +20,6 @@ export interface RuntimeBookPiEnv {
   DATABASE_URL?: string;
   BOOKPI_PIPELINE_LEDGER_PATH?: string;
   BOOKPI_PIPELINE_STORAGE?: string;
-  ISABELLA_BOOKPI_ACTOR_ID?: string;
 }
 
 /**
@@ -46,9 +45,7 @@ export function createRuntimeBookPiStorage(
     });
     // Pipeline route uses a single admin-gated service principal. The Postgres
     // adapter's RLS context and event actor must be identical for chain reads.
-    const actorId = "human:pipeline-session";
-    if (!actorId) throw new Error("ISABELLA_BOOKPI_ACTOR_ID_REQUIRED");
-    const storage = createPostgresStorage(pool, "bookpi_events", { actorId });
+    const storage = createPostgresStorage(pool, "bookpi_events", { actorId: "human:pipeline-session" });
     return {
       storage,
       backend: "POSTGRES",
