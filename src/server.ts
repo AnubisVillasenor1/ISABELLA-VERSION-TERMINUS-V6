@@ -1053,6 +1053,9 @@ app.get("/api/v1/cognition/native-runtime", (_req, res) => {
 // Cache entries are process-local optimizations, not permissions, evidence, or durable memory.
 const cognitionResponseCache = new TtlCache<unknown>(30_000, 500);
 app.post("/api/v1/cognition/route", async (req, res) => {
+  // Conversation inputs and generated text may contain personal data; prohibit browser/CDN caching
+  // on every response, not only cache hits. The internal process cache remains separate.
+  res.setHeader("Cache-Control", "no-store");
   if (!enforceRateLimit(req, res, publicCognitionLimiter, "cognition")) return;
   try {
     const body = req.body ?? {};
