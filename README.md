@@ -116,8 +116,9 @@ El README previo declara GET /api/v1/ops/preflight protegido por token administr
 
 La inspección estática de los workflows encontró puntos que deben resolverse antes de afirmar que el despliegue es automático y productivo:
 
-1. **Desalineación de runtime — corregida en esta rama:** package.json declara Node 24.x y se cambió .github/workflows/repository-assurance.yml a Node 24. La corrección queda pendiente de confirmación mediante una ejecución CI verde.
-2. **CI en rojo:** ejecuciones recientes consultadas de GitHub Actions muestran al menos un workflow con conclusión failure. Inspeccionar el job y log exactos, corregir la causa y repetir sobre el SHA candidato.
+1. **Runtime y gestor — corregidos en esta rama:** package.json y los workflows principales/Atlas declaran Node 24; Atlas usa pnpm con lockfile congelado. Falta confirmar los cambios con CI verde.
+2. **Compilación TypeScript — corrección aplicada, pendiente de revalidación:** el build de Vercel reportó TS2308 por exportaciones ambiguas de ConfidenceLevel entre comercio y memoria en src/index.ts. Se hizo explícita la exportación canónica del tipo comercial y se conservaron alias por dominio.
+3. **CI previo en rojo:** el SHA anterior registró fallos en varios jobs. Los logs accesibles no demuestran la causa de todos; deben reevaluarse sobre el nuevo SHA.
 3. **Despliegue real no demostrado:** .github/workflows/deploy-production.yml termina con un paso que imprime mensajes y declara que el despliegue real se delega al operador. Un gate de aceptación no equivale a publicar una versión en un proveedor.
 4. **Protección de rama:** la consulta de GitHub indicó que main no tenía protección habilitada. Exigir revisiones, checks obligatorios, evitar pushes directos y aplicar permisos mínimos.
 5. **Evidencia por SHA:** pruebas, SBOM, escaneo de secretos y evidencia de producción deben corresponder al mismo commit candidato.
