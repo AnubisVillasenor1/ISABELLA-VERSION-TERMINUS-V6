@@ -1979,7 +1979,7 @@ app.post("/api/v1/sanitization/scan", (req, res) => {
 });
 
 // Admit governed knowledge (IKES): sanitization → identity → evidence → policy gate → index.
-app.post("/api/v1/knowledge/admit", (req, res) => {
+app.post("/api/v1/knowledge/admit", async (req, res) => {
   if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
   if (!enforceRateLimit(req, res, publicScanLimiter, "knowledge-admit")) return;
   try {
@@ -2030,6 +2030,9 @@ app.post("/api/v1/knowledge/admit", (req, res) => {
       contentHash: hashSourceContent(body.content),
       license: body.license,
     });
+    // Do not acknowledge an admitted source before the configured persistence
+    // queue has completed successfully.
+    await runtime.memory.flushPersistence();
     const proposalInput = {
       proposedBy: "service:authenticated-knowledge-admission",
       evidenceIds: [sourceId],
@@ -2056,12 +2059,14 @@ app.post("/api/v1/knowledge/admit", (req, res) => {
     });
     if (result.entry.released) {
       runtime.memory.propose(proposalInput);
+      await runtime.memory.flushPersistence();
     }
     const blockers = result.entry.stages.filter((stage) => !stage.ok);
     res.status(202).json({
       success: result.entry.released,
       status: result.entry.released ? "RELEASED" : "PROPOSAL_RECORDED_RELEASE_BLOCKED",
       sourceVerification: "USER_SUPPLIED_CONTENT_HASHED_NOT_REMOTE_VERIFIED",
+      persistence: ikesPersistence ? "SUPABASE_BACKED" : "VOLATILE_MEMORY",
       sourceId,
       contentHash: hashSourceContent(body.content),
       proposal,
@@ -2069,7 +2074,9 @@ app.post("/api/v1/knowledge/admit", (req, res) => {
       releaseBlockers: blockers,
     });
   } catch (err) {
-    res.status(400).json({ success: false, error: err instanceof Error ? err.message : "KNOWLEDGE_ADMISSION_FAILED" });
+    const message = err instanceof Error ? err.message : "KNOWLEDGE_ADMISSION_FAILED";
+    const status = message === "IKES_PERSISTENCE_WRITE_FAILED" || message === "IKES_PERSISTENCE_NOT_INITIALIZED" ? 503 : 400;
+    res.status(status).json({ success: false, error: message });
   }
 });
 
