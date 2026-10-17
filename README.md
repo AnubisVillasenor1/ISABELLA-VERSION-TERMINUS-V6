@@ -8,11 +8,11 @@
 
 **Contrato de evidencia:** SPECIFIED ≠ IMPLEMENTED ≠ TESTED. Una especificación no demuestra implementación y una implementación no demuestra que se haya probado.
 
-**Avance global estimado para producción y despliegue: 54.0%.**
+**Avance global estimado para producción y despliegue: 59.0%.**
 
-Estimación ponderada de preparación operativa —no es una métrica de calidad del modelo ni una garantía de disponibilidad— calculada sobre la evidencia del último build de aplicación validado en el preview, SHA `d6228890d57156062366430fc5c13e843801d308`. El build terminó en estado READY; ejecutó 1,543 pruebas en 258 archivos, 31/31 comprobaciones estructurales, 14/14 invariantes de seguridad y smoke local de conversación e interfaz. Esto valida el build de ese SHA, no el despliegue productivo.
+Estimación ponderada de preparación operativa —no es una métrica de calidad del modelo ni una garantía de disponibilidad— calculada sobre el build reproducible del SHA `011467a68ee88999e55995e97439b8e9d1d5a152`. En Node 24.21.0 y pnpm 10.28.0, `pnpm install --frozen-lockfile && pnpm run build` terminó con código 0: 1,557 pruebas en 261 archivos, 35/35 comprobaciones estructurales, 14/14 invariantes de seguridad, typecheck, compilación del servidor y smoke de UI/conversación aprobados. Esto valida el código y las pruebas de ese SHA; no certifica dependencias remotas ni producción. La cuota diaria de despliegues de Vercel impidió desplegar el SHA final durante esta intervención.
 
-**Estado: preproducción; no declarar listo para producción.** El runtime ya incorpora en esta rama un adaptador PostgreSQL seleccionable para el ledger del pipeline y un adaptador Supabase para hidratar/persistir fuentes y claims IKES. Eso es integración de código, no prueba de configuración remota: la última lectura de `/api/v1/readyz` devolvió HTTP 503, Atlas/Supabase respondió HTTP 404, el ledger BookPI síncrono que usan rutas heredadas sigue siendo volátil y no se verifica exportación de telemetría. La migración IKES debe aplicarse y probarse; el smoke del gateway LLM externo se omitió por ausencia de credenciales. Los cambios de esta rama aún requieren un build verde del SHA final y una ejecución GitHub Actions válida.
+**Estado: preproducción; no declarar listo para producción.** El código del SHA final compila y pasa la suite local aislada, pero el último probe remoto de preview (SHA `5aaea9302e7899f3cf05bc0a031971ea4b96288a`) devolvió HTTP 503. Atlas/Supabase respondió HTTP 404; el pipeline reconoció el PostgreSQL configurado, pero carece de `BOOKPI_INTEGRITY_SECRET` de al menos 32 caracteres; el ledger BookPI síncrono heredado sigue siendo volátil y la exportación de telemetría no está verificada. Las migraciones IKES/Atlas deben aplicarse y probarse. El smoke generativo externo se omitió por ausencia de credenciales. GitHub Actions aún no ofrece una ejecución válida con pasos/logs, y la cuota diaria de Vercel impidió desplegar el SHA final.
 
 - Repositorio: https://github.com/OsoPanda1/ISABELLA-VERSION-TERMINUS-V6
 - Rama principal: main
@@ -174,17 +174,17 @@ No se afirma liderazgo mundial, superioridad frente a proveedores consolidados n
 
 El porcentaje sólo debe subir cuando una capacidad funcional nueva o una mejora relevante quede implementada y validada con evidencia. La documentación, el número de archivos, las declaraciones arquitectónicas y los tests que no se ejecutan no incrementan por sí solos el avance.
 
-La estimación de **54.0%** usa esta rúbrica ponderada (puntos disponibles = peso del dominio); el total sólo refleja el último build de aplicación validado, no un despliegue productivo:
+La estimación de **59.0%** usa esta rúbrica ponderada (puntos disponibles = peso del dominio). El total incorpora el build reproducible del SHA final y las pruebas ejecutadas; no equivale a despliegue productivo:
 
 | Dominio | Puntos obtenidos / disponibles | Evidencia y limitación principal |
 |---|---:|---|
-| Runtime, compilación y pruebas | 22 / 25 | Build READY, 1,543 pruebas, 258 archivos y smoke local; faltan E2E con dependencias productivas. |
-| Seguridad y CI | 14 / 20 | 14 invariantes de seguridad aprobados; auditoría Rust/Trivy bloqueantes configurados, pero la ejecución final de GitHub Actions sigue pendiente y main requiere protección. |
-| Persistencia e integridad de datos | 3 / 20 | Los adaptadores BookPI/IKES ya están cableados en esta rama, pero el estado remoto sigue sin verificar: Atlas health query 404, migraciones sin aplicación confirmada y ledger síncrono heredado volátil. |
+| Runtime, compilación y pruebas | 24 / 25 | Build reproducible, typecheck, 1,557 pruebas en 261 archivos y smoke local aprobados; faltan E2E con dependencias productivas. |
+| Seguridad y CI | 15 / 20 | 35/35 checks estructurales y 14/14 invariantes de seguridad aprobados; GitHub Actions sigue sin ejecución válida y main requiere protección. |
+| Persistencia e integridad de datos | 5 / 20 | Adaptadores BookPI/IKES implementados y probados, pero Atlas/IKES remoto devuelve 404, falta BOOKPI_INTEGRITY_SECRET y el ledger síncrono heredado sigue volátil. |
 | Inferencia y conversación | 7 / 15 | Chat local y seguimiento funcionan; smoke generativo externo omitido por falta de credenciales configuradas. |
 | Despliegue y recuperación | 5 / 10 | Preview READY; no se ha demostrado promoción real a producción ni rollback. |
 | Observabilidad y operación | 3 / 10 | Readiness y métricas en proceso disponibles; exportación OTLP y alertas no verificadas. |
-| **Total** | **54 / 100** | **Preproducción; no certificado para producción.** |
+| **Total** | **59 / 100** | **Preproducción; no certificado para producción.** |
 
 Para elevar la cifra de nuevo, exigir build verde del SHA final, CI/CD verde, migración aplicada y probe Atlas saludable, persistencia durable/recuperación de BookPI e IKES, smoke generativo aprobado, telemetría exportada y despliegue/rollback reales.
 
