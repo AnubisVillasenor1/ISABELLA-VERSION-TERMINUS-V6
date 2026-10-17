@@ -201,6 +201,27 @@ add("RA-035", "BLOCKER",
   "The pipeline reports evidence-store failures as service-unavailable, sanitizes storage errors and has a regression test for the distinction from policy denials.",
   ["src/routes/pipeline.ts", "src/pipeline/conductor.ts", "test/routes/pipeline.test.ts"]);
 
+const bookPiMigration = await read("supabase/migrations/20261017000002_bookpi-events.sql");
+const bookPiPostgresTests = await read("test/bookpi/postgres-migration.test.ts");
+add("RA-036", "BLOCKER",
+  !!bookPiMigration &&
+    /create table if not exists public\\.bookpi_events/i.test(bookPiMigration) &&
+    /sequence bigint not null unique/i.test(bookPiMigration) &&
+    /alter table public\\.bookpi_events enable row level security/i.test(bookPiMigration) &&
+    /revoke all on table public\\.bookpi_events from anon, authenticated/i.test(bookPiMigration) &&
+    /to service_role/i.test(bookPiMigration) &&
+    !!bookPiPostgresTests && /BookPI PostgreSQL migration contract/.test(bookPiPostgresTests),
+  "The BookPI PostgreSQL event schema matches adapter columns and restricts direct browser-role access; the contract has regression tests.",
+  ["supabase/migrations/20261017000002_bookpi-events.sql", "test/bookpi/postgres-migration.test.ts"]);
+
+add("RA-037", "BLOCKER",
+  !!server &&
+    /const verification = bookPiLedger\\.verify\\(\\)/.test(server) &&
+    /status: legacyLedgerStatus/.test(server) &&
+    !/name: "bookpi-ledger", status: "degraded" as const/.test(server),
+  "Readiness evaluates the legacy BookPI chain instead of hardcoding the dependency as degraded.",
+  ["src/server.ts"]);
+
 const report = {
   schemaVersion: "1.0.0",
   audit: "isabella-genesis-repository-assurance",
