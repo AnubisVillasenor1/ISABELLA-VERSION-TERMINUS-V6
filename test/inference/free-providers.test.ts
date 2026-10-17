@@ -107,6 +107,37 @@ describe("free provider router", () => {
     }
   }, 3_000);
 
+  it("bounds retries and backoff by one total timeout budget", async () => {
+    let requests = 0;
+    const server = createServer((_request, response) => {
+      requests += 1;
+      response.writeHead(503, { "content-type": "application/json" });
+      response.end(JSON.stringify({ error: "temporarily unavailable" }));
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const address = server.address();
+    if (!address || typeof address === "string") {
+      server.close();
+      throw new Error("TEST_SERVER_ADDRESS_UNAVAILABLE");
+    }
+
+    const adapter = new GratisAPIAdapter({
+      baseUrl: `http://127.0.0.1:${address.port}/v1`,
+      timeoutMs: 100,
+      maxRetries: 3,
+      retryBaseDelayMs: 500,
+    });
+    const started = Date.now();
+    try {
+      await expect(adapter.generate({ prompt: "hello", maxTokens: 8 })).rejects.toThrow("GRATIS_API_HTTP_503");
+      expect(requests).toBe(1);
+      expect(Date.now() - started).toBeLessThan(400);
+    } finally {
+      server.closeAllConnections();
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  }, 3_000);
+
   it("declares a local ollama descriptor without network calls", () => {
     const adapter = new OllamaAdapter({ baseUrl: "http://127.0.0.1:1" });
     expect(adapter.descriptor.provider).toBe("ollama");
