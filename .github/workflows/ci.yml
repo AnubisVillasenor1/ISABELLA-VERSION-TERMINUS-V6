@@ -149,7 +149,7 @@ jobs:
 
       - name: Security Audit (blocking)
         working-directory: ige-omega
-        run: cargo audit --locked
+        run: cargo audit
 
       - name: Format
         working-directory: ige-omega
