@@ -1056,6 +1056,12 @@ app.post("/api/v1/cognition/route", async (req, res) => {
   // Conversation inputs and generated text may contain personal data; prohibit browser/CDN caching
   // on every response, not only cache hits. The internal process cache remains separate.
   res.setHeader("Cache-Control", "no-store");
+  const requestAbortController = new AbortController();
+  res.once("close", () => {
+    // "close" also fires after a successful response; cancel only a prematurely closed connection.
+    if (!res.writableEnded) requestAbortController.abort(new Error("CLIENT_DISCONNECTED"));
+  });
+  if (res.destroyed && !res.writableEnded) requestAbortController.abort(new Error("CLIENT_DISCONNECTED"));
   if (!enforceRateLimit(req, res, publicCognitionLimiter, "cognition")) return;
   try {
     const body = req.body ?? {};
@@ -1151,12 +1157,8 @@ app.post("/api/v1/cognition/route", async (req, res) => {
     let generativeNarrative: string | null = null;
     let responseEngine: "gemini" | "gateway" | "open-science" | "openrouter-free" | "huggingface-provider" | "compatible-provider" | "keyless-free" | "perplexity-router" | "sovereign-fallback" | "sovereign" | "blocked" = "blocked";
     // Start the budget before native classification so inference plus routing share one deadline.
-    const requestAbortController = new AbortController();
-    res.once("close", () => {
-      // "close" also fires after a successful response; cancel only a prematurely closed connection.
-      if (!res.writableEnded) requestAbortController.abort(new Error("CLIENT_DISCONNECTED"));
-    });
     const chainBudget = new DeadlineBudget(chatChainBudgetMs, undefined, requestAbortController.signal);
+    if (chainBudget.cancelled()) return;
     let nativeRouting: GenesisResult | null = null;
     try {
       nativeRouting = await classifyWithGenesisTurbo(input);
