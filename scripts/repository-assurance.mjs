@@ -248,7 +248,7 @@ add("RA-039", "BLOCKER",
     /IKES_SOURCE_IDENTITY_IMMUTABLE/.test(ikesConcurrencyMigration) &&
     /atlas_knowledge_guard_claim_version/.test(ikesConcurrencyMigration) &&
     /IKES_CLAIM_VERSION_CONFLICT/.test(ikesConcurrencyMigration) &&
-    !!ikesConcurrencyTests && /optimistic claim concurrency/.test(ikesConcurrencyTests),
+    !!ikesConcurrencyTests && /IKES migration concurrency contract/.test(ikesConcurrencyTests),
   "IKES migrations protect source identity and reject stale or conflicting claim writes across replicas, with regression tests.",
   ["supabase/migrations/20261017000001_ikes-memory.sql", "test/memory/ikes-migration.test.ts"]);
 
