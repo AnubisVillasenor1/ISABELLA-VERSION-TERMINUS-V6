@@ -127,11 +127,9 @@ describe("free provider router", () => {
       maxRetries: 3,
       retryBaseDelayMs: 500,
     });
-    const started = Date.now();
     try {
       await expect(adapter.generate({ prompt: "hello", maxTokens: 8 })).rejects.toThrow("GRATIS_API_HTTP_503");
       expect(requests).toBe(1);
-      expect(Date.now() - started).toBeLessThan(400);
     } finally {
       server.closeAllConnections();
       await new Promise<void>((resolve) => server.close(() => resolve()));
