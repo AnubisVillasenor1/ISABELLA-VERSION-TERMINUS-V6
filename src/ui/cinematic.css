@@ -3,7 +3,7 @@
 /* Immersion gate and synchronized video layer */
 .intro-video{position:absolute;inset:0;z-index:0;width:100%;height:100%;object-fit:cover;opacity:.9;filter:saturate(1.1) contrast(1.05);pointer-events:none;background:#050914}
   .intro-video-tint{position:absolute;inset:0;z-index:1;background:linear-gradient(135deg,rgba(3,8,18,.42),rgba(15,37,76,.2) 45%,rgba(85,8,31,.28));mix-blend-mode:multiply;pointer-events:none}
-.immersion-gate{position:absolute;inset:0;z-index:30;display:grid;place-items:center;padding:24px;background:rgba(3,6,16,.38);backdrop-filter:blur(8px);transition:opacity .9s ease,visibility .9s ease}
+.immersion-gate{position:absolute;inset:0;z-index:100;display:grid;place-items:center;padding:24px;background:rgba(3,6,16,.38);backdrop-filter:blur(8px);transition:opacity .9s ease,visibility .9s ease;pointer-events:auto}.immersion-gate.is-accepted{pointer-events:none}
 .immersion-gate.is-accepted{opacity:0;visibility:hidden;pointer-events:none}
 .immersion-card{width:min(560px,100%);padding:clamp(28px,5vw,64px);border:1px solid rgba(141,243,255,.5);background:linear-gradient(145deg,rgba(8,18,42,.96),rgba(12,16,34,.88));box-shadow:0 30px 120px rgba(0,0,0,.48),0 0 70px rgba(56,189,248,.12);text-align:center;color:#f5f7fb}
 .immersion-mark{display:grid;place-items:center;width:58px;height:58px;margin:0 auto 24px;border:1px solid #8df3ff;border-radius:50%;color:#8df3ff;font:600 18px/1 ui-monospace,monospace;box-shadow:0 0 28px rgba(141,243,255,.3)}
