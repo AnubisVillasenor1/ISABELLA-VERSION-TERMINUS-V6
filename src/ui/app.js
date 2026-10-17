@@ -24,6 +24,7 @@ let introTimer = 0;
 let introPausedAt = 0;
 let introWatchdog = 0;
 let introActive = false;
+let introMediaClockActive = false;
 let introLastVideoTime = -1;
 let introLastVideoProgressAt = 0;
 const formatIntroTime = (milliseconds) => {
@@ -32,7 +33,8 @@ const formatIntroTime = (milliseconds) => {
 };
 const markIntroVideoReady = () => {
   intro?.classList.add('media-ready');
-  intro?.classList.remove('media-stalled');
+  intro?.classList.remove('media-stalled', 'media-unavailable');
+  introMediaClockActive = Boolean(introVideo && Number.isFinite(introVideo.duration) && introVideo.duration > 1);
   introLastVideoProgressAt = performance.now();
 };
 const startIntroMedia = async () => {
@@ -102,12 +104,17 @@ introVideo?.addEventListener('timeupdate', () => {
   if (!introVideo) return;
   introLastVideoTime = introVideo.currentTime;
   introLastVideoProgressAt = performance.now();
+  introMediaClockActive = Number.isFinite(introVideo.duration) && introVideo.duration > 1;
   intro?.classList.remove('media-stalled');
 });
-introVideo?.addEventListener('error', () => intro?.classList.add('media-unavailable', 'media-stalled'));
+introVideo?.addEventListener('error', () => {
+  introMediaClockActive = false;
+  intro?.classList.add('media-unavailable', 'media-stalled');
+});
 introVideo?.addEventListener('loadedmetadata', () => {
   if (Number.isFinite(introVideo.duration) && introVideo.duration > 1) {
     introTotalMs = Math.max(INTRO_SCENE_MS * introScenes.length, introVideo.duration * 1000);
+    introMediaClockActive = !introVideo.paused;
   }
 });
 introVideo?.addEventListener('ended', () => {
@@ -123,7 +130,20 @@ const dismissIntro = () => {
   intro?.classList.add('is-dismissed');
   document.body.classList.remove('intro-lock');
 };
-const advanceIntro = (elapsed = performance.now() - introStartedAt) => {
+const getIntroElapsed = () => {
+  if (
+    introMediaClockActive &&
+    introVideo &&
+    Number.isFinite(introVideo.duration) &&
+    introVideo.duration > 1
+  ) {
+    // Tie scene transitions to decoded media time; buffering freezes the story instead
+    // of letting titles outrun the video, then desynchronizing when playback resumes.
+    return (introVideo.currentTime / introVideo.duration) * introTotalMs;
+  }
+  return performance.now() - introStartedAt;
+};
+const advanceIntro = (elapsed = getIntroElapsed()) => {
   if (!intro || !introScenes.length) return;
   const boundedElapsed = Math.max(0, Math.min(elapsed, introTotalMs));
   const sceneIndex = Math.min(introScenes.length - 1, Math.floor(boundedElapsed / INTRO_SCENE_MS));
@@ -185,7 +205,7 @@ if (intro) {
       const renderIntroFrame = () => {
         if (!introActive) return;
         if (!document.hidden && !introPausedAt) advanceIntro();
-        introTimer = window.requestAnimationFrame(renderIntroFrame);
+        if (introActive) introTimer = window.requestAnimationFrame(renderIntroFrame);
       };
       advanceIntro(0);
       introTimer = window.requestAnimationFrame(renderIntroFrame);
