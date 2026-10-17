@@ -15,4 +15,11 @@ describe("buildCognitionCacheKey", () => {
     const right = buildCognitionCacheKey("a", [], "auto", "general", "safe");
     expect(left).not.toBe(right);
   });
+
+  it("stores only a fixed-length digest rather than literal prompt/history in the cache key", () => {
+    const key = buildCognitionCacheKey("private prompt text", [{ role: "user", content: "private history" }], "auto", "general", "safe");
+    expect(key).toMatch(/^[a-f0-9]{64}$/);
+    expect(key).not.toContain("private prompt text");
+    expect(key).not.toContain("private history");
+  });
 });
