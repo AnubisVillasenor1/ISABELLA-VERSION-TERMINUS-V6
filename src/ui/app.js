@@ -379,6 +379,28 @@ if ('speechSynthesis' in window) {
   chooseIsabellaVoice();
   window.speechSynthesis.addEventListener('voiceschanged', chooseIsabellaVoice);
 }
+const ISABELLA_PROSODY = Object.freeze({ rate: 0.93, pitch: 1.0, sentencePauseMs: 420 });
+let speechSession = 0;
+const stopSpeech = () => {
+  speechSession += 1;
+  if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+};
+const speechChunks = (text, maxChunk = 220) => {
+  const clean = String(text).replace(/\s+/g, ' ').trim();
+  if (!clean) return [];
+  const out = [];
+  for (const raw of clean.match(/[^.!?…]+[.!?…]*\s*/g) || [clean]) {
+    let part = raw.trim();
+    while (part.length > maxChunk) {
+      const comma = part.lastIndexOf(',', maxChunk);
+      const cut = comma > 40 ? comma + 1 : (part.lastIndexOf(' ', maxChunk) > 0 ? part.lastIndexOf(' ', maxChunk) : maxChunk);
+      out.push(part.slice(0, cut).trim());
+      part = part.slice(cut).trim();
+    }
+    if (part) out.push(part);
+  }
+  return out;
+};
 const speak = (text) => {
   if (!soundOn) return;
   if (!('speechSynthesis' in window)) {
@@ -390,13 +412,23 @@ const speak = (text) => {
     addMessage('La síntesis de voz no tiene una voz española disponible en este navegador; la respuesta queda disponible en texto.', 'isabella');
     return;
   }
-  window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.voice = voice;
-  utterance.lang = voice.lang;
-  utterance.rate = 0.96;
-  utterance.pitch = 1.04;
-  window.speechSynthesis.speak(utterance);
+  stopSpeech();
+  // Prosody mirrors ISABELLA_PROSODY (src/inference/voice-profile.ts): unhurried mid-female register,
+  // sentence-sized chunks so speech starts after the first sentence (lower perceived latency).
+  const chunks = speechChunks(text);
+  const sessionId = ++speechSession;
+  const playChunk = (index) => {
+    if (sessionId !== speechSession || index >= chunks.length) return;
+    const utterance = new SpeechSynthesisUtterance(chunks[index]);
+    utterance.voice = voice;
+    utterance.lang = voice.lang;
+    utterance.rate = ISABELLA_PROSODY.rate;
+    utterance.pitch = ISABELLA_PROSODY.pitch;
+    utterance.onend = () => window.setTimeout(() => playChunk(index + 1), ISABELLA_PROSODY.sentencePauseMs);
+    utterance.onerror = () => { speechSession += 1; };
+    window.speechSynthesis.speak(utterance);
+  };
+  playChunk(0);
 };
 
 const sendCurrentMessage = async () => {
@@ -611,7 +643,7 @@ soundToggle?.addEventListener('click', () => {
   voiceCapability?.classList.toggle('is-active', soundOn);
   if (inspectorVoice) inspectorVoice.textContent = soundOn && ('speechSynthesis' in window) ? 'ON' : (('speechSynthesis' in window || Recognition) ? 'BROWSER' : 'TEXT ONLY');
   soundToggle.setAttribute('aria-pressed', String(soundOn));
-  if (!soundOn && 'speechSynthesis' in window) window.speechSynthesis.cancel();
+  if (!soundOn) stopSpeech();
 });
 
 if (Recognition && mic) {
@@ -946,7 +978,7 @@ const exportConversation = () => {
 };
 const resetConversation = () => {
   if (!messages) return;
-  if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+  stopSpeech();
   messages.innerHTML = initialWelcomeMarkup;
   sessionId = newSessionSeed();
   prompt && (prompt.value = '');
@@ -1061,7 +1093,7 @@ const runCommand = (command) => {
       soundToggle.textContent = `VOZ: ${soundOn ? 'ON' : 'OFF'}`;
       soundToggle.setAttribute('aria-pressed', String(soundOn));
     }
-    if (!soundOn && 'speechSynthesis' in window) window.speechSynthesis.cancel();
+    if (!soundOn) stopSpeech();
     return;
   }
   if (command === 'focus-prompt') {
