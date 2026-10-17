@@ -90,6 +90,7 @@ Las variables que el README previo declara incluyen:
 |---|---|---|
 | DATABASE_URL | PostgreSQL, incluida opción Neon | TLS, mínimo privilegio, migraciones controladas y secretos gestionados. |
 | REDIS_URL | Redis/Upstash | Autenticación, límites, expiración y comportamiento ante indisponibilidad. |
+| ISABELLA_KEYLESS_FREE_PROVIDER | Inferencia externa gratuita sin clave | Desactivada por defecto. Configurar explícitamente `pollinations`, `on`, `true` o `1` sólo si el operador autoriza enviar prompt/historial acotados a ese proveedor. |
 | BOOKPI_LEDGER_PATH | Ruta del ledger BookPI | Permisos, persistencia, backup, recuperación e integridad. |
 | STRICT_PREFLIGHT=1 | Abortar el arranque si preflight detecta errores bloqueantes | Confirmar que identifica dependencias realmente obligatorias. |
 | NODE_ENV=production | Activar validaciones de producción | No sustituye configuración segura ni gestión de secretos. |
@@ -107,7 +108,7 @@ El README previo declara GET /api/v1/ops/preflight protegido por token administr
 - **Datos personales:** la redacción por patrones no garantiza anonimización ni detección exhaustiva.
 - **Memoria y evidencia:** definir clasificación, acceso, retención, eliminación, recuperación y protección frente a manipulación.
 - **Aislamiento multi-tenant:** verificar controles en consultas, cachés, claves, eventos y artefactos.
-- **Proveedores de IA:** disponibilidad, privacidad, costos, residencia de datos y fallback dependen de la configuración y los contratos efectivos.
+- **Proveedores de IA:** disponibilidad, privacidad, costos, residencia de datos y fallback dependen de la configuración y los contratos efectivos. El proveedor keyless externo queda desactivado por defecto y requiere opt-in explícito del operador.
 - **Criptografía:** no afirmar resistencia poscuántica, certificaciones ni cumplimiento normativo sin implementación revisada, parámetros explícitos y pruebas reproducibles.
 - **Auditoría:** demostrar integridad, procedencia, control de acceso y recuperación del ledger/evidencia.
 - **Disponibilidad:** retries y bulkheads no sustituyen pruebas de carga, límites globales, observabilidad ni recuperación.
