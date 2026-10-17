@@ -56,8 +56,12 @@ const rowToRecord = (row: PostgresBookPiRow): BookPiEventRecord => {
   if (!Number.isSafeInteger(sequence) || sequence < 1) throw new Error("BOOKPI_POSTGRES_SEQUENCE_INVALID");
   // node-postgres parses TIMESTAMPTZ into Date by default. Canonical BookPI hashing
   // requires the same ISO-8601 string that was originally sealed, not Date's object keys.
-  const timestamp = row.timestamp instanceof Date ? row.timestamp.toISOString() : row.timestamp;
-  if (!Number.isFinite(Date.parse(timestamp))) throw new Error("BOOKPI_POSTGRES_TIMESTAMP_INVALID");
+  const timestamp = row.timestamp instanceof Date
+    ? (Number.isFinite(row.timestamp.getTime()) ? row.timestamp.toISOString() : "")
+    : row.timestamp;
+  if (typeof timestamp !== "string" || !Number.isFinite(Date.parse(timestamp))) {
+    throw new Error("BOOKPI_POSTGRES_TIMESTAMP_INVALID");
+  }
   return {
     id: row.id, type: row.type, sequence, prevHash: row.prev_hash, timestamp,
     actorId: row.actor_id ?? undefined, header: row.header as BookPiEventRecord["header"],
