@@ -43,6 +43,37 @@ describe("BookPI PostgreSQL adapter contract", () => {
     expect(statements.some((x) => x.sql === "RELEASE")).toBe(true);
   });
 
+  it("normalizes PostgreSQL BIGINT strings before allocating the next sequence", async () => {
+    let insertedParams: unknown[] = [];
+    const previousRow = {
+      id: "evt-41",
+      type: "TEST",
+      sequence: "41",
+      prev_hash: "a".repeat(64),
+      timestamp: "2026-10-17T00:00:00.000Z",
+      actor_id: null,
+      payload: { ok: true },
+      schema_version: "v1",
+      meta: {},
+      header: { type: "TEST", source: "test", protocol: "tamv-federation-v1", hehepcontext: { hexagon: "test", domain: "test" } },
+      hash: "b".repeat(64),
+      integrity: "c".repeat(128),
+      canonical: "{}",
+    };
+    const pool: PostgresLike = {
+      query: async (sql, values = []) => {
+        if (sql.startsWith("SELECT id, type, sequence")) return { rows: [previousRow] };
+        if (sql.startsWith("INSERT INTO")) insertedParams = values;
+        return { rows: [] };
+      },
+    };
+    const storage = createPostgresStorage(pool);
+    const last = await storage.getLastEvent();
+    expect(last?.sequence).toBe(41);
+    await storage.appendEvent(makeSeed());
+    expect(insertedParams[2]).toBe(42);
+  });
+
   it("rejects an append that crosses the configured actor scope", async () => {
     let touchedDatabase = false;
     const pool: PostgresLike = {
