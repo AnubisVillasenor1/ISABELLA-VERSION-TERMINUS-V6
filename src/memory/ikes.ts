@@ -172,7 +172,19 @@ export class IKESEngine {
       return { healthy: false, backend: "VOLATILE_MEMORY", reason: "IKES has no durable persistence adapter configured.", pending: false };
     }
     if (!this.persistenceInitialized) {
-      return { healthy: false, backend: "SUPABASE", reason: "IKES persistence has not completed startup hydration.", pending: true };
+      try {
+        const health = await this.persistence.health();
+        return {
+          healthy: false,
+          backend: "SUPABASE",
+          reason: health.healthy
+            ? "IKES persistence is reachable but startup hydration has not completed."
+            : health.reason,
+          pending: true,
+        };
+      } catch {
+        return { healthy: false, backend: "SUPABASE", reason: "IKES persistence health probe failed; inspect restricted server logs.", pending: true };
+      }
     }
     try {
       await this.flushPersistence();
