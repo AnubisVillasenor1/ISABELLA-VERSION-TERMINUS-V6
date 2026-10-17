@@ -24,6 +24,7 @@ name: Deploy Production Ω
 on:
   workflow_run:
     workflows: ["Isabella Genesis Ω Sovereign CI"]
+    branches: [main]
     types: [completed]
   workflow_dispatch:
     inputs:
@@ -56,46 +57,39 @@ jobs:
       the_sha: ${{ steps.validate.outputs.the_sha }}
       ci_run_id: ${{ steps.validate.outputs.ci_run_id }}
     steps:
-      - name: Validate source and identifiers
+      - name: Validate the exact successful CI run (fail closed)
         id: validate
         shell: bash
+        env:
+          EXPECTED_RUN_ID: ${{ github.event.workflow_run.id || inputs.run_id }}
+          EXPECTED_SHA: ${{ github.event.workflow_run.head_sha || inputs.sha }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
+          [[ "$EXPECTED_RUN_ID" =~ ^[0-9]+$ ]] || { echo "::error::Invalid CI run ID."; exit 1; }
+          [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::Invalid full commit SHA."; exit 1; }
 
-          ALLOWED_WORKFLOW="Isabella Genesis Ω Sovereign CI"
-
-          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
-            EXPECTED_RUN_ID="${{ github.event.workflow_run.id }}"
-            EXPECTED_SHA="${{ github.event.workflow_run.head_sha }}"
-            ACTUAL_WORKFLOW="${{ github.event.workflow_run.name }}"
-          else
-            EXPECTED_RUN_ID="${{ inputs.run_id }}"
-            EXPECTED_SHA="${{ inputs.sha }}"
-            ACTUAL_WORKFLOW="${{ github.event.workflow_run.name || 'manual' }}"
-          fi
-
-          echo "Expected run_id: $EXPECTED_RUN_ID"
-          echo "Expected sha: $EXPECTED_SHA"
-          echo "Source workflow: $ACTUAL_WORKFLOW"
-
-          if [[ "$ACTUAL_WORKFLOW" != "$ALLOWED_WORKFLOW" ]]; then
-            echo "::error::Unauthorized workflow source: '$ACTUAL_WORKFLOW'. Expected '$ALLOWED_WORKFLOW'."
-            exit 1
-          fi
-
-          if [[ -z "$EXPECTED_RUN_ID" ]]; then
-            echo "::error::Missing run_id."
-            exit 1
-          fi
-
-          if [[ -z "$EXPECTED_SHA" ]]; then
-            echo "::error::Missing commit SHA."
-            exit 1
-          fi
-
-          echo "the_sha=$EXPECTED_SHA" >> "$GITHUB_OUTPUT"
-          echo "ci_run_id=$EXPECTED_RUN_ID" >> "$GITHUB_OUTPUT"
-          echo "Source validation passed."
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$EXPECTED_RUN_ID" > "$RUNNER_TEMP/source-run.json"
+          node --input-type=module <<'NODE'
+          import fs from "node:fs";
+          const run = JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + "/source-run.json", "utf8"));
+          const expectedSha = process.env.EXPECTED_SHA;
+          const expectedName = "Isabella Genesis Ω Sovereign CI";
+          const checks = {
+            correctWorkflow: run.name === expectedName,
+            successful: run.conclusion === "success",
+            mainBranch: run.head_branch === "main",
+            pushEvent: run.event === "push",
+            exactSha: run.head_sha === expectedSha,
+          };
+          for (const [name, ok] of Object.entries(checks)) console.log(name + "=" + String(ok));
+          if (Object.values(checks).some((ok) => !ok)) {
+            console.error("Deployment gate rejected the CI run. Only a successful push run for the exact SHA on main is eligible.");
+            process.exit(1);
+          }
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, "the_sha=" + run.head_sha + "\\nci_run_id=" + run.id + "\\n");
+          NODE
+          echo "Validated exact successful CI run for SHA $EXPECTED_SHA."
 
   secret-scan:
     name: Secret scan (gitleaks)
