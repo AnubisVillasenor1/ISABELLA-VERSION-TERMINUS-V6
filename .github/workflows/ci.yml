@@ -37,6 +37,15 @@ jobs:
     outputs:
       build_id: ${{ steps.meta.outputs.build_id }}
     steps:
+      - name: Get Secrets (Bitwarden)
+        uses: bitwarden/sm-action@v2
+        with:
+          access_token: ${{ secrets.BW_ACCESS_TOKEN }}
+          base_url: https://vault.bitwarden.com
+          secrets: |
+            00000000-0000-0000-0000-000000000000 > PERPLEXITY_API_KEY
+            00000000-0000-0000-0000-000000000001 > BRAINTRUST_API_KEY
+            00000000-0000-0000-0000-000000000002 > OPENROUTER_API_KEY
       - id: meta
         shell: bash
         run: |
