@@ -3,12 +3,8 @@ const byId = (id) => document.getElementById(id);
 const intro = byId('cinematicIntro');
 const immersionGate = byId('immersionGate');
 const startImmersion = byId('startImmersion');
-const humanCheckBox = byId('humanCheckBox');
-const humanCheckChallenge = byId('humanCheckChallenge');
-const humanCheckCode = byId('humanCheckCode');
-const humanCheckInput = byId('humanCheckInput');
-const humanCheckMark = byId('humanCheckMark');
-const humanCheckStatus = byId('humanCheckStatus');
+const immersionConsent = byId('immersionConsent');
+const immersionConsentStatus = byId('immersionConsentStatus');
 const introVideo = byId('introVideo');
 const introScenes = [...document.querySelectorAll('.intro-scene')];
 const introProgressBar = byId('introProgressBar');
@@ -27,6 +23,7 @@ let introStartedAt = 0;
 let introTimer = 0;
 let introPausedAt = 0;
 let introWatchdog = 0;
+let introActive = false;
 let introLastVideoTime = -1;
 let introLastVideoProgressAt = 0;
 const formatIntroTime = (milliseconds) => {
@@ -41,19 +38,27 @@ const markIntroVideoReady = () => {
 const startIntroMedia = async () => {
   if (!introVideo) return;
   window.clearInterval(introWatchdog);
+  // The user's explicit consent is the gesture that unlocks playback. Ask the browser
+  // to warm the complete small web rendition before the intro sequence advances.
+  introVideo.preload = 'auto';
+  if (introVideo.readyState === HTMLMediaElement.HAVE_NOTHING) introVideo.load();
   introVideo.currentTime = 0;
   introVideo.muted = false;
-  introVideo.volume = 1;
-  const playVideo = async () => {
+  introVideo.volume = 0.82;
+  try {
+    await introVideo.play();
+    markIntroVideoReady();
+  } catch {
+    // Some browser/device combinations block audio despite the click; continue only
+    // if muted playback is allowed, and keep the CSS motion background as a fallback.
+    introVideo.muted = true;
     try {
       await introVideo.play();
       markIntroVideoReady();
     } catch {
-      introVideo.muted = true;
-      await introVideo.play().then(markIntroVideoReady).catch(() => intro?.classList.add('media-unavailable'));
+      intro?.classList.add('media-unavailable', 'media-stalled');
     }
-  };
-  await playVideo();
+  }
   introLastVideoTime = introVideo.currentTime;
   introWatchdog = window.setInterval(() => {
     if (!introVideo || introVideo.paused || introVideo.ended) return;
@@ -64,11 +69,9 @@ const startIntroMedia = async () => {
       intro?.classList.remove('media-stalled');
       return;
     }
-    if (now - introLastVideoProgressAt > 1200) {
-      intro?.classList.add('media-stalled');
-      void playVideo();
-      introLastVideoProgressAt = now;
-    }
+    // Do not spam play() while a network buffer is empty; browsers already retry
+    // automatically. Hide only the video layer so the lightweight animated scene shows.
+    if (now - introLastVideoProgressAt > 1400) intro?.classList.add('media-stalled');
   }, 500);
 };
 const stopIntroMedia = () => {
@@ -76,26 +79,32 @@ const stopIntroMedia = () => {
   introVideo?.pause();
   if (introVideo) introVideo.currentTime = 0;
 };
-// Warm the intro video buffer while the person completes the human check (poster shows meanwhile).
-humanCheckBox?.addEventListener('change', () => { if (introVideo && introVideo.preload !== 'auto') introVideo.preload = 'auto'; }, { once: true });
-const humanCode = String(Math.floor(1000 + Math.random() * 9000));
-let humanVerified = false;
-if (humanCheckCode) humanCheckCode.textContent = humanCode;
-const updateHumanCheck = () => {
-  const checked = Boolean(humanCheckBox?.checked);
-  if (humanCheckChallenge) humanCheckChallenge.hidden = !checked;
-  if (humanCheckMark) humanCheckMark.classList.toggle('is-visible', checked);
-  if (humanCheckStatus) humanCheckStatus.textContent = checked ? 'Ahora escribe los 4 números mostrados.' : 'Selecciona el recuadro para comenzar.';
-  if (checked) humanCheckInput?.focus();
+// This checkbox records multimedia consent only; it is deliberately not presented as
+// bot protection or identity verification. Server-side rate limits remain separate.
+const updateImmersionConsent = () => {
+  const accepted = Boolean(immersionConsent?.checked);
+  if (startImmersion) startImmersion.disabled = !accepted;
+  if (immersionConsentStatus) {
+    immersionConsentStatus.textContent = accepted
+      ? 'Autorización registrada. El video se está preparando para una reproducción fluida.'
+      : 'La reproducción permanece desactivada hasta que la autorices.';
+  }
+  if (accepted && introVideo) {
+    introVideo.preload = 'auto';
+    if (introVideo.readyState === HTMLMediaElement.HAVE_NOTHING) introVideo.load();
+  }
 };
-const validateHumanCheck = () => {
-  humanVerified = Boolean(humanCheckBox?.checked && humanCheckInput?.value === humanCode);
-  if (startImmersion) startImmersion.disabled = !humanVerified;
-  if (humanCheckStatus) humanCheckStatus.textContent = humanVerified ? 'Verificación completada. El video está listo para iniciar.' : 'El código no coincide todavía.';
-  humanCheckInput?.classList.toggle('is-valid', humanVerified);
-};
-humanCheckBox?.addEventListener('change', updateHumanCheck);
-humanCheckInput?.addEventListener('input', validateHumanCheck);
+immersionConsent?.addEventListener('change', updateImmersionConsent);
+introVideo?.addEventListener('waiting', () => intro?.classList.add('media-stalled'));
+introVideo?.addEventListener('stalled', () => intro?.classList.add('media-stalled'));
+introVideo?.addEventListener('playing', markIntroVideoReady);
+introVideo?.addEventListener('timeupdate', () => {
+  if (!introVideo) return;
+  introLastVideoTime = introVideo.currentTime;
+  introLastVideoProgressAt = performance.now();
+  intro?.classList.remove('media-stalled');
+});
+introVideo?.addEventListener('error', () => intro?.classList.add('media-unavailable', 'media-stalled'));
 introVideo?.addEventListener('loadedmetadata', () => {
   if (Number.isFinite(introVideo.duration) && introVideo.duration > 1) {
     introTotalMs = Math.max(INTRO_SCENE_MS * introScenes.length, introVideo.duration * 1000);
@@ -105,7 +114,10 @@ introVideo?.addEventListener('ended', () => {
   dismissIntro();
 });
 const dismissIntro = () => {
-  window.clearInterval(introTimer);
+  introActive = false;
+  if (introTimer) window.cancelAnimationFrame(introTimer);
+  introTimer = 0;
+  window.clearInterval(introWatchdog);
   stopIntroMedia();
   immersionGate?.classList.add('is-accepted');
   intro?.classList.add('is-dismissed');
@@ -126,6 +138,27 @@ const advanceIntro = (elapsed = performance.now() - introStartedAt) => {
   if (introTimecode) introTimecode.textContent = `${formatIntroTime(boundedElapsed)} / ${formatIntroTime(introTotalMs)}`;
   if (boundedElapsed >= introTotalMs) dismissIntro();
 };
+document.addEventListener('visibilitychange', () => {
+  if (!introActive) return;
+  if (document.hidden) {
+    if (!introPausedAt) introPausedAt = performance.now();
+    introVideo?.pause();
+    return;
+  }
+  if (introPausedAt) {
+    introStartedAt += performance.now() - introPausedAt;
+    introPausedAt = 0;
+  }
+  if (introVideo && introVideo.paused && !introVideo.ended) {
+    void introVideo.play().then(markIntroVideoReady).catch(() => {
+      introVideo.muted = true;
+      void introVideo.play().then(markIntroVideoReady).catch(() => {
+        intro?.classList.add('media-unavailable', 'media-stalled');
+      });
+    });
+  }
+});
+
 if (intro) {
   const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   const cinematicDisabled = new URLSearchParams(window.location.search).get('intro') === '0';
@@ -140,22 +173,22 @@ if (intro) {
     skipIntro?.addEventListener('click', dismissIntro);
     intro.querySelector('.intro-enter')?.addEventListener('click', dismissIntro);
     const beginImmersion = () => {
-      if (!humanVerified) {
-        humanCheckStatus?.focus?.();
+      if (!immersionConsent?.checked) {
+        immersionConsent?.focus?.();
         return;
       }
       immersionGate?.classList.add('is-accepted');
-      void startIntroMedia();
+      introActive = true;
+      introPausedAt = 0;
       introStartedAt = performance.now();
-      introTimer = window.setInterval(() => {
-        if (document.hidden) {
-          if (!introPausedAt) introPausedAt = performance.now();
-          return;
-        }
-        if (introPausedAt) { introStartedAt += performance.now() - introPausedAt; introPausedAt = 0; }
-        advanceIntro();
-      }, 80);
+      void startIntroMedia();
+      const renderIntroFrame = () => {
+        if (!introActive) return;
+        if (!document.hidden && !introPausedAt) advanceIntro();
+        introTimer = window.requestAnimationFrame(renderIntroFrame);
+      };
       advanceIntro(0);
+      introTimer = window.requestAnimationFrame(renderIntroFrame);
     };
     startImmersion?.addEventListener('click', beginImmersion, { once: true });
   }
