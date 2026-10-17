@@ -129,7 +129,7 @@ La inspección estática de los workflows encontró puntos que deben resolverse 
 
 Los siguientes criterios deben quedar verificados antes de autorizar producción.
 
-- [ ] Node y pnpm alineados entre manifiesto, CI, contenedor y runtime.
+- [ ] Node y pnpm alineados entre manifiesto, CI, contenedor y runtime (workflows corregidos en esta rama; validación integral pendiente).
 - [ ] Typecheck, suite completa, build, smoke y seguridad en verde sobre el mismo SHA.
 - [ ] E2E contra PostgreSQL y Redis cuando formen parte del modo productivo.
 - [ ] Conversación real con proveedor configurado, timeout, presupuesto y fallback verificable.
