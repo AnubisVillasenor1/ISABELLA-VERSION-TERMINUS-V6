@@ -24,6 +24,7 @@ import { hashSourceContent } from "./memory/ikes";
 import { createSupabaseIkesPersistence } from "./memory/ikes-supabase";
 import { bookPiLedger } from "./bookpi";
 import { createRuntimeBookPiStorage } from "./bookpi/runtime-storage";
+import { inspectLegacyBookPiLedger } from "./bookpi/readiness";
 import { evaluateEpistemicState, EPISTEMIC_LADDER_SPEC } from "./cognition/epistemic-evaluator";
 import { createAtlasStoreFromEnv } from "./atlas";
 import { createDiffObservatory, sanitizeDiffSnapshot, snapshotMetadataHash } from "./plugins";
@@ -2223,25 +2224,11 @@ app.post("/api/v1/security/triangulate", (req, res) => {
 
 // Configuration presence alone is not proof of provider health.
 async function currentOpsState() {
-  // Probe the legacy synchronous ledger instead of hardcoding it as degraded.
-  // This is deliberately separate from pipelineBookPi: the two stores are not yet unified.
-  let legacyLedgerStatus: "healthy" | "degraded" = "degraded";
-  let bookPiBackend = "UNKNOWN";
-  let bookPiReason = "Legacy BookPI ledger probe has not completed.";
-  try {
-    const verification = bookPiLedger.verify();
-    bookPiBackend = verification.storage;
-    if (!verification.valid) {
-      bookPiReason = "Legacy BookPI chain verification failed; inspect the restricted operator report.";
-    } else if (verification.durable) {
-      legacyLedgerStatus = "healthy";
-      bookPiReason = "Legacy BookPI durable local chain verified; this is not shared PostgreSQL durability.";
-    } else {
-      bookPiReason = "Legacy BookPI in-memory chain is valid but volatile; events will not survive process restart.";
-    }
-  } catch {
-    bookPiReason = "Legacy BookPI ledger is unavailable or requires maintenance recovery.";
-  }
+  // The synchronous legacy ledger and async pipeline port remain distinct dependencies.
+  const legacyLedgerProbe = inspectLegacyBookPiLedger(() => bookPiLedger.verify());
+  const legacyLedgerStatus = legacyLedgerProbe.status;
+  const bookPiBackend = legacyLedgerProbe.backend;
+  const bookPiReason = legacyLedgerProbe.reason;
   let atlasStatus: "healthy" | "degraded" | "unavailable" = "unavailable";
   let atlasReason = "No Atlas persistence adapter is configured.";
   if (runtime.persistence && typeof runtime.persistence.health === "function") {
