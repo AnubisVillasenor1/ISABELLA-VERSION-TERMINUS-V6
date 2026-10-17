@@ -1,6 +1,8 @@
+import { createHash } from "node:crypto";
+
 /**
- * Canonical cache-key encoding. The governance method is part of the tuple so
- * identical text cannot share an entry across materially different policy paths.
+ * Hash a canonical request tuple instead of retaining user prompts/history as
+ * Map keys. The governance method is included to isolate distinct policy paths.
  */
 export function buildCognitionCacheKey(
   input: string,
@@ -9,5 +11,6 @@ export function buildCognitionCacheKey(
   focusLens: string,
   methodId: string,
 ): string {
-  return JSON.stringify([modelEngine, focusLens, methodId, input, history ?? []]) ?? "null";
+  const canonical = JSON.stringify([modelEngine, focusLens, methodId, input, history ?? []]) ?? "null";
+  return createHash("sha256").update(canonical, "utf8").digest("hex");
 }
