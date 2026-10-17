@@ -3,6 +3,12 @@ const byId = (id) => document.getElementById(id);
 const intro = byId('cinematicIntro');
 const immersionGate = byId('immersionGate');
 const startImmersion = byId('startImmersion');
+const humanCheckBox = byId('humanCheckBox');
+const humanCheckChallenge = byId('humanCheckChallenge');
+const humanCheckCode = byId('humanCheckCode');
+const humanCheckInput = byId('humanCheckInput');
+const humanCheckMark = byId('humanCheckMark');
+const humanCheckStatus = byId('humanCheckStatus');
 const introVideo = byId('introVideo');
 const introScenes = [...document.querySelectorAll('.intro-scene')];
 const introProgressBar = byId('introProgressBar');
@@ -70,6 +76,24 @@ const stopIntroMedia = () => {
   introVideo?.pause();
   if (introVideo) introVideo.currentTime = 0;
 };
+const humanCode = String(Math.floor(1000 + Math.random() * 9000));
+let humanVerified = false;
+if (humanCheckCode) humanCheckCode.textContent = humanCode;
+const updateHumanCheck = () => {
+  const checked = Boolean(humanCheckBox?.checked);
+  if (humanCheckChallenge) humanCheckChallenge.hidden = !checked;
+  if (humanCheckMark) humanCheckMark.classList.toggle('is-visible', checked);
+  if (humanCheckStatus) humanCheckStatus.textContent = checked ? 'Ahora escribe los 4 números mostrados.' : 'Selecciona el recuadro para comenzar.';
+  if (checked) humanCheckInput?.focus();
+};
+const validateHumanCheck = () => {
+  humanVerified = Boolean(humanCheckBox?.checked && humanCheckInput?.value === humanCode);
+  if (startImmersion) startImmersion.disabled = !humanVerified;
+  if (humanCheckStatus) humanCheckStatus.textContent = humanVerified ? 'Verificación completada. El video está listo para iniciar.' : 'El código no coincide todavía.';
+  humanCheckInput?.classList.toggle('is-valid', humanVerified);
+};
+humanCheckBox?.addEventListener('change', updateHumanCheck);
+humanCheckInput?.addEventListener('input', validateHumanCheck);
 introVideo?.addEventListener('loadedmetadata', () => {
   if (Number.isFinite(introVideo.duration) && introVideo.duration > 1) {
     introTotalMs = Math.max(INTRO_SCENE_MS * introScenes.length, introVideo.duration * 1000);
@@ -114,6 +138,10 @@ if (intro) {
     skipIntro?.addEventListener('click', dismissIntro);
     intro.querySelector('.intro-enter')?.addEventListener('click', dismissIntro);
     const beginImmersion = () => {
+      if (!humanVerified) {
+        humanCheckStatus?.focus?.();
+        return;
+      }
       immersionGate?.classList.add('is-accepted');
       void startIntroMedia();
       introStartedAt = performance.now();

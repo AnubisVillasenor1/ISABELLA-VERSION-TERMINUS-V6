@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#080d14" />
   <title>Isabella Villaseñor AI | Genesis TINA V6</title>
   <link rel="preload" as="video" href="/assets/video/IntroVideoIsabella.mp4" />
-  <link rel="stylesheet" href="/styles/cinematic.css" />
+  <link rel="stylesheet" href="/styles/cinematic.css?v=human-check-1" />
 </head>
 <body>
   <a class="skip-link" href="#chat">Saltar a la conversación</a>
@@ -17,7 +17,20 @@
         <p class="eyebrow">ISABELLA V6 GENESIS</p>
         <h1 id="immersion-title">Bienvenido a la inmersión.</h1>
         <p>Para iniciar necesitamos tu permiso para reproducir el <strong>audio</strong> y mostrar la experiencia visual (<strong>video</strong>) de bienvenida.</p>
-        <button id="startImmersion" class="immersion-start" type="button">INICIAR INMERSIÓN <span>↗</span></button>
+        <div class="human-check" aria-labelledby="humanCheckLabel">
+          <div class="human-check-row">
+            <input id="humanCheckBox" class="human-check-box" type="checkbox" aria-describedby="humanCheckStatus" />
+            <label id="humanCheckLabel" for="humanCheckBox">Verificación humana</label>
+            <span id="humanCheckMark" class="human-check-mark" aria-hidden="true">✓</span>
+          </div>
+          <div id="humanCheckChallenge" class="human-check-challenge" hidden>
+            <span class="human-check-caption">Escribe los 4 números para continuar</span>
+            <strong id="humanCheckCode" class="human-check-code" aria-label="Código de verificación"></strong>
+            <input id="humanCheckInput" class="human-check-input" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="0000" aria-label="Código de verificación" />
+          </div>
+          <p id="humanCheckStatus" class="human-check-status" role="status">Selecciona el recuadro para comenzar.</p>
+        </div>
+        <button id="startImmersion" class="immersion-start" type="button" disabled>INICIAR INMERSIÓN <span>↗</span></button>
         <div class="immersion-dedication">
           <div class="immersion-network">TAMV ONLINE NETWORK <span>«Orgullosamente Realmontenses»</span></div>
           <div class="immersion-tribute">Proyecto desarrollado entre neblina y montaña, dedicado a Reyna Trejo Serrano; levanta el rostro y sonríe, hoy tu oveja negra logró algo por lo que puedas sentir orgullo. Te amo, madre.</div>
@@ -181,5 +194,5 @@
     </div>
     <p class="palette-foot">Usa ↑ ↓ para recorrer la lista, Enter para abrir y Esc para cerrar. Atajo global: Ctrl/Cmd + K.</p>
   </dialog>
-  <script src="/ui/app.js" defer></script>
+  <script src="/ui/app.js?v=human-check-1" defer></script>
 </body></html>
