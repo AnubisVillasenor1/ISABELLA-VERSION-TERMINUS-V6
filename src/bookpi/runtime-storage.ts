@@ -1,7 +1,10 @@
+import { randomUUID } from "node:crypto";
 import { Pool } from "pg";
+import { buildBookPiEvent } from "./emitter";
+import { verifyChainLink, ZERO_HASH } from "./crypto";
 import { createPostgresStorage } from "./storage-postgres";
 import { createJsonlStorage } from "./storage-jsonl";
-import type { BookPiStorage } from "./types";
+import type { BookPiEventRecord, BookPiEventSeed, BookPiStorage } from "./types";
 
 export type RuntimeBookPiBackend = "POSTGRES" | "DURABLE_JSONL_LOCAL" | "VOLATILE_MEMORY";
 
@@ -42,7 +45,9 @@ export function createRuntimeBookPiStorage(
       idleTimeoutMillis: 10_000,
       application_name: "isabella-terminus-bookpi",
     });
-    const actorId = (env.ISABELLA_BOOKPI_ACTOR_ID ?? "isabella-runtime").trim();
+    // Pipeline route uses a single admin-gated service principal. The Postgres
+    // adapter's RLS context and event actor must be identical for chain reads.
+    const actorId = "human:pipeline-session";
     if (!actorId) throw new Error("ISABELLA_BOOKPI_ACTOR_ID_REQUIRED");
     const storage = createPostgresStorage(pool, "bookpi_events", { actorId });
     return {
@@ -111,11 +116,6 @@ export function createRuntimeBookPiStorage(
     async close() {},
   };
 }
-
-import { randomUUID } from "node:crypto";
-import { buildBookPiEvent } from "./emitter";
-import { verifyChainLink, ZERO_HASH } from "./crypto";
-import type { BookPiEventRecord, BookPiEventSeed } from "./types";
 
 function createMemoryStorage(): BookPiStorage {
   const events: BookPiEventRecord[] = [];
