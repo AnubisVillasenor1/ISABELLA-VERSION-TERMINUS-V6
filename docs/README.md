@@ -115,7 +115,6 @@ Listado reconstruido del árbol Git de `main` más los cambios documentales de e
 ### archive
 
 - [`archive/GENESISAI-500-CONTROL-CHECKLISTS-2026-10.md`](archive/GENESISAI-500-CONTROL-CHECKLISTS-2026-10.md)
-- [`archive/HISTORICAL-AUDITS-GENESIS-TINA-2026-10-08-12.md`](archive/HISTORICAL-AUDITS-GENESIS-TINA-2026-10-08-12.md)
 
 ### audit
 
