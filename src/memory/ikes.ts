@@ -149,6 +149,12 @@ export class IKESEngine {
     this.persistenceInitialized = true;
   }
 
+  private assertInitialized(): void {
+    if (this.persistence && !this.persistenceInitialized) {
+      throw new Error("IKES_PERSISTENCE_NOT_INITIALIZED");
+    }
+  }
+
   private enqueuePersistence(write: () => Promise<void>): void {
     if (!this.persistence) return;
     this.pendingWrites = this.pendingWrites.then(write).then(() => {
@@ -185,6 +191,7 @@ export class IKESEngine {
   }
 
   registerSource(source: KnowledgeSource): void {
+    this.assertInitialized();
     if (!source.sourceId.trim() || !source.title.trim()) throw new Error("IKES_SOURCE_METADATA_REQUIRED");
     if (!/^[a-f0-9]{64}$/i.test(source.contentHash)) throw new Error("IKES_SOURCE_HASH_MUST_BE_SHA256");
     if (!Number.isFinite(Date.parse(source.retrievedAt))) throw new Error("IKES_SOURCE_RETRIEVED_AT_INVALID");
@@ -201,6 +208,7 @@ export class IKESEngine {
 
   /** Builds a candidate without mutating canonical IKES state. */
   prepareProposal(proposal: KnowledgeProposal): KnowledgeClaim {
+    this.assertInitialized();
     if (!proposal || !Array.isArray(proposal.evidenceIds) || proposal.evidenceIds.length === 0) {
       throw new Error("IKES_EVIDENCE_REQUIRED");
     }
@@ -255,6 +263,7 @@ export class IKESEngine {
   }
 
   corroborate(claimId: string, evidenceIds: readonly string[]): KnowledgeClaim {
+    this.assertInitialized();
     const claim = this.requireClaim(claimId);
     if (!Array.isArray(evidenceIds) || evidenceIds.length === 0) {
       throw new Error("IKES_CORROBORATION_EVIDENCE_REQUIRED");
@@ -284,6 +293,7 @@ export class IKESEngine {
   }
 
   deprecate(claimId: string): KnowledgeClaim {
+    this.assertInitialized();
     const claim = this.requireClaim(claimId);
     const next: KnowledgeClaim = { ...claim, temporalState: "superseded", epistemicState: "DP_DEPRECATED", version: claim.version + 1 };
     next.contentHash = claimContentHash(next);
@@ -294,6 +304,7 @@ export class IKESEngine {
   }
 
   retrieve(query: string, opts: { temporal?: TemporalState; minEvidence?: EpistemicState } = {}): KnowledgeClaim[] {
+    this.assertInitialized();
     const q = query.toLowerCase();
     return [...this.claims.values()]
       .filter((c) => opts.temporal ? c.temporalState === opts.temporal : c.temporalState === "current")
@@ -304,7 +315,7 @@ export class IKESEngine {
       .sort((a, b) => epistemicRank(b.epistemicState) - epistemicRank(a.epistemicState));
   }
 
-  listClaims(): readonly KnowledgeClaim[] { return [...this.claims.values()]; }
+  listClaims(): readonly KnowledgeClaim[] { this.assertInitialized(); return [...this.claims.values()]; }
 
   private requireClaim(id: string): KnowledgeClaim {
     const claim = this.claims.get(id);
