@@ -1198,7 +1198,9 @@ app.post("/api/v1/cognition/route", async (req, res) => {
         generativeNarrative = await generateKeylessFreeNarrative(systemPrompt, input, history, chainBudget);
         if (generativeNarrative) responseEngine = "keyless-free";
       }
-      if (!generativeNarrative && process.env.ALLOW_PAID_PROVIDER_FALLBACK === "true") {
+      // The Open Science mode is never allowed to degrade into paid proprietary APIs;
+      // operator-level paid opt-in applies to Auto/Gemini, not to an explicit open-only request.
+      if (!generativeNarrative && modelEngine !== "open-science" && process.env.ALLOW_PAID_PROVIDER_FALLBACK === "true") {
         // These APIs may consume provider credits or incur usage charges. Only attempt
         // them after the operator opts in and explicitly configures models.
         if (!generativeNarrative && process.env.HF_TOKEN && process.env.HF_FREE_MODELS?.trim() && !chainBudget.expired()) {
