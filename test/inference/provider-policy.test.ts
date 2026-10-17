@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildOpenAICompatibleCandidates } from "../../src/inference/provider-policy";
+import { buildOpenAICompatibleCandidates, isOpenRouterModelAllowed } from "../../src/inference/provider-policy";
 
 describe("OpenAI-compatible candidate builder", () => {
   it("fails closed without paid-provider opt-in, even when credentials exist", () => {
@@ -73,5 +73,17 @@ describe("OpenAI-compatible candidate builder", () => {
       GROQ_API_KEY: "groq-key",
       GROQ_MODEL: "model",
     })).toHaveLength(0);
+  });
+});
+
+describe("OpenRouter free-model guard", () => {
+  it("accepts the free router and explicit :free model IDs when paid routes are disabled", () => {
+    expect(isOpenRouterModelAllowed("openrouter/free", false)).toBe(true);
+    expect(isOpenRouterModelAllowed("publisher/model:free", false)).toBe(true);
+  });
+
+  it("rejects paid or unknown model IDs from the free route", () => {
+    expect(isOpenRouterModelAllowed("publisher/model", false)).toBe(false);
+    expect(isOpenRouterModelAllowed("   ", true)).toBe(false);
   });
 });
