@@ -58,6 +58,26 @@ describe("IGE-OMEGA gateway health/readiness probe", () => {
     expect(fetcher).not.toHaveBeenCalled();
   });
 
+  it("fails closed when the gateway health response exceeds the byte budget", async () => {
+    const fetcher = vi.fn().mockResolvedValue(new Response("x".repeat(2_049), { status: 200 }));
+    const result = await probeIgeOmegaGateway({
+      IGE_OMEGA_GATEWAY_URL: "http://localhost:8080",
+      NODE_ENV: "test",
+    }, fetcher as unknown as typeof fetch);
+    expect(result.status).toBe("DEGRADED");
+    expect(result.reason).not.toContain("BODY_TOO_LARGE");
+  });
+
+  it("fails closed on malformed health JSON without leaking the response body", async () => {
+    const fetcher = vi.fn().mockResolvedValue(new Response("private-secret-not-json", { status: 200 }));
+    const result = await probeIgeOmegaGateway({
+      IGE_OMEGA_GATEWAY_URL: "http://localhost:8080",
+      NODE_ENV: "test",
+    }, fetcher as unknown as typeof fetch);
+    expect(result.status).toBe("DEGRADED");
+    expect(result.reason).not.toContain("private-secret-not-json");
+  });
+
   it("sanitizes network failures without exposing raw exception details", async () => {
     const fetcher = vi.fn().mockRejectedValue(new Error("private endpoint secret"));
     const result = await probeIgeOmegaGateway({
