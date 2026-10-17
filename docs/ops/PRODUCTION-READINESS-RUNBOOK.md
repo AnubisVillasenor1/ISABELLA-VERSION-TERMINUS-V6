@@ -18,6 +18,8 @@ El smoke test local sí verificó `health=200`, `chat=200` y `followUp=200` medi
 ### 1. Aplicar el esquema de Atlas en Supabase
 
 Migración versionada: `supabase/migrations/20261017000000_atlas-store-core.sql`.
+Migración de memoria: `supabase/migrations/20261017000001_ikes-memory.sql`.
+Migraciones del ledger PostgreSQL: `infra/db/migrations/001_create_bookpi_events.sql` y `infra/db/migrations/002_bookpi_canonical_immutability.sql`.
 
 1. Revisar el SQL con el responsable de la base de datos.
 2. Aplicarlo mediante el flujo de migraciones aprobado del proyecto Supabase (no pegar secretos en issues, PRs o logs).
@@ -27,34 +29,51 @@ Migración versionada: `supabase/migrations/20261017000000_atlas-store-core.sql`
 
 **No resuelto por la migración:** que el valor de las variables de entorno sea válido, que el esquema existente sea compatible o que las operaciones funcionales cumplan aislamiento multi-tenant. La migración no se ha aplicado a la base remota desde este cambio.
 
-### 2. Sustituir BookPI volátil en producción
+### 2. Activar el BookPI compartido del pipeline
+
+El código de esta rama conecta `POST /api/v1/pipeline/execute` al puerto `createRuntimeBookPiStorage`. Si `DATABASE_URL` está configurada, selecciona PostgreSQL automáticamente; también se puede indicar `BOOKPI_PIPELINE_STORAGE=postgres`.
+
+1. Aplicar las dos migraciones de BookPI a la base PostgreSQL de la aplicación.
+2. Configurar `DATABASE_URL` con TLS y privilegios mínimos; nunca incluir el valor en logs, issues ni README.
+3. Confirmar que la tabla `bookpi_events` existe y que el actor de pipeline `human:pipeline-session` puede leer/escribir bajo RLS.
+4. Ejecutar `pnpm run postgres:e2e` contra una base de pruebas desechable y comprobar cadena, inserción concurrente y reinicio.
+5. Confirmar que el probe de `pipeline-bookpi-storage` indica `POSTGRES`, cadena válida y recuento observado.
+
+**Límite actual:** esto vuelve durable el ledger del conductor del pipeline, no sustituye todavía el singleton síncrono `bookPiLedger` utilizado por las rutas heredadas (YUN, HyperCore y otras). Ese singleton permanece degradado hasta una migración coordinada de su API síncrona o hasta que esas rutas se trasladen explícitamente al puerto asíncrono. No declarar que todo BookPI es compartido sólo porque el pipeline use PostgreSQL.
+
+### 3. Hidratar y persistir IKES
+
+El código de esta rama incorpora `SupabaseIkesPersistence` y conecta el motor al arranque del runtime. Las fuentes y claims se escriben en tablas separadas; la hidratación valida hashes y referencias y no eleva estados epistémicos automáticamente.
+
+1. Aplicar `supabase/migrations/20261017000001_ikes-memory.sql`.
+2. Confirmar acceso server-only mediante `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY`; nunca exponer la clave al cliente.
+3. Esperar a que el runtime complete hidratación antes de consultar o mutar IKES.
+4. Probar alta de fuente, persistencia de claim admitido, reinicio del proceso y recuperación de los mismos hashes/estados.
+5. Confirmar que un error de escritura devuelve fallo y mantiene degradado el probe; no tratar una mutación en memoria como éxito durable.
+
+**Límite actual:** la cola serializa las escrituras, pero no reemplaza una transacción única entre fuentes y claims. El estado epistemológico sigue sujeto al flujo gobernado; almacenar un claim no es evidencia independiente de su veracidad.
+
+### 4. Sustituir BookPI volátil en producción
 
 - No configurar un archivo local o `/tmp` como si fuera almacenamiento durable de Vercel/serverless.
 - `createPostgresStorage` ya existe como adaptador asíncrono, pero el singleton `bookPiLedger` usado por rutas sigue siendo síncrono y selecciona memoria/JSONL local.
 - Implementar y probar un adaptador durable integrado a los consumidores reales, con migración, concurrencia transaccional, verificación de cadena, backup/restore y control de acceso.
 - No declarar WORM: el adaptador Postgres por sí solo no proporciona almacenamiento WORM ni inmutabilidad física.
 
-### 3. Hacer durable IKES
-
-- `IKESEngine` mantiene fuentes y claims en mapas en memoria.
-- Implementar persistencia y recuperación de fuentes/claims, control de versión, hashes, transacciones y pruebas de reinicio.
-- Añadir un probe de solo lectura que compruebe la persistencia activa sin exponer contenido de claims.
-- Mantener revisión humana para elevar estados epistémicos; guardar datos no debe elevar automáticamente la confianza.
-
-### 4. Validar inferencia real sin violar privacidad
+### 5. Validar inferencia real sin violar privacidad
 
 - La inferencia externa keyless queda desactivada por defecto.
 - Para habilitar un proveedor externo, el operador debe configurar expresamente `ISABELLA_KEYLESS_FREE_PROVIDER=pollinations` o un proveedor con credenciales, tras revisar tratamiento de datos, límites, disponibilidad y condiciones.
 - No enviar información confidencial a proveedores gratuitos sin aprobación explícita.
 - Ejecutar el smoke test del gateway y registrar proveedor/modelo efectivo, latencia, fallback y errores sin registrar prompts o secretos.
 
-### 5. Instrumentar observabilidad
+### 6. Instrumentar observabilidad
 
 - Configurar `OTEL_EXPORTER_OTLP_ENDPOINT` y credenciales de exportación cuando corresponda.
 - Añadir una comprobación de exportación real y acotada, no sólo de presencia de variable.
 - Verificar correlación trace/request, retención, acceso, alertas y ausencia de PII en logs.
 
-### 6. Cerrar CI/CD y producción
+### 7. Cerrar CI/CD y producción
 
 - Esperar CI verde en el SHA candidato, incluidos typecheck, tests, build, auditoría Rust, Trivy, SBOM y artefactos de seguridad.
 - Confirmar que el workflow de liberación descarga evidencia del mismo SHA y rechaza runs que no sean un push exitoso a `main`.
@@ -67,8 +86,9 @@ Migración versionada: `supabase/migrations/20261017000000_atlas-store-core.sql`
 - [ ] CI verde en el SHA candidato y checks obligatorios configurados en `main`.
 - [ ] Preview más reciente en estado READY y smoke HTTP exitoso.
 - [ ] `/api/v1/readyz` devuelve 200 sólo con todas las dependencias requeridas verificadas.
-- [ ] BookPI sobrevive reinicio y pasa verificación de cadena; backup/restore probado.
-- [ ] IKES recupera fuentes/claims tras reinicio y conserva hashes/versiones.
+- [ ] El pipeline usa PostgreSQL compartido y pasa E2E; backup/restore y verificación de cadena aprobados.
+- [ ] Las rutas heredadas de BookPI dejan de usar el singleton volátil o están explícitamente bloqueadas en producción.
+- [ ] IKES recupera fuentes/claims tras reinicio y conserva hashes/versiones; migración aplicada y probe saludable.
 - [ ] Proveedor de inferencia configurado por decisión explícita y smoke generativo aprobado.
 - [ ] Telemetría exportada y alertas probadas.
 - [ ] Despliegue de producción y rollback demostrados sobre un SHA trazable.
