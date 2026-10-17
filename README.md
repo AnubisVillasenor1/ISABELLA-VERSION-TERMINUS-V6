@@ -6,6 +6,8 @@
 
 ## Estado de madurez
 
+**Contrato de evidencia:** SPECIFIED ≠ IMPLEMENTED ≠ TESTED. Una especificación no demuestra implementación y una implementación no demuestra que se haya probado.
+
 **Avance global estimado para producción y despliegue: 48.0%.**
 
 Estimación conservadora de preparación operativa; no es una métrica de calidad del modelo ni una garantía de disponibilidad. Se conserva el último valor de referencia documentado. Este cambio de documentación no incrementa el porcentaje: sólo debe aumentar cuando mejoras funcionales estén implementadas y validadas con evidencia reproducible sobre un SHA concreto.
@@ -122,7 +124,9 @@ La inspección estática de los workflows encontró puntos que deben resolverse 
 6. **Integraciones externas:** validar PostgreSQL, Redis, proveedores de modelos, secretos, almacenamiento, Kubernetes y observabilidad en staging, incluyendo recuperación y rollback.
 7. **Interacción funcional:** comprobar una conversación de extremo a extremo con configuración real, timeouts, manejo de errores y fallback; una interfaz visible no prueba que la inferencia esté operativa.
 
-### Criterios mínimos para autorizar producción
+### Gates pendientes para liberar
+
+Los siguientes criterios deben quedar verificados antes de autorizar producción.
 
 - [ ] Node y pnpm alineados entre manifiesto, CI, contenedor y runtime.
 - [ ] Typecheck, suite completa, build, smoke y seguridad en verde sobre el mismo SHA.
