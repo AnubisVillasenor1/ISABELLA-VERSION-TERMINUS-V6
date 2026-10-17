@@ -159,6 +159,24 @@ add("RA-032", "BLOCKER",
   "The governed pipeline uses the environment-selected BookPI adapter; Postgres append is transactional and actor-scoped, while volatile fallback stays explicitly degraded.",
   ["src/server.ts", "src/bookpi/runtime-storage.ts", "src/bookpi/storage-postgres.ts", "src/routes/pipeline.ts"]);
 
+const ikesAdapter = await read("src/memory/ikes-supabase.ts");
+const ikesEngine = await read("src/memory/ikes.ts");
+const ikesMigration = await read("supabase/migrations/20261017000001_ikes-memory.sql");
+const ikesTests = await read("test/memory/ikes-persistence.test.ts");
+add("RA-033", "BLOCKER",
+  !!server && /createSupabaseIkesPersistence\(process\.env\)/.test(server) &&
+    /runtime\.memory\.flushPersistence\(\)/.test(server) &&
+    !!ikesEngine && /initPersistence\(\)/.test(ikesEngine) &&
+    /IKES_PERSISTENCE_NOT_INITIALIZED/.test(ikesEngine) &&
+    /IKES_PERSISTENCE_WRITE_FAILED/.test(ikesEngine) &&
+    !!ikesAdapter && /atlas_knowledge_sources/.test(ikesAdapter) &&
+    /atlas_knowledge_claims/.test(ikesAdapter) &&
+    !!ikesMigration && /enable row level security/i.test(ikesMigration) &&
+    /revoke all on table[\s\S]*from anon, authenticated/i.test(ikesMigration) &&
+    !!ikesTests && /durable hydration/.test(ikesTests),
+  "IKES hydrates and persists hash-validated claims through server-only Supabase tables; reads fail closed during hydration and write errors remain visible.",
+  ["src/server.ts", "src/genesis/runtime.ts", "src/memory/ikes.ts", "src/memory/ikes-supabase.ts", "supabase/migrations/20261017000001_ikes-memory.sql", "test/memory/ikes-persistence.test.ts"]);
+
 const report = {
   schemaVersion: "1.0.0",
   audit: "isabella-genesis-repository-assurance",
