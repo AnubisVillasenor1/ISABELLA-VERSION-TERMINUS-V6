@@ -1306,3 +1306,77 @@ button.primary:hover, .immersion-start:hover {
   .hero { padding: 20px 16px; }
   .human-check-challenge{grid-template-columns:1fr auto}.human-check-input{grid-column:2;grid-row:1}
 }
+
+/* ==== TERMINUS ENTERPRISE LAYER v1 — state: engine-generated (additive; safe to remove as one block) ==== */
+:root{
+  --ent-bg-0:#05070c;--ent-bg-1:#0a0f18;--ent-surface:rgba(12,18,29,.72);--ent-surface-hi:rgba(18,27,42,.82);
+  --ent-line:rgba(170,200,230,.11);--ent-line-hi:rgba(141,243,255,.34);
+  --ent-text:#e9f1f8;--ent-muted:#8b9bb0;--ent-accent:#7fe6ff;--ent-accent-2:#a89bff;--ent-ok:#6ee7a8;
+  --ent-radius:14px;--ent-ease:cubic-bezier(.22,.8,.2,1);
+  --ent-shadow:0 1px 0 rgba(255,255,255,.04) inset,0 24px 60px -28px rgba(0,0,0,.75);
+}
+body{background:
+  radial-gradient(1200px 700px at 78% -8%,rgba(127,230,255,.07),transparent 60%),
+  radial-gradient(900px 600px at 6% 30%,rgba(168,155,255,.06),transparent 60%),
+  var(--ent-bg-0);
+  font-feature-settings:"cv11","ss01","tnum";-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+:focus-visible{outline:2px solid var(--ent-accent);outline-offset:3px;border-radius:6px}
+::selection{background:rgba(127,230,255,.28)}
+.topbar{backdrop-filter:blur(20px) saturate(150%);-webkit-backdrop-filter:blur(20px) saturate(150%);
+  background:linear-gradient(180deg,rgba(5,7,12,.9),rgba(5,7,12,.62));border-bottom:1px solid var(--ent-line);
+  flex-wrap:nowrap;gap:14px}
+.topbar .nav-links{min-width:0;flex-wrap:nowrap;overflow:hidden}
+.command-launcher,.header-action{min-height:34px;border-radius:10px;border:1px solid var(--ent-line);background:rgba(255,255,255,.03);
+  transition:border-color .25s var(--ent-ease),background .25s var(--ent-ease),transform .25s var(--ent-ease)}
+.command-launcher:hover,.header-action:hover{border-color:var(--ent-line-hi);background:rgba(127,230,255,.07);transform:translateY(-1px)}
+.command-launcher span,.command-launcher kbd{white-space:nowrap;flex:none}
+.workspace-modebar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:6px;border-radius:12px;
+  border:1px solid var(--ent-line);background:var(--ent-surface);backdrop-filter:blur(14px)}
+.workspace-mode{border-radius:8px;padding:9px 14px;transition:all .25s var(--ent-ease)}
+.workspace-mode.is-active{background:linear-gradient(135deg,rgba(127,230,255,.14),rgba(168,155,255,.12));
+  border-color:var(--ent-line-hi);color:#eafcff;box-shadow:0 0 0 1px rgba(127,230,255,.12),0 8px 24px -12px rgba(127,230,255,.5)}
+.workspace-context-bar{border-radius:var(--ent-radius);border:1px solid var(--ent-line);background:var(--ent-surface);box-shadow:var(--ent-shadow)}
+.hero-product h1{background:linear-gradient(180deg,#fff 20%,#b9d4e8 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.hero-product h1 em{-webkit-text-fill-color:transparent;background-image:linear-gradient(120deg,var(--ent-accent),var(--ent-accent-2));-webkit-background-clip:text;background-clip:text}
+.hero-system-board{border-radius:var(--ent-radius);border:1px solid var(--ent-line);background:var(--ent-surface);padding:6px 10px;box-shadow:var(--ent-shadow)}
+.system-item strong{font-variant-numeric:tabular-nums}
+.console,.protocols{border-radius:18px;border:1px solid var(--ent-line);background:var(--ent-surface);box-shadow:var(--ent-shadow);
+  backdrop-filter:blur(22px) saturate(140%);-webkit-backdrop-filter:blur(22px) saturate(140%)}
+.console{position:relative}
+.console::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;padding:1px;
+  background:linear-gradient(140deg,rgba(127,230,255,.35),transparent 30%,transparent 70%,rgba(168,155,255,.3));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:.55}
+.composer{border-radius:14px;border:1px solid var(--ent-line);background:rgba(4,8,14,.55);transition:border-color .25s var(--ent-ease),box-shadow .25s var(--ent-ease)}
+.composer:focus-within{border-color:var(--ent-line-hi);box-shadow:0 0 0 4px rgba(127,230,255,.08)}
+.send{border-radius:10px;background:linear-gradient(135deg,var(--ent-accent),var(--ent-accent-2));color:#04101a}
+.message{animation:entRise .45s var(--ent-ease) both}
+.message.isabella p{background:rgba(255,255,255,.03);border:1px solid var(--ent-line);border-radius:12px;padding:12px 14px}
+.protocols{margin-bottom:28px}
+.protocol-grid article{border-radius:14px;padding:18px}
+.side-rail{border-radius:var(--ent-radius)}
+.rail-panel summary{letter-spacing:.14em}
+footer{border-top:1px solid var(--ent-line)}
+@keyframes entRise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media(max-width:1180px){.topbar .nav-links{display:none}}
+@media(max-width:860px){
+  .side-rail{position:static!important;transform:none!important;width:auto!important;margin:0 16px 12px!important;z-index:1}
+  .topbar{padding-left:0;padding-right:0}
+  .command-launcher kbd{display:none}
+}
+@media(prefers-reduced-motion:reduce){.message{animation:none}.command-launcher,.header-action,.workspace-mode,.composer{transition:none}}
+/* -- enterprise layer: topbar label fixes (overlap + oversized label) -- */
+.topbar{display:flex}
+.topbar-actions{display:flex;align-items:center;gap:8px;flex:none}
+.command-launcher,.header-action{width:auto;overflow:visible;gap:8px}
+.command-launcher>span,.header-action>span{position:static;font-size:11px;line-height:1}
+.command-launcher>span[aria-hidden],.header-action>span[aria-hidden]{font-size:15px}
+.header-action{background:linear-gradient(135deg,#dff6ff,#c9c2ff);border-color:transparent;color:#07111c}
+.hero-product{position:relative}
+.hero-product::after{content:"";position:absolute;inset:auto;left:auto;bottom:auto;right:2%;top:12%;border:0;box-shadow:none;width:min(38%,420px);aspect-ratio:1;pointer-events:none;border-radius:50%;
+  background:conic-gradient(from 210deg,rgba(127,230,255,.0),rgba(127,230,255,.22),rgba(168,155,255,.18),rgba(127,230,255,0) 60%);
+  -webkit-mask:radial-gradient(circle,transparent 58%,#000 59%,#000 60%,transparent 61%);mask:radial-gradient(circle,transparent 58%,#000 59%,#000 60%,transparent 61%);
+  animation:entOrbit 40s linear infinite}
+@keyframes entOrbit{to{transform:rotate(360deg)}}
+@media(max-width:1080px){.command-launcher .command-label,.header-action .header-action-label{display:none}.command-launcher,.header-action{width:38px;padding:0;justify-content:center}.hero-product::after{display:none}}
+@media(prefers-reduced-motion:reduce){.hero-product::after{animation:none}}
+/* ==== END TERMINUS ENTERPRISE LAYER v1 ==== */
