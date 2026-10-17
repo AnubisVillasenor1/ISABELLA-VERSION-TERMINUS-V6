@@ -59,3 +59,63 @@ export function boundedBudgetMs(raw: string | undefined, fallback: number, min: 
   const candidate = Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
   return Math.min(max, Math.max(min, Math.trunc(candidate)));
 }
+
+export interface HedgedTask<T> {
+  readonly label: string;
+  readonly run: () => Promise<T | null>;
+}
+
+export interface HedgedWinner<T> {
+  readonly label: string;
+  readonly value: T;
+  readonly startedCount: number;
+}
+
+/**
+ * Hedged first-success race (AUD-13b). Starts task 0; the next task starts when the previous one
+ * finishes with null/throws (immediately) OR when `hedgeDelayMs` passes without a result (in parallel).
+ * Resolves with the first non-null value; null when every task is exhausted or the budget expires.
+ * Only use for providers where a duplicate in-flight request is acceptable (free tiers) — never for
+ * actions with side effects. Losing tasks are not cancelled here; give them budget-bound signals.
+ */
+export function hedgedFirst<T>(
+  tasks: readonly HedgedTask<T>[],
+  hedgeDelayMs: number,
+  budget?: DeadlineBudget,
+): Promise<HedgedWinner<T> | null> {
+  if (!Number.isFinite(hedgeDelayMs) || hedgeDelayMs < 0) throw new Error("HEDGE: hedgeDelayMs must be >= 0");
+  return new Promise((resolve) => {
+    let started = 0;
+    let finished = 0;
+    let settled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const done = (winner: HedgedWinner<T> | null): void => {
+      if (settled) return;
+      settled = true;
+      if (timer) clearTimeout(timer);
+      resolve(winner);
+    };
+    const startNext = (): void => {
+      if (settled) return;
+      if (started >= tasks.length || budget?.expired()) {
+        if (finished >= started) done(null);
+        return;
+      }
+      const task = tasks[started++]!;
+      if (timer) clearTimeout(timer);
+      if (started < tasks.length) timer = setTimeout(startNext, hedgeDelayMs);
+      task.run().then(
+        (value) => {
+          finished++;
+          if (value !== null && value !== undefined) done({ label: task.label, value, startedCount: started });
+          else { if (finished >= started && started >= tasks.length) done(null); else startNext(); }
+        },
+        () => {
+          finished++;
+          if (finished >= started && started >= tasks.length) done(null); else startNext();
+        },
+      );
+    };
+    if (tasks.length === 0) done(null); else startNext();
+  });
+}

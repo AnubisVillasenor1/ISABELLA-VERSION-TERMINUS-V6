@@ -77,7 +77,15 @@ const stopIntroMedia = () => {
   if (introVideo) introVideo.currentTime = 0;
 };
 // Warm the intro video buffer while the person completes the human check (poster shows meanwhile).
-humanCheckBox?.addEventListener('change', () => { if (introVideo && introVideo.preload !== 'auto') introVideo.preload = 'auto'; }, { once: true });
+const warmIntroVideo = () => { if (introVideo && introVideo.preload !== 'auto') { introVideo.preload = 'auto'; introVideo.load(); } };
+humanCheckBox?.addEventListener('change', warmIntroVideo, { once: true });
+// Warm the 540p faststart rendition as soon as the main thread is idle (skipped on Save-Data / 2g links),
+// so "INICIAR INMERSIÓN" starts playback instantly instead of buffering after the click.
+{
+  const conn = navigator.connection;
+  const constrained = Boolean(conn && (conn.saveData || /(^|-)2g$/.test(String(conn.effectiveType || ''))));
+  if (!constrained) (window.requestIdleCallback || ((fn) => window.setTimeout(fn, 800)))(warmIntroVideo, { timeout: 2500 });
+}
 const humanCode = String(Math.floor(1000 + Math.random() * 9000));
 let humanVerified = false;
 if (humanCheckCode) humanCheckCode.textContent = humanCode;
@@ -477,7 +485,7 @@ const sendCurrentMessage = async () => {
     const requestCognition = (modelEngine) => fetch('/api/v1/cognition/route', {
       method: 'POST',
       headers: { 'content-type': 'application/json', accept: 'application/json', 'x-session-id': sessionId },
-      body: JSON.stringify({ input, modelEngine, focusLens: 'general', history }),
+      body: JSON.stringify({ input, modelEngine, focusLens: window.IsabellaChatPlus?.getLens?.() ?? 'general', history }),
       signal: abortController.signal
     });
     const engine = selectEngine();
