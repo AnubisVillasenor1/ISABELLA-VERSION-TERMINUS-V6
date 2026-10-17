@@ -267,22 +267,40 @@ function describeProviderReadiness(env: NodeJS.ProcessEnv): {
   keylessFreeProviderConfigured: boolean;
   publicRouteRequiresToken: boolean;
 } {
-  const openModelConfigured = Boolean(
+  const keylessFreeProviderConfigured = resolveKeylessFreeProvider(env) !== null;
+  const openRouterModel = (env.OPENROUTER_FREE_MODEL || "openrouter/free").trim();
+  const openRouterFreeConfigured = Boolean(
+    env.OPENROUTER_API_KEY && isOpenRouterModelAllowed(openRouterModel, false),
+  );
+  const gatewayFreeConfigured = Boolean(env.AI_GATEWAY_API_KEY || env.VERCEL_OIDC_TOKEN);
+  const openModelConfigured = gatewayFreeConfigured || openRouterFreeConfigured || keylessFreeProviderConfigured;
+
+  // Credential/model presence only; this does not assert reachability, quota,
+  // current tariffs or authorization to spend. Paid-capable routes remain disabled
+  // until ALLOW_PAID_PROVIDER_FALLBACK=true.
+  const paidProviderConfigured = Boolean(
+    genAi ||
     env.AI_GATEWAY_API_KEY ||
     env.VERCEL_OIDC_TOKEN ||
     env.OPENROUTER_API_KEY ||
-      (env.HF_TOKEN && env.HF_FREE_MODELS) ||
-      env.OLLAMA_API_KEY ||
-      env.GROQ_API_KEY ||
-      env.CEREBRAS_API_KEY ||
-      env.TOGETHER_API_KEY ||
-      env.DEEPINFRA_API_KEY ||
-      env.FIREWORKS_API_KEY,
+    env.PERPLEXITY_API_KEY ||
+    (env.HF_TOKEN && env.HF_FREE_MODELS) ||
+    env.OLLAMA_API_KEY ||
+    env.GROQ_API_KEY ||
+    env.CEREBRAS_API_KEY ||
+    env.TOGETHER_API_KEY ||
+    env.DEEPINFRA_API_KEY ||
+    env.FIREWORKS_API_KEY,
   );
-  const paidProviderConfigured = Boolean(genAi || env.AI_GATEWAY_API_KEY || env.VERCEL_OIDC_TOKEN);
-  const keylessFreeProviderConfigured = resolveKeylessFreeProvider(env) !== null;
+  const paidOptIn = env.ALLOW_PAID_PROVIDER_FALLBACK === "true";
+  const paidModelConfigured = Boolean(
+    (paidOptIn && genAi) ||
+    (paidOptIn && env.HF_TOKEN && env.HF_FREE_MODELS?.trim()) ||
+    buildOpenAICompatibleCandidates(env).length > 0 ||
+    resolvePerplexityGenerationConfig(env) !== null
+  );
   return {
-    modelConfigured: openModelConfigured || paidProviderConfigured || keylessFreeProviderConfigured,
+    modelConfigured: openModelConfigured || paidModelConfigured,
     openModelConfigured,
     paidProviderConfigured,
     keylessFreeProviderConfigured,
@@ -1175,19 +1193,21 @@ app.post("/api/v1/cognition/route", async (req, res) => {
         generativeNarrative = await generateFreeOpenRouterNarrative(systemPrompt, input, history, chainBudget);
         if (generativeNarrative) responseEngine = "openrouter-free";
       }
-      if (!generativeNarrative && (modelEngine === "open-science" || modelEngine === "auto" || modelEngine === "gemini")) {
-        generativeNarrative = await generateHuggingFaceNarrative(systemPrompt, input, history, chainBudget);
-        if (generativeNarrative) responseEngine = "huggingface-free";
-      }
-      if (!generativeNarrative && (modelEngine === "open-science" || modelEngine === "auto" || modelEngine === "gemini")) {
-        generativeNarrative = await generateCompatibleProviderNarrative(systemPrompt, input, history, chainBudget);
-        if (generativeNarrative) responseEngine = "open-science";
-      }
       if (!generativeNarrative && modelEngine === "auto") {
         generativeNarrative = await generateKeylessFreeNarrative(systemPrompt, input, history, chainBudget);
         if (generativeNarrative) responseEngine = "keyless-free";
       }
       if (!generativeNarrative && process.env.ALLOW_PAID_PROVIDER_FALLBACK === "true") {
+        // These APIs may consume provider credits or incur usage charges. Only attempt
+        // them after the operator opts in and explicitly configures models.
+        if (!generativeNarrative && process.env.HF_TOKEN && process.env.HF_FREE_MODELS?.trim() && !chainBudget.expired()) {
+          generativeNarrative = await generateHuggingFaceNarrative(systemPrompt, input, history, chainBudget);
+          if (generativeNarrative) responseEngine = "huggingface-free";
+        }
+        if (!generativeNarrative && buildOpenAICompatibleCandidates(process.env).length > 0 && !chainBudget.expired()) {
+          generativeNarrative = await generateCompatibleProviderNarrative(systemPrompt, input, history, chainBudget);
+          if (generativeNarrative) responseEngine = "compatible-provider";
+        }
         if (genAi && modelEngine !== "gemini") {
           try {
             const contents = [
