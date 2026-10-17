@@ -16,7 +16,7 @@
 #   - No se copia el archivo de workspace de pnpm: no existe en el repositorio.
 #   - La etapa de build usa `pnpm run build:dist` (compila + bundle) y por tanto
 #     NO requiere `scripts/` ni `test/` dentro del contexto .dockerignore.
-#   - Se copian los activos leidos en runtime por process.cwd(): src/ui y src/styles.
+#   - Se copian los activos leidos en runtime por process.cwd(): src/ui, src/styles y src/assets.
 #   - Sin HEALTHCHECK Docker: distroless no aporta wget/curl; la autoridad de salud
 #     la ejerce Kubernetes (probes en k8s/deployment.yaml y deploy/k8s/).
 #   - BLOCKED_ENVIRONMENT (ISA-349/355): fijar digests de las bases con
@@ -74,6 +74,8 @@ COPY --from=build /app/dist ./dist
 # Activos leidos en runtime via process.cwd(): CSS e interfaz.
 COPY --from=build /app/src/ui ./src/ui
 COPY --from=build /app/src/styles ./src/styles
+# Intro de video (src/assets/video): sin esta copia la ruta /assets/video/* respondia 404 en la imagen (AUD-16).
+COPY --from=build /app/src/assets ./src/assets
 COPY package.json ./
 # Solo dependencias de runtime (express, ws, ai, @ai-sdk/gateway, @google/genai).
 COPY --from=production-deps /app/node_modules ./node_modules

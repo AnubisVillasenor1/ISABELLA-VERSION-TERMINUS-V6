@@ -25,6 +25,10 @@ describe("container build artifact", () => {
     expect(dockerfile).toContain("src/ui");
     expect(dockerfile).toContain("src/styles");
   });
+
+  it("ships the intro video assets read at runtime (AUD-16)", () => {
+    expect(dockerfile).toMatch(/COPY --from=build \/app\/src\/assets \.\/src\/assets/);
+  });
 });
 
 describe("docker compose stack", () => {

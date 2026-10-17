@@ -4,107 +4,115 @@
 > `state: auto_generated` — no editar a mano; requiere revisión humana para ser
 > evidencia (*CAPABILITY ≠ AUTHORITY ≠ EVIDENCE*, AGENTS.md).
 
-- **Generado:** 2026-10-16T21:57:41.895Z
+- **Generado:** 2026-10-17T09:08:51.390Z
 - **Fuente:** `src/server.ts` (parseo estático, sin ejecutar el servidor)
-- **Rutas totales:** 152 · **Sensibles:** 98 · **Con contrato verificado:** 5
+- **Rutas totales:** 160 · **Sensibles:** 103 · **Con contrato verificado:** 6
 - **Contratos de tipo considerados:** `InferenceCapability`, `ModelDescriptor`, `GenerationRequest`, `GenerationResult`, `InferenceAdapter`, `EmbeddingAdapter`, `InferenceRouter`
 
 ## Tabla de rutas
 
 | Método | Ruta | Handler | Sensible | Auth | Rate-limit | Validación | Verificado |
 |---|---|---|---|---|---|---|---|
-| `GET` | `/` | `inline@src/server.ts:159` | no | no | no | no | no |
-| `GET` | `/styles/cinematic.css` | `inline@src/server.ts:168` | no | no | no | no | no |
-| `GET` | `/ui/app.js` | `inline@src/server.ts:178` | no | no | no | no | no |
-| `GET` | `/assets/video/IsabellaVideoIntro.mp4` | `inline@src/server.ts:187` | no | sí | sí | no | no |
-| `GET` | `/health` | `inline@src/server.ts:740` | no | no | no | no | no |
-| `GET` | `/api/v1/health` | `inline@src/server.ts:750` | no | no | no | no | sí |
-| `GET` | `/api/v1/healthz` | `inline@src/server.ts:764` | no | no | no | no | no |
-| `GET` | `/api/v1/status` | `inline@src/server.ts:778` | no | no | no | no | sí |
-| `GET` | `/api/v1/memory` | `inline@src/server.ts:824` | no | sí | no | sí | sí |
-| `POST` | `/api/v1/memory/ingest` | `inline@src/server.ts:838` | sí | no | sí | sí | no |
-| `GET` | `/api/v1/memory/proposals` | `inline@src/server.ts:864` | no | sí | no | no | no |
-| `POST` | `/api/v1/memory/proposals/:proposalId/resolve` | `inline@src/server.ts:869` | sí | sí | no | sí | no |
-| `GET` | `/api/v1/bookpi/events` | `inline@src/server.ts:890` | no | no | sí | no | no |
-| `GET` | `/api/v1/bookpi/events/admin` | `inline@src/server.ts:911` | sí | sí | no | no | no |
-| `POST` | `/api/v1/tools/execute` | `inline@src/server.ts:917` | sí | no | sí | sí | no |
-| `GET` | `/api/v1/cognition/native-runtime` | `inline@src/server.ts:969` | sí | no | no | no | no |
-| `POST` | `/api/v1/cognition/route` | `inline@src/server.ts:985` | sí | no | sí | sí | sí |
-| `GET` | `/api/v1/cognition/multimodal` | `inline@src/server.ts:1167` | sí | no | no | no | no |
-| `POST` | `/api/v1/cognition/vision` | `inline@src/server.ts:1181` | sí | no | sí | sí | no |
-| `POST` | `/api/v1/cognition/image` | `inline@src/server.ts:1236` | sí | no | sí | sí | no |
-| `POST` | `/api/v1/cognition/speech` | `inline@src/server.ts:1289` | sí | no | sí | sí | no |
-| `POST` | `/api/v1/cognition/transcribe` | `inline@src/server.ts:1338` | sí | no | sí | sí | no |
-| `POST` | `/api/v1/cognitive/request` | `inline@src/server.ts:1376` | sí | no | sí | sí | no |
-| `POST` | `/api/v1/isabella/mediate` | `inline@src/server.ts:1499` | sí | sí | sí | sí | sí |
-| `POST` | `/api/v1/isabella/entropy` | `inline@src/server.ts:1566` | sí | no | sí | sí | no |
-| `GET` | `/api/v1/isabella/status` | `inline@src/server.ts:1583` | no | no | no | no | no |
-| `GET` | `/api/v1/hsf/status` | `inline@src/server.ts:1593` | no | no | no | no | no |
-| `POST` | `/api/v1/hsf/invoke` | `inline@src/server.ts:1606` | sí | sí | sí | sí | no |
-| `GET` | `/api/v1/quantum/pennylane/status` | `inline@src/server.ts:1670` | no | no | no | no | no |
-| `POST` | `/api/v1/quantum/pennylane/execute` | `inline@src/server.ts:1682` | sí | sí | sí | sí | no |
-| `POST` | `/api/v1/triple-blockade/scan` | `inline@src/server.ts:1735` | sí | no | sí | no | no |
-| `POST` | `/api/v1/notebook/generate` | `inline@src/server.ts:1769` | sí | no | sí | sí | no |
-| `POST` | `/api/v1/audio-overview/generate` | `inline@src/server.ts:1839` | sí | no | sí | sí | no |
-| `GET` | `/api/v1/territory/rdm` | `inline@src/server.ts:1887` | no | no | no | no | no |
-| `POST` | `/api/v1/sanitization/scan` | `inline@src/server.ts:1908` | sí | no | sí | sí | no |
-| `POST` | `/api/v1/knowledge/admit` | `inline@src/server.ts:1931` | sí | sí | sí | sí | no |
-| `POST` | `/api/v1/governance/git` | `inline@src/server.ts:2026` | sí | no | sí | sí | no |
-| `POST` | `/api/v1/governance/quality-gates` | `inline@src/server.ts:2037` | sí | no | sí | sí | no |
-| `POST` | `/api/v1/governance/deployment` | `inline@src/server.ts:2056` | sí | no | sí | sí | no |
-| `POST` | `/api/v1/governance/verify-agent-app` | `inline@src/server.ts:2076` | sí | no | sí | sí | no |
-| `POST` | `/api/v1/governance/lifecycle-plan` | `inline@src/server.ts:2096` | sí | no | sí | sí | no |
-| `POST` | `/api/v1/diff/observe` | `inline@src/server.ts:2107` | sí | no | sí | sí | no |
-| `POST` | `/api/v1/sanitization/harden` | `inline@src/server.ts:2131` | sí | no | no | sí | no |
-| `POST` | `/api/v1/security/triangulate` | `inline@src/server.ts:2146` | sí | no | no | sí | no |
-| `POST` | `/api/v1/ops/readiness` | `inline@src/server.ts:2209` | sí | no | no | sí | no |
-| `GET` | `/api/v1/readyz` | `inline@src/server.ts:2220` | no | no | no | no | no |
-| `GET` | `/api/v1/ops/snapshot` | `inline@src/server.ts:2232` | no | no | no | no | no |
-| `GET` | `/api/v1/ops/latency` | `inline@src/server.ts:2242` | no | sí | no | no | no |
-| `POST` | `/api/v1/isa/pipeline` | `inline@src/server.ts:2254` | sí | no | no | sí | no |
-| `POST` | `/api/v1/isa/act` | `inline@src/server.ts:2264` | sí | no | no | sí | no |
-| `POST` | `/api/v1/litle/attest` | `inline@src/server.ts:2293` | sí | sí | sí | sí | no |
-| `POST` | `/api/v1/litle/verify` | `inline@src/server.ts:2343` | sí | no | sí | sí | no |
-| `POST` | `/api/v1/connectors/ingest` | `inline@src/server.ts:2431` | sí | no | no | sí | no |
-| `GET` | `/api/v1/metrics` | `inline@src/server.ts:2515` | no | sí | no | no | no |
-| `GET` | `/api/v1/runtime/capabilities` | `inline@src/server.ts:2527` | no | no | no | no | no |
-| `POST` | `/api/v1/memory/verified` | `inline@src/server.ts:2548` | sí | sí | no | sí | no |
-| `GET` | `/api/v1/memory/verified` | `inline@src/server.ts:2568` | no | sí | no | sí | no |
-| `GET` | `/api/v1/osiris/status` | `inline@src/server.ts:2582` | no | sí | no | no | no |
-| `POST` | `/api/v1/osiris/inspect` | `inline@src/server.ts:2587` | sí | sí | no | sí | no |
-| `GET` | `/api/v1/billing/prices` | `inline@src/server.ts:2652` | no | no | no | no | no |
-| `POST` | `/api/v1/billing/checkout` | `inline@src/server.ts:2656` | sí | sí | no | sí | no |
-| `POST` | `/api/v1/billing/portal` | `inline@src/server.ts:2693` | sí | sí | no | sí | no |
-| `POST` | `/api/v1/billing/stripe/webhook` | `inline@src/server.ts:2729` | sí | no | no | sí | no |
-| `GET` | `/api/v1/billing/plans` | `inline@src/server.ts:2782` | no | no | no | no | no |
-| `GET` | `/api/v1/billing/entitlements` | `inline@src/server.ts:2794` | no | no | no | sí | no |
-| `GET` | `/api/v1/billing/subscription` | `inline@src/server.ts:2804` | no | sí | no | sí | no |
-| `POST` | `/api/v1/billing/subscribe` | `inline@src/server.ts:2816` | sí | sí | no | sí | no |
-| `POST` | `/api/v1/billing/cancel` | `inline@src/server.ts:2858` | sí | sí | no | sí | no |
-| `GET` | `/api/v1/billing/usage` | `inline@src/server.ts:2884` | no | sí | no | sí | no |
-| `POST` | `/api/v1/commerce/offers` | `inline@src/server.ts:2902` | sí | sí | no | sí | no |
-| `GET` | `/api/v1/gameover/constitution` | `inline@src/server.ts:2954` | no | sí | no | no | no |
-| `GET` | `/api/v1/gameover/passports` | `inline@src/server.ts:2959` | no | sí | no | no | no |
-| `POST` | `/api/v1/gameover/passports` | `inline@src/server.ts:2970` | sí | sí | no | sí | no |
-| `POST` | `/api/v1/gameover/passports/revoke` | `inline@src/server.ts:3001` | sí | sí | no | sí | no |
-| `POST` | `/api/v1/gameover/govern` | `inline@src/server.ts:3019` | sí | sí | no | sí | no |
-| `GET` | `/api/v1/platform/capabilities` | `inline@src/server.ts:3255` | no | sí | no | no | no |
-| `POST` | `/api/v1/evidence-graph/append` | `inline@src/server.ts:3260` | sí | sí | no | sí | no |
-| `GET` | `/api/v1/evidence-graph/verify` | `inline@src/server.ts:3278` | sí | sí | no | no | no |
-| `POST` | `/api/v1/temporal/record` | `inline@src/server.ts:3283` | sí | sí | no | sí | no |
-| `GET` | `/api/v1/temporal/versions` | `inline@src/server.ts:3294` | no | sí | no | no | no |
-| `POST` | `/api/v1/citemesh/publish` | `inline@src/server.ts:3299` | sí | sí | no | sí | no |
-| `GET` | `/api/v1/citemesh/replay` | `inline@src/server.ts:3310` | no | sí | no | sí | no |
-| `POST` | `/api/v1/cognitive-capital/list` | `inline@src/server.ts:3317` | sí | sí | no | sí | no |
-| `POST` | `/api/v1/cognitive-capital/trade` | `inline@src/server.ts:3332` | sí | sí | no | sí | no |
-| `POST` | `/api/v1/immune/report` | `inline@src/server.ts:3343` | sí | sí | no | sí | no |
-| `POST` | `/api/v1/immune/assess` | `inline@src/server.ts:3354` | sí | sí | no | sí | no |
-| `POST` | `/api/v1/fabric/execute` | `inline@src/server.ts:3365` | sí | sí | no | sí | no |
-| `POST` | `/api/v1/governance/evaluate` | `inline@src/server.ts:3376` | sí | sí | no | sí | no |
-| `GET` | `/api/v1/ops/preflight` | `inline@src/server.ts:3391` | no | sí | no | no | no |
-| `GET` | `/api/v1/reina/status` | `inline@src/server.ts:3410` | no | no | sí | no | no |
-| `POST` | `/api/v1/reina/adjudicate` | `inline@src/server.ts:3417` | sí | sí | no | sí | no |
-| `GET` | `/api/v1/reina/log/proof/:index` | `inline@src/server.ts:3445` | no | sí | no | sí | no |
+| `GET` | `/` | `inline@src/server.ts:183` | no | no | no | no | no |
+| `GET` | `/styles/cinematic.css` | `inline@src/server.ts:190` | no | no | no | no | no |
+| `GET` | `/ui/app.js` | `inline@src/server.ts:197` | no | no | no | no | no |
+| `GET` | `/ui/chat-plus.js` | `inline@src/server.ts:204` | no | sí | sí | no | no |
+| `GET` | `/health` | `inline@src/server.ts:781` | no | no | no | no | no |
+| `GET` | `/api/v1/health` | `inline@src/server.ts:791` | no | no | no | no | sí |
+| `GET` | `/api/v1/healthz` | `inline@src/server.ts:805` | no | no | no | no | no |
+| `GET` | `/api/v1/status` | `inline@src/server.ts:819` | no | no | no | no | sí |
+| `GET` | `/api/v1/memory` | `inline@src/server.ts:865` | no | sí | no | sí | sí |
+| `POST` | `/api/v1/memory/ingest` | `inline@src/server.ts:883` | sí | no | sí | sí | no |
+| `GET` | `/api/v1/memory/proposals` | `inline@src/server.ts:909` | no | sí | no | no | no |
+| `POST` | `/api/v1/memory/proposals/:proposalId/resolve` | `inline@src/server.ts:914` | sí | sí | no | sí | no |
+| `GET` | `/api/v1/bookpi/events` | `inline@src/server.ts:935` | no | no | sí | no | no |
+| `GET` | `/api/v1/bookpi/events/admin` | `inline@src/server.ts:956` | sí | sí | no | no | no |
+| `POST` | `/api/v1/tools/execute` | `inline@src/server.ts:962` | sí | no | sí | sí | no |
+| `GET` | `/api/v1/cognition/native-runtime` | `inline@src/server.ts:1014` | sí | no | no | no | no |
+| `POST` | `/api/v1/cognition/route` | `inline@src/server.ts:1037` | sí | no | sí | sí | sí |
+| `GET` | `/api/v1/cognition/multimodal` | `inline@src/server.ts:1247` | sí | no | no | no | no |
+| `POST` | `/api/v1/cognition/vision` | `inline@src/server.ts:1261` | sí | no | sí | sí | no |
+| `POST` | `/api/v1/cognition/image` | `inline@src/server.ts:1316` | sí | no | sí | sí | no |
+| `POST` | `/api/v1/cognition/speech` | `inline@src/server.ts:1369` | sí | no | sí | sí | no |
+| `POST` | `/api/v1/cognition/transcribe` | `inline@src/server.ts:1418` | sí | no | sí | sí | no |
+| `POST` | `/api/v1/cognitive/request` | `inline@src/server.ts:1456` | sí | no | sí | sí | no |
+| `POST` | `/api/v1/isabella/mediate` | `inline@src/server.ts:1579` | sí | sí | sí | sí | sí |
+| `POST` | `/api/v1/isabella/entropy` | `inline@src/server.ts:1646` | sí | no | sí | sí | no |
+| `GET` | `/api/v1/isabella/status` | `inline@src/server.ts:1663` | no | no | no | no | no |
+| `GET` | `/api/v1/hsf/status` | `inline@src/server.ts:1673` | no | no | no | no | no |
+| `POST` | `/api/v1/hsf/invoke` | `inline@src/server.ts:1686` | sí | sí | sí | sí | no |
+| `GET` | `/api/v1/quantum/pennylane/status` | `inline@src/server.ts:1750` | no | no | no | no | no |
+| `POST` | `/api/v1/quantum/pennylane/execute` | `inline@src/server.ts:1762` | sí | sí | sí | sí | no |
+| `POST` | `/api/v1/triple-blockade/scan` | `inline@src/server.ts:1815` | sí | no | sí | no | no |
+| `POST` | `/api/v1/notebook/generate` | `inline@src/server.ts:1849` | sí | no | sí | sí | no |
+| `POST` | `/api/v1/audio-overview/generate` | `inline@src/server.ts:1919` | sí | no | sí | sí | no |
+| `GET` | `/api/v1/territory/rdm` | `inline@src/server.ts:1967` | no | no | no | no | no |
+| `POST` | `/api/v1/sanitization/scan` | `inline@src/server.ts:1988` | sí | no | sí | sí | no |
+| `POST` | `/api/v1/knowledge/admit` | `inline@src/server.ts:2011` | sí | sí | sí | sí | no |
+| `POST` | `/api/v1/governance/git` | `inline@src/server.ts:2113` | sí | no | sí | sí | no |
+| `POST` | `/api/v1/governance/quality-gates` | `inline@src/server.ts:2124` | sí | no | sí | sí | no |
+| `POST` | `/api/v1/governance/deployment` | `inline@src/server.ts:2143` | sí | no | sí | sí | no |
+| `POST` | `/api/v1/governance/verify-agent-app` | `inline@src/server.ts:2163` | sí | no | sí | sí | no |
+| `POST` | `/api/v1/governance/lifecycle-plan` | `inline@src/server.ts:2183` | sí | no | sí | sí | no |
+| `POST` | `/api/v1/diff/observe` | `inline@src/server.ts:2194` | sí | no | sí | sí | no |
+| `POST` | `/api/v1/sanitization/harden` | `inline@src/server.ts:2218` | sí | no | no | sí | no |
+| `POST` | `/api/v1/security/triangulate` | `inline@src/server.ts:2233` | sí | no | no | sí | no |
+| `POST` | `/api/v1/ops/readiness` | `inline@src/server.ts:2311` | sí | no | no | sí | no |
+| `GET` | `/api/v1/readyz` | `inline@src/server.ts:2322` | no | no | no | no | no |
+| `GET` | `/api/v1/ops/snapshot` | `inline@src/server.ts:2334` | no | no | no | no | no |
+| `GET` | `/api/v1/integrations/graph` | `inline@src/server.ts:2344` | no | sí | no | no | sí |
+| `GET` | `/api/v1/ops/latency` | `inline@src/server.ts:2426` | no | sí | no | no | no |
+| `POST` | `/api/v1/isa/pipeline` | `inline@src/server.ts:2438` | sí | no | no | sí | no |
+| `POST` | `/api/v1/isa/act` | `inline@src/server.ts:2448` | sí | no | no | sí | no |
+| `POST` | `/api/v1/litle/attest` | `inline@src/server.ts:2477` | sí | sí | sí | sí | no |
+| `POST` | `/api/v1/litle/verify` | `inline@src/server.ts:2527` | sí | no | sí | sí | no |
+| `POST` | `/api/v1/connectors/ingest` | `inline@src/server.ts:2615` | sí | no | no | sí | no |
+| `GET` | `/api/v1/metrics` | `inline@src/server.ts:2699` | no | sí | no | no | no |
+| `GET` | `/api/v1/runtime/capabilities` | `inline@src/server.ts:2711` | no | no | no | no | no |
+| `POST` | `/api/v1/memory/verified` | `inline@src/server.ts:2732` | sí | sí | no | sí | no |
+| `GET` | `/api/v1/memory/verified` | `inline@src/server.ts:2752` | no | sí | no | sí | no |
+| `GET` | `/api/v1/osiris/status` | `inline@src/server.ts:2766` | no | sí | no | no | no |
+| `POST` | `/api/v1/osiris/inspect` | `inline@src/server.ts:2771` | sí | sí | no | sí | no |
+| `GET` | `/api/v1/billing/prices` | `inline@src/server.ts:2836` | no | no | no | no | no |
+| `POST` | `/api/v1/billing/checkout` | `inline@src/server.ts:2840` | sí | sí | no | sí | no |
+| `POST` | `/api/v1/billing/portal` | `inline@src/server.ts:2877` | sí | sí | no | sí | no |
+| `POST` | `/api/v1/billing/stripe/webhook` | `inline@src/server.ts:2915` | sí | no | no | sí | no |
+| `GET` | `/api/v1/billing/plans` | `inline@src/server.ts:2968` | no | no | no | no | no |
+| `GET` | `/api/v1/billing/entitlements` | `inline@src/server.ts:2980` | no | no | no | sí | no |
+| `GET` | `/api/v1/billing/subscription` | `inline@src/server.ts:2990` | no | sí | no | sí | no |
+| `POST` | `/api/v1/billing/subscribe` | `inline@src/server.ts:3002` | sí | sí | no | sí | no |
+| `POST` | `/api/v1/billing/cancel` | `inline@src/server.ts:3044` | sí | sí | no | sí | no |
+| `GET` | `/api/v1/billing/usage` | `inline@src/server.ts:3070` | no | sí | no | sí | no |
+| `POST` | `/api/v1/commerce/offers` | `inline@src/server.ts:3088` | sí | sí | no | sí | no |
+| `GET` | `/api/v1/gameover/constitution` | `inline@src/server.ts:3139` | no | sí | no | no | no |
+| `GET` | `/api/v1/gameover/passports` | `inline@src/server.ts:3144` | no | sí | no | no | no |
+| `POST` | `/api/v1/gameover/passports` | `inline@src/server.ts:3155` | sí | sí | no | sí | no |
+| `POST` | `/api/v1/gameover/passports/revoke` | `inline@src/server.ts:3186` | sí | sí | no | sí | no |
+| `POST` | `/api/v1/gameover/govern` | `inline@src/server.ts:3204` | sí | sí | no | sí | no |
+| `GET` | `/api/v1/platform/capabilities` | `inline@src/server.ts:3438` | no | sí | no | no | no |
+| `POST` | `/api/v1/evidence-graph/append` | `inline@src/server.ts:3443` | sí | sí | no | sí | no |
+| `GET` | `/api/v1/evidence-graph/verify` | `inline@src/server.ts:3461` | sí | sí | no | no | no |
+| `POST` | `/api/v1/temporal/record` | `inline@src/server.ts:3466` | sí | sí | no | sí | no |
+| `GET` | `/api/v1/temporal/versions` | `inline@src/server.ts:3477` | no | sí | no | no | no |
+| `POST` | `/api/v1/citemesh/publish` | `inline@src/server.ts:3482` | sí | sí | no | sí | no |
+| `GET` | `/api/v1/citemesh/replay` | `inline@src/server.ts:3493` | no | sí | no | sí | no |
+| `POST` | `/api/v1/cognitive-capital/list` | `inline@src/server.ts:3500` | sí | sí | no | sí | no |
+| `POST` | `/api/v1/cognitive-capital/trade` | `inline@src/server.ts:3515` | sí | sí | no | sí | no |
+| `POST` | `/api/v1/immune/report` | `inline@src/server.ts:3526` | sí | sí | no | sí | no |
+| `POST` | `/api/v1/immune/assess` | `inline@src/server.ts:3537` | sí | sí | no | sí | no |
+| `POST` | `/api/v1/fabric/execute` | `inline@src/server.ts:3548` | sí | sí | no | sí | no |
+| `POST` | `/api/v1/governance/evaluate` | `inline@src/server.ts:3559` | sí | sí | no | sí | no |
+| `GET` | `/api/v1/monetization/plans` | `inline@src/server.ts:3574` | no | sí | no | no | no |
+| `POST` | `/api/v1/monetization/escrow` | `inline@src/server.ts:3579` | sí | sí | no | sí | no |
+| `POST` | `/api/v1/monetization/escrow/release` | `inline@src/server.ts:3590` | sí | sí | no | sí | no |
+| `POST` | `/api/v1/monetization/payout` | `inline@src/server.ts:3601` | sí | sí | no | sí | no |
+| `POST` | `/api/v1/monetization/scer-split` | `inline@src/server.ts:3612` | sí | sí | no | sí | no |
+| `POST` | `/api/v1/pricing/dynamic` | `inline@src/server.ts:3623` | sí | sí | no | sí | no |
+| `GET` | `/api/v1/monetization/stats` | `inline@src/server.ts:3634` | no | sí | no | no | no |
+| `GET` | `/api/v1/ops/preflight` | `inline@src/server.ts:3640` | no | sí | no | no | no |
+| `GET` | `/api/v1/reina/status` | `inline@src/server.ts:3659` | no | no | sí | no | no |
+| `POST` | `/api/v1/reina/adjudicate` | `inline@src/server.ts:3666` | sí | sí | no | sí | no |
+| `GET` | `/api/v1/reina/log/proof/:index` | `inline@src/server.ts:3694` | no | sí | no | sí | no |
 | `POST` | `/api/v1/civilization/cycle` | `inline@src/routes/civilization.ts:25` | sí | no | sí | sí | no |
 | `POST` | `/api/v1/security/document-seal` | `inline@src/routes/document-seal.ts:57` | sí | no | sí | sí | no |
 | `POST` | `/api/v1/security/document-seal/verify` | `inline@src/routes/document-seal.ts:91` | sí | no | sí | sí | no |
@@ -192,7 +200,7 @@ una referencia externa al contrato de la ruta:
    (`types:src/inference/types.ts:...`).
 
 Ser simplemente un handler de Express tipado por inferencia **no** cuenta como
-verificado. Hoy la mayoría de rutas queda con `verified: false` (147 de 152);
+verificado. Hoy la mayoría de rutas queda con `verified: false` (154 de 160);
 eso es el estado real del repositorio, no un defecto del script.
 
 ## UI/API truthfulness (ISA-451..458)

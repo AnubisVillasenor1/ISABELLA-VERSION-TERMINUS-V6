@@ -1,4 +1,5 @@
 import { boundedBudgetMs, DeadlineBudget } from "./inference/deadline";
+import { buildAsset, contentHash, serveAsset, type StaticAsset } from "./http/static-assets";
 import express, { type Application, type NextFunction, type Request, type Response } from "express";
 import { randomUUID, timingSafeEqual } from "node:crypto";
 import fs from "fs";
@@ -155,49 +156,69 @@ app.use(
 
 
 // Read the canonical workspace assets once at startup; avoid sync filesystem I/O per request.
+// Assets are pre-compressed (brotli/gzip) and ETagged once (src/http/static-assets.ts); script/style URLs
+// carry a content hash so they can be cached immutably while the HTML itself always revalidates.
 const uiPath = path.join(process.cwd(), "src", "ui");
-let cinematicHtml: string | null = null;
-let cinematicCss: string | null = null;
-let cinematicJs: string | null = null;
+let htmlAsset: StaticAsset | null = null;
+let cssAsset: StaticAsset | null = null;
+let jsAsset: StaticAsset | null = null;
+let chatPlusAsset: StaticAsset | null = null;
 try {
-  cinematicHtml = fs.readFileSync(path.join(uiPath, "index.html"), "utf-8");
-  cinematicCss = fs.readFileSync(path.join(uiPath, "cinematic.css"), "utf-8");
-  cinematicJs = fs.readFileSync(path.join(uiPath, "app.js"), "utf-8");
+  const rawHtml = fs.readFileSync(path.join(uiPath, "index.html"), "utf-8");
+  const cinematicCss = fs.readFileSync(path.join(uiPath, "cinematic.css"), "utf-8");
+  const cinematicJs = fs.readFileSync(path.join(uiPath, "app.js"), "utf-8");
+  const chatPlusJs = fs.readFileSync(path.join(uiPath, "chat-plus.js"), "utf-8");
+  const versioned = rawHtml
+    .replace(/(\/styles\/cinematic\.css)\?v=[^"']*/, `$1?v=${contentHash(cinematicCss)}`)
+    .replace(/(\/ui\/app\.js)\?v=[^"']*/, `$1?v=${contentHash(cinematicJs)}`)
+    .replace(/(\/ui\/chat-plus\.js)\?v=[^"']*/, `$1?v=${contentHash(chatPlusJs)}`);
+  htmlAsset = buildAsset(versioned, "text/html; charset=utf-8");
+  cssAsset = buildAsset(cinematicCss, "text/css; charset=utf-8");
+  jsAsset = buildAsset(cinematicJs, "text/javascript; charset=utf-8");
+  chatPlusAsset = buildAsset(chatPlusJs, "text/javascript; charset=utf-8");
 } catch {
   console.warn("[Genesis] Cinematic UI assets are unavailable at startup.");
 }
-app.get("/", (_req, res) => {
-  res.setHeader("Content-Type", "text/html; charset=utf-8");
-  res.setHeader("Cache-Control", "no-store");
-  if (cinematicHtml === null) {
+const IMMUTABLE_CACHE = "public, max-age=31536000, immutable";
+app.get("/", (req, res) => {
+  if (htmlAsset === null) {
     res.status(503).type("html").send("<!doctype html><meta charset=\"utf-8\"><title>Isabella Genesis</title><p>La interfaz de este nodo no está disponible en el momento.</p>");
     return;
   }
-  res.type("html").send(cinematicHtml);
+  serveAsset(req, res, htmlAsset, "no-cache");
 });
-app.get("/styles/cinematic.css", (_req, res) => {
-  if (cinematicCss === null) {
+app.get("/styles/cinematic.css", (req, res) => {
+  if (cssAsset === null) {
     res.status(404).type("css").send("/* Cinematic CSS unavailable */");
     return;
   }
-  res.setHeader("Content-Type", "text/css; charset=utf-8");
-  res.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
-  res.type("css").send(cinematicCss);
+  serveAsset(req, res, cssAsset, IMMUTABLE_CACHE);
 });
-app.get("/ui/app.js", (_req, res) => {
-  if (cinematicJs === null) {
+app.get("/ui/app.js", (req, res) => {
+  if (jsAsset === null) {
     res.status(404).type("js").send("// Cinematic JavaScript unavailable");
     return;
   }
-  res.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
-  res.type("js").send(cinematicJs);
+  serveAsset(req, res, jsAsset, IMMUTABLE_CACHE);
 });
-app.get("/assets/video/IntroVideoIsabella.mp4", (_req, res) => {
-  const videoPath = path.resolve(process.cwd(), "src/assets/video/IntroVideoIsabella.mp4");
-  if (!fs.existsSync(videoPath)) { res.status(404).type("text").send("Intro video unavailable"); return; }
-  res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
-  res.type("video/mp4").sendFile(videoPath);
+app.get("/ui/chat-plus.js", (req, res) => {
+  if (chatPlusAsset === null) {
+    res.status(404).type("js").send("// Chat+ unavailable");
+    return;
+  }
+  serveAsset(req, res, chatPlusAsset, IMMUTABLE_CACHE);
 });
+// Intro media: the original is 1080p60 with its index (moov) at the END of the file, so playback cannot start
+// until the tail is fetched. The "web" rendition is 540p30 with +faststart (index first) for instant start.
+const serveMedia = (file: string, mime: string) => (_req: Request, res: Response): void => {
+  const mediaPath = path.resolve(process.cwd(), "src/assets/video", file);
+  if (!fs.existsSync(mediaPath)) { res.status(404).type("text").send("Intro media unavailable"); return; }
+  res.setHeader("Cache-Control", IMMUTABLE_CACHE);
+  res.type(mime).sendFile(mediaPath); // express sendFile honours Range requests
+};
+app.get("/assets/video/IntroVideoIsabella.mp4", serveMedia("IntroVideoIsabella.mp4", "video/mp4"));
+app.get("/assets/video/IntroVideoIsabella-web.mp4", serveMedia("IntroVideoIsabella-web.mp4", "video/mp4"));
+app.get("/assets/video/IntroVideoIsabella-poster.jpg", serveMedia("IntroVideoIsabella-poster.jpg", "image/jpeg"));
 // Initialize Genesis TINA Runtime with optional Atlas persistence.
 const atlasPersistence = process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
   ? createAtlasStoreFromEnv()

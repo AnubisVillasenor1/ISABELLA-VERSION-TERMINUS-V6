@@ -220,8 +220,12 @@ function checkHeaderInjection() {
 
 function checkContentTypes() {
   const text = readText(SERVER_FILE);
-  const css = /setHeader\(\s*["']Content-Type["']\s*,\s*["']text\/css/.test(text);
-  const html = /setHeader\(\s*["']Content-Type["']\s*,\s*["']text\/html/.test(text);
+  // Either inline setHeader("Content-Type", "text/...") in server.ts, or assets built with an explicit
+  // charset and served by src/http/static-assets.ts, which sets Content-Type from the asset on every response.
+  const assetsFile = path.join(SRC, "http", "static-assets.ts");
+  const viaAssets = exists(assetsFile) && /setHeader\(\s*["']Content-Type["']\s*,\s*asset\.contentType/.test(readText(assetsFile));
+  const css = /setHeader\(\s*["']Content-Type["']\s*,\s*["']text\/css/.test(text) || (viaAssets && /buildAsset\([^)]*["']text\/css; charset=utf-8["']/.test(text));
+  const html = /setHeader\(\s*["']Content-Type["']\s*,\s*["']text\/html/.test(text) || (viaAssets && /buildAsset\([^)]*["']text\/html; charset=utf-8["']/.test(text));
   return result(
     "SEC-09",
     "Respuestas HTML/CSS declaran Content-Type con charset",

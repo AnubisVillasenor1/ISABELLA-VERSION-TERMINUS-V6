@@ -76,6 +76,8 @@ const stopIntroMedia = () => {
   introVideo?.pause();
   if (introVideo) introVideo.currentTime = 0;
 };
+// Warm the intro video buffer while the person completes the human check (poster shows meanwhile).
+humanCheckBox?.addEventListener('change', () => { if (introVideo && introVideo.preload !== 'auto') introVideo.preload = 'auto'; }, { once: true });
 const humanCode = String(Math.floor(1000 + Math.random() * 9000));
 let humanVerified = false;
 if (humanCheckCode) humanCheckCode.textContent = humanCode;
@@ -287,7 +289,11 @@ const addMessage = (text, role) => {
   speaker.className = 'speaker';
   speaker.textContent = `${role === 'user' ? 'TÚ' : 'ISABELLA'} · AHORA`;
   const paragraph = document.createElement('p');
-  paragraph.textContent = text;
+  paragraph.dataset.raw = text;
+  if (role !== 'user' && text && window.IsabellaChatPlus) window.IsabellaChatPlus.renderInto(paragraph, text, { animate: false });
+  else paragraph.textContent = text;
+  article.dataset.ts = String(Date.now());
+  speaker.textContent = `${role === 'user' ? 'TÚ' : 'ISABELLA'} · ${new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}`;
   content.append(speaker, paragraph);
   if (role !== 'user') {
     const copyButton = document.createElement('button');
@@ -296,7 +302,7 @@ const addMessage = (text, role) => {
     copyButton.textContent = 'COPIAR';
     copyButton.setAttribute('aria-label', 'Copiar respuesta de Isabella');
     copyButton.addEventListener('click', async () => {
-      const value = paragraph.textContent || '';
+      const value = paragraph.dataset.raw || paragraph.textContent || '';
       try {
         await navigator.clipboard.writeText(value);
         copyButton.textContent = 'COPIADO';
@@ -319,7 +325,7 @@ const addMessage = (text, role) => {
     saveButton.className = 'message-save';
     saveButton.textContent = 'GUARDAR';
     saveButton.setAttribute('aria-label', 'Guardar respuesta en Studio local');
-    saveButton.addEventListener('click', () => saveDraft(paragraph.textContent || ''));
+    saveButton.addEventListener('click', () => saveDraft(paragraph.dataset.raw || paragraph.textContent || ''));
     const readButton = document.createElement('button');
     readButton.type = 'button';
     readButton.className = 'message-read';
@@ -331,7 +337,7 @@ const addMessage = (text, role) => {
         soundToggle.textContent = 'VOZ: ON';
         soundToggle.setAttribute('aria-pressed', 'true');
       }
-      speak(paragraph.textContent || '');
+      speak(paragraph.dataset.raw || paragraph.textContent || '');
     });
     content.append(copyButton, saveButton, readButton);
     const badgeRow = document.createElement('span');
@@ -351,7 +357,7 @@ const priorHistory = () => {
     .slice(-8)
     .map((node) => ({
       role: node.classList.contains('user') ? 'user' : 'assistant',
-      content: node.querySelector('p')?.textContent?.trim() || ''
+      content: (node.querySelector('p')?.dataset.raw || node.querySelector('p')?.textContent || '').trim()
     }))
     .filter((turn) => turn.content)
     .map((turn) => ({ role: turn.role, content: turn.content.slice(0, 2_000) }));
@@ -401,8 +407,9 @@ const speechChunks = (text, maxChunk = 220) => {
   }
   return out;
 };
-const speak = (text) => {
+const speak = (rawText) => {
   if (!soundOn) return;
+  const text = String(rawText).replace(/```[\s\S]*?```/g, ' bloque de código. ').replace(/[*_`#>|]+/g, '').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
   if (!('speechSynthesis' in window)) {
     addMessage('La síntesis de voz no está disponible en este navegador. La respuesta permanece disponible como texto.', 'isabella');
     return;
@@ -452,16 +459,26 @@ const sendCurrentMessage = async () => {
   prompt.value = '';
   clearActiveAttachment();
   resizePrompt();
-  const pendingNode = addMessage('Procesando tu intención…', 'isabella');
+  const pendingNode = addMessage('', 'isabella');
+  if (window.IsabellaChatPlus) window.IsabellaChatPlus.beginPending(pendingNode);
+  else if (pendingNode) pendingNode.textContent = 'Procesando tu intención…';
+  const abortController = new AbortController();
+  window.IsabellaChatPlus?.setAbort(abortController);
+  const showAnswer = (node, value) => {
+    if (!node) return;
+    if (window.IsabellaChatPlus) window.IsabellaChatPlus.renderInto(node, value);
+    else node.textContent = value;
+  };
   isSending = true;
   form.setAttribute('aria-busy', 'true');
-  if (submitButton) submitButton.disabled = true;
+  // Submit stays enabled while sending: it doubles as the STOP control (Chat+). isSending guards re-entry.
   if (mic) mic.disabled = true;
   try {
     const requestCognition = (modelEngine) => fetch('/api/v1/cognition/route', {
       method: 'POST',
       headers: { 'content-type': 'application/json', accept: 'application/json', 'x-session-id': sessionId },
-      body: JSON.stringify({ input, modelEngine, focusLens: 'general', history })
+      body: JSON.stringify({ input, modelEngine, focusLens: 'general', history }),
+      signal: abortController.signal
     });
     const engine = selectEngine();
     let response = await requestCognition(engine);
@@ -477,26 +494,32 @@ const sendCurrentMessage = async () => {
       throw new Error(typeof responseText === 'string' ? responseText : `El servicio respondió HTTP ${response.status}.`);
     }
     if (pendingNode) {
-      pendingNode.textContent = typeof responseText === 'string' && responseText.trim()
+      showAnswer(pendingNode, typeof responseText === 'string' && responseText.trim()
         ? responseText
-        : 'El servicio respondió, pero no entregó texto. Inténtalo de nuevo.';
+        : 'El servicio respondió, pero no entregó texto. Inténtalo de nuevo.');
       setResponseMeta(pendingNode, {
         engine: body.responseEngine,
         trafficLight: body.trafficLight,
         modelConfigured: body.modelConfigured,
         openModelConfigured: body.openModelConfigured
       });
+      window.IsabellaChatPlus?.decorate(pendingNode, { engine: body.responseEngine, latencyMs: window.IsabellaChatPlus.latencySince() });
     }
     if (typeof responseText === 'string' && responseText.trim()) speak(responseText);
   } catch (error) {
-    if (pendingNode) pendingNode.textContent = error instanceof Error && error.message
-      ? `No pude completar la solicitud: ${error.message.slice(0, 240)}`
-      : 'La conexión con el nodo se interrumpió. Inténtalo de nuevo.';
+    const aborted = error instanceof DOMException && error.name === 'AbortError';
+    showAnswer(pendingNode, aborted
+      ? 'Generación detenida. Puedes editar tu mensaje o regenerar la respuesta.'
+      : error instanceof Error && error.message
+        ? `No pude completar la solicitud: ${error.message.slice(0, 240)}`
+        : 'La conexión con el nodo se interrumpió. Inténtalo de nuevo.');
+    if (pendingNode) window.IsabellaChatPlus?.decorate(pendingNode, {});
   } finally {
     isSending = false;
     form.removeAttribute('aria-busy');
     if (submitButton) submitButton.disabled = false;
     if (mic) mic.disabled = false;
+    window.IsabellaChatPlus?.persist();
     prompt.focus();
   }
 };
@@ -966,7 +989,7 @@ const saveDraft = (content) => {
 const exportConversation = () => {
   const entries = [...(messages?.querySelectorAll('.message') || [])].map((node) => {
     const role = node.classList.contains('user') ? 'Tú' : 'Isabella';
-    const content = node.querySelector('p')?.textContent?.trim() || '';
+    const content = (node.querySelector('p')?.dataset.raw || node.querySelector('p')?.textContent || '').trim();
     return content ? `## ${role}\n\n${content}` : '';
   }).filter(Boolean);
   if (!entries.length) {
@@ -976,7 +999,7 @@ const exportConversation = () => {
   const content = `# Conversación con Isabella\n\nExportada desde esta sesión el ${new Date().toLocaleString('es-MX')}\n\n${entries.join('\n\n---\n\n')}\n`;
   downloadTextFile(`isabella-conversacion-${new Date().toISOString().slice(0, 10)}.md`, content);
 };
-const resetConversation = () => {
+const resetConversation = (opts) => {
   if (!messages) return;
   stopSpeech();
   messages.innerHTML = initialWelcomeMarkup;
@@ -985,10 +1008,10 @@ const resetConversation = () => {
   clearActiveAttachment();
   refreshWorkspaceContext();
   resizePrompt();
-  prompt?.focus();
+  if (!opts?.keepFocus) prompt?.focus();
 };
-byId('newChat')?.addEventListener('click', resetConversation);
-byId('clearChat')?.addEventListener('click', resetConversation);
+byId('newChat')?.addEventListener('click', () => resetConversation());
+byId('clearChat')?.addEventListener('click', () => resetConversation());
 contextExport?.addEventListener('click', exportConversation);
 
 const closeInspector = () => {
@@ -1126,4 +1149,13 @@ document.addEventListener('keydown', (event) => {
     byId('chat')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     window.setTimeout(() => prompt?.focus(), 180);
   }
+});
+
+// Narrow bridge for the Chat+ layer (src/ui/chat-plus.js). No privileged capability is exposed.
+window.IsabellaApp = Object.freeze({
+  getSessionId: () => sessionId,
+  setSessionId: (value) => { if (typeof value === 'string' && value.length > 0 && value.length < 200) sessionId = value; },
+  resetConversation: (opts) => resetConversation(opts),
+  addMessage: (text, role) => addMessage(text, role),
+  saveDraft: (content) => saveDraft(content)
 });

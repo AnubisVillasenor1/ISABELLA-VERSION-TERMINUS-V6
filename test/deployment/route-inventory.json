@@ -158,5 +158,8 @@
   "POST /api/v3/treasury/credit",
   "POST /api/v3/treasury/debit",
   "POST /v1/chat/completions",
-  "POST /v1/completions"
+  "POST /v1/completions",
+  "GET /ui/chat-plus.js",
+  "GET /assets/video/IntroVideoIsabella-web.mp4",
+  "GET /assets/video/IntroVideoIsabella-poster.jpg"
 ]

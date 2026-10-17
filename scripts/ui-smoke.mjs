@@ -19,7 +19,10 @@ for (const id of ['navToggle', 'primaryLinks', 'runtimeStatus', 'soundToggle', '
 assert.ok(js.includes("fetch('/api/v1/cognition/route'"), 'Chat must call the existing cognition route');
 assert.ok(js.includes("fetch('/api/v1/health'"), 'UI must check the health endpoint');
 assert.ok(server.includes('app.get("/api/v1/health"'), 'The runtime health endpoint must exist');
-assert.ok(server.includes('res.type("html").send(cinematicHtml)'), 'The root UI must use the startup-cached HTML asset');
+assert.ok(server.includes('serveAsset(req, res, htmlAsset'), 'The root UI must use the startup-cached, compressed HTML asset');
+assert.ok(server.includes('app.get("/ui/chat-plus.js"'), 'Runtime must serve the Chat+ enhancement layer');
+assert.ok(fs.existsSync('src/ui/chat-plus.js') && !/innerHTML\s*=/.test(fs.readFileSync('src/ui/chat-plus.js', 'utf8')), 'Chat+ must exist and never assign innerHTML');
+assert.ok(fs.existsSync('src/assets/video/IntroVideoIsabella-web.mp4'), 'The fast-start web rendition of the intro must be present');
 assert.ok(server.includes('fs.readFileSync(path.join(uiPath, "cinematic.css")'), 'The stylesheet route must serve the current CSS asset');
 assert.ok(css.includes('.nav-links.is-open'), 'Responsive menu open state must be styled');
 assert.equal((html.match(/class="side-rail /g) || []).length, 2, 'The interface must render one folded rail on each side');
@@ -71,11 +74,11 @@ assert.ok(js.includes('input.length > 18_000'), 'The combined prompt plus attach
 assert.ok(js.includes("commandList?.addEventListener('keydown'"), 'Arrow keys must navigate the command list after focus leaves search');
 assert.ok(js.includes('DRAFT_STORAGE_KEY'), 'Local Studio drafts must use an explicit storage namespace');
 assert.ok(js.includes('const exportConversation ='), 'Conversation export must be wired to a real Markdown download');
-assert.ok(js.includes('const resetConversation ='), 'New-session/restart behavior must clear the visible conversation and rotate the session ID');
+assert.ok(js.includes('const resetConversation = ('), 'New-session/restart behavior must clear the visible conversation and rotate the session ID');
 assert.ok(js.includes('commandPalette.showModal()'), 'The command center must use a native dialog when supported');
 assert.ok(js.includes("event.key.toLowerCase() === 'k'"), 'The command center must expose the Ctrl/Cmd+K keyboard shortcut');
 assert.ok(js.includes("event.key === 'Enter' && !event.shiftKey"), 'Enter must send while Shift+Enter preserves newlines');
-assert.ok(js.includes("saveDraft(paragraph.textContent || '')"), 'Assistant answers must have a working local save action');
+assert.ok(js.includes("saveDraft(paragraph.dataset.raw || paragraph.textContent || '')"), 'Assistant answers must have a working local save action');
 
 console.log('CINEMATIC_INTRO_12_SCENES_OK');
 console.log('UNIFIED_WORKSPACE_COMMAND_CENTER_OK');
