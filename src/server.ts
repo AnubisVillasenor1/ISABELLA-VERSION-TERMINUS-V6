@@ -2327,6 +2327,9 @@ app.get("/api/v1/integrations/graph", async (req, res) => {
   const bookpiEvidence = evidenceByName.get("pipeline-bookpi-storage") as {
     status?: string; backend?: string; durable?: boolean; shared?: boolean; eventCount?: number; reason?: string;
   } | undefined;
+  const legacyBookpiEvidence = evidenceByName.get("bookpi-ledger") as {
+    status?: string; backend?: string; reason?: string;
+  } | undefined;
   const ikesEvidence = evidenceByName.get("ikes-memory") as {
     status?: string; backend?: string; pending?: boolean; reason?: string;
   } | undefined;
@@ -2354,7 +2357,7 @@ app.get("/api/v1/integrations/graph", async (req, res) => {
       { id: "ikes-memory", state: ikesEvidence?.status ?? "UNKNOWN", role: "Epistemic source/claim memory", evidence: ikesEvidence },
       { id: "atlas-store", state: atlasEvidence?.status ?? "UNKNOWN", role: "Supabase-backed Atlas persistence", evidence: atlasEvidence },
       { id: "bookpi-pipeline", state: bookpiEvidence?.status ?? "UNKNOWN", role: "Governed pipeline evidence port", evidence: bookpiEvidence },
-      { id: "bookpi-legacy", state: "DEGRADED", role: "Synchronous legacy ledger; not yet unified with the async PostgreSQL pipeline port" },
+      { id: "bookpi-legacy", state: legacyBookpiEvidence?.status ?? "UNKNOWN", role: "Synchronous legacy ledger; not yet unified with the async PostgreSQL pipeline port", evidence: legacyBookpiEvidence },
       { id: "observability", state: "PARTIAL", role: "In-process metrics exist; OTLP export/alerts not verified" },
       { id: "yun-events", state: "WIRED", role: "YUN event routes are registered against the Genesis runtime" },
       { id: "hypercore-api", state: "WIRED", role: "HyperCore/MCP route surface is registered" },
@@ -2375,7 +2378,7 @@ app.get("/api/v1/integrations/graph", async (req, res) => {
       { from: "genesis-runtime", to: "ikes-memory", state: ikesEvidence?.status ?? "UNKNOWN" },
       { from: "genesis-runtime", to: "atlas-store", state: atlasEvidence?.status ?? "UNKNOWN" },
       { from: "http-ingress", to: "bookpi-pipeline", state: bookpiEvidence?.status ?? "UNKNOWN" },
-      { from: "http-ingress", to: "bookpi-legacy", state: bookpiEvidence?.status?.toUpperCase() ?? "UNKNOWN" },
+      { from: "http-ingress", to: "bookpi-legacy", state: legacyBookpiEvidence?.status?.toUpperCase() ?? "UNKNOWN" },
       { from: "genesis-runtime", to: "observability", state: "PARTIAL" },
       { from: "http-ingress", to: "yun-events", state: "WIRED" },
       { from: "http-ingress", to: "hypercore-api", state: "WIRED" },
