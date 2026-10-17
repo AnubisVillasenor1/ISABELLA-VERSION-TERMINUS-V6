@@ -71,8 +71,10 @@ export interface PostgresStorageOptions {
 
 export function createPostgresStorage(pool: PostgresLike, table = BOOKPI_TABLE, options: PostgresStorageOptions = {}): BookPiStorage {
   const quote = (ident: string): string => `"${ident.replaceAll('"', '""')}"`;
-  const withActor = <T>(work: (client: PostgresLike) => Promise<T>): Promise<T> =>
-    withActorTransaction(pool, options.actorId, work);
+  const withActor = <T>(
+    work: (client: PostgresLike) => Promise<T>,
+    actorId = options.actorId,
+  ): Promise<T> => withActorTransaction(pool, actorId, work);
 
   const eventColumns = "id, type, sequence, prev_hash, timestamp, actor_id, payload, schema_version, meta, header, hash, integrity, canonical";
 
@@ -85,6 +87,10 @@ export function createPostgresStorage(pool: PostgresLike, table = BOOKPI_TABLE, 
   }
 
   async function appendEvent(seed: BookPiEventSeed, ctx: { secret?: string; actorId?: string } = {}): Promise<BookPiEventRecord> {
+    const actorId = ctx.actorId ?? options.actorId;
+    if (options.actorId && actorId !== options.actorId) {
+      throw new Error("BOOKPI_ACTOR_SCOPE_MISMATCH: this storage instance is scoped to one actor");
+    }
     let lastError: unknown;
     for (let attempt = 0; attempt < 4; attempt += 1) {
       try {
@@ -110,7 +116,7 @@ export function createPostgresStorage(pool: PostgresLike, table = BOOKPI_TABLE, 
              record.payload, record.schemaVersion, record.meta, record.header, record.hash, record.integrity, record.canonical],
           );
           return record;
-        });
+        }, actorId);
       } catch (error) {
         lastError = error;
         if (!isUniqueViolation(error)) throw error;
