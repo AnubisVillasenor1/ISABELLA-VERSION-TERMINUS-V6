@@ -2222,7 +2222,7 @@ async function currentOpsState() {
         // a fresh 2-second timeout. Expose only a safe class/status, never the
         // provider response body, URL, token, or connection string.
         const message = error instanceof Error ? error.message : "";
-        const status = message.match(/Supabase REST error (\\d{3})/u)?.[1];
+        const status = message.match(/Supabase REST error (\d{3})/u)?.[1];
         const timedOut = /timeout|timed out|aborterror/iu.test(message);
         const reason = status
           ? `Read-only Atlas/Supabase query returned HTTP ${status}.`
