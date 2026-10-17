@@ -96,9 +96,8 @@ export function createRuntimeBookPiStorage(
   }
 
   if (mode && mode !== "memory") throw new Error("BOOKPI_PIPELINE_STORAGE_UNSUPPORTED");
-  const { createInMemoryBookPiStorage } = awaitlessMemoryFactory();
   return {
-    storage: createInMemoryBookPiStorage(),
+    storage: createMemoryStorage(),
     backend: "VOLATILE_MEMORY",
     durable: false,
     shared: false,
@@ -111,13 +110,6 @@ export function createRuntimeBookPiStorage(
     },
     async close() {},
   };
-}
-
-/** Avoids a circular dependency on the HTTP route module in this storage factory. */
-function awaitlessMemoryFactory(): { createInMemoryBookPiStorage: typeof import("../routes/pipeline").createInMemoryBookPiStorage } {
-  // eslint-free static require is intentionally avoided in ESM; this function is
-  // replaced below by the standalone implementation local to this module.
-  return { createInMemoryBookPiStorage: createMemoryStorage };
 }
 
 import { randomUUID } from "node:crypto";
