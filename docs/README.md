@@ -96,3 +96,140 @@
 - El resumen breve de auditoría del 13 de octubre se integró en la auditoría técnico-operativa ampliada.
 - Se eliminaron las tres fuentes redundantes solo después de crear sus versiones consolidadas.
 - Los contratos, especificaciones canónicas, artefactos generados y runbooks especializados se conservaron.
+
+
+## Inventario completo de archivos
+
+Listado reconstruido del árbol Git de `main` más los cambios documentales de esta rama. Incluye Markdown, contratos YAML/JSON, CSV generados y fuentes de texto dentro de `docs/`.
+
+### api
+
+- [`api/README.md`](api/README.md)
+- [`api/openapi.yaml`](api/openapi.yaml)
+- [`api/route-inventory.json`](api/route-inventory.json)
+
+### architecture
+
+- [`architecture/GENESIS-MAGPIE-INTEGRATION.md`](architecture/GENESIS-MAGPIE-INTEGRATION.md)
+
+### archive
+
+- [`archive/GENESISAI-500-CONTROL-CHECKLISTS-2026-10.md`](archive/GENESISAI-500-CONTROL-CHECKLISTS-2026-10.md)
+- [`archive/HISTORICAL-AUDITS-GENESIS-TINA-2026-10-08-12.md`](archive/HISTORICAL-AUDITS-GENESIS-TINA-2026-10-08-12.md)
+
+### audit
+
+- [`audit/500-POINT-REAUDIT-V6.csv`](audit/500-POINT-REAUDIT-V6.csv)
+- [`audit/500-POINT-REAUDIT-V6.md`](audit/500-POINT-REAUDIT-V6.md)
+
+### audits
+
+- [`audits/AI-INTERFACE-BENCHMARK-20-2026-10.md`](audits/AI-INTERFACE-BENCHMARK-20-2026-10.md)
+- [`audits/GLOBAL-PROFILE-TERMINUS-2026-10-12.md`](audits/GLOBAL-PROFILE-TERMINUS-2026-10-12.md)
+- [`audits/P0-ARCHITECTURE-HARDENING-2026-10-12.md`](audits/P0-ARCHITECTURE-HARDENING-2026-10-12.md)
+- [`audits/PROFILE-ECOSYSTEM-REVIEW-2026-10.md`](audits/PROFILE-ECOSYSTEM-REVIEW-2026-10.md)
+- [`audits/TECH-DEBT-REDUCTION-2026-10-13.md`](audits/TECH-DEBT-REDUCTION-2026-10-13.md)
+- [`audits/TECHNICAL-OPERATIONAL-AUDIT-2026-10-13.md`](audits/TECHNICAL-OPERATIONAL-AUDIT-2026-10-13.md)
+- [`audits/TOTAL-AUDIT-2026-10-13.md`](audits/TOTAL-AUDIT-2026-10-13.md)
+- [`audits/UI-NAVIGATION-AND-CHAT-AUDIT-2026-10-12.md`](audits/UI-NAVIGATION-AND-CHAT-AUDIT-2026-10-12.md)
+
+### bookpi
+
+- [`bookpi/DURABLE-LEDGER.md`](bookpi/DURABLE-LEDGER.md)
+
+### commerce
+
+- [`commerce/BILLING-ENGINE.md`](commerce/BILLING-ENGINE.md)
+
+### deployment
+
+- [`deployment/README.md`](deployment/README.md)
+
+### evolution
+
+- [`evolution/7000-CONTROL-MATRIX.md`](evolution/7000-CONTROL-MATRIX.md)
+- [`evolution/AI-TO-AI-OPERATING-MANUAL.md`](evolution/AI-TO-AI-OPERATING-MANUAL.md)
+- [`evolution/BLUEPRINT-V5.md`](evolution/BLUEPRINT-V5.md)
+- [`evolution/IMPLEMENTATION-BACKLOG.md`](evolution/IMPLEMENTATION-BACKLOG.md)
+- [`evolution/MASTER-V5-000.md`](evolution/MASTER-V5-000.md)
+- [`evolution/STRUCTURAL-TREE-FINAL.md`](evolution/STRUCTURAL-TREE-FINAL.md)
+
+### ops
+
+- [`ops/PRODUCTION-READINESS-RUNBOOK.md`](ops/PRODUCTION-READINESS-RUNBOOK.md)
+
+### osiris
+
+- [`osiris/ARCHITECTURE.md`](osiris/ARCHITECTURE.md)
+
+### platform
+
+- [`platform/PLATFORM-GIFTS.md`](platform/PLATFORM-GIFTS.md)
+
+### policies
+
+- [`policies/CONVERSATIONAL-BETA-GUARDRAILS.md`](policies/CONVERSATIONAL-BETA-GUARDRAILS.md)
+
+### Raíz de docs
+
+- [`ARCHITECTURE-OPERATING-MAP.md`](ARCHITECTURE-OPERATING-MAP.md)
+- [`ASSURANCE-CONTROL-PLANE.md`](ASSURANCE-CONTROL-PLANE.md)
+- [`AUDIT_GENESIS_V6_2026-10-08.md`](AUDIT_GENESIS_V6_2026-10-08.md)
+- [`CROWN-ISABELLA-VOMEGA-OPERATING-SPEC.md`](CROWN-ISABELLA-VOMEGA-OPERATING-SPEC.md)
+- [`CROWN_CONVERGENCE.md`](CROWN_CONVERGENCE.md)
+- [`ECOSYSTEM_EVOLUTION_AUDIT_2026-10-09.md`](ECOSYSTEM_EVOLUTION_AUDIT_2026-10-09.md)
+- [`ENVIRONMENT.md`](ENVIRONMENT.md)
+- [`ESTADO-REAL-ACTUAL.md`](ESTADO-REAL-ACTUAL.md)
+- [`GAME_OVER_UAGP1_CANONICAL.md`](GAME_OVER_UAGP1_CANONICAL.md)
+- [`ISABELLA_HYPER_SKILL_FABRIC.md`](ISABELLA_HYPER_SKILL_FABRIC.md)
+- [`ISABELLA_PENNYLANE_BRIDGE.md`](ISABELLA_PENNYLANE_BRIDGE.md)
+- [`LITLE_GENESIS_INTEGRATION.md`](LITLE_GENESIS_INTEGRATION.md)
+
+### registry
+
+- [`registry/TAMV-ONLINE-CANONICAL-REGISTRY-v2.0.0.md`](registry/TAMV-ONLINE-CANONICAL-REGISTRY-v2.0.0.md)
+
+### reina
+
+- [`reina/ARCHITECTURE.md`](reina/ARCHITECTURE.md)
+
+### research
+
+- [`research/ISABELLA-PUBLIC-KNOWLEDGE-GAP-2026.md`](research/ISABELLA-PUBLIC-KNOWLEDGE-GAP-2026.md)
+
+### runbooks
+
+- [`runbooks/BETA-LIVE-MODEL-GATE.md`](runbooks/BETA-LIVE-MODEL-GATE.md)
+- [`runbooks/DEPLOY-TODAY.md`](runbooks/DEPLOY-TODAY.md)
+
+### security
+
+- [`security/GENESIS-V6-THREAT-MODEL.md`](security/GENESIS-V6-THREAT-MODEL.md)
+- [`security/ISA-X-IMPLEMENTATION.md`](security/ISA-X-IMPLEMENTATION.md)
+
+### spec
+
+- [`spec/BLUEPRINT-API-v4.2.0.md`](spec/BLUEPRINT-API-v4.2.0.md)
+- [`spec/GENESIS-V6-ARCHITECTURE.md`](spec/GENESIS-V6-ARCHITECTURE.md)
+- [`spec/GENESIS-V6.1-RUNTIME.md`](spec/GENESIS-V6.1-RUNTIME.md)
+- [`spec/IKES-LIBRARIES.md`](spec/IKES-LIBRARIES.md)
+- [`spec/ISABELLA-CANON-v40-source.txt`](spec/ISABELLA-CANON-v40-source.txt)
+- [`spec/canonical/CONTRIBUTING.md`](spec/canonical/CONTRIBUTING.md)
+- [`spec/canonical/DEPLOYMENT_POLICY.md`](spec/canonical/DEPLOYMENT_POLICY.md)
+- [`spec/canonical/DIVERGENCE-REGISTER.md`](spec/canonical/DIVERGENCE-REGISTER.md)
+- [`spec/canonical/EVIDENCE_MANIFEST_SCHEMA.md`](spec/canonical/EVIDENCE_MANIFEST_SCHEMA.md)
+- [`spec/canonical/GIT_POLICY.md`](spec/canonical/GIT_POLICY.md)
+- [`spec/canonical/IKES_SPEC.md`](spec/canonical/IKES_SPEC.md)
+- [`spec/canonical/LSP_VALIDATION.md`](spec/canonical/LSP_VALIDATION.md)
+- [`spec/canonical/QUALITY_GATES.md`](spec/canonical/QUALITY_GATES.md)
+- [`spec/canonical/SANITIZATION_POLICY.md`](spec/canonical/SANITIZATION_POLICY.md)
+- [`spec/canonical/SYNC_SPEC.md`](spec/canonical/SYNC_SPEC.md)
+- [`spec/canonical/TAMV_INTEGRATION.md`](spec/canonical/TAMV_INTEGRATION.md)
+- [`spec/canonical/VERIFIER_SPEC.md`](spec/canonical/VERIFIER_SPEC.md)
+- [`spec/canonical/isabella-diff.README.md`](spec/canonical/isabella-diff.README.md)
+- [`spec/canonical/isabella-diff.manifest.json`](spec/canonical/isabella-diff.manifest.json)
+
+### tenancy
+
+- [`tenancy/ISOLATION.md`](tenancy/ISOLATION.md)
+
