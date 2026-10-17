@@ -2375,7 +2375,7 @@ app.get("/api/v1/integrations/graph", async (req, res) => {
       { from: "genesis-runtime", to: "ikes-memory", state: ikesEvidence?.status ?? "UNKNOWN" },
       { from: "genesis-runtime", to: "atlas-store", state: atlasEvidence?.status ?? "UNKNOWN" },
       { from: "http-ingress", to: "bookpi-pipeline", state: bookpiEvidence?.status ?? "UNKNOWN" },
-      { from: "http-ingress", to: "bookpi-legacy", state: legacyLedgerStatus.toUpperCase() },
+      { from: "http-ingress", to: "bookpi-legacy", state: bookpiEvidence?.status?.toUpperCase() ?? "UNKNOWN" },
       { from: "genesis-runtime", to: "observability", state: "PARTIAL" },
       { from: "http-ingress", to: "yun-events", state: "WIRED" },
       { from: "http-ingress", to: "hypercore-api", state: "WIRED" },
