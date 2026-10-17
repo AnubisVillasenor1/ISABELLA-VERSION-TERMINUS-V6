@@ -64,6 +64,10 @@ assert.ok(!html.includes('humanCheckCode') && !js.includes('humanCheckCode'), 'T
 assert.ok(!(/\sloop(?:\s|>)/i.test(html.match(/<video\b[^>]*>/i)?.[0] || '')), 'Intro video must stop at its narrative end rather than silently loop');
 assert.ok(js.includes('window.requestAnimationFrame(renderIntroFrame)'), 'Intro progress updates must use the animation frame scheduler');
 assert.ok(js.includes('introVideo.currentTime / introVideo.duration'), 'Narrative timing must follow media time to avoid scene drift during buffering');
+assert.ok(js.includes('Math.floor((boundedElapsed / Math.max(1, introTotalMs)) * introScenes.length)'), 'Intro scenes must be distributed over the actual media duration');
+assert.ok(js.includes('scene.inert = !active'), 'Inactive intro scenes must be removed from keyboard tab order');
+assert.ok(js.includes('readyState >= HTMLMediaElement.HAVE_METADATA'), 'Intro rewind must guard against seeking before metadata loads');
+assert.ok(css.includes('.cinematic-intro.media-stalled .intro-video{visibility:hidden}'), 'Stalled video must reveal the CSS scene fallback');
 assert.ok(js.includes("addEventListener('waiting'"), 'Buffering must trigger a visible-media fallback instead of repeated play() attempts');
 assert.ok(html.slice(html.indexOf('id="immersionGate"'), html.indexOf('<video id="introVideo"')).includes('id="skipIntro"'), 'The intro bypass must remain inside the modal consent gate');
 assert.ok(js.includes('trapImmersionDialogFocus') && js.includes("event.key === 'Escape'"), 'The consent dialog must trap keyboard focus and close on Escape');
