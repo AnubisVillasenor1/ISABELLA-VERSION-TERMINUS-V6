@@ -53,7 +53,7 @@ import { CognitiveFabricEngine } from "./core/cognitive-fabric-engine";
 import { ConstitutionalGovernanceFabric } from "./governance/constitutional-governance-fabric";
 import { MonetizationEngine } from "./economy/monetization-engine";
 import { DynamicPricingEngine } from "./economy/dynamic-pricing";
-import { generatePerplexityNarrative } from "./inference/perplexity-router";
+import { generatePerplexityNarrative, resolvePerplexityGenerationConfig } from "./inference/perplexity-router";
 import { createReinaRuntime, type ReinaRequest } from "./reina";
 import { SubscriptionStore, UsageMeter, billingPriceById, billingPricesPublic, billingPriceIsConfigured, checkFeature, checkQuota, planEntitlements, PLANS, type PlanId, type QuotaKey, type SubscriptionRecord } from "./commerce";
 import { GAMEOVER_CONSTITUTION, passportAuthority, uagpGateway, type UagpRequestInput } from "./gameover";
@@ -1183,15 +1183,6 @@ app.post("/api/v1/cognition/route", async (req, res) => {
         generativeNarrative = await generateCompatibleProviderNarrative(systemPrompt, input, history, chainBudget);
         if (generativeNarrative) responseEngine = "open-science";
       }
-      if (!generativeNarrative && (modelEngine === "open-science" || modelEngine === "auto" || modelEngine === "gemini")) {
-        if (!chainBudget.expired()) {
-          generativeNarrative = await generatePerplexityNarrative(
-            process.env, systemPrompt, input, history, "perplexity/kimi-k3",
-            chainBudget.attemptMs(providerTimeoutMs), chainBudget.signal(providerTimeoutMs),
-          );
-        }
-        if (generativeNarrative) responseEngine = "perplexity-router";
-      }
       if (!generativeNarrative && modelEngine === "auto") {
         generativeNarrative = await generateKeylessFreeNarrative(systemPrompt, input, history, chainBudget);
         if (generativeNarrative) responseEngine = "keyless-free";
@@ -1213,8 +1204,18 @@ app.post("/api/v1/cognition/route", async (req, res) => {
           } catch { generativeNarrative = null; }
         }
         if (!generativeNarrative) {
+          const perplexityConfig = resolvePerplexityGenerationConfig(process.env);
+          if (perplexityConfig && !chainBudget.expired()) {
+            generativeNarrative = await generatePerplexityNarrative(
+              process.env, systemPrompt, input, history, perplexityConfig.model,
+              chainBudget.attemptMs(providerTimeoutMs), chainBudget.signal(providerTimeoutMs),
+            );
+            if (generativeNarrative) responseEngine = "perplexity-router";
+          }
+        }
+        if (!generativeNarrative && !chainBudget.expired()) {
           generativeNarrative = await generateGatewayNarrative(systemPrompt, input, history, chainBudget);
-          if (generativeNarrative) responseEngine = "open-science";
+          if (generativeNarrative) responseEngine = "gateway";
         }
       }
     }
