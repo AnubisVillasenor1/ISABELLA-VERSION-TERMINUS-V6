@@ -1,5 +1,6 @@
 import { boundedBudgetMs, DeadlineBudget } from "./inference/deadline";
-import { buildCognitionCacheKey, CognitionResponseCache } from "./inference/cognition-response-cache";
+import { TtlCache } from "./inference/cache";
+import { buildCognitionCacheKey } from "./inference/cognition-cache-key";
 import { buildAsset, contentHash, serveAsset, type StaticAsset } from "./http/static-assets";
 import express, { type Application, type NextFunction, type Request, type Response } from "express";
 import { randomUUID, timingSafeEqual } from "node:crypto";
@@ -1031,7 +1032,7 @@ app.get("/api/v1/cognition/native-runtime", (_req, res) => {
 
 // Public cognitive route: viewer-only. Request bodies cannot supply authority, roles, action or resource.
 // Cache entries are process-local optimizations, not permissions, evidence, or durable memory.
-const cognitionResponseCache = new CognitionResponseCache<unknown>(30_000, 500);
+const cognitionResponseCache = new TtlCache<unknown>(30_000, 500);
 app.post("/api/v1/cognition/route", async (req, res) => {
   if (!enforceRateLimit(req, res, publicCognitionLimiter, "cognition")) return;
   try {
