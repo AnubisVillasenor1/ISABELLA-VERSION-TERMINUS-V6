@@ -153,6 +153,8 @@ add("RA-032", "BLOCKER",
     /bookpi: pipelineBookPi\.storage/.test(server) &&
     !!bookPiRuntime && /createPostgresStorage\(pool, "bookpi_events"/.test(bookPiRuntime) &&
     /POSTGRES_URL/.test(bookPiRuntime) &&
+    /BOOKPI_INTEGRITY_SECRET/.test(bookPiRuntime) &&
+    /integritySecret\.length < 32/.test(bookPiRuntime) &&
     /VOLATILE_MEMORY/.test(bookPiRuntime) &&
     !!bookPiPostgres && /pg_advisory_xact_lock/.test(bookPiPostgres) &&
     /BOOKPI_ACTOR_SCOPE_MISMATCH/.test(bookPiPostgres) &&
