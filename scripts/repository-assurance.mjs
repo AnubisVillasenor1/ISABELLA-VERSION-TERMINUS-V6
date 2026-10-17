@@ -264,6 +264,16 @@ add("RA-040", "BLOCKER",
   "The authenticated integration graph enumerates connected route surfaces and explicitly labels the Rust workspace as not runtime-linked.",
   ["src/server.ts", "test/deployment/integration-graph.test.ts"]);
 
+const graphSourceTests = await read("test/deployment/integration-graph.test.ts");
+add("RA-041", "BLOCKER",
+  !!server &&
+    /const legacyBookpiEvidence = evidenceByName\.get\("bookpi-ledger"\)/.test(server) &&
+    /id: "bookpi-legacy", state: legacyBookpiEvidence\?\.status/.test(server) &&
+    /to: "bookpi-legacy", state: legacyBookpiEvidence\?\.status\?\.toUpperCase/.test(server) &&
+    !!graphSourceTests && /legacy graph state uses its own health evidence/.test(graphSourceTests),
+  "The legacy BookPI node and edge consume the legacy ledger's own readiness evidence, not the pipeline adapter's state.",
+  ["src/server.ts", "test/deployment/integration-graph.test.ts"]);
+
 const report = {
   schemaVersion: "1.0.0",
   audit: "isabella-genesis-repository-assurance",
