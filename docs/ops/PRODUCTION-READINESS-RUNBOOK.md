@@ -31,7 +31,7 @@ Migraciones del ledger PostgreSQL: `infra/db/migrations/001_create_bookpi_events
 
 ### 2. Activar el BookPI compartido del pipeline
 
-El código de esta rama conecta `POST /api/v1/pipeline/execute` al puerto `createRuntimeBookPiStorage`. Si `DATABASE_URL` está configurada, selecciona PostgreSQL automáticamente; también se puede indicar `BOOKPI_PIPELINE_STORAGE=postgres`.
+El código de esta rama conecta `POST /api/v1/pipeline/execute` al puerto `createRuntimeBookPiStorage`. Selecciona PostgreSQL automáticamente con `DATABASE_URL`, `POSTGRES_URL` o `POSTGRES_URL_NON_POOLING`; también se puede indicar `BOOKPI_PIPELINE_STORAGE=postgres`.
 
 1. Aplicar las dos migraciones de BookPI a la base PostgreSQL de la aplicación.
 2. Configurar `DATABASE_URL` con TLS y privilegios mínimos; nunca incluir el valor en logs, issues ni README.
