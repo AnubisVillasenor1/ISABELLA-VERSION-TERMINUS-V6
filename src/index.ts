@@ -168,6 +168,9 @@ export type { RateLimitDecision as TokenBucketPolicy } from "./deployment/produc
  *
  * Separates business confidence from verified knowledge confidence.
  */
+// Keep the generic public symbol deterministic: the commerce scale (low/medium/high)
+// remains the default; evidence confidence is exported under its explicit domain name.
+export type { ConfidenceLevel } from "./commerce";
 export type { ConfidenceLevel as CommerceConfidence } from "./commerce";
 export type { ConfidenceLevel as VerifiedKnowledgeConfidence } from "./memory/verified-knowledge";
 
