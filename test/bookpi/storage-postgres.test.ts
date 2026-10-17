@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createPostgresStorage } from "../../src/bookpi/storage-postgres";
+import { buildBookPiEvent } from "../../src/bookpi/emitter";
 import type { PostgresLike } from "../../src/bookpi/storage-postgres";
 import { makeSeed } from "./helpers";
 
@@ -83,4 +84,37 @@ describe("BookPI PostgreSQL adapter contract", () => {
       .rejects.toThrow("BOOKPI_ACTOR_SCOPE_MISMATCH");
     expect(touchedDatabase).toBe(false);
   });
+  it("normalizes node-postgres TIMESTAMPTZ Date values before canonical chain verification", async () => {
+    const secret = "test-integrity-secret-with-32-chars";
+    const record = buildBookPiEvent(makeSeed(), {
+      sequence: 1,
+      prevHash: "0".repeat(64),
+      timestamp: "2026-10-17T12:30:00.000Z",
+      actorId: "human:pipeline-session",
+      secret,
+    });
+    const row = {
+      id: record.id,
+      type: record.type,
+      sequence: String(record.sequence),
+      prev_hash: record.prevHash,
+      timestamp: new Date(record.timestamp),
+      actor_id: record.actorId ?? null,
+      payload: record.payload,
+      schema_version: record.schemaVersion,
+      meta: record.meta,
+      header: record.header,
+      hash: record.hash,
+      integrity: record.integrity,
+      canonical: record.canonical,
+    };
+    const pool: PostgresLike = {
+      query: async () => ({ rows: [row] }),
+    };
+    const result = await createPostgresStorage(pool).verifyChain({ secret });
+    expect(result.valid).toBe(true);
+    expect(result.count).toBe(1);
+    expect(result.failures).toEqual([]);
+  });
+
 });
