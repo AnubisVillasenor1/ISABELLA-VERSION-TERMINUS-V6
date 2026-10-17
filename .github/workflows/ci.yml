@@ -57,7 +57,7 @@ jobs:
         uses: anchore/sbom-action@v0
         with:
           format: spdx-json
-          artifact-name: sbom-${{ github.sha }}
+          upload-artifact: false
 
       - name: Upload SBOM
         uses: actions/upload-artifact@v4
