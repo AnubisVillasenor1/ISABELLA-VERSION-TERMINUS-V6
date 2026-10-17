@@ -71,5 +71,5 @@ export function buildCognitionCacheKey(
   focusLens: string,
   methodId: string,
 ): string {
-  return JSON.stringify([modelEngine, focusLens, methodId, input, history ?? []]);
+  return JSON.stringify([modelEngine, focusLens, methodId, input, history ?? []]) ?? "null";
 }
