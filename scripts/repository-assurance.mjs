@@ -205,10 +205,10 @@ const bookPiMigration = await read("supabase/migrations/20261017000002_bookpi-ev
 const bookPiPostgresTests = await read("test/bookpi/postgres-migration.test.ts");
 add("RA-036", "BLOCKER",
   !!bookPiMigration &&
-    /create table if not exists public\\.bookpi_events/i.test(bookPiMigration) &&
+    /create table if not exists public\.bookpi_events/i.test(bookPiMigration) &&
     /sequence bigint not null unique/i.test(bookPiMigration) &&
-    /alter table public\\.bookpi_events enable row level security/i.test(bookPiMigration) &&
-    /revoke all on table public\\.bookpi_events from anon, authenticated/i.test(bookPiMigration) &&
+    /alter table public\.bookpi_events enable row level security/i.test(bookPiMigration) &&
+    /revoke all on table public\.bookpi_events from anon, authenticated/i.test(bookPiMigration) &&
     /to service_role/i.test(bookPiMigration) &&
     !!bookPiPostgresTests && /BookPI PostgreSQL migration contract/.test(bookPiPostgresTests),
   "The BookPI PostgreSQL event schema matches adapter columns and restricts direct browser-role access; the contract has regression tests.",
@@ -216,7 +216,7 @@ add("RA-036", "BLOCKER",
 
 add("RA-037", "BLOCKER",
   !!server &&
-    /const verification = bookPiLedger\\.verify\\(\\)/.test(server) &&
+    /const verification = bookPiLedger\.verify\(\)/.test(server) &&
     /status: legacyLedgerStatus/.test(server) &&
     !/name: "bookpi-ledger", status: "degraded" as const/.test(server),
   "Readiness evaluates the legacy BookPI chain instead of hardcoding the dependency as degraded.",
