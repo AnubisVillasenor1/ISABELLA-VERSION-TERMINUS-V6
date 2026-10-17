@@ -311,9 +311,9 @@ function describeProviderReadiness(env: NodeJS.ProcessEnv): {
 }
 
 /**
- * Optional OpenAI-compatible free/credit-tier providers. They are attempted only
- * when an operator supplies the provider key and model explicitly; Isabella never
- * invents credentials or silently upgrades to a paid model.
+ * Potentially billable OpenAI-compatible providers. They are called only behind
+ * ALLOW_PAID_PROVIDER_FALLBACK=true and require an explicit key and model ID.
+ * Credentials alone never imply permission to spend.
  */
 async function generateCompatibleProviderNarrative(systemPrompt: string, input: string, history: PublicChatTurn[] = [], budget?: DeadlineBudget): Promise<string | null> {
   if (budget?.expired()) return null;
@@ -445,10 +445,11 @@ async function generateFreeOpenRouterNarrative(systemPrompt: string, input: stri
   if (budget?.expired()) return null;
   const key = process.env.OPENROUTER_API_KEY;
   const model = (process.env.OPENROUTER_FREE_MODEL || "openrouter/free").trim();
-  const paidFallbackEnabled = process.env.ALLOW_PAID_PROVIDER_FALLBACK === "true";
   if (!key || Date.now() < openRouterCooldownUntil) return null;
-  if (!isOpenRouterModelAllowed(model, paidFallbackEnabled)) {
-    console.warn("[Isabella] refusing OpenRouter model without an explicit free suffix while paid fallback is disabled", { model });
+  // This adapter is explicitly the free OpenRouter path. Paid model IDs must not
+  // be admitted here, even when some other paid provider has been enabled.
+  if (!isOpenRouterModelAllowed(model, false)) {
+    console.warn("[Isabella] refusing non-free OpenRouter model in the free route", { model });
     return null;
   }
   try {
@@ -1145,7 +1146,7 @@ app.post("/api/v1/cognition/route", async (req, res) => {
     }
 
     let generativeNarrative: string | null = null;
-    let responseEngine: "gemini" | "gateway" | "open-science" | "openrouter-free" | "huggingface-free" | "keyless-free" | "perplexity-router" | "sovereign-fallback" | "sovereign" | "blocked" = "blocked";
+    let responseEngine: "gemini" | "gateway" | "open-science" | "openrouter-free" | "huggingface-free" | "compatible-provider" | "keyless-free" | "perplexity-router" | "sovereign-fallback" | "sovereign" | "blocked" = "blocked";
     // Start the budget before native classification so inference plus routing share one deadline.
     const requestAbortController = new AbortController();
     res.once("close", () => {
