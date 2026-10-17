@@ -288,6 +288,17 @@ add("RA-042", "BLOCKER",
   "IGE-OMEGA has a bounded, URL-validated HTTP health/readiness bridge; the graph reports real probe state without claiming authenticated inference is wired.",
   ["src/ige-omega/gateway-probe.ts", "test/ige-omega/gateway-probe.test.ts", "src/server.ts"]);
 
+const nestedPackageManagerScripts = Object.entries(pkg?.scripts ?? {})
+  .filter(([, command]) => typeof command === "string")
+  .filter(([, command]) => command.replaceAll("corepack pnpm run", "").includes("pnpm run"))
+  .map(([name]) => name);
+add("RA-043", "BLOCKER",
+  !!pkg && nestedPackageManagerScripts.length === 0,
+  nestedPackageManagerScripts.length === 0
+    ? "All nested pnpm run invocations explicitly use Corepack and the packageManager-pinned version."
+    : `Unpinned nested pnpm invocations remain in scripts: ${nestedPackageManagerScripts.join(", ")}.`,
+  ["package.json"]);
+
 const report = {
   schemaVersion: "1.0.0",
   audit: "isabella-genesis-repository-assurance",
