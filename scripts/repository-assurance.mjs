@@ -177,6 +177,15 @@ add("RA-033", "BLOCKER",
   "IKES hydrates and persists hash-validated claims through server-only Supabase tables; reads fail closed during hydration and write errors remain visible.",
   ["src/server.ts", "src/genesis/runtime.ts", "src/memory/ikes.ts", "src/memory/ikes-supabase.ts", "supabase/migrations/20261017000001_ikes-memory.sql", "test/memory/ikes-persistence.test.ts"]);
 
+add("RA-034", "BLOCKER",
+  !!server && /\/api\/v1\/integrations\/graph/.test(server) &&
+    /authorizeApiToken\(req, res, "GENESIS_ADMIN_API_TOKEN"\)/.test(server) &&
+    /readinessEvidence/.test(server) &&
+    /legacy ledger; not yet unified/.test(server) &&
+    /WIRED describes a code path/.test(server),
+  "An authenticated operations endpoint exposes registered modules and distinguishes wiring from actual dependency health.",
+  ["src/server.ts"]);
+
 const report = {
   schemaVersion: "1.0.0",
   audit: "isabella-genesis-repository-assurance",
