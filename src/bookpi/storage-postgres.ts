@@ -42,19 +42,25 @@ async function withActorTransaction<T>(
 }
 
 export interface PostgresBookPiRow {
-  id: string; type: string; sequence: number; prev_hash: string; timestamp: string;
+  id: string; type: string; sequence: number | string; prev_hash: string; timestamp: string;
   actor_id: string | null; payload: unknown; schema_version: string; meta: unknown;
   header: unknown; hash: string; integrity: string; canonical: string;
 }
 
 export const BOOKPI_TABLE = "bookpi_events";
 
-const rowToRecord = (row: PostgresBookPiRow): BookPiEventRecord => ({
-  id: row.id, type: row.type, sequence: row.sequence, prevHash: row.prev_hash, timestamp: row.timestamp,
-  actorId: row.actor_id ?? undefined, header: row.header as BookPiEventRecord["header"],
-  payload: row.payload as BookPiEventRecord["payload"], schemaVersion: row.schema_version,
-  meta: (row.meta ?? {}) as BookPiEventRecord["meta"], hash: row.hash, integrity: row.integrity, canonical: row.canonical,
-});
+const rowToRecord = (row: PostgresBookPiRow): BookPiEventRecord => {
+  // node-postgres returns int8/BIGINT as a string by default. Normalize before
+  // arithmetic or chain order checks; never allow "1" + 1 to become "11".
+  const sequence = typeof row.sequence === "string" ? Number(row.sequence) : row.sequence;
+  if (!Number.isSafeInteger(sequence) || sequence < 1) throw new Error("BOOKPI_POSTGRES_SEQUENCE_INVALID");
+  return {
+    id: row.id, type: row.type, sequence, prevHash: row.prev_hash, timestamp: row.timestamp,
+    actorId: row.actor_id ?? undefined, header: row.header as BookPiEventRecord["header"],
+    payload: row.payload as BookPiEventRecord["payload"], schemaVersion: row.schema_version,
+    meta: (row.meta ?? {}) as BookPiEventRecord["meta"], hash: row.hash, integrity: row.integrity, canonical: row.canonical,
+  };
+};
 
 function isUniqueViolation(error: unknown): boolean {
   return typeof error === "object" && error !== null && "code" in error && (error as { code?: unknown }).code === "23505";
