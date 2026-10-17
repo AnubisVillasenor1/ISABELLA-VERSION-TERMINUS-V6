@@ -1,4 +1,4 @@
-# Isabella Villaseñor AI — Genesis TINA v40.0.0
+# Isabella Villaseñor AI — Genesis TINA V6
 
 Infraestructura Cognitiva Civilizatoria Soberana (CCI): memoria, gobernanza, evidencia, economía, seguridad, federación y resiliencia.
 
