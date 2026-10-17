@@ -144,12 +144,12 @@ jobs:
             exit 1
           fi
 
-      - name: Cargo Audit
-        run: cargo install cargo-audit || true
+      - name: Install Cargo Audit (locked dependency resolution)
+        run: cargo install cargo-audit --locked
 
-      - name: Security Audit
+      - name: Security Audit (blocking)
         working-directory: ige-omega
-        run: cargo audit || true
+        run: cargo audit --locked
 
       - name: Format
         working-directory: ige-omega
@@ -206,11 +206,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Trivy Filesystem Scan
+      - name: Trivy Filesystem Scan (block high/critical vulnerabilities)
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: fs
           format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
 
       - name: CodeQL Init
         uses: github/codeql-action/init@v3
