@@ -103,6 +103,8 @@ No incluyas claves, tokens ni credenciales en el repositorio. Verifica nombres y
 
 El README previo declara GET /api/v1/ops/preflight protegido por token administrativo. Antes de exponerlo, verifica en código y pruebas que la autenticación y autorización se aplican realmente, que los errores no revelan secretos y que usuarios no autorizados no pueden consultar detalles internos. Confirma también qué rutas registra el servidor y añade pruebas de contrato para cada endpoint público.
 
+Diagnóstico de interconexión: `GET /api/v1/integrations/graph` requiere `GENESIS_ADMIN_API_TOKEN` y devuelve los módulos, tools, skills, protocolos, aristas de integración y evidencia de readiness observada. `WIRED` significa que existe un camino de código; no implica que la base remota, los secretos, los proveedores ni el despliegue estén saludables.
+
 ## Seguridad, privacidad y límites
 
 - **Autoridad separada de capacidad:** un módulo que propone una acción no adquiere permiso para ejecutarla.
