@@ -130,6 +130,10 @@ add("RA-029", "WARN",
   !!uiCss && !/hebbkx1anhila5yf/.test(uiCss),
   "The interface does not depend on the retired external cinematic background asset.",
   ["src/ui/cinematic.css"]);
+add("RA-030", "BLOCKER",
+  !!server && !/process\\.env\\.ISABELLA_KEYLESS_FREE_PROVIDER\\s*=\\s*["']pollinations["']/.test(server),
+  "External keyless inference remains disabled unless the operator explicitly opts in.",
+  ["src/server.ts"]);
 
 const report = {
   schemaVersion: "1.0.0",
