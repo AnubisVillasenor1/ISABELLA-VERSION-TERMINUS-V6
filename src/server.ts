@@ -2321,10 +2321,17 @@ app.get("/api/v1/ops/snapshot", async (_req, res) => {
 app.get("/api/v1/integrations/graph", async (req, res) => {
   if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
   const { snapshot, readinessEvidence } = await currentOpsState();
-  const evidenceByName = new Map(readinessEvidence.map((item) => [item.dependency, item]));
-  const bookpiEvidence = evidenceByName.get("pipeline-bookpi-storage");
-  const ikesEvidence = evidenceByName.get("ikes-memory");
-  const atlasEvidence = evidenceByName.get("atlas-persistence");
+  const evidenceByName = new Map<string, Record<string, unknown>>();
+  for (const item of readinessEvidence) evidenceByName.set(item.dependency, { ...item });
+  const bookpiEvidence = evidenceByName.get("pipeline-bookpi-storage") as {
+    status?: string; backend?: string; durable?: boolean; shared?: boolean; eventCount?: number; reason?: string;
+  } | undefined;
+  const ikesEvidence = evidenceByName.get("ikes-memory") as {
+    status?: string; backend?: string; pending?: boolean; reason?: string;
+  } | undefined;
+  const atlasEvidence = evidenceByName.get("atlas-persistence") as {
+    status?: string; reason?: string;
+  } | undefined;
   res.setHeader("Cache-Control", "no-store");
   res.json({
     success: true,
