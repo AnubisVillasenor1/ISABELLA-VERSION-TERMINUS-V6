@@ -1,4 +1,4 @@
-# Estado real de Isabella Genesis — 12 de octubre de 2026
+# Estado real de Isabella Genesis — actualizado 17 de octubre de 2026
 
 **Repositorio:** `OsoPanda1/Isabella-V6-TINA-h6`  
 **Rama de runtime validada:** `main`  
@@ -8,18 +8,19 @@
 
 ## Readiness estimada
 
-**46.25% ponderado (≈46%) de preparación para producción.** Es una evaluación de gates, no una métrica científica ni un porcentaje de funcionalidades. No se incrementa por el mero aumento del número de pruebas: siguen abiertos la inferencia externa real, CI reproducible, la validación Rust, el E2E de persistencia y la prueba operativa de recuperación.
+**61.0% ponderado de preparación para producción** (misma cifra y misma rúbrica que `README.md`, sección «Medición del avance real»; una prueba de consistencia, `test/deployment/readiness-consistency.test.ts`, falla si ambos documentos divergen). Es una evaluación de gates, no una métrica científica ni un porcentaje de funcionalidades. No sube por el mero aumento del número de pruebas ni por cambios posteriores al SHA validado: siguen abiertos CI de GitHub con ejecución válida, persistencia remota sana (Atlas/IKES), `BOOKPI_INTEGRITY_SECRET` en el entorno desplegado, inferencia externa verificada, telemetría exportada y despliegue/rollback reales.
 
-| Dimensión | Peso | Puntaje | Aporte |
-|---|---:|---:|---:|
-| Runtime HTTP y flujo local | 20 | 75 | 15 |
-| Pruebas y validación automatizada | 20 | 75 | 15 |
-| Seguridad y guardrails | 15 | 45 | 6.75 |
-| Inferencia externa real verificada | 15 | 0 | 0 |
-| Persistencia durable y recuperación | 10 | 40 | 4 |
-| CI reproducible y workspace Rust | 10 | 20 | 2 |
-| Operación, observabilidad y rollback | 10 | 35 | 3.5 |
-| **Total** | **100** |  | **46.25** |
+> Histórico: la versión de 12 de octubre de 2026 estimaba 46.25% con otra rúbrica (runtime 20, pruebas 20, seguridad 15, inferencia 15, persistencia 10, CI/Rust 10, operación 10). Se reemplazó para no mantener dos cifras contradictorias.
+
+| Dominio | Obtenidos / disponibles |
+|---|---:|
+| Runtime, compilación y pruebas | 25 / 25 |
+| Seguridad y CI | 16 / 20 |
+| Persistencia e integridad de datos | 5 / 20 |
+| Inferencia y conversación | 7 / 15 |
+| Despliegue y recuperación | 5 / 10 |
+| Observabilidad y operación | 3 / 10 |
+| **Total** | **61 / 100** |
 
 ## Evidencia del SHA validado
 
