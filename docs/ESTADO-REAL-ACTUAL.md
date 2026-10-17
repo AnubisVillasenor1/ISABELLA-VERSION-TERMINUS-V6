@@ -36,7 +36,6 @@ Existe una inconsistencia de trazabilidad: el README menciona dos recuentos hist
 - [Mapa operativo](ARCHITECTURE-OPERATING-MAP.md): arquitectura y fronteras de integración.
 - [Runbook de readiness](ops/PRODUCTION-READINESS-RUNBOOK.md): acciones para cerrar bloqueadores.
 - [Auditoría técnico-operativa](audits/TECHNICAL-OPERATIONAL-AUDIT-2026-10-13.md) y [reducción de deuda técnica](audits/TECH-DEBT-REDUCTION-2026-10-13.md): hallazgos y cambios con alcance histórico.
-- [Archivo de auditorías históricas](archive/HISTORICAL-AUDITS-GENESIS-TINA-2026-10-08-12.md): snapshots anteriores o de otros repositorios.
 
 ## Regla de actualización
 
