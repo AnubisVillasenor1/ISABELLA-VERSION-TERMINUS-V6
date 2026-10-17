@@ -14,9 +14,9 @@ The `DeadlineBudget` was created after the local Genesis Turbo classification. T
 
 ### INF-02 — Two fallback paths could escape the shared budget
 
-The Perplexity Router call used its own default 30-second timeout without the chain's remaining budget. A later keyless-provider retry also omitted the `DeadlineBudget` argument.
+Before this fix, the Perplexity Router call used its default 30-second timeout without the chain's remaining budget. A later keyless-provider retry also omitted the `DeadlineBudget` argument.
 
-**Correction:** pass a remaining-budget-derived timeout and abort signal to Perplexity; pass the shared budget to the second keyless attempt. All ordinary provider attempts remain guarded by `budget.expired()`.
+**Correction:** the Perplexity request now receives a remaining-budget-derived timeout and abort signal, and the second keyless attempt receives the shared budget. All provider attempts are expected to respect the shared time and cancellation contract.
 
 ### INF-03 — Client-side Stop/disconnect did not cancel upstream model work
 
@@ -36,10 +36,19 @@ The route checked its full-response cache before enforcing the input-size limit,
 
 **Correction:** cache reads now happen after request validation, a fresh policy evaluation, and a BookPI event. The key uses structural JSON encoding and includes the governance method. Cache hits refresh the current decision, principal, and provider-configuration disclosure, mark the hit explicitly, and use `Cache-Control: no-store`. The cache is process-local, bounded, TTL-expiring, and LRU-evicting. Deterministic fallback responses are excluded from writes.
 
+### INF-06 — Potential billable provider was routed from Auto/Open Science without an explicit paid-model selection
+
+The server previously called Perplexity Router with the hard-coded model `perplexity/kimi-k3` from the `auto` and `open-science` fallback chain. A configured API key was enough to attempt that model; it did not require `ALLOW_PAID_PROVIDER_FALLBACK=true` or an operator-selected model. This contradicted the route's own policy that paid routes require opt-in.
+
+**Correction:** generation is now fail-closed unless all three values are present: `PERPLEXITY_API_KEY`, a nonblank `PERPLEXITY_ROUTER_MODEL`, and the exact operator opt-in `ALLOW_PAID_PROVIDER_FALLBACK=true`. The helper refuses generation if the requested model differs from the configured model. The default Perplexity model has been removed, readiness now reports the selected model only when the gate is satisfied, and the provider is invoked only in the paid fallback block. Added unit tests cover key-only, missing model, opt-in values, and successful explicit selection.
+
+The official Kimi API pricing guidance states that API use is billed by token and model, including Kimi K3 pay-as-you-go; selection must therefore not be silently interpreted as free. See [Kimi API pricing](https://www.kimi.ai/help/kimi-api/api-pricing).
+
 ## Regression coverage added
 
 - Added a unit test asserting that caller cancellation aborts a provider signal and marks the deadline as expired, preventing subsequent attempts.
 - Added bounded-cache tests for TTL expiry, capacity, LRU, replacement, clear, and cache-key isolation across governance methods.
+- Added provider policy tests proving Perplexity generation stays disabled unless the operator explicitly opts into paid fallback and chooses the model.
 - Added source-level route contract tests verifying input-size and memory-query guards, current governance evaluation, and BookPI event append all precede cache reuse. These are structural regression checks, not substitutes for an HTTP integration test.
 - Existing deadline tests still cover remaining-budget caps, minimum attempt windows, worst-case sequential timeout bounds, invalid values, and environment parsing.
 
@@ -54,6 +63,6 @@ The route checked its full-response cache before enforcing the input-size limit,
 ## Invariants preserved
 
 - External keyless inference remains opt-in; this change does not enable it.
-- Paid-provider fallback remains controlled by the existing explicit configuration.
+- Paid-provider fallback remains controlled by explicit configuration; Perplexity additionally requires an explicit model ID.
 - The deterministic fallback is still labeled `sovereign-fallback`; it is not represented as LLM output.
 - No authority or execution permissions are granted by the deadline or cancellation mechanism.
