@@ -62,7 +62,7 @@ Este flujo describe el objetivo de arquitectura. La persistencia, el aislamiento
 
 ## Instalación y validación local
 
-Requisitos declarados: Node.js 24.x y pnpm 10.28.0. Antes de dar por válida la CI, alinea los workflows que todavía configuran Node 22.
+Requisitos declarados: Node.js 24.x y pnpm 10.28.0. Los workflows principales y el ingest de Atlas quedaron alineados en esta rama con Node 24 y una instalación reproducible mediante pnpm; la alineación debe confirmarse con una ejecución CI verde.
 
     corepack enable
     pnpm install --frozen-lockfile
