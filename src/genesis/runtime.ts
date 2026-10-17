@@ -852,13 +852,23 @@ export class IsabellaGenesisRuntime {
     return result;
   }
 
+  /** Optional memory degradation must not disable local conversation; explicit memory APIs still return 503. */
+  private retrieveMemorySafely(query: string): ReturnType<IKESEngine["retrieve"]> {
+    try {
+      return this.memory.retrieve(query);
+    } catch (error) {
+      if (error instanceof Error && error.message === "IKES_PERSISTENCE_NOT_INITIALIZED") return [];
+      throw error;
+    }
+  }
+
   evaluate(input: GenesisRuntimeInput): GenesisRuntimeDecision {
     const started = Date.now();
     const aegis = inspectAegis(input.input);
     const crown = evaluateCrown(input);
     const plan = planExecution(input);
     const memory = input.memoryQuery && aegis.decision !== "BLOCK"
-      ? this.memory.retrieve(input.memoryQuery)
+      ? this.retrieveMemorySafely(input.memoryQuery)
       : [];
     const admitted = aegis.decision !== "BLOCK" && crown.verification.allPassed && crown.responseMode !== "refuse";
 
@@ -1229,7 +1239,7 @@ export class IsabellaGenesisRuntime {
         classifyFlow: (value) => this.classifyFlow(value),
         assessCompanionSafety: (value) => this.assessCompanionSafety(value),
         assessVigia: (value) => this.assessVigia(value),
-        retrieveKnowledge: (query) => this.memory.retrieve(query),
+        retrieveKnowledge: (query) => this.retrieveMemorySafely(query),
         planExperts: (ids) => this.planExpertModules(ids),
         harden: (content) => this.harden(content),
         explainPolicy: (decision, factors, evidenceRefs, policyVersion) =>
