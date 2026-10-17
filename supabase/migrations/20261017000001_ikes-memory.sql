@@ -62,6 +62,47 @@ create trigger atlas_knowledge_claims_updated_at
 before update on public.atlas_knowledge_claims
 for each row execute function public.atlas_knowledge_set_updated_at();
 
+-- Preserve stable source identity across concurrent application replicas.
+create or replace function public.atlas_knowledge_guard_source_identity()
+returns trigger language plpgsql as $
+begin
+  if new.source_id <> old.source_id
+    or new.uri <> old.uri
+    or new.content_hash <> old.content_hash then
+    raise exception 'IKES_SOURCE_IDENTITY_IMMUTABLE';
+  end if;
+  return new;
+end;
+$;
+
+drop trigger if exists atlas_knowledge_sources_identity_guard on public.atlas_knowledge_sources;
+create trigger atlas_knowledge_sources_identity_guard
+before update on public.atlas_knowledge_sources
+for each row execute function public.atlas_knowledge_guard_source_identity();
+
+-- Optimistic concurrency control: retries are idempotent only when both version
+-- and content hash match. Stale or same-version conflicting claims are rejected.
+create or replace function public.atlas_knowledge_guard_claim_version()
+returns trigger language plpgsql as $
+begin
+  if new.claim_id <> old.claim_id then
+    raise exception 'IKES_CLAIM_IDENTITY_IMMUTABLE';
+  end if;
+  if new.version = old.version and new.content_hash = old.content_hash then
+    return new;
+  end if;
+  if new.version <> old.version + 1 then
+    raise exception 'IKES_CLAIM_VERSION_CONFLICT';
+  end if;
+  return new;
+end;
+$;
+
+drop trigger if exists atlas_knowledge_claims_version_guard on public.atlas_knowledge_claims;
+create trigger atlas_knowledge_claims_version_guard
+before update on public.atlas_knowledge_claims
+for each row execute function public.atlas_knowledge_guard_claim_version();
+
 alter table public.atlas_knowledge_sources enable row level security;
 alter table public.atlas_knowledge_claims enable row level security;
 
