@@ -22,6 +22,25 @@ export function perplexityApiKey(env: Record<string, string | undefined>): strin
   return v ? v : null;
 }
 
+/**
+ * Model generation through the Perplexity Router is treated as paid unless an
+ * operator explicitly opts in and selects the exact model. An API key alone is
+ * never sufficient to turn this provider into an automatic fallback.
+ */
+export interface PerplexityGenerationConfig {
+  readonly apiKey: string;
+  readonly model: string;
+}
+
+export function resolvePerplexityGenerationConfig(
+  env: Record<string, string | undefined>,
+): PerplexityGenerationConfig | null {
+  const apiKey = perplexityApiKey(env);
+  const model = env.PERPLEXITY_ROUTER_MODEL?.trim();
+  if (env.ALLOW_PAID_PROVIDER_FALLBACK !== "true" || !apiKey || !model) return null;
+  return Object.freeze({ apiKey, model });
+}
+
 export function createPerplexityRouterClient(env: Record<string, string | undefined>): OpenAI | null {
   const key = perplexityApiKey(env);
   if (!key) return null;
@@ -44,10 +63,13 @@ export async function generatePerplexityNarrative(
   systemPrompt: string,
   input: string,
   history: { role: string; content: string }[] = [],
-  model = "perplexity/kimi-k3",
+  model: string,
   timeoutMs = 30_000,
   signal?: AbortSignal,
 ): Promise<string | null> {
+  const config = resolvePerplexityGenerationConfig(env);
+  // Fail closed when a caller passes an unconfigured model or provider credentials are missing.
+  if (!config || config.model !== model || signal?.aborted) return null;
   const client = createPerplexityRouterClient(env);
   if (!client) return null;
   try {
@@ -68,6 +90,11 @@ export async function generatePerplexityNarrative(
   }
 }
 
-export function describePerplexityReadiness(env: Record<string, string | undefined>): { configured: boolean; model: string } {
-  return { configured: perplexityApiKey(env) !== null, model: "perplexity/kimi-k3" };
+export function describePerplexityReadiness(env: Record<string, string | undefined>): {
+  configured: boolean;
+  model: string | null;
+  paidOptInRequired: true;
+} {
+  const config = resolvePerplexityGenerationConfig(env);
+  return { configured: config !== null, model: config?.model ?? null, paidOptInRequired: true };
 }
