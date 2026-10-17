@@ -1,6 +1,6 @@
 /** COMMERCE — ingresos confirmados, fórmulas estadísticas y niveles de confianza. */
 
-import type { ConfidenceLevel, RevenueMetric, RevenueSummary } from "./types";
+import type { CommerceConfidenceLevel as ConfidenceLevel, RevenueMetric, RevenueSummary } from "./types";
 
 export interface RevenueComponents {
   grossConfirmed: number;

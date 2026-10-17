@@ -168,7 +168,7 @@ export type { RateLimitDecision as TokenBucketPolicy } from "./deployment/produc
  *
  * Separates business confidence from verified knowledge confidence.
  */
-export type { ConfidenceLevel as CommerceConfidence } from "./commerce";
+export type { CommerceConfidenceLevel as CommerceConfidence } from "./commerce";
 export type { ConfidenceLevel as VerifiedKnowledgeConfidence } from "./memory/verified-knowledge";
 
 /**

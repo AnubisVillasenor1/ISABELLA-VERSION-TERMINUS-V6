@@ -46,6 +46,7 @@
     "@ai-sdk/gateway": "^4.0.110",
     "@google/genai": "^2.28.0",
     "ai": "^7.0.137",
+    "braintrust": "^3.37.2",
     "express": "^5.2.1",
     "mammoth": "^1.13.0",
     "openai": "^7.36.0",

@@ -80,13 +80,13 @@ export interface RevenueSummary {
   updatedAt: string;
 }
 
-export type ConfidenceLevel = "low" | "medium" | "high";
+export type CommerceConfidenceLevel = "low" | "medium" | "high";
 
 export interface RevenueMetric {
   name: string;
   value: number;
   observations: number;
-  confidence: ConfidenceLevel;
+  confidence: CommerceConfidenceLevel;
   partialAttribution: boolean;
   updatedAt: string;
 }
