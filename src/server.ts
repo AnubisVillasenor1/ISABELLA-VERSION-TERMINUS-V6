@@ -2316,6 +2316,53 @@ app.get("/api/v1/ops/snapshot", async (_req, res) => {
   });
 });
 
+// Runtime integration graph: reports actual wiring separately from dependency health.
+app.get("/api/v1/integrations/graph", async (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  const { snapshot, readinessEvidence } = await currentOpsState();
+  const evidenceByName = new Map(readinessEvidence.map((item) => [item.dependency, item]));
+  const bookpiEvidence = evidenceByName.get("pipeline-bookpi-storage");
+  const ikesEvidence = evidenceByName.get("ikes-memory");
+  const atlasEvidence = evidenceByName.get("atlas-persistence");
+  res.setHeader("Cache-Control", "no-store");
+  res.json({
+    success: true,
+    systemReady: snapshot.readiness.ready,
+    generatedAt: new Date().toISOString(),
+    principle: "CAPABILITY ≠ AUTHORITY ≠ EXECUTION ≠ EVIDENCE ≠ LEARNING ≠ PRODUCTION",
+    modules: {
+      registered: runtime.modules.list(),
+      capabilities: runtime.capabilities.list().map((item) => ({ id: item.id, domain: item.domain, riskTier: item.riskTier })),
+      tools: runtime.tools.list().map((item) => ({ id: item.id, riskTier: item.riskTier })),
+      skills: runtime.skills.list().map((item) => ({ id: item.id, riskTier: item.riskTier })),
+      protocols: runtime.protocols.list().map((item) => ({ id: item.id, version: item.version })),
+    },
+    nodes: [
+      { id: "http-ingress", state: "WIRED", role: "Express routes, rate limits, token authorization" },
+      { id: "genesis-runtime", state: "WIRED", role: "Canonical composition, tools, skills, protocols and capability registries" },
+      { id: "crown-aegis", state: "WIRED", role: "Governance, risk evaluation and fail-closed authorization" },
+      { id: "inference", state: describeProviderReadiness(process.env).modelConfigured ? "CONFIGURED_NOT_PROBE_VERIFIED" : "LOCAL_FALLBACK_ONLY", role: "Provider policy, deadlines and local fallback" },
+      { id: "ikes-memory", state: ikesEvidence?.status ?? "UNKNOWN", role: "Epistemic source/claim memory", evidence: ikesEvidence },
+      { id: "atlas-store", state: atlasEvidence?.status ?? "UNKNOWN", role: "Supabase-backed Atlas persistence", evidence: atlasEvidence },
+      { id: "bookpi-pipeline", state: bookpiEvidence?.status ?? "UNKNOWN", role: "Governed pipeline evidence port", evidence: bookpiEvidence },
+      { id: "bookpi-legacy", state: "DEGRADED", role: "Synchronous legacy ledger; not yet unified with the async PostgreSQL pipeline port" },
+      { id: "observability", state: "PARTIAL", role: "In-process metrics exist; OTLP export/alerts not verified" },
+    ],
+    edges: [
+      { from: "http-ingress", to: "genesis-runtime", state: "WIRED" },
+      { from: "genesis-runtime", to: "crown-aegis", state: "WIRED" },
+      { from: "genesis-runtime", to: "ikes-memory", state: ikesEvidence?.status ?? "UNKNOWN" },
+      { from: "genesis-runtime", to: "atlas-store", state: atlasEvidence?.status ?? "UNKNOWN" },
+      { from: "http-ingress", to: "bookpi-pipeline", state: bookpiEvidence?.status ?? "UNKNOWN" },
+      { from: "http-ingress", to: "bookpi-legacy", state: "DEGRADED" },
+      { from: "genesis-runtime", to: "observability", state: "PARTIAL" },
+    ],
+    readiness: snapshot.readiness,
+    readinessEvidence,
+    disclaimer: "WIRED describes a code path, not proof that remote credentials, migrations, persistence, provider inference or production deployment are healthy.",
+  });
+});
+
 // Bounded latency diagnostics. Require a dedicated token; do not expose runtime metrics publicly.
 app.get("/api/v1/ops/latency", (req, res) => {
   if (!authorizeApiToken(req, res, "OPS_API_TOKEN")) return;
