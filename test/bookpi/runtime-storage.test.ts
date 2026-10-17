@@ -16,6 +16,16 @@ describe("runtime BookPI storage composition", () => {
     await runtime.close();
   });
 
+  it("selects the configured Vercel POSTGRES_URL without requiring DATABASE_URL", async () => {
+    const runtime = createRuntimeBookPiStorage({
+      POSTGRES_URL: "postgres://isabella:test@127.0.0.1:5432/isabella",
+    });
+    expect(runtime.backend).toBe("POSTGRES");
+    expect(runtime.durable).toBe(true);
+    expect(runtime.shared).toBe(true);
+    await runtime.close();
+  });
+
   it("fails closed when PostgreSQL is explicitly selected without a connection string", () => {
     expect(() => createRuntimeBookPiStorage({ BOOKPI_PIPELINE_STORAGE: "postgres" }))
       .toThrow("BOOKPI_POSTGRES_REQUIRES_DATABASE_URL");
