@@ -30,9 +30,17 @@ The cognition response cache accepted any successful admitted response, includin
 
 **Correction:** exclude `sovereign-fallback` responses from the success cache. The fallback remains available to answer promptly but no longer masks recovery through cached output.
 
+### INF-05 — Response-cache hits happened before input guards and governance evaluation
+
+The route checked its full-response cache before enforcing the input-size limit, rejecting unscoped `memoryQuery` requests, evaluating the current governance policy, and appending a BookPI cognitive-evaluation event. A matching cached request could therefore bypass those checks and skip per-request evidence. The old key also did not encode the method identifier.
+
+**Correction:** cache reads now happen after request validation, a fresh policy evaluation, and a BookPI event. The key uses structural JSON encoding and includes the governance method. Cache hits refresh the current decision, principal, and provider-configuration disclosure, mark the hit explicitly, and use `Cache-Control: no-store`. The cache is process-local, bounded, TTL-expiring, and LRU-evicting. Deterministic fallback responses are excluded from writes.
+
 ## Regression coverage added
 
 - Added a unit test asserting that caller cancellation aborts a provider signal and marks the deadline as expired, preventing subsequent attempts.
+- Added bounded-cache tests for TTL expiry, capacity, LRU, replacement, clear, and cache-key isolation across governance methods.
+- Added source-level route contract tests verifying input-size and memory-query guards, current governance evaluation, and BookPI event append all precede cache reuse. These are structural regression checks, not substitutes for an HTTP integration test.
 - Existing deadline tests still cover remaining-budget caps, minimum attempt windows, worst-case sequential timeout bounds, invalid values, and environment parsing.
 
 ## Limitations and verification status
