@@ -14,6 +14,7 @@ export {
 } from "./crypto";
 export { createJsonlStorage } from "./storage-jsonl";
 export { createPostgresStorage, BOOKPI_TABLE, type PostgresLike, type PostgresBookPiRow } from "./storage-postgres";
+export { createRuntimeBookPiStorage, type RuntimeBookPiStorage, type RuntimeBookPiBackend, type RuntimeBookPiEnv } from "./runtime-storage";
 export { BOOKPI_PROTOCOL } from "./types";
 export {
   InMemoryBookPiLedger,
