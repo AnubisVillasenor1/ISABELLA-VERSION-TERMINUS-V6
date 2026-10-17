@@ -14,7 +14,7 @@
 - Seguridad: [SECURITY.md](../SECURITY.md), [modelo de amenazas](security/GENESIS-V6-THREAT-MODEL.md), [implementación ISA-X](security/ISA-X-IMPLEMENTATION.md).
 - Auditoría de seguridad/deuda: [Auditoría técnico-operativa consolidada](audits/TECHNICAL-OPERATIONAL-AUDIT-2026-10-13.md), [reducción de deuda técnica](audits/TECH-DEBT-REDUCTION-2026-10-13.md), [auditoría P0](audits/P0-ARCHITECTURE-HARDENING-2026-10-12.md).
 - Reauditoría de 500 controles V6: [informe](audit/500-POINT-REAUDIT-V6.md) y [CSV generado](audit/500-POINT-REAUDIT-V6.csv).
-- Historia de Genesis/TINA: [auditorías históricas](archive/HISTORICAL-AUDITS-GENESIS-TINA-2026-10-08-12.md), [checklists históricos](archive/GENESISAI-500-CONTROL-CHECKLISTS-2026-10.md). No son evidencia actual de TERMINUS V6.
+- Checklists históricos de GenesisAI: [archivo consolidado](archive/GENESISAI-500-CONTROL-CHECKLISTS-2026-10.md). No son evidencia actual de TERMINUS V6.
 
 ## Política de documentación
 
