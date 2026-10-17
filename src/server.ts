@@ -99,6 +99,7 @@ const metricsRegistry = new MetricsRegistry();
 const subscriptionStore = new SubscriptionStore();
 const usageMeter = new UsageMeter();
 const atlasHealthCache = new TtlSingleFlight<{ healthy: boolean; reason: string }>(1_000);
+const ikesHealthCache = new TtlSingleFlight<{ healthy: boolean; backend: string; reason: string; pending: boolean }>(1_000);
 // Port is taken from the platform environment (PORT is the de-facto contract for
 // containers and PaaS). Validate it: an invalid value must fail loudly, not silently
 // bind the default and leave the deployment unreachable.
@@ -2263,7 +2264,7 @@ async function currentOpsState() {
 
   const pipelineLedgerProbe = await pipelineBookPi.probe();
   const pipelineLedgerStatus = pipelineLedgerProbe.healthy ? "healthy" as const : "degraded" as const;
-  const ikesProbe = await runtime.memory.persistenceProbe();
+  const ikesProbe = await ikesHealthCache.get(async () => runtime.memory.persistenceProbe());
   const ikesStatus = ikesProbe.healthy ? "healthy" as const : "degraded" as const;
   const dependencies = [
     { name: "bookpi-ledger", status: "degraded" as const, required: true },
