@@ -228,6 +228,18 @@ add("RA-037", "BLOCKER",
   "Readiness evaluates the actual legacy BookPI verification result and has regression tests for volatile, durable, corrupt and recovery states.",
   ["src/server.ts", "src/bookpi/readiness.ts", "test/bookpi/readiness.test.ts"]);
 
+const bookPiPostgresAdapter = await read("src/bookpi/storage-postgres.ts");
+const bookPiPostgresAdapterTests = await read("test/bookpi/storage-postgres.test.ts");
+add("RA-038", "BLOCKER",
+  !!bookPiPostgresAdapter &&
+    /row\.timestamp instanceof Date/.test(bookPiPostgresAdapter) &&
+    /BOOKPI_POSTGRES_TIMESTAMP_INVALID/.test(bookPiPostgresAdapter) &&
+    /Number\(row\.sequence\)/.test(bookPiPostgresAdapter) &&
+    !!bookPiPostgresAdapterTests &&
+    /TIMESTAMPTZ Date values before canonical chain verification/.test(bookPiPostgresAdapterTests),
+  "PostgreSQL TIMESTAMPTZ values are normalized to canonical ISO strings before hashing; invalid timestamps fail closed with regression coverage.",
+  ["src/bookpi/storage-postgres.ts", "test/bookpi/storage-postgres.test.ts"]);
+
 const report = {
   schemaVersion: "1.0.0",
   audit: "isabella-genesis-repository-assurance",
