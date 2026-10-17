@@ -1,4 +1,5 @@
 export * from "./ikes";
+export * from "./ikes-supabase";
 export * from "./vector";
 export * from "./retrieval";
 export * from "./persistence";

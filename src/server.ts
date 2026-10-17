@@ -21,6 +21,7 @@ import { bookPiSecret } from "./security/secrets";
 import { verifyBearerToken } from "./security/api-token";
 import { FixedWindowRateLimiter } from "./security/rate-limit";
 import { hashSourceContent } from "./memory/ikes";
+import { createSupabaseIkesPersistence } from "./memory/ikes-supabase";
 import { bookPiLedger } from "./bookpi";
 
 import { createAtlasStoreFromEnv } from "./atlas/persistence";
@@ -63,7 +64,7 @@ import { registerHfHubRoutes } from "./routes/hf-hub";
 import { registerIhecRoutes } from "./routes/ihec";
 import { registerMarketplaceRoutes } from "./routes/marketplace";
 import { registerDocumentSealRoutes } from "./routes/document-seal";
-import { registerPipelineRoutes, createInMemoryBookPiStorage } from "./routes/pipeline";
+import { registerPipelineRoutes } from "./routes/pipeline";
 import { registerYunEventRoutes } from "./routes/yun-events";
 import { registerEconomyRoutes } from "./routes/economy";
 import { registerTreasuryRoutes } from "./routes/treasury";
@@ -73,16 +74,15 @@ import { generateControls } from "./evolution/catalog";
 import { classifyWithGenesisTurbo, type GenesisResult } from "./lib/native-ml/genesis-turbo";
 
 const app: Application = express();
-// Conversación gratuita disponible desde el primer arranque. Puede desactivarse con
-// ISABELLA_KEYLESS_FREE_PROVIDER=off cuando la privacidad del nodo lo requiera.
-if (!process.env.ISABELLA_KEYLESS_FREE_PROVIDER) process.env.ISABELLA_KEYLESS_FREE_PROVIDER = "pollinations";
+// La inferencia gratuita sin clave reenvía el prompt y parte del historial a un proveedor externo.
+// Por privacidad, sólo se activa con opt-in explícito del operador:
+// ISABELLA_KEYLESS_FREE_PROVIDER=pollinations (o on/true/1).
 app.disable("x-powered-by");
 // Detrás de un balanceador, req.ip sería la IP del proxy y todos los clientes compartirían cubeta de rate limit.
 // TRUST_PROXY=<saltos> (entero 1..10) habilita X-Forwarded-For; sin valor válido NO se confía en él.
 const trustProxyHops = parseTrustProxy(process.env.TRUST_PROXY);
 if (trustProxyHops !== false) app.set("trust proxy", trustProxyHops);
 // Conjuntos de cabeceras constantes (precalculados al arrancar); la ruta solo elige cuál aplicar.
-app.disable("x-powered-by");
 const BASE_SECURITY_HEADERS = Object.entries(securityHeadersFor("/", process.env));
 const API_SECURITY_HEADERS = Object.entries(securityHeadersFor("/api/", process.env));
 app.use((req, res, next) => {
@@ -99,6 +99,7 @@ const metricsRegistry = new MetricsRegistry();
 const subscriptionStore = new SubscriptionStore();
 const usageMeter = new UsageMeter();
 const atlasHealthCache = new TtlSingleFlight<{ healthy: boolean; reason: string }>(1_000);
+const ikesHealthCache = new TtlSingleFlight<{ healthy: boolean; backend: string; reason: string; pending: boolean }>(1_000);
 // Port is taken from the platform environment (PORT is the de-facto contract for
 // containers and PaaS). Validate it: an invalid value must fail loudly, not silently
 // bind the default and leave the deployment unreachable.
@@ -201,10 +202,19 @@ app.get("/assets/video/IntroVideoIsabella.mp4", (_req, res) => {
 const atlasPersistence = process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
   ? createAtlasStoreFromEnv()
   : undefined;
-const runtime = new IsabellaGenesisRuntime(undefined, atlasPersistence);
+const ikesPersistence = createSupabaseIkesPersistence(process.env);
+const runtime = new IsabellaGenesisRuntime(undefined, atlasPersistence, undefined, undefined, ikesPersistence);
 void runtime.initPersistence().catch((error) => {
-  console.error("[Genesis] Atlas persistence initialization failed:", error);
+  // A single provider failure must not hide which storage subsystem degraded.
+  const reasons = error instanceof AggregateError ? [...error.errors] : [error];
+  for (const reason of reasons) {
+    const message = reason instanceof Error ? reason.message : "PERSISTENCE_INITIALIZATION_FAILED";
+    console.error("[Genesis] persistence initialization failed:", message);
+  }
 });
+// Pipeline evidence uses a dedicated async BookPI storage port. PostgreSQL is selected
+// when DATABASE_URL exists; local JSONL is opt-in and volatile memory is explicitly degraded.
+const pipelineBookPi = createRuntimeBookPiStorage(process.env);
 
 // Initialize Google GenAI client if API key is provided in environment
 const apiKey = process.env.GEMINI_API_KEY || process.env.MODEL_API_KEY;
@@ -831,12 +841,16 @@ app.get("/api/v1/status", (_req, res) => {
 app.get("/api/v1/memory", (req, res) => {
   if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
   const query = typeof req.query.q === "string" ? req.query.q : "TAMV";
-  const results = runtime.memory.retrieve(query);
-  res.json({
-    query,
-    count: results.length,
-    claims: results,
-  });
+  try {
+    const results = runtime.memory.retrieve(query);
+    res.json({ query, count: results.length, claims: results, persistence: ikesPersistence ? "SUPABASE_BACKED" : "VOLATILE_MEMORY" });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    res.status(message === "IKES_PERSISTENCE_NOT_INITIALIZED" ? 503 : 500).json({
+      success: false,
+      error: message === "IKES_PERSISTENCE_NOT_INITIALIZED" ? message : "IKES_RETRIEVAL_FAILED",
+    });
+  }
 });
 
 // Public claims enter a bounded review queue; they do not mutate canonical IKES memory.
@@ -1970,7 +1984,7 @@ app.post("/api/v1/sanitization/scan", (req, res) => {
 });
 
 // Admit governed knowledge (IKES): sanitization → identity → evidence → policy gate → index.
-app.post("/api/v1/knowledge/admit", (req, res) => {
+app.post("/api/v1/knowledge/admit", async (req, res) => {
   if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
   if (!enforceRateLimit(req, res, publicScanLimiter, "knowledge-admit")) return;
   try {
@@ -2021,6 +2035,9 @@ app.post("/api/v1/knowledge/admit", (req, res) => {
       contentHash: hashSourceContent(body.content),
       license: body.license,
     });
+    // Do not acknowledge an admitted source before the configured persistence
+    // queue has completed successfully.
+    await runtime.memory.flushPersistence();
     const proposalInput = {
       proposedBy: "service:authenticated-knowledge-admission",
       evidenceIds: [sourceId],
@@ -2047,12 +2064,14 @@ app.post("/api/v1/knowledge/admit", (req, res) => {
     });
     if (result.entry.released) {
       runtime.memory.propose(proposalInput);
+      await runtime.memory.flushPersistence();
     }
     const blockers = result.entry.stages.filter((stage) => !stage.ok);
     res.status(202).json({
       success: result.entry.released,
       status: result.entry.released ? "RELEASED" : "PROPOSAL_RECORDED_RELEASE_BLOCKED",
       sourceVerification: "USER_SUPPLIED_CONTENT_HASHED_NOT_REMOTE_VERIFIED",
+      persistence: ikesPersistence ? "SUPABASE_BACKED" : "VOLATILE_MEMORY",
       sourceId,
       contentHash: hashSourceContent(body.content),
       proposal,
@@ -2060,7 +2079,9 @@ app.post("/api/v1/knowledge/admit", (req, res) => {
       releaseBlockers: blockers,
     });
   } catch (err) {
-    res.status(400).json({ success: false, error: err instanceof Error ? err.message : "KNOWLEDGE_ADMISSION_FAILED" });
+    const message = err instanceof Error ? err.message : "KNOWLEDGE_ADMISSION_FAILED";
+    const status = message === "IKES_PERSISTENCE_WRITE_FAILED" || message === "IKES_PERSISTENCE_NOT_INITIALIZED" ? 503 : 400;
+    res.status(status).json({ success: false, error: message });
   }
 });
 
@@ -2201,11 +2222,11 @@ app.post("/api/v1/security/triangulate", (req, res) => {
 
 // Configuration presence alone is not proof of provider health.
 async function currentOpsState() {
-  const localBookPiConfigured = Boolean(process.env.BOOKPI_LEDGER_PATH?.trim());
-  const bookPiBackend = localBookPiConfigured ? "DURABLE_APPEND_ONLY_JSONL_LOCAL_SCOPE" : "VOLATILE_IN_MEMORY_HASH_CHAIN";
-  const bookPiReason = localBookPiConfigured
-    ? "Local JSONL with fsync is configured; shared persistence, distributed concurrency, external signatures and WORM/HA are not runtime-verified."
-    : "The application uses the in-memory hash chain; events do not survive a process restart.";
+  // The synchronous legacy ledger and async pipeline port remain distinct dependencies.
+  const legacyLedgerProbe = inspectLegacyBookPiLedger(() => bookPiLedger.verify());
+  const legacyLedgerStatus = legacyLedgerProbe.status;
+  const bookPiBackend = legacyLedgerProbe.backend;
+  const bookPiReason = legacyLedgerProbe.reason;
   let atlasStatus: "healthy" | "degraded" | "unavailable" = "unavailable";
   let atlasReason = "No Atlas persistence adapter is configured.";
   if (runtime.persistence && typeof runtime.persistence.health === "function") {
@@ -2218,10 +2239,19 @@ async function currentOpsState() {
             ? "Read-only Atlas/Supabase query succeeded."
             : "Atlas/Supabase health probe did not confirm a valid response.",
         };
-      } catch {
-        // Cache the failed result briefly too; otherwise an outage can trigger a
-        // fresh 2-second database timeout on every readiness request.
-        return { healthy: false, reason: "Read-only Atlas/Supabase health probe failed or timed out." };
+      } catch (error) {
+        // Cache failed results briefly; do not turn every readiness request into
+        // a fresh 2-second timeout. Expose only a safe class/status, never the
+        // provider response body, URL, token, or connection string.
+        const message = error instanceof Error ? error.message : "";
+        const status = message.match(/Supabase REST error (\d{3})/u)?.[1];
+        const timedOut = /timeout|timed out|aborterror/iu.test(message);
+        const reason = status
+          ? `Read-only Atlas/Supabase query returned HTTP ${status}.`
+          : timedOut
+            ? "Read-only Atlas/Supabase health probe timed out."
+            : "Read-only Atlas/Supabase health probe failed; inspect private server logs.";
+        return { healthy: false, reason };
       }
     });
     atlasStatus = probe.healthy ? "healthy" : "unavailable";
@@ -2231,16 +2261,22 @@ async function currentOpsState() {
     atlasReason = "Persistence adapter has no health probe; connectivity is unverified.";
   }
 
+  const pipelineLedgerProbe = await pipelineBookPi.probe();
+  const pipelineLedgerStatus = pipelineLedgerProbe.healthy ? "healthy" as const : "degraded" as const;
+  const ikesProbe = await ikesHealthCache.get(async () => runtime.memory.persistenceProbe());
+  const ikesStatus = ikesProbe.healthy ? "healthy" as const : "degraded" as const;
   const dependencies = [
-    { name: "bookpi-ledger", status: "degraded" as const, required: true },
+    { name: "bookpi-ledger", status: legacyLedgerStatus, required: true },
+    { name: "pipeline-bookpi-storage", status: pipelineLedgerStatus, required: true },
     { name: "atlas-persistence", status: atlasStatus, required: true },
-    { name: "ikes-memory", status: "degraded" as const, required: true },
+    { name: "ikes-memory", status: ikesStatus, required: true },
     { name: "observability", status: "degraded" as const, required: false },
   ];
   const readinessEvidence = [
-    { dependency: "bookpi-ledger", status: "degraded", backend: bookPiBackend, reason: bookPiReason },
+    { dependency: "bookpi-ledger", status: legacyLedgerStatus, backend: bookPiBackend, reason: bookPiReason },
+    { dependency: "pipeline-bookpi-storage", status: pipelineLedgerStatus, backend: pipelineLedgerProbe.backend, durable: pipelineBookPi.durable, shared: pipelineBookPi.shared, reason: pipelineLedgerProbe.reason, ...(pipelineLedgerProbe.eventCount !== undefined ? { eventCount: pipelineLedgerProbe.eventCount } : {}) },
     { dependency: "atlas-persistence", status: atlasStatus, reason: atlasReason },
-    { dependency: "ikes-memory", status: "degraded", reason: "A live durable-memory probe is not wired into this readiness path." },
+    { dependency: "ikes-memory", status: ikesStatus, backend: ikesProbe.backend, pending: ikesProbe.pending, reason: ikesProbe.reason },
     { dependency: "observability", status: "degraded", reason: "No live telemetry exporter probe is wired into the readiness path." },
   ];
   return { snapshot: runtime.opsSnapshot(dependencies), readinessEvidence };
@@ -2277,6 +2313,88 @@ app.get("/api/v1/ops/snapshot", async (_req, res) => {
     success: snapshot.readiness.ready,
     readinessEvidence,
     snapshot,
+  });
+});
+
+// Runtime integration graph: reports actual wiring separately from dependency health.
+app.get("/api/v1/integrations/graph", async (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  const { snapshot, readinessEvidence } = await currentOpsState();
+  const igeOmegaProbe = await probeIgeOmegaGateway(process.env);
+  const evidenceByName = new Map<string, Record<string, unknown>>();
+  for (const item of readinessEvidence) evidenceByName.set(item.dependency, { ...item });
+  const bookpiEvidence = evidenceByName.get("pipeline-bookpi-storage") as {
+    status?: string; backend?: string; durable?: boolean; shared?: boolean; eventCount?: number; reason?: string;
+  } | undefined;
+  const legacyBookpiEvidence = evidenceByName.get("bookpi-ledger") as {
+    status?: string; backend?: string; reason?: string;
+  } | undefined;
+  const ikesEvidence = evidenceByName.get("ikes-memory") as {
+    status?: string; backend?: string; pending?: boolean; reason?: string;
+  } | undefined;
+  const atlasEvidence = evidenceByName.get("atlas-persistence") as {
+    status?: string; reason?: string;
+  } | undefined;
+  res.setHeader("Cache-Control", "no-store");
+  res.json({
+    success: true,
+    systemReady: snapshot.readiness.ready,
+    generatedAt: new Date().toISOString(),
+    principle: "CAPABILITY ≠ AUTHORITY ≠ EXECUTION ≠ EVIDENCE ≠ LEARNING ≠ PRODUCTION",
+    modules: {
+      registered: runtime.modules.list(),
+      capabilities: runtime.capabilities.list().map((item) => ({ id: item.id, domain: item.domain, riskTier: item.riskTier })),
+      tools: runtime.tools.list().map((item) => ({ id: item.id, riskTier: item.riskTier })),
+      skills: runtime.skills.list().map((item) => ({ id: item.id, riskTier: item.riskTier })),
+      protocols: runtime.protocols.list().map((item) => ({ id: item.id, version: item.version })),
+    },
+    nodes: [
+      { id: "http-ingress", state: "WIRED", role: "Express routes, rate limits, token authorization" },
+      { id: "genesis-runtime", state: "WIRED", role: "Canonical composition, tools, skills, protocols and capability registries" },
+      { id: "crown-aegis", state: "WIRED", role: "Governance, risk evaluation and fail-closed authorization" },
+      { id: "inference", state: describeProviderReadiness(process.env).modelConfigured ? "CONFIGURED_NOT_PROBE_VERIFIED" : "LOCAL_FALLBACK_ONLY", role: "Provider policy, deadlines and local fallback" },
+      { id: "ikes-memory", state: ikesEvidence?.status ?? "UNKNOWN", role: "Epistemic source/claim memory", evidence: ikesEvidence },
+      { id: "atlas-store", state: atlasEvidence?.status ?? "UNKNOWN", role: "Supabase-backed Atlas persistence", evidence: atlasEvidence },
+      { id: "bookpi-pipeline", state: bookpiEvidence?.status ?? "UNKNOWN", role: "Governed pipeline evidence port", evidence: bookpiEvidence },
+      { id: "bookpi-legacy", state: legacyBookpiEvidence?.status ?? "UNKNOWN", role: "Synchronous legacy ledger; not yet unified with the async PostgreSQL pipeline port", evidence: legacyBookpiEvidence },
+      { id: "observability", state: "PARTIAL", role: "In-process metrics exist; OTLP export/alerts not verified" },
+      { id: "yun-events", state: "WIRED", role: "YUN event routes are registered against the Genesis runtime" },
+      { id: "hypercore-api", state: "WIRED", role: "HyperCore/MCP route surface is registered" },
+      { id: "openai-compatible-api", state: "WIRED", role: "OpenAI-compatible routes are registered through the governed runtime" },
+      { id: "ihec", state: "WIRED", role: "IHEC routes consume runtime.ihec" },
+      { id: "osiris-sentinel", state: "WIRED", role: "OSIRIS inspection routes use the singleton sentinel" },
+      { id: "session-memory", state: "PROCESS_LOCAL", role: "SessionMemory is instantiated in-process; distributed persistence is not asserted" },
+      { id: "verified-knowledge", state: "PROCESS_LOCAL", role: "VerifiedKnowledgeStore is instantiated in-process; IKES persistence remains a separate dependency" },
+      { id: "commerce-economy", state: "WIRED", role: "Marketplace, economy, treasury and commerce route surfaces are registered" },
+      { id: "civilization", state: "WIRED", role: "Civilization routes are registered" },
+      { id: "hf-hub", state: "WIRED", role: "Hugging Face hub routes are registered; provider credentials/availability are separate checks" },
+      { id: "omega-api", state: "WIRED", role: "Omega API routes are registered; this does not prove the separate Rust workspace is called" },
+      { id: "ige-omega-rust", state: igeOmegaProbe.status, role: "Optional Rust gateway; only health/readiness are probed, authenticated inference bridging remains unverified", evidence: igeOmegaProbe },
+    ],
+    edges: [
+      { from: "http-ingress", to: "genesis-runtime", state: "WIRED" },
+      { from: "genesis-runtime", to: "crown-aegis", state: "WIRED" },
+      { from: "genesis-runtime", to: "ikes-memory", state: ikesEvidence?.status ?? "UNKNOWN" },
+      { from: "genesis-runtime", to: "atlas-store", state: atlasEvidence?.status ?? "UNKNOWN" },
+      { from: "http-ingress", to: "bookpi-pipeline", state: bookpiEvidence?.status ?? "UNKNOWN" },
+      { from: "http-ingress", to: "bookpi-legacy", state: legacyBookpiEvidence?.status?.toUpperCase() ?? "UNKNOWN" },
+      { from: "genesis-runtime", to: "observability", state: "PARTIAL" },
+      { from: "http-ingress", to: "yun-events", state: "WIRED" },
+      { from: "http-ingress", to: "hypercore-api", state: "WIRED" },
+      { from: "http-ingress", to: "openai-compatible-api", state: "WIRED" },
+      { from: "genesis-runtime", to: "ihec", state: "WIRED" },
+      { from: "http-ingress", to: "osiris-sentinel", state: "WIRED" },
+      { from: "http-ingress", to: "session-memory", state: "WIRED" },
+      { from: "http-ingress", to: "verified-knowledge", state: "WIRED" },
+      { from: "http-ingress", to: "commerce-economy", state: "WIRED" },
+      { from: "http-ingress", to: "civilization", state: "WIRED" },
+      { from: "http-ingress", to: "hf-hub", state: "WIRED" },
+      { from: "http-ingress", to: "omega-api", state: "WIRED" },
+      { from: "omega-api", to: "ige-omega-rust", state: igeOmegaProbe.status },
+    ],
+    readiness: snapshot.readiness,
+    readinessEvidence,
+    disclaimer: "WIRED describes a code path, not proof that remote credentials, migrations, persistence, provider inference or production deployment are healthy.",
   });
 });
 
@@ -3227,9 +3345,7 @@ registerDocumentSealRoutes({
 // externos, NO concede autoridad y NO salta etapas (fail-closed por etapa).
 registerPipelineRoutes({
   app,
-  ...(process.env.BOOKPI_PIPELINE_LEDGER_PATH
-    ? { bookpiPath: process.env.BOOKPI_PIPELINE_LEDGER_PATH }
-    : { bookpi: createInMemoryBookPiStorage() }),
+  bookpi: pipelineBookPi.storage,
   gate: createCapabilityGate([
     {
       methodId: "A.TWINS.E15_MEMORY.recall.synthesize.v1.0.0.LOW.AUTONOMOUS",

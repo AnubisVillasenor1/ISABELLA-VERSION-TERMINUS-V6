@@ -28,6 +28,7 @@
   "GET /api/v1/hsf/status",
   "GET /api/v1/hypercore/modes",
   "GET /api/v1/hypercore/skills",
+  "GET /api/v1/integrations/graph",
   "GET /api/v1/isabella/status",
   "GET /api/v1/marketplace",
   "GET /api/v1/marketplace/:packId",

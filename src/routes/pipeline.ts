@@ -120,10 +120,15 @@ export function registerPipelineRoutes(deps: PipelineRouteDeps): void {
         controlsSnapshot: deps.controlsSnapshot,
         ...(deps.consent ? { consent: deps.consent } : {}),
       });
-      res.status(result.passed ? 200 : 403).json({
+      const ledgerOnlyFailure = !result.passed
+        && result.verdicts.some((verdict) => verdict.stage === "BOOKPI_IGDS" && !verdict.passed)
+        && result.verdicts.filter((verdict) => verdict.stage !== "BOOKPI_IGDS").every((verdict) => verdict.passed);
+      const status = result.passed ? 200 : ledgerOnlyFailure ? 503 : 403;
+      res.status(status).json({
         success: result.passed,
         authorizationPerformed: result.passed,
         executionPerformed: false,
+        ...(ledgerOnlyFailure ? { error: "PIPELINE_EVIDENCE_STORAGE_UNAVAILABLE" } : {}),
         result,
       });
     } catch (error) {

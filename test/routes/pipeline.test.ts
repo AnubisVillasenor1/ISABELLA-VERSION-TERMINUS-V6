@@ -4,6 +4,7 @@ import type { FixedWindowRateLimiter } from "../../src/security/rate-limit";
 import { createInMemoryBookPiStorage, registerPipelineRoutes } from "../../src/routes/pipeline";
 import { createCapabilityGate } from "../../src/crown/capability";
 import { generateControls } from "../../src/evolution/catalog";
+import type { BookPiStorage } from "../../src/bookpi/types";
 
 type Handler = (req: Request, res: Response) => void | Promise<void>;
 
@@ -15,7 +16,7 @@ interface Captured {
 
 const MEMORIA = "A.TWINS.E15_MEMORY.recall.synthesize.v1.0.0.LOW.AUTONOMOUS";
 
-function harness(options: { denyAdmin?: boolean; denyRate?: boolean } = {}) {
+function harness(options: { denyAdmin?: boolean; denyRate?: boolean; bookpi?: BookPiStorage } = {}) {
   const handlers = new Map<string, Handler>();
   const app = {
     post: (path: string, handler: Handler) => handlers.set(`POST ${path}`, handler),
@@ -23,7 +24,7 @@ function harness(options: { denyAdmin?: boolean; denyRate?: boolean } = {}) {
   } as unknown as Application;
   registerPipelineRoutes({
     app,
-    bookpi: createInMemoryBookPiStorage(),
+    bookpi: options.bookpi ?? createInMemoryBookPiStorage(),
     gate: createCapabilityGate([
       {
         methodId: MEMORIA,
@@ -79,6 +80,30 @@ describe("Pipeline Conductor route", () => {
     expect(body.result.passed).toBe(true);
     expect(body.result.ledger).toBeDefined();
     expect(body.result.verdicts).toHaveLength(6);
+  });
+
+  it("reports a durable evidence-store outage as 503, not an authorization denial", async () => {
+    const volatile = createInMemoryBookPiStorage();
+    const failingStorage: BookPiStorage = {
+      ...volatile,
+      async appendEvent() { throw new Error("BOOKPI: integrity secret is required"); },
+    };
+    const handlers = harness({ bookpi: failingStorage });
+    const { res, captured } = makeRes();
+    await handlers.get("POST /api/v1/pipeline/execute")!(
+      { body: { input: "recupera el resumen de la fase", methodId: MEMORIA } } as unknown as Request,
+      res,
+    );
+    const body = captured.body as {
+      success: boolean;
+      error: string;
+      result: { verdicts: Array<{ stage: string; passed: boolean; reason: string }> };
+    };
+    expect(captured.status).toBe(503);
+    expect(body.success).toBe(false);
+    expect(body.error).toBe("PIPELINE_EVIDENCE_STORAGE_UNAVAILABLE");
+    expect(body.result.verdicts.at(-1)?.reason).toContain("secreto de integridad no configurado");
+    expect(body.result.verdicts.at(-1)?.reason).not.toContain("required");
   });
 
   it("bloquea con método no registrado en la gate (fail-closed)", async () => {

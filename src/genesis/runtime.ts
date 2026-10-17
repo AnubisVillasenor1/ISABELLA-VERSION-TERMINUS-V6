@@ -4,7 +4,7 @@ import { planExecution, type AdaptivePlan, type AdaptiveRequest } from "../intel
 import { planTurboRoute as buildTurboPlan, type TurboPlan, type TurboRequest } from "../intelligence/turbo-planner";
 import { classifyFlow as classifyTrafficFlow, type TrafficLightInput, type TrafficLightVerdict } from "../governance/traffic-light";
 import { InMemoryTelemetry, sloSnapshot, type TelemetrySink } from "../observability/telemetry";
-import { IKESEngine } from "../memory/ikes";
+import { IKESEngine, type IKESEnginePersistencePort } from "../memory/ikes";
 import { ToolRegistry, type ToolAuthorization, type ToolReceipt } from "../tools/registry";
 import { SkillRegistry } from "../skills/registry";
 import { GovernedInferenceRouter } from "../inference/router";
@@ -166,7 +166,7 @@ export interface GenesisToolDecision {
 }
 
 export class IsabellaGenesisRuntime {
-  readonly memory = new IKESEngine();
+  readonly memory: IKESEngine;
   readonly tools = new ToolRegistry();
   readonly skills = new SkillRegistry();
   readonly telemetry: TelemetrySink;
@@ -216,9 +216,11 @@ export class IsabellaGenesisRuntime {
     persistence?: AtlasPersistencePort,
     isabellaConfig?: IsabellaEngineConfig,
     quantumConfig?: PennyLaneBridgeConfig,
+    memoryPersistence?: IKESEnginePersistencePort,
   ) {
     this.telemetry = telemetry;
     this.persistence = persistence;
+    this.memory = new IKESEngine(memoryPersistence);
     this.isabella = new IsabellaEngine(isabellaConfig);
     this.quantum = new PennyLaneBridge(quantumConfig);
     this.registerCanonicalModules();
@@ -764,8 +766,14 @@ export class IsabellaGenesisRuntime {
 
 
   async initPersistence(): Promise<void> {
+    const initializers: Promise<unknown>[] = [this.memory.initPersistence()];
     if (this.persistence && "init" in this.persistence && typeof this.persistence.init === "function") {
-      await this.persistence.init();
+      initializers.push(this.persistence.init());
+    }
+    const results = await Promise.allSettled(initializers);
+    const failures = results.filter((result): result is PromiseRejectedResult => result.status === "rejected");
+    if (failures.length > 0) {
+      throw new AggregateError(failures.map((failure) => failure.reason), "GENESIS_PERSISTENCE_INITIALIZATION_FAILED");
     }
   }
 
@@ -843,13 +851,23 @@ export class IsabellaGenesisRuntime {
     return result;
   }
 
+  /** Optional memory degradation must not disable local conversation; explicit memory APIs still return 503. */
+  private retrieveMemorySafely(query: string): ReturnType<IKESEngine["retrieve"]> {
+    try {
+      return this.memory.retrieve(query);
+    } catch (error) {
+      if (error instanceof Error && error.message === "IKES_PERSISTENCE_NOT_INITIALIZED") return [];
+      throw error;
+    }
+  }
+
   evaluate(input: GenesisRuntimeInput): GenesisRuntimeDecision {
     const started = Date.now();
     const aegis = inspectAegis(input.input);
     const crown = evaluateCrown(input);
     const plan = planExecution(input);
     const memory = input.memoryQuery && aegis.decision !== "BLOCK"
-      ? this.memory.retrieve(input.memoryQuery)
+      ? this.retrieveMemorySafely(input.memoryQuery)
       : [];
     const admitted = aegis.decision !== "BLOCK" && crown.verification.allPassed && crown.responseMode !== "refuse";
 
@@ -1220,7 +1238,7 @@ export class IsabellaGenesisRuntime {
         classifyFlow: (value) => this.classifyFlow(value),
         assessCompanionSafety: (value) => this.assessCompanionSafety(value),
         assessVigia: (value) => this.assessVigia(value),
-        retrieveKnowledge: (query) => this.memory.retrieve(query),
+        retrieveKnowledge: (query) => this.retrieveMemorySafely(query),
         planExperts: (ids) => this.planExpertModules(ids),
         harden: (content) => this.harden(content),
         explainPolicy: (decision, factors, evidenceRefs, policyVersion) =>
