@@ -2217,10 +2217,19 @@ async function currentOpsState() {
             ? "Read-only Atlas/Supabase query succeeded."
             : "Atlas/Supabase health probe did not confirm a valid response.",
         };
-      } catch {
-        // Cache the failed result briefly too; otherwise an outage can trigger a
-        // fresh 2-second database timeout on every readiness request.
-        return { healthy: false, reason: "Read-only Atlas/Supabase health probe failed or timed out." };
+      } catch (error) {
+        // Cache failed results briefly; do not turn every readiness request into
+        // a fresh 2-second timeout. Expose only a safe class/status, never the
+        // provider response body, URL, token, or connection string.
+        const message = error instanceof Error ? error.message : "";
+        const status = message.match(/Supabase REST error (\\d{3})/u)?.[1];
+        const timedOut = /timeout|timed out|aborterror/iu.test(message);
+        const reason = status
+          ? `Read-only Atlas/Supabase query returned HTTP ${status}.`
+          : timedOut
+            ? "Read-only Atlas/Supabase health probe timed out."
+            : "Read-only Atlas/Supabase health probe failed; inspect private server logs.";
+        return { healthy: false, reason };
       }
     });
     atlasStatus = probe.healthy ? "healthy" : "unavailable";
