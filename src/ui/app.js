@@ -316,11 +316,13 @@ let canUseExternalEngine = false;
 const ENGINE_LABELS = {
   sovereign: 'MOTOR · LOCAL SOBERANO',
   'sovereign-fallback': 'MOTOR · RESPALDO LOCAL',
-  'openrouter-free': 'MOTOR · OPENROUTER (GRATIS)',
-  'huggingface-free': 'MOTOR · HUGGING FACE (GRATIS)',
+  'openrouter-free': 'MOTOR · OPENROUTER FREE',
+  'huggingface-free': 'MOTOR · HUGGING FACE (OPT-IN DE USO)',
+  'compatible-provider': 'MOTOR · API COMPATIBLE (OPT-IN DE PAGO)',
+  'perplexity-router': 'MOTOR · PERPLEXITY ROUTER (OPT-IN DE PAGO)',
   'open-science': 'MOTOR · PASARELA ABIERTA',
-  'keyless-free': 'MOTOR · PROVEEDOR LIBRE SIN CLAVE',
-  gemini: 'MOTOR · GEMINI',
+  'keyless-free': 'MOTOR · PROVEEDOR EXTERNO SIN CLAVE',
+  gemini: 'MOTOR · GEMINI (OPT-IN DE PAGO)',
   gateway: 'MOTOR · VERCEL AI GATEWAY',
   blocked: 'MOTOR · BLOQUEADO POR GOBERNANZA'
 };
@@ -346,10 +348,24 @@ const setResponseMeta = (paragraph, meta) => {
     chip.textContent = `${BAND_LABELS[band] || band}${meta.trafficLight.humanReviewRequired ? ' · REVISIÓN HUMANA' : ''}`;
     row.append(chip);
   }
-  if (engine.startsWith('sovereign') || engine === 'gateway' || engine === 'open-science' || engine === 'keyless-free') {
+  const externalEngines = new Set([
+    'gateway', 'open-science', 'openrouter-free', 'huggingface-free',
+    'compatible-provider', 'perplexity-router', 'keyless-free', 'gemini'
+  ]);
+  if (engine.startsWith('sovereign') || externalEngines.has(engine)) {
     const note = document.createElement('span');
     note.className = 'meta-chip engine-note';
-    note.textContent = engine === 'gateway' || engine === 'open-science' || engine === 'keyless-free' ? 'AGENTE EXTERNO · RESPUESTA GENERATIVA' : meta.modelConfigured ? 'PROVEEDOR DISPONIBLE · FALLBACK LOCAL' : 'MODO LOCAL (SIN PROVEEDOR EXTERNO)';
+    const engineNotes = {
+      gateway: 'MODELO FREE EN PASARELA EXTERNA',
+      'open-science': 'PASARELA EXTERNA · RESPUESTA GENERATIVA',
+      'openrouter-free': 'RUTA FREE · DISPONIBILIDAD SEGÚN CUOTA DEL PROVEEDOR',
+      'huggingface-free': 'API EXTERNA · OPT-IN DE USO POTENCIALMENTE FACTURABLE',
+      'compatible-provider': 'API EXTERNA · MODELO EXPLÍCITO Y OPT-IN DE PAGO',
+      'perplexity-router': 'API EXTERNA · MODELO EXPLÍCITO Y OPT-IN DE PAGO',
+      'keyless-free': 'PROVEEDOR EXTERNO · OPT-IN DEL OPERADOR',
+      gemini: 'API EXTERNA · OPT-IN DE PAGO'
+    };
+    note.textContent = engineNotes[engine] || (meta.modelConfigured ? 'PROVEEDOR CONFIGURADO · FALLBACK LOCAL DISPONIBLE' : 'MODO LOCAL (SIN PROVEEDOR EXTERNO)');
     row.append(note);
   }
   row.hidden = row.childElementCount === 0;
