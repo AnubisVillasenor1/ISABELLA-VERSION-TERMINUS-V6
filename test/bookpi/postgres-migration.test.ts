@@ -10,13 +10,14 @@ const migration = initialMigration + "\n" + hardeningMigration;
 
 describe("BookPI PostgreSQL migration contract", () => {
   it("creates the complete schema required by the runtime adapter", () => {
+    const normalized = migration.toLowerCase();
     for (const column of [
-      "id TEXT PRIMARY KEY", "type TEXT NOT NULL", "sequence BIGINT NOT NULL UNIQUE",
-      "prev_hash TEXT NOT NULL", "timestamp TIMESTAMPTZ NOT NULL", "actor_id TEXT",
-      "payload JSONB NOT NULL", "schema_version TEXT NOT NULL", "meta JSONB NOT NULL",
-      "header JSONB NOT NULL", "hash TEXT NOT NULL", "integrity TEXT NOT NULL",
-      "canonical TEXT NOT NULL",
-    ]) expect(migration.toUpperCase()).toContain(column);
+      "id text primary key", "type text not null", "sequence bigint not null unique",
+      "prev_hash text not null", "timestamp timestamptz not null", "actor_id text",
+      "payload jsonb not null", "schema_version text not null", "meta jsonb not null",
+      "header jsonb not null", "hash text not null", "integrity text not null",
+      "canonical text not null",
+    ]) expect(normalized).toContain(column);
   });
 
   it("enables row-level security and scopes rows to the transaction actor", () => {
