@@ -139,6 +139,9 @@ try {
   if (process.env.ALLOW_PAID_PROVIDER_FALLBACK !== "true") {
     assert.notEqual(explicitGeminiBody.responseEngine, "gemini", "Gemini must not be invoked without explicit paid-provider opt-in");
     assert.notEqual(explicitGeminiBody.responseEngine, "open-science", "paid AI Gateway must not be invoked without explicit paid-provider opt-in");
+    assert.notEqual(explicitGeminiBody.responseEngine, "perplexity-router", "Perplexity Router must remain disabled without paid-provider opt-in");
+    assert.notEqual(explicitGeminiBody.responseEngine, "compatible-provider", "compatible API providers must remain disabled without paid-provider opt-in");
+    assert.notEqual(explicitGeminiBody.responseEngine, "huggingface-provider", "Hugging Face must remain disabled without paid-provider opt-in");
   }
   const savedProviderEnv = {
     openRouterKey: process.env.OPENROUTER_API_KEY,
@@ -225,7 +228,7 @@ try {
   });
   assert.equal(badAudio.status, 400, "transcription must reject missing audio/mime before any provider call");
   console.log("MULTIMODAL_SPEECH_GUARDRAILS_OK", JSON.stringify({ visionProviders: readinessBody.readiness.vision.length, imageProviders: readinessBody.readiness.image.length, tts: readinessBody.speech.textToSpeech }));
-  const gatewayCredentialsAvailable = Boolean(process.env.OPENROUTER_API_KEY || (process.env.HF_TOKEN && process.env.HF_FREE_MODELS));
+  const gatewayCredentialsAvailable = Boolean(process.env.OPENROUTER_API_KEY);
   if (gatewayCredentialsAvailable) {
     try {
       const llm = await fetch(`${baseUrl}/api/v1/cognition/route`, {
@@ -242,7 +245,7 @@ try {
       });
       const llmBody = await llm.json();
       assert.equal(llm.status, 200, `gateway chat returned HTTP ${llm.status}: ${JSON.stringify(llmBody)}`);
-      assert.ok(["openrouter-free", "huggingface-free"].includes(llmBody.responseEngine), `a real free/open provider must answer; got ${llmBody.responseEngine}`);
+      assert.equal(llmBody.responseEngine, "openrouter-free", `the billable-free gate must use a verified OpenRouter free route; got ${llmBody.responseEngine}`);
       assert.equal(typeof llmBody.generativeNarrative, "string");
       assert.ok(llmBody.generativeNarrative.trim().length > 0);
       console.log("EXTERNAL_MODEL_SMOKE_OK", JSON.stringify({ responseEngine: llmBody.responseEngine }));
@@ -252,7 +255,7 @@ try {
       console.warn("LLM_GATEWAY_SMOKE_FAILED_NONBLOCKING", message);
     }
   } else {
-    const message = "No free/open provider credentials are available for this smoke test. Configure OPENROUTER_API_KEY or both HF_TOKEN and HF_FREE_MODELS. Paid AI Gateway credentials do not count because paid fallback is opt-in.";
+    const message = "No OpenRouter credentials are available for this smoke test. Configure OPENROUTER_API_KEY and an eligible free model ID. Hugging Face/provider-credit routes are potentially billable and are not used by this gate.";
     if (process.env.ISABELLA_REQUIRE_LLM_SMOKE === "true") throw new Error(message);
     console.warn("LLM_GATEWAY_SMOKE_SKIPPED", message);
   }
