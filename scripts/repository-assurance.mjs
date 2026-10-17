@@ -145,6 +145,20 @@ add("RA-031", "BLOCKER",
   "AtlasStore migration includes the health-probe table and denies direct browser-role access.",
   ["supabase/migrations/20261017000000_atlas-store-core.sql"]);
 
+const bookPiRuntime = await read("src/bookpi/runtime-storage.ts");
+const bookPiPostgres = await read("src/bookpi/storage-postgres.ts");
+const pipelineRoute = await read("src/routes/pipeline.ts");
+add("RA-032", "BLOCKER",
+  !!server && /createRuntimeBookPiStorage\(process\.env\)/.test(server) &&
+    /bookpi: pipelineBookPi\.storage/.test(server) &&
+    !!bookPiRuntime && /createPostgresStorage\(pool, "bookpi_events"/.test(bookPiRuntime) &&
+    /VOLATILE_MEMORY/.test(bookPiRuntime) &&
+    !!bookPiPostgres && /pg_advisory_xact_lock/.test(bookPiPostgres) &&
+    /BOOKPI_ACTOR_SCOPE_MISMATCH/.test(bookPiPostgres) &&
+    !!pipelineRoute && /await resolveStorage\(\)/.test(pipelineRoute),
+  "The governed pipeline uses the environment-selected BookPI adapter; Postgres append is transactional and actor-scoped, while volatile fallback stays explicitly degraded.",
+  ["src/server.ts", "src/bookpi/runtime-storage.ts", "src/bookpi/storage-postgres.ts", "src/routes/pipeline.ts"]);
+
 const report = {
   schemaVersion: "1.0.0",
   audit: "isabella-genesis-repository-assurance",
