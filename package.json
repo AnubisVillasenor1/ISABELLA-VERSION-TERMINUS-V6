@@ -22,15 +22,15 @@
     "reconcile:pids": "tsx src/cli/reconcilePids.ts",
     "bookpi:maintenance": "tsx src/cli/bookpiMaintenance.ts",
     "quantum:bridge": "python services/pennylane_bridge.py",
-    "validate": "pnpm run typecheck && pnpm run build",
+    "validate": "corepack pnpm run typecheck && corepack pnpm run build",
     "ingest:atlas": "tsx scripts/atlas-ingest.ts",
     "security:suite": "node scripts/security-suite.mjs",
     "production:evidence": "node scripts/production-evidence.mjs",
     "smoke:runtime": "node scripts/runtime-smoke.mjs",
     "smoke:ui": "node --check src/ui/app.js && node scripts/ui-smoke.mjs",
     "smoke:production": "tsx scripts/production-smoke.ts",
-    "postgres:e2e": "pnpm run build:dist && node scripts/postgres-e2e.mjs",
-    "deploy:verify": "docker build --tag isabella-genesisai:verify . && pnpm run smoke:runtime && kubectl apply --dry-run=server -k k8s/",
+    "postgres:e2e": "corepack pnpm run build:dist && node scripts/postgres-e2e.mjs",
+    "deploy:verify": "docker build --tag isabella-genesisai:verify . && corepack pnpm run smoke:runtime && kubectl apply --dry-run=server -k k8s/",
     "verify:production": "tsx scripts/verify-production.ts"
   },
   "devDependencies": {
