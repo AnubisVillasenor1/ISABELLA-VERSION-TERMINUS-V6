@@ -1,4 +1,5 @@
 import { boundedBudgetMs, DeadlineBudget } from "./inference/deadline";
+import { CognitionResponseCache } from "./inference/cognition-response-cache";
 import { buildAsset, contentHash, serveAsset, type StaticAsset } from "./http/static-assets";
 import express, { type Application, type NextFunction, type Request, type Response } from "express";
 import { randomUUID, timingSafeEqual } from "node:crypto";
@@ -1029,11 +1030,11 @@ app.get("/api/v1/cognition/native-runtime", (_req, res) => {
 });
 
 // Public cognitive route: viewer-only. Request bodies cannot supply authority, roles, action or resource.
-// Caché en memoria de respuestas cognitivas (TTL 30s) para reducir latencia en inputs repetidos.
-const COGNITION_CACHE_TTL_MS = 30_000;
-const cognitionResponseCache = new Map<string, { body: unknown; ts: number }>();
-function cognitionCacheKey(input: string, history: unknown, modelEngine: string, focusLens: string): string {
-  return `${modelEngine}|${focusLens}|${input}|${JSON.stringify(history ?? [])}`;
+// Cache entries are process-local optimizations, not permissions, evidence, or durable memory.
+const cognitionResponseCache = new CognitionResponseCache<unknown>(30_000, 500);
+function cognitionCacheKey(input: string, history: unknown, modelEngine: string, focusLens: string, methodId: string): string {
+  // JSON tuple avoids delimiter collisions and binds cache reuse to the governance method.
+  return JSON.stringify([modelEngine, focusLens, methodId, input, history ?? []]);
 }
 
 app.post("/api/v1/cognition/route", async (req, res) => {
@@ -1047,14 +1048,6 @@ app.post("/api/v1/cognition/route", async (req, res) => {
     const history = sanitizePublicHistory(body.history);
     const input = typeof body.input === "string" ? body.input.trim() : "";
     const focusLens = ["territorial", "epistemic", "security", "governance"].includes(body.focusLens) ? body.focusLens : "general";
-    const cacheKey = cognitionCacheKey(input, history, modelEngine, focusLens);
-    const cached = cognitionResponseCache.get(cacheKey);
-    if (cached !== undefined && Date.now() - cached.ts < COGNITION_CACHE_TTL_MS) {
-      res.setHeader("X-Isabella-Turbo", "cache-hit");
-      res.setHeader("X-Isabella-Latency-Mode", "fast-lane");
-      res.status(200).json(cached.body);
-      return;
-    }
     const cognitionStartedAt = process.hrtime.bigint();
     if (input.length > 20_000) {
       res.status(413).json({ success: false, error: "COGNITIVE_INPUT_SIZE_LIMIT_EXCEEDED" });
@@ -1072,6 +1065,7 @@ app.post("/api/v1/cognition/route", async (req, res) => {
     const destructiveMethodId = "T.TWINS.E08_DATA.remove.permanent_delete.v1.0.0.CRITICAL.CONSTITUTIONAL";
     const destructiveIntent = body.methodId === destructiveMethodId;
     const methodId = destructiveIntent ? destructiveMethodId : safeMethodId;
+    const cacheKey = cognitionCacheKey(input, history, modelEngine, focusLens, methodId);
     const principal = createPrincipal({ id: "human:public-session", kind: "human", roles: ["viewer"] });
 
     const decision = runtime.evaluate({
@@ -1093,18 +1087,16 @@ app.post("/api/v1/cognition/route", async (req, res) => {
     res.json = (body: unknown) => {
       const elapsedMs = Number(process.hrtime.bigint() - cognitionStartedAt) / 1_000_000;
       res.setHeader("Server-Timing", `cognition;dur=${elapsedMs.toFixed(1)}`);
-      res.setHeader("X-Isabella-Turbo", elapsedMs < 400 ? "fast" : elapsedMs < 1500 ? "accelerated" : "governed");
+      const cacheHit = Boolean(body && typeof body === "object" && (body as { cacheHit?: unknown }).cacheHit === true);
+      res.setHeader("X-Isabella-Turbo", cacheHit ? "cache-hit" : elapsedMs < 400 ? "fast" : elapsedMs < 1500 ? "accelerated" : "governed");
       if (
+        !cacheHit &&
         decision.admitted &&
         body && typeof body === "object" &&
         (body as { success?: unknown }).success &&
         (body as { responseEngine?: unknown }).responseEngine !== "sovereign-fallback"
       ) {
-        cognitionResponseCache.set(cacheKey, { body, ts: Date.now() });
-        if (cognitionResponseCache.size > 500) {
-          const oldest = cognitionResponseCache.keys().next().value;
-          if (oldest !== undefined) cognitionResponseCache.delete(oldest);
-        }
+        cognitionResponseCache.set(cacheKey, body);
       }
       return originalJson(body);
     };
@@ -1118,6 +1110,25 @@ app.post("/api/v1/cognition/route", async (req, res) => {
       riskTier: destructiveIntent ? "CRITICAL" : "LOW",
       status: decision.admitted ? "ADMITTED" : "BLOCKED_BY_POLICY",
     });
+
+    // Cache reads occur only after size/empty/memory guards, a fresh policy decision,
+    // and an evaluation ledger event. A cached model answer is never an auth shortcut.
+    if (decision.admitted) {
+      const cached = cognitionResponseCache.get(cacheKey);
+      if (cached && typeof cached === "object" && (cached as { success?: unknown }).success === true) {
+        const cachedResponse = cached as Record<string, unknown>;
+        res.setHeader("X-Isabella-Latency-Mode", "fast-lane");
+        res.setHeader("Cache-Control", "no-store");
+        res.status(200).json({
+          ...cachedResponse,
+          decision,
+          principal,
+          ...describeProviderReadiness(process.env),
+          cacheHit: true,
+        });
+        return;
+      }
+    }
 
     let generativeNarrative: string | null = null;
     let responseEngine: "gemini" | "gateway" | "open-science" | "openrouter-free" | "huggingface-free" | "keyless-free" | "perplexity-router" | "sovereign-fallback" | "sovereign" | "blocked" = "blocked";
