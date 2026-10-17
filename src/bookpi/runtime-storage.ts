@@ -22,6 +22,7 @@ export interface RuntimeBookPiEnv {
   POSTGRES_URL_NON_POOLING?: string;
   BOOKPI_PIPELINE_LEDGER_PATH?: string;
   BOOKPI_PIPELINE_STORAGE?: string;
+  BOOKPI_INTEGRITY_SECRET?: string;
 }
 
 /**
@@ -51,16 +52,33 @@ export function createRuntimeBookPiStorage(
     });
     // Pipeline route uses a single admin-gated service principal. The Postgres
     // adapter's RLS context and event actor must be identical for chain reads.
-    const storage = createPostgresStorage(pool, "bookpi_events", { actorId: "human:pipeline-session" });
+    const postgresStorage = createPostgresStorage(pool, "bookpi_events", { actorId: "human:pipeline-session" });
+    const integritySecret = env.BOOKPI_INTEGRITY_SECRET?.trim();
+    const storage: BookPiStorage = {
+      getLastEvent: () => postgresStorage.getLastEvent(),
+      appendEvent: (seed, ctx = {}) => postgresStorage.appendEvent(seed, {
+        ...ctx,
+        secret: ctx.secret ?? integritySecret,
+      }),
+      listEvents: () => postgresStorage.listEvents(),
+      verifyChain: (opts = {}) => postgresStorage.verifyChain({ secret: opts.secret ?? integritySecret }),
+    };
     return {
       storage,
       backend: "POSTGRES",
       durable: true,
       shared: true,
       async probe() {
+        if (!integritySecret || integritySecret.length < 32) {
+          return {
+            healthy: false,
+            backend: "POSTGRES",
+            reason: "BOOKPI_INTEGRITY_SECRET is missing or shorter than 32 characters.",
+          };
+        }
         try {
           await pool.query("SELECT 1");
-          const chain = await storage.verifyChain();
+          const chain = await storage.verifyChain({ secret: integritySecret });
           return chain.valid
             ? { healthy: true, backend: "POSTGRES", eventCount: chain.count, reason: "PostgreSQL reachable; BookPI chain verified." }
             : { healthy: false, backend: "POSTGRES", eventCount: chain.count, reason: "PostgreSQL reachable but BookPI chain verification failed." };
