@@ -173,23 +173,21 @@ app.get("/", (_req, res) => {
   res.type("html").send(cinematicHtml);
 });
 app.get("/styles/cinematic.css", (_req, res) => {
-  try {
-    const css = fs.readFileSync(path.join(uiPath, "cinematic.css"), "utf-8");
-    res.setHeader("Content-Type", "text/css; charset=utf-8");
-    res.setHeader("Cache-Control", "no-store");
-    res.type("css").send(css);
-  } catch {
+  if (cinematicCss === null) {
     res.status(404).type("css").send("/* Cinematic CSS unavailable */");
+    return;
   }
+  res.setHeader("Content-Type", "text/css; charset=utf-8");
+  res.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
+  res.type("css").send(cinematicCss);
 });
 app.get("/ui/app.js", (_req, res) => {
-  try {
-    const js = fs.readFileSync(path.join(uiPath, "app.js"), "utf-8");
-    res.setHeader("Cache-Control", "no-store");
-    res.type("js").send(js);
-  } catch {
+  if (cinematicJs === null) {
     res.status(404).type("js").send("// Cinematic JavaScript unavailable");
+    return;
   }
+  res.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
+  res.type("js").send(cinematicJs);
 });
 app.get("/assets/video/IntroVideoIsabella.mp4", (_req, res) => {
   const videoPath = path.resolve(process.cwd(), "src/assets/video/IntroVideoIsabella.mp4");
@@ -1010,9 +1008,12 @@ app.post("/api/v1/cognition/route", async (req, res) => {
     const cacheKey = cognitionCacheKey(input, history, modelEngine, focusLens);
     const cached = cognitionResponseCache.get(cacheKey);
     if (cached !== undefined && Date.now() - cached.ts < COGNITION_CACHE_TTL_MS) {
+      res.setHeader("X-Isabella-Turbo", "cache-hit");
+      res.setHeader("X-Isabella-Latency-Mode", "fast-lane");
       res.status(200).json(cached.body);
       return;
     }
+    const cognitionStartedAt = process.hrtime.bigint();
     if (input.length > 20_000) {
       res.status(413).json({ success: false, error: "COGNITIVE_INPUT_SIZE_LIMIT_EXCEEDED" });
       return;
@@ -1048,6 +1049,9 @@ app.post("/api/v1/cognition/route", async (req, res) => {
     });
     const originalJson = res.json.bind(res);
     res.json = (body: unknown) => {
+      const elapsedMs = Number(process.hrtime.bigint() - cognitionStartedAt) / 1_000_000;
+      res.setHeader("Server-Timing", `cognition;dur=${elapsedMs.toFixed(1)}`);
+      res.setHeader("X-Isabella-Turbo", elapsedMs < 400 ? "fast" : elapsedMs < 1500 ? "accelerated" : "governed");
       if (decision.admitted && body && typeof body === "object" && (body as { success?: unknown }).success) {
         cognitionResponseCache.set(cacheKey, { body, ts: Date.now() });
         if (cognitionResponseCache.size > 500) {
@@ -1116,10 +1120,6 @@ app.post("/api/v1/cognition/route", async (req, res) => {
       if (!generativeNarrative && (modelEngine === "open-science" || modelEngine === "auto" || modelEngine === "gemini")) {
         generativeNarrative = await generateCompatibleProviderNarrative(systemPrompt, input, history);
         if (generativeNarrative) responseEngine = "open-science";
-      }
-      if (!generativeNarrative && modelEngine === "auto") {
-        generativeNarrative = await generateKeylessFreeNarrative(systemPrompt, input, history);
-        if (generativeNarrative) responseEngine = "keyless-free";
       }
       if (!generativeNarrative && process.env.ALLOW_PAID_PROVIDER_FALLBACK === "true") {
         if (genAi && modelEngine !== "gemini") {
