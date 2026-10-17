@@ -120,11 +120,13 @@ La inspección estática de los workflows encontró puntos que deben resolverse 
 1. **Runtime y gestor — corregidos en esta rama:** package.json y los workflows principales/Atlas declaran Node 24; Atlas usa pnpm con lockfile congelado. Falta confirmar los cambios con CI verde.
 2. **Compilación TypeScript — corrección aplicada, pendiente de revalidación:** el build de Vercel reportó TS2308 por exportaciones ambiguas de ConfidenceLevel entre comercio y memoria en src/index.ts. Se hizo explícita la exportación canónica del tipo comercial y se conservaron alias por dominio.
 3. **CI previo en rojo:** el SHA anterior registró fallos en varios jobs. Los logs accesibles no demuestran la causa de todos; deben reevaluarse sobre el nuevo SHA.
-3. **Despliegue real no demostrado:** .github/workflows/deploy-production.yml termina con un paso que imprime mensajes y declara que el despliegue real se delega al operador. Un gate de aceptación no equivale a publicar una versión en un proveedor.
-4. **Protección de rama:** la consulta de GitHub indicó que main no tenía protección habilitada. Exigir revisiones, checks obligatorios, evitar pushes directos y aplicar permisos mínimos.
-5. **Evidencia por SHA:** pruebas, SBOM, escaneo de secretos y evidencia de producción deben corresponder al mismo commit candidato.
-6. **Integraciones externas:** validar PostgreSQL, Redis, proveedores de modelos, secretos, almacenamiento, Kubernetes y observabilidad en staging, incluyendo recuperación y rollback.
-7. **Interacción funcional:** comprobar una conversación de extremo a extremo con configuración real, timeouts, manejo de errores y fallback; una interfaz visible no prueba que la inferencia esté operativa.
+4. **Despliegue real no demostrado:** .github/workflows/deploy-production.yml valida evidencia y llega a un paso de handoff; no prueba una promoción real a producción. Un gate de aceptación no equivale a publicar una versión en un proveedor.
+5. **Protección de rama:** la consulta de GitHub indicó que main no tenía protección habilitada. Exigir revisiones, checks obligatorios, evitar pushes directos y aplicar permisos mínimos.
+6. **Evidencia por SHA:** pruebas, SBOM, escaneo de secretos y evidencia de producción deben corresponder al mismo commit candidato.
+7. **Integraciones externas:** validar PostgreSQL, Redis, proveedores de modelos, secretos, almacenamiento, Kubernetes y observabilidad en staging, incluyendo recuperación y rollback.
+8. **Interacción funcional:** comprobar una conversación de extremo a extremo con configuración real, timeouts, manejo de errores y fallback; una interfaz visible no prueba que la inferencia esté operativa.
+
+**Readiness operativo observado:** el preview verificado respondió HTTP 503 en `/api/v1/readyz`. El informe indicó BookPI volátil, probe Atlas/Supabase sin éxito confirmado, ausencia de persistencia durable de IKES y ausencia de probe de exportación de telemetría. Se añadió la migración inicial `supabase/migrations/20261017000000_atlas-store-core.sql`, pero **no se ha aplicado a la base remota** y no resuelve por sí sola BookPI/IKES. Seguir [el runbook de cierre de bloqueos](docs/ops/PRODUCTION-READINESS-RUNBOOK.md).
 
 ### Gates pendientes para liberar
 
