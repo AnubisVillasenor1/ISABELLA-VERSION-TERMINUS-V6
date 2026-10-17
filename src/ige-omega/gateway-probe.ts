@@ -12,6 +12,7 @@ export interface IgeOmegaGatewayProbe {
 type FetchLike = typeof fetch;
 
 const MAX_TIMEOUT_MS = 5_000;
+const MAX_PROBE_BODY_BYTES = 2_048;
 const DEFAULT_TIMEOUT_MS = 1_500;
 
 function safeBaseUrl(raw: string, production: boolean): URL | null {
@@ -25,6 +26,24 @@ function safeBaseUrl(raw: string, production: boolean): URL | null {
   } catch {
     return null;
   }
+}
+
+async function readProbeJson(response: Response): Promise<Record<string, unknown>> {
+  const declaredLength = Number(response.headers.get("content-length"));
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_PROBE_BODY_BYTES) {
+    throw new Error("IGE_OMEGA_PROBE_BODY_TOO_LARGE");
+  }
+  const body = await response.text();
+  if (new TextEncoder().encode(body).byteLength > MAX_PROBE_BODY_BYTES) {
+    throw new Error("IGE_OMEGA_PROBE_BODY_TOO_LARGE");
+  }
+  let parsed: unknown;
+  try { parsed = JSON.parse(body); }
+  catch { throw new Error("IGE_OMEGA_PROBE_INVALID_JSON"); }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error("IGE_OMEGA_PROBE_INVALID_JSON");
+  }
+  return parsed as Record<string, unknown>;
 }
 
 function timeoutFrom(env: NodeJS.ProcessEnv): number {
@@ -89,7 +108,7 @@ export async function probeIgeOmegaGateway(
         integrationScope: "health-readiness-probe-only",
       };
     }
-    const health = await healthResponse.json() as { status?: unknown; system?: unknown };
+    const health = await readProbeJson(healthResponse);
     if (health.status !== "ok" || health.system !== "IGE-OMEGA") {
       return {
         status: "DEGRADED",
@@ -117,7 +136,7 @@ export async function probeIgeOmegaGateway(
         integrationScope: "health-readiness-probe-only",
       };
     }
-    const readiness = await readyResponse.json() as { status?: unknown; database?: unknown };
+    const readiness = await readProbeJson(readyResponse);
     if (readiness.status !== "ready" || readiness.database !== "reachable") {
       return {
         status: "DEGRADED",
