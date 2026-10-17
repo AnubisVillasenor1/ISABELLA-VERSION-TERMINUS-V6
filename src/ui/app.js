@@ -327,7 +327,7 @@ const ENGINE_LABELS = {
   sovereign: 'MOTOR · LOCAL SOBERANO',
   'sovereign-fallback': 'MOTOR · RESPALDO LOCAL',
   'openrouter-free': 'MOTOR · OPENROUTER FREE',
-  'huggingface-free': 'MOTOR · HUGGING FACE (OPT-IN DE USO)',
+  'huggingface-provider': 'MOTOR · HUGGING FACE (OPT-IN DE PAGO)',
   'compatible-provider': 'MOTOR · API COMPATIBLE (OPT-IN DE PAGO)',
   'perplexity-router': 'MOTOR · PERPLEXITY ROUTER (OPT-IN DE PAGO)',
   'open-science': 'MOTOR · PASARELA ABIERTA',
@@ -359,7 +359,7 @@ const setResponseMeta = (paragraph, meta) => {
     row.append(chip);
   }
   const externalEngines = new Set([
-    'gateway', 'open-science', 'openrouter-free', 'huggingface-free',
+    'gateway', 'open-science', 'openrouter-free', 'huggingface-provider',
     'compatible-provider', 'perplexity-router', 'keyless-free', 'gemini'
   ]);
   if (engine.startsWith('sovereign') || externalEngines.has(engine)) {
@@ -369,7 +369,7 @@ const setResponseMeta = (paragraph, meta) => {
       gateway: 'MODELO FREE EN PASARELA EXTERNA',
       'open-science': 'PASARELA EXTERNA · RESPUESTA GENERATIVA',
       'openrouter-free': 'RUTA FREE · DISPONIBILIDAD SEGÚN CUOTA DEL PROVEEDOR',
-      'huggingface-free': 'API EXTERNA · OPT-IN DE USO POTENCIALMENTE FACTURABLE',
+      'huggingface-provider': 'API EXTERNA · OPT-IN DE PAGO ACTIVO',
       'compatible-provider': 'API EXTERNA · MODELO EXPLÍCITO Y OPT-IN DE PAGO',
       'perplexity-router': 'API EXTERNA · MODELO EXPLÍCITO Y OPT-IN DE PAGO',
       'keyless-free': 'PROVEEDOR EXTERNO · OPT-IN DEL OPERADOR',
