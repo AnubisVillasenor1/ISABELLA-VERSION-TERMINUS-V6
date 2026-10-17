@@ -8,11 +8,11 @@
 
 **Contrato de evidencia:** SPECIFIED ≠ IMPLEMENTED ≠ TESTED. Una especificación no demuestra implementación y una implementación no demuestra que se haya probado.
 
-**Avance global estimado para producción y despliegue: 48.0%.**
+**Avance global estimado para producción y despliegue: 54.0%.**
 
-Estimación conservadora de preparación operativa; no es una métrica de calidad del modelo ni una garantía de disponibilidad. Se conserva el último valor de referencia documentado. Este cambio de documentación no incrementa el porcentaje: sólo debe aumentar cuando mejoras funcionales estén implementadas y validadas con evidencia reproducible sobre un SHA concreto.
+Estimación ponderada de preparación operativa —no es una métrica de calidad del modelo ni una garantía de disponibilidad— calculada sobre la evidencia del último build de aplicación validado en el preview, SHA `d6228890d57156062366430fc5c13e843801d308`. El build terminó en estado READY; ejecutó 1,543 pruebas en 258 archivos, 31/31 comprobaciones estructurales, 14/14 invariantes de seguridad y smoke local de conversación e interfaz. Esto valida el build de ese SHA, no el despliegue productivo.
 
-**Estado: preproducción; no declarar listo para producción.** La inspección documental detecta ejecuciones recientes de GitHub Actions con resultado failure, el workflow de despliegue no demuestra una publicación automática real: su paso final registra mensajes y delega el despliegue a un operador. La rama de auditoría alinea el workflow de assurance con Node 24; esta corrección aún necesita una ejecución CI verde para considerarse validada.
+**Estado: preproducción; no declarar listo para producción.** La comprobación live de `/api/v1/readyz` devolvió HTTP 503: BookPI sigue volátil, la consulta Atlas/Supabase devolvió HTTP 404, IKES carece de persistencia durable conectada y no se verifica exportación de telemetría. El smoke de gateway LLM externo se omitió por ausencia de credenciales de proveedor. Las últimas correcciones de CI/CD aún requieren una ejecución GitHub Actions verde sobre el SHA final.
 
 - Repositorio: https://github.com/OsoPanda1/ISABELLA-VERSION-TERMINUS-V6
 - Rama principal: main
@@ -169,7 +169,19 @@ No se afirma liderazgo mundial, superioridad frente a proveedores consolidados n
 
 El porcentaje sólo debe subir cuando una capacidad funcional nueva o una mejora relevante quede implementada y validada con evidencia. La documentación, el número de archivos, las declaraciones arquitectónicas y los tests que no se ejecutan no incrementan por sí solos el avance.
 
-La estimación de **48.0%** se mantiene como referencia provisional hasta cerrar los bloqueos de CI/CD e integraciones. Para sustituirla, generar una evaluación versionada que incluya SHA exacto, resultados de typecheck/tests/build/seguridad/smoke, E2E reproducible, evidencia de despliegue, pesos explícitos por dominio y revisión humana del riesgo residual.
+La estimación de **54.0%** usa esta rúbrica ponderada (puntos disponibles = peso del dominio); el total sólo refleja el último build de aplicación validado, no un despliegue productivo:
+
+| Dominio | Puntos obtenidos / disponibles | Evidencia y limitación principal |
+|---|---:|---|
+| Runtime, compilación y pruebas | 22 / 25 | Build READY, 1,543 pruebas, 258 archivos y smoke local; faltan E2E con dependencias productivas. |
+| Seguridad y CI | 14 / 20 | 14 invariantes de seguridad aprobados; auditoría Rust/Trivy bloqueantes configurados, pero la ejecución final de GitHub Actions sigue pendiente y main requiere protección. |
+| Persistencia e integridad de datos | 3 / 20 | BookPI volátil, Atlas health query 404, IKES sin persistencia durable. La migración SQL está en el repo, no aplicada remotamente. |
+| Inferencia y conversación | 7 / 15 | Chat local y seguimiento funcionan; smoke generativo externo omitido por falta de credenciales configuradas. |
+| Despliegue y recuperación | 5 / 10 | Preview READY; no se ha demostrado promoción real a producción ni rollback. |
+| Observabilidad y operación | 3 / 10 | Readiness y métricas en proceso disponibles; exportación OTLP y alertas no verificadas. |
+| **Total** | **54 / 100** | **Preproducción; no certificado para producción.** |
+
+Para elevar la cifra de nuevo, exigir build verde del SHA final, CI/CD verde, migración aplicada y probe Atlas saludable, persistencia durable/recuperación de BookPI e IKES, smoke generativo aprobado, telemetría exportada y despliegue/rollback reales.
 
 ## Licencias y uso
 
