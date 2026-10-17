@@ -1146,7 +1146,7 @@ app.post("/api/v1/cognition/route", async (req, res) => {
     }
 
     let generativeNarrative: string | null = null;
-    let responseEngine: "gemini" | "gateway" | "open-science" | "openrouter-free" | "huggingface-free" | "compatible-provider" | "keyless-free" | "perplexity-router" | "sovereign-fallback" | "sovereign" | "blocked" = "blocked";
+    let responseEngine: "gemini" | "gateway" | "open-science" | "openrouter-free" | "huggingface-provider" | "compatible-provider" | "keyless-free" | "perplexity-router" | "sovereign-fallback" | "sovereign" | "blocked" = "blocked";
     // Start the budget before native classification so inference plus routing share one deadline.
     const requestAbortController = new AbortController();
     res.once("close", () => {
@@ -1203,7 +1203,7 @@ app.post("/api/v1/cognition/route", async (req, res) => {
         // them after the operator opts in and explicitly configures models.
         if (!generativeNarrative && process.env.HF_TOKEN && process.env.HF_FREE_MODELS?.trim() && !chainBudget.expired()) {
           generativeNarrative = await generateHuggingFaceNarrative(systemPrompt, input, history, chainBudget);
-          if (generativeNarrative) responseEngine = "huggingface-free";
+          if (generativeNarrative) responseEngine = "huggingface-provider";
         }
         if (!generativeNarrative && buildOpenAICompatibleCandidates(process.env).length > 0 && !chainBudget.expired()) {
           generativeNarrative = await generateCompatibleProviderNarrative(systemPrompt, input, history, chainBudget);
