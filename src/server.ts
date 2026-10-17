@@ -25,6 +25,7 @@ import { createSupabaseIkesPersistence } from "./memory/ikes-supabase";
 import { bookPiLedger } from "./bookpi";
 import { createRuntimeBookPiStorage } from "./bookpi/runtime-storage";
 import { inspectLegacyBookPiLedger } from "./bookpi/readiness";
+import { probeIgeOmegaGateway } from "./ige-omega/gateway-probe";
 import { evaluateEpistemicState, EPISTEMIC_LADDER_SPEC } from "./cognition/epistemic-evaluator";
 import { createAtlasStoreFromEnv } from "./atlas";
 import { createDiffObservatory, sanitizeDiffSnapshot, snapshotMetadataHash } from "./plugins";
@@ -2322,6 +2323,7 @@ app.get("/api/v1/ops/snapshot", async (_req, res) => {
 app.get("/api/v1/integrations/graph", async (req, res) => {
   if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
   const { snapshot, readinessEvidence } = await currentOpsState();
+  const igeOmegaProbe = await probeIgeOmegaGateway(process.env);
   const evidenceByName = new Map<string, Record<string, unknown>>();
   for (const item of readinessEvidence) evidenceByName.set(item.dependency, { ...item });
   const bookpiEvidence = evidenceByName.get("pipeline-bookpi-storage") as {
@@ -2370,7 +2372,7 @@ app.get("/api/v1/integrations/graph", async (req, res) => {
       { id: "civilization", state: "WIRED", role: "Civilization routes are registered" },
       { id: "hf-hub", state: "WIRED", role: "Hugging Face hub routes are registered; provider credentials/availability are separate checks" },
       { id: "omega-api", state: "WIRED", role: "Omega API routes are registered; this does not prove the separate Rust workspace is called" },
-      { id: "ige-omega-rust", state: "SEPARATE_WORKSPACE_NOT_LINKED", role: "Rust workspace exists; direct invocation from this Node runtime is not verified" },
+      { id: "ige-omega-rust", state: igeOmegaProbe.status, role: "Optional Rust gateway; only health/readiness are probed, authenticated inference bridging remains unverified", evidence: igeOmegaProbe },
     ],
     edges: [
       { from: "http-ingress", to: "genesis-runtime", state: "WIRED" },
@@ -2391,7 +2393,7 @@ app.get("/api/v1/integrations/graph", async (req, res) => {
       { from: "http-ingress", to: "civilization", state: "WIRED" },
       { from: "http-ingress", to: "hf-hub", state: "WIRED" },
       { from: "http-ingress", to: "omega-api", state: "WIRED" },
-      { from: "omega-api", to: "ige-omega-rust", state: "NOT_VERIFIED" },
+      { from: "omega-api", to: "ige-omega-rust", state: igeOmegaProbe.status },
     ],
     readiness: snapshot.readiness,
     readinessEvidence,
