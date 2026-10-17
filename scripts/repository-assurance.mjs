@@ -270,7 +270,7 @@ add("RA-041", "BLOCKER",
     /const legacyBookpiEvidence = evidenceByName\.get\("bookpi-ledger"\)/.test(server) &&
     /id: "bookpi-legacy", state: legacyBookpiEvidence\?\.status/.test(server) &&
     /to: "bookpi-legacy", state: legacyBookpiEvidence\?\.status\?\.toUpperCase/.test(server) &&
-    !!graphSourceTests && /legacy graph state uses its own health evidence/.test(graphSourceTests),
+    !!graphSourceTests && /uses dependency evidence in edges without leaking out-of-scope state/.test(graphSourceTests),
   "The legacy BookPI node and edge consume the legacy ledger's own readiness evidence, not the pipeline adapter's state.",
   ["src/server.ts", "test/deployment/integration-graph.test.ts"]);
 
