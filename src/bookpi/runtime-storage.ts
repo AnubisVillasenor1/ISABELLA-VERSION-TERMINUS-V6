@@ -18,6 +18,8 @@ export interface RuntimeBookPiStorage {
 
 export interface RuntimeBookPiEnv {
   DATABASE_URL?: string;
+  POSTGRES_URL?: string;
+  POSTGRES_URL_NON_POOLING?: string;
   BOOKPI_PIPELINE_LEDGER_PATH?: string;
   BOOKPI_PIPELINE_STORAGE?: string;
 }
@@ -31,7 +33,11 @@ export function createRuntimeBookPiStorage(
   env: RuntimeBookPiEnv = process.env,
 ): RuntimeBookPiStorage {
   const mode = (env.BOOKPI_PIPELINE_STORAGE ?? "").trim().toLowerCase();
-  const databaseUrl = env.DATABASE_URL?.trim();
+  // Vercel Postgres/Supabase integrations commonly expose POSTGRES_URL rather
+  // than DATABASE_URL. Prefer the pooled endpoint for serverless execution.
+  const databaseUrl = env.DATABASE_URL?.trim()
+    || env.POSTGRES_URL?.trim()
+    || env.POSTGRES_URL_NON_POOLING?.trim();
   const jsonlPath = env.BOOKPI_PIPELINE_LEDGER_PATH?.trim();
 
   if (mode === "postgres" || (!mode && databaseUrl)) {
