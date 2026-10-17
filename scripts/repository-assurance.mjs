@@ -258,8 +258,9 @@ add("RA-040", "BLOCKER",
   !!server &&
     /\/api\/v1\/integrations\/graph/.test(server) &&
     /authorizeApiToken\(req, res, "GENESIS_ADMIN_API_TOKEN"\)/.test(server) &&
-    /id: "ige-omega-rust", state: "SEPARATE_WORKSPACE_NOT_LINKED"/.test(server) &&
-    /to: "ige-omega-rust", state: "NOT_VERIFIED"/.test(server) &&
+    /const igeOmegaProbe = await probeIgeOmegaGateway\(process\.env\)/.test(server) &&
+    /id: "ige-omega-rust", state: igeOmegaProbe\.status/.test(server) &&
+    /to: "ige-omega-rust", state: igeOmegaProbe\.status/.test(server) &&
     !!integrationGraphTests && /runtime integration graph contract/.test(integrationGraphTests),
   "The authenticated integration graph enumerates connected route surfaces and explicitly labels the Rust workspace as not runtime-linked.",
   ["src/server.ts", "test/deployment/integration-graph.test.ts"]);
@@ -273,6 +274,19 @@ add("RA-041", "BLOCKER",
     !!graphSourceTests && /uses dependency evidence in edges without leaking out-of-scope state/.test(graphSourceTests),
   "The legacy BookPI node and edge consume the legacy ledger's own readiness evidence, not the pipeline adapter's state.",
   ["src/server.ts", "test/deployment/integration-graph.test.ts"]);
+
+const igeOmegaGatewayProbe = await read("src/ige-omega/gateway-probe.ts");
+const igeOmegaGatewayProbeTests = await read("test/ige-omega/gateway-probe.test.ts");
+add("RA-042", "BLOCKER",
+  !!igeOmegaGatewayProbe &&
+    /IGE_OMEGA_GATEWAY_URL/.test(igeOmegaGatewayProbe) &&
+    /new URL\("health", baseUrl\)/.test(igeOmegaGatewayProbe) &&
+    /new URL\("ready", baseUrl\)/.test(igeOmegaGatewayProbe) &&
+    /health-readiness-probe-only/.test(igeOmegaGatewayProbe) &&
+    !!igeOmegaGatewayProbeTests && /requires both the public health contract and database readiness/.test(igeOmegaGatewayProbeTests) &&
+    /rejects insecure non-local HTTP URLs in production/.test(igeOmegaGatewayProbeTests),
+  "IGE-OMEGA has a bounded, URL-validated HTTP health/readiness bridge; the graph reports real probe state without claiming authenticated inference is wired.",
+  ["src/ige-omega/gateway-probe.ts", "test/ige-omega/gateway-probe.test.ts", "src/server.ts"]);
 
 const report = {
   schemaVersion: "1.0.0",
