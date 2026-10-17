@@ -2,8 +2,43 @@ import { verifyChainLink, ZERO_HASH } from "./crypto";
 import { buildBookPiEvent } from "./emitter";
 import type { BookPiEventRecord, BookPiEventSeed, BookPiStorage } from "./types";
 
+export interface PostgresQueryResult { rows: unknown[]; rowCount?: number | null; }
 export interface PostgresLike {
-  query(text: string, params?: unknown[]): Promise<{ rows: unknown[] }>;
+  query(text: string, params?: unknown[]): Promise<PostgresQueryResult>;
+  connect?(): Promise<PostgresClientLike>;
+}
+export interface PostgresClientLike extends PostgresLike {
+  release?(): void;
+}
+
+/** Run each operation in a single connection/transaction so actor RLS context is local and reliable. */
+async function withActorTransaction<T>(
+  pool: PostgresLike,
+  actorId: string | undefined,
+  work: (client: PostgresLike) => Promise<T>,
+): Promise<T> {
+  if (!pool.connect) {
+    if (actorId) await pool.query("SELECT set_config('app.actor_id', $1, false)", [actorId]);
+    return work(pool);
+  }
+  const client = await pool.connect();
+  let began = false;
+  try {
+    await client.query("BEGIN");
+    began = true;
+    if (actorId) await client.query("SELECT set_config('app.actor_id', $1, true)", [actorId]);
+    const result = await work(client);
+    await client.query("COMMIT");
+    began = false;
+    return result;
+  } catch (error) {
+    if (began) {
+      try { await client.query("ROLLBACK"); } catch { /* preserve original error */ }
+    }
+    throw error;
+  } finally {
+    client.release?.();
+  }
 }
 
 export interface PostgresBookPiRow {
@@ -36,38 +71,46 @@ export interface PostgresStorageOptions {
 
 export function createPostgresStorage(pool: PostgresLike, table = BOOKPI_TABLE, options: PostgresStorageOptions = {}): BookPiStorage {
   const quote = (ident: string): string => `"${ident.replaceAll('"', '""')}"`;
-  const setActor = async (): Promise<void> => {
-    if (options.actorId) await pool.query("SELECT set_config('app.actor_id', $1, false)", [options.actorId]);
-  };
+  const withActor = <T>(work: (client: PostgresLike) => Promise<T>): Promise<T> =>
+    withActorTransaction(pool, options.actorId, work);
 
   const eventColumns = "id, type, sequence, prev_hash, timestamp, actor_id, payload, schema_version, meta, header, hash, integrity, canonical";
 
   async function getLastEvent(): Promise<BookPiEventRecord | null> {
-    await setActor();
-    const { rows } = await pool.query(`SELECT ${eventColumns} FROM ${quote(table)} ORDER BY sequence DESC LIMIT 1`);
-    const row = rows[0] as PostgresBookPiRow | undefined;
-    return row ? rowToRecord(row) : null;
+    return withActor(async (client) => {
+      const { rows } = await client.query(`SELECT ${eventColumns} FROM ${quote(table)} ORDER BY sequence DESC LIMIT 1`);
+      const row = rows[0] as PostgresBookPiRow | undefined;
+      return row ? rowToRecord(row) : null;
+    });
   }
 
-  async function appendEvent(seed: BookPiEventSeed, ctx: { secret?: string } = {}): Promise<BookPiEventRecord> {
+  async function appendEvent(seed: BookPiEventSeed, ctx: { secret?: string; actorId?: string } = {}): Promise<BookPiEventRecord> {
     let lastError: unknown;
     for (let attempt = 0; attempt < 4; attempt += 1) {
-      const last = await getLastEvent();
-      const sequence = last ? last.sequence + 1 : 1;
-      const prevHash = last ? last.hash : ZERO_HASH;
-      const record = buildBookPiEvent(seed, {
-        sequence, prevHash, timestamp: new Date().toISOString(), secret: ctx.secret,
-      });
       try {
-        await setActor();
-        await pool.query(
-          `INSERT INTO ${quote(table)}
-           (id, type, sequence, prev_hash, timestamp, actor_id, payload, schema_version, meta, header, hash, integrity, canonical)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
-          [record.id, record.type, record.sequence, record.prevHash, record.timestamp, record.actorId ?? null,
-           record.payload, record.schemaVersion, record.meta, record.header, record.hash, record.integrity, record.canonical],
-        );
-        return record;
+        return await withActor(async (client) => {
+          // Serialize chain-head allocation across concurrent requests; the insert and
+          // predecessor lookup commit atomically on the same connection.
+          await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [`bookpi:${table}`]);
+          const { rows } = await client.query(`SELECT ${eventColumns} FROM ${quote(table)} ORDER BY sequence DESC LIMIT 1`);
+          const lastRow = rows[0] as PostgresBookPiRow | undefined;
+          const last = lastRow ? rowToRecord(lastRow) : null;
+          const record = buildBookPiEvent(seed, {
+            sequence: last ? last.sequence + 1 : 1,
+            prevHash: last ? last.hash : ZERO_HASH,
+            timestamp: new Date().toISOString(),
+            actorId: ctx.actorId ?? options.actorId,
+            secret: ctx.secret,
+          });
+          await client.query(
+            `INSERT INTO ${quote(table)}
+             (id, type, sequence, prev_hash, timestamp, actor_id, payload, schema_version, meta, header, hash, integrity, canonical)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+            [record.id, record.type, record.sequence, record.prevHash, record.timestamp, record.actorId ?? null,
+             record.payload, record.schemaVersion, record.meta, record.header, record.hash, record.integrity, record.canonical],
+          );
+          return record;
+        });
       } catch (error) {
         lastError = error;
         if (!isUniqueViolation(error)) throw error;
@@ -77,9 +120,10 @@ export function createPostgresStorage(pool: PostgresLike, table = BOOKPI_TABLE, 
   }
 
   async function listEvents(): Promise<BookPiEventRecord[]> {
-    await setActor();
-    const { rows } = await pool.query(`SELECT * FROM ${quote(table)} ORDER BY sequence ASC`);
-    return (rows as PostgresBookPiRow[]).map(rowToRecord);
+    return withActor(async (client) => {
+      const { rows } = await client.query(`SELECT * FROM ${quote(table)} ORDER BY sequence ASC`);
+      return (rows as PostgresBookPiRow[]).map(rowToRecord);
+    });
   }
 
   async function verifyChain(opts: { secret?: string } = {}): Promise<{ valid: boolean; count: number; failures: string[] }> {
