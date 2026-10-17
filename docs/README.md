@@ -85,7 +85,7 @@
 - [Árbol estructural](evolution/STRUCTURAL-TREE-FINAL.md)
 - [Ledger durable BookPI](bookpi/DURABLE-LEDGER.md)
 - [Motor de facturación](commerce/BILLING-ENGINE.md)
-- [Reglas comerciales](commerce/OPERATING_RULES.md)
+- [Guía comercial consolidada: cláusulas, operación, implementación, QA y métricas](commerce/BILLING-ENGINE.md)
 - [Arquitectura OSIRIS](osiris/ARCHITECTURE.md)
 - [Arquitectura REINA](reina/ARCHITECTURE.md)
 - [Registro canónico TAMV](registry/TAMV-ONLINE-CANONICAL-REGISTRY-v2.0.0.md)
