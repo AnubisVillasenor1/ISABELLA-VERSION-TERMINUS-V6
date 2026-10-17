@@ -212,6 +212,21 @@ export class GratisAPIAdapter implements InferenceAdapter {
     };
   }
 
+  async healthCheck(): Promise<boolean> {
+    try {
+      const headers: Record<string, string> = {};
+      if (this.config.apiKey) headers.Authorization = `Bearer ${this.config.apiKey}`;
+      const response = await fetchWithTimeout(
+        `${this.config.baseUrl.replace(/\/$/, "")}/models`,
+        { method: "GET", headers },
+        5_000,
+      );
+      return response.ok;
+    } catch {
+      return false;
+    }
+  }
+
   async generate(request: GenerationRequest): Promise<GenerationResult> {
     const started = Date.now();
     const url = `${this.config.baseUrl.replace(/\/$/, "")}/chat/completions`;
@@ -306,10 +321,11 @@ export class FreeProviderRouter {
   async healthCheck(): Promise<Record<string, boolean>> {
     const results: Record<string, boolean> = {};
     for (const adapter of this.adapters) {
-      if (adapter instanceof OllamaAdapter) {
+      if (adapter instanceof OllamaAdapter || adapter instanceof GratisAPIAdapter) {
         results[adapter.descriptor.provider] = await adapter.healthCheck();
       } else {
-        results[adapter.descriptor.provider] = true;
+        // Unknown adapters must not be reported healthy without an actual probe.
+        results[adapter.descriptor.provider] = false;
       }
     }
     return results;
