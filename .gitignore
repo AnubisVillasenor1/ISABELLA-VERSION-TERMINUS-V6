@@ -13,3 +13,4 @@ data/
 !fixtures/**/*.jsonl
 evidence/*.json
 artifacts/
+firebase-applet-config.json
