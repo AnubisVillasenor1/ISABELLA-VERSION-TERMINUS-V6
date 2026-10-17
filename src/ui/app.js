@@ -453,6 +453,22 @@ document.addEventListener('click', (event) => {
   const link = target.closest('a[href^="#"]');
   if (link) navigateToHash(link.getAttribute('href'), event);
 });
+
+// Keep every navigation surface on the same interaction path. Some embedded
+// preview shells intercept native hash navigation, so the app owns the scroll
+// and history update instead of relying on browser defaults.
+const bindNavigationSurface = (selector) => {
+  document.querySelectorAll(selector).forEach((link) => {
+    link.addEventListener('click', (event) => {
+      const href = link.getAttribute('href');
+      if (href?.startsWith('#')) navigateToHash(href, event);
+    });
+  });
+};
+bindNavigationSurface('.topbar a[href^="#"], .side-rail a[href^="#"], .hero a[href^="#"], .access-section a[href^="#"], .intro-enter[href^="#"]');
+if (window.location.hash) {
+  window.requestAnimationFrame(() => navigateToHash(window.location.hash));
+}
 document.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') {
     closeNav();
