@@ -44,7 +44,10 @@ const startIntroMedia = async () => {
   // to warm the complete small web rendition before the intro sequence advances.
   introVideo.preload = 'auto';
   if (introVideo.readyState === HTMLMediaElement.HAVE_NOTHING) introVideo.load();
-  introVideo.currentTime = 0;
+  // On the first user gesture metadata may not exist yet; avoid an InvalidStateError.
+  if (introVideo.readyState >= HTMLMediaElement.HAVE_METADATA) {
+    try { introVideo.currentTime = 0; } catch { /* the browser will start at its current position */ }
+  }
   introVideo.muted = false;
   introVideo.volume = 0.82;
   try {
@@ -79,7 +82,9 @@ const startIntroMedia = async () => {
 const stopIntroMedia = () => {
   window.clearInterval(introWatchdog);
   introVideo?.pause();
-  if (introVideo) introVideo.currentTime = 0;
+  if (introVideo && introVideo.readyState >= HTMLMediaElement.HAVE_METADATA) {
+    try { introVideo.currentTime = 0; } catch { /* cleanup must not block dismissal */ }
+  }
 };
 // This checkbox records multimedia consent only; it is deliberately not presented as
 // bot protection or identity verification. Server-side rate limits remain separate.
@@ -159,6 +164,7 @@ const advanceIntro = (elapsed = getIntroElapsed()) => {
     const active = index === sceneIndex;
     scene.classList.toggle('is-active', active);
     scene.setAttribute('aria-hidden', String(!active));
+    scene.inert = !active;
   });
   if (introSceneLabel) introSceneLabel.textContent = introLabels[sceneIndex] || `SECUENCIA ${String(sceneIndex + 1).padStart(2, '0')}`;
   if (introProgressBar) introProgressBar.style.width = `${(boundedElapsed / introTotalMs) * 100}%`;
@@ -220,7 +226,11 @@ if (intro) {
     dismissIntro();
   } else {
     document.body.classList.add('intro-lock');
-    introScenes.forEach((scene, index) => scene.setAttribute('aria-hidden', String(index !== 0)));
+    introScenes.forEach((scene, index) => {
+      const inactive = index !== 0;
+      scene.setAttribute('aria-hidden', String(inactive));
+      scene.inert = inactive;
+    });
     immersionGate?.addEventListener('keydown', trapImmersionDialogFocus);
     immersionConsent?.focus({ preventScroll: true });
     skipIntro?.addEventListener('click', dismissIntro);
