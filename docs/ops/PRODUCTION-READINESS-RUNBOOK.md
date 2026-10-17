@@ -74,6 +74,13 @@ El código de esta rama incorpora `SupabaseIkesPersistence` y conecta el motor a
 - Añadir una comprobación de exportación real y acotada, no sólo de presencia de variable.
 - Verificar correlación trace/request, retención, acceso, alertas y ausencia de PII en logs.
 
+### 7. Verificar el gateway Rust IGE-Ω
+
+- El runtime Node dispone de un probe acotado mediante `IGE_OMEGA_GATEWAY_URL`; comprueba `GET /health` y `GET /ready` con timeout limitado, valida el contrato JSON y no envía tokens ni contenido del usuario.
+- En producción, configurar una URL HTTPS del gateway ya desplegado. No incluir usuario/contraseña, query strings ni fragmentos en la URL.
+- `GET /api/v1/integrations/graph` reportará `HEALTHY`, `DEGRADED` o `NOT_CONFIGURED` según la prueba observada. El probe sólo confirma salud/readiness y conectividad a base de datos; **no** demuestra que la inferencia autenticada desde Node esté conectada.
+- La integración de inferencia autenticada requiere un diseño separado de identidad/tenant, gestión del token de servicio, autorización y pruebas de aislamiento; no reutilizar un token de un usuario para todos los clientes.
+
 ### 7. Cerrar CI/CD y producción
 
 - Esperar CI verde en el SHA candidato, incluidos typecheck, tests, build, auditoría Rust, Trivy, SBOM y artefactos de seguridad.
