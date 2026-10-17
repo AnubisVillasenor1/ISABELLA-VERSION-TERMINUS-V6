@@ -8,13 +8,11 @@
 
 **Contrato de evidencia:** SPECIFIED ≠ IMPLEMENTED ≠ TESTED. Una especificación no demuestra implementación y una implementación no demuestra que se haya probado.
 
-**Avance global estimado para producción y despliegue: 59.0%.**
+**Avance global estimado para producción y despliegue: 61.0%.**
 
-Estimación ponderada de preparación operativa —no es una métrica de calidad del modelo ni una garantía de disponibilidad— calculada sobre el build reproducible del SHA `011467a68ee88999e55995e97439b8e9d1d5a152`. En Node 24.21.0 y pnpm 10.28.0, `pnpm install --frozen-lockfile && pnpm run build` terminó con código 0: 1,557 pruebas en 261 archivos, 35/35 comprobaciones estructurales, 14/14 invariantes de seguridad, typecheck, compilación del servidor y smoke de UI/conversación aprobados. Esto valida el código y las pruebas de ese SHA; no certifica dependencias remotas ni producción. La cuota diaria de despliegues de Vercel impidió desplegar el SHA final durante esta intervención.
+Estimación ponderada de preparación operativa —no es una métrica de calidad del modelo ni una garantía de disponibilidad— calculada sobre el build aislado del SHA `6ca34c3cdcdae8b0fb47044a2ddaa8d116e1992b`. En Node 24.21.0 y pnpm 10.28.0, `pnpm install --frozen-lockfile && pnpm run build` terminó con código 0: **1,568 pruebas en 264 archivos**, **39/39 comprobaciones estructurales**, **14/14 invariantes de seguridad**, typecheck de compilación, bundle del servidor, smoke de interfaz/conversación y suite de seguridad aprobados. Se corrigió el build para que la suite de seguridad invoque el gestor pnpm fijado en `packageManager`, evitando que una versión global distinta convierta un build verde en fallo.
 
-**Actualizaciones de integración posteriores al SHA validado:** se corrigió la normalización de `TIMESTAMPTZ` devuelto como `Date` por node-postgres antes de verificar hashes BookPI; el readiness ahora inspecciona el resultado real de verificación del ledger síncrono heredado; se añadieron pruebas de regresión para esos contratos y las migraciones PostgreSQL existentes. Estas últimas modificaciones aún no tienen una ejecución completa de la suite sobre el SHA más reciente, por lo que la estimación permanece en 59.0% hasta validar ese commit.
-
-**Estado: preproducción; no declarar listo para producción.** El código del SHA final compila y pasa la suite local aislada, pero el último probe remoto de preview (SHA `5aaea9302e7899f3cf05bc0a031971ea4b96288a`) devolvió HTTP 503. Atlas/Supabase respondió HTTP 404; el pipeline reconoció el PostgreSQL configurado, pero carece de `BOOKPI_INTEGRITY_SECRET` de al menos 32 caracteres; el ledger BookPI síncrono heredado sigue siendo volátil y la exportación de telemetría no está verificada. Las migraciones IKES/Atlas deben aplicarse y probarse. El smoke generativo externo se omitió por ausencia de credenciales. GitHub Actions aún no ofrece una ejecución válida con pasos/logs, y la cuota diaria de Vercel impidió desplegar el SHA final.
+**Estado: preproducción; no declarar listo para producción.** El preview más reciente disponible, SHA `a8a5c580ed2d54ef87b1a80c0074c974d52cd726`, está `READY`, pero `/api/v1/readyz` devuelve HTTP 503: Atlas/Supabase e IKES responden HTTP 404, falta `BOOKPI_INTEGRITY_SECRET` de al menos 32 caracteres, el ledger BookPI síncrono heredado sigue siendo volátil y la exportación de telemetría no está verificada. El smoke generativo externo se omitió por ausencia de credenciales de proveedor. Vercel rechazó el build del SHA final por cuota de builds/despliegues; el SHA `6ca34c3` sí pasó la compilación y suite completa en un sandbox aislado, pero no tiene un preview remoto propio. GitHub Actions sigue sin proporcionar una ejecución válida con pasos/logs y `main` requiere protección.
 
 - Repositorio: https://github.com/OsoPanda1/ISABELLA-VERSION-TERMINUS-V6
 - Rama principal: main
@@ -176,17 +174,17 @@ No se afirma liderazgo mundial, superioridad frente a proveedores consolidados n
 
 El porcentaje sólo debe subir cuando una capacidad funcional nueva o una mejora relevante quede implementada y validada con evidencia. La documentación, el número de archivos, las declaraciones arquitectónicas y los tests que no se ejecutan no incrementan por sí solos el avance.
 
-La estimación de **59.0%** usa esta rúbrica ponderada (puntos disponibles = peso del dominio). El total incorpora el build reproducible del SHA final y las pruebas ejecutadas; no equivale a despliegue productivo:
+La estimación de **61.0%** usa esta rúbrica ponderada (puntos disponibles = peso del dominio). El total incorpora el build reproducible del SHA validado y las pruebas ejecutadas; no equivale a despliegue productivo:
 
 | Dominio | Puntos obtenidos / disponibles | Evidencia y limitación principal |
 |---|---:|---|
-| Runtime, compilación y pruebas | 24 / 25 | Build reproducible, typecheck, 1,557 pruebas en 261 archivos y smoke local aprobados; faltan E2E con dependencias productivas. |
-| Seguridad y CI | 15 / 20 | 35/35 checks estructurales y 14/14 invariantes de seguridad aprobados; GitHub Actions sigue sin ejecución válida y main requiere protección. |
+| Runtime, compilación y pruebas | 25 / 25 | Build completo, typecheck, 1,568 pruebas en 264 archivos, bundle y smoke local aprobados; faltan E2E con dependencias productivas. |
+| Seguridad y CI | 16 / 20 | 39/39 checks estructurales y 14/14 invariantes de seguridad aprobados; GitHub Actions sigue sin ejecución válida y main requiere protección. |
 | Persistencia e integridad de datos | 5 / 20 | Adaptadores BookPI/IKES implementados y probados, pero Atlas/IKES remoto devuelve 404, falta BOOKPI_INTEGRITY_SECRET y el ledger síncrono heredado sigue volátil. |
 | Inferencia y conversación | 7 / 15 | Chat local y seguimiento funcionan; smoke generativo externo omitido por falta de credenciales configuradas. |
 | Despliegue y recuperación | 5 / 10 | Preview READY; no se ha demostrado promoción real a producción ni rollback. |
 | Observabilidad y operación | 3 / 10 | Readiness y métricas en proceso disponibles; exportación OTLP y alertas no verificadas. |
-| **Total** | **59 / 100** | **Preproducción; no certificado para producción.** |
+| **Total** | **61 / 100** | **Preproducción; no certificado para producción.** |
 
 Para elevar la cifra de nuevo, exigir build verde del SHA final, CI/CD verde, migración aplicada y probe Atlas saludable, persistencia durable/recuperación de BookPI e IKES, smoke generativo aprobado, telemetría exportada y despliegue/rollback reales.
 
