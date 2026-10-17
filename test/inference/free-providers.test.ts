@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { createServer } from "node:http";
 import type { GenerationRequest, GenerationResult, InferenceAdapter, ModelDescriptor } from "../../src/inference/types";
 import { FreeProviderRouter, OllamaAdapter, createDefaultFreeProviderRouter } from "../../src/inference/free-providers";
 
@@ -52,6 +53,34 @@ describe("free provider router", () => {
       else process.env.GRATIS_API_KEY = previousKey;
     }
   });
+
+
+  it("aborts when a provider sends headers but stalls the response body", async () => {
+    const server = createServer((_request, response) => {
+      response.writeHead(200, { "content-type": "application/json" });
+      response.write('{"response":"');
+      // Intentionally leave the body open: the client timeout must cover body parsing too.
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const address = server.address();
+    if (!address || typeof address === "string") {
+      server.close();
+      throw new Error("TEST_SERVER_ADDRESS_UNAVAILABLE");
+    }
+
+    const adapter = new OllamaAdapter({
+      baseUrl: `http://127.0.0.1:${address.port}`,
+      timeoutMs: 80,
+      maxRetries: 0,
+    });
+
+    try {
+      await expect(adapter.generate({ prompt: "hello", maxTokens: 8 })).rejects.toThrow();
+    } finally {
+      server.closeAllConnections();
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  }, 3_000);
 
   it("declares a local ollama descriptor without network calls", () => {
     const adapter = new OllamaAdapter({ baseUrl: "http://127.0.0.1:1" });
