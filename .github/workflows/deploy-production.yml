@@ -87,7 +87,7 @@ jobs:
             console.error("Deployment gate rejected the CI run. Only a successful push run for the exact SHA on main is eligible.");
             process.exit(1);
           }
-          fs.appendFileSync(process.env.GITHUB_OUTPUT, "the_sha=" + run.head_sha + "\\nci_run_id=" + run.id + "\\n");
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, "the_sha=" + run.head_sha + "\nci_run_id=" + run.id + "\n");
           NODE
           echo "Validated exact successful CI run for SHA $EXPECTED_SHA."
 
