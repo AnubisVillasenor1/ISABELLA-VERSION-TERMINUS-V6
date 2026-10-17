@@ -62,4 +62,8 @@ export const PLATFORM_GIFTS: readonly PlatformGift[] = Object.freeze([
   { order: 28, id: "security-http-hardening", title: "Seguridad — HTTP Hardening", file: "src/security/http-hardening.ts", wired: "middleware global", limits: "Sin CSP/HSTS declarado." },
   { order: 29, id: "hypercore-engine", title: "HyperCore — Motor de Optimización", file: "src/hypercore/hypercore.ts", wired: "biblioteca (sin cablear)", limits: "Optimización local." },
   { order: 30, id: "isabella-engine", title: "Isabella — Motor Cognitivo", file: "src/isabella/library.ts", wired: "biblioteca (sin cablear)", limits: "Sin proveedor externo por defecto." },
+  { order: 31, id: "monetization-engine", title: "Motor de Monetización (planes, escrow, payouts, SCER)", file: "src/economy/monetization-engine.ts", wired: "GET/POST /api/v1/monetization/*", limits: "Sin liquidación real; en memoria." },
+  { order: 32, id: "dynamic-pricing", title: "Pricing Dinámico (demanda, carga, valor)", file: "src/economy/dynamic-pricing.ts", wired: "POST /api/v1/pricing/dynamic", limits: "Heurístico; requiere calibración." },
 ]);
+export * from "../economy/monetization-engine";
+export * from "../economy/dynamic-pricing";

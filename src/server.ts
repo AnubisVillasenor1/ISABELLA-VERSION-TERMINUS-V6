@@ -46,6 +46,8 @@ import { CognitiveCapitalMarket } from "./economy/cognitive-capital-market";
 import { CognitiveImmuneSystem } from "./ihec/immune-system";
 import { CognitiveFabricEngine } from "./core/cognitive-fabric-engine";
 import { ConstitutionalGovernanceFabric } from "./governance/constitutional-governance-fabric";
+import { MonetizationEngine } from "./economy/monetization-engine";
+import { DynamicPricingEngine } from "./economy/dynamic-pricing";
 import { createReinaRuntime, type ReinaRequest } from "./reina";
 import { SubscriptionStore, UsageMeter, billingPriceById, billingPricesPublic, billingPriceIsConfigured, checkFeature, checkQuota, planEntitlements, PLANS, type PlanId, type QuotaKey, type SubscriptionRecord } from "./commerce";
 import { GAMEOVER_CONSTITUTION, passportAuthority, uagpGateway, type UagpRequestInput } from "./gameover";
@@ -2754,6 +2756,8 @@ const cognitiveCapitalMarket = new CognitiveCapitalMarket();
 const cognitiveImmuneSystem = new CognitiveImmuneSystem();
 const cognitiveFabricEngine = new CognitiveFabricEngine();
 const constitutionalGovernanceFabric = new ConstitutionalGovernanceFabric();
+const monetizationEngine = new MonetizationEngine();
+const dynamicPricingEngine = new DynamicPricingEngine();
 
 app.post("/api/v1/billing/stripe/webhook", async (req, res) => {
   if (!stripeClient || !stripeWebhookSecret || !Buffer.isBuffer(req.body)) {
@@ -3414,6 +3418,72 @@ app.post("/api/v1/governance/evaluate", (req, res) => {
   } catch (e) {
     res.status(400).json({ success: false, error: e instanceof Error ? e.message : "ERROR" });
   }
+});
+
+// ── Monetización: endpoints (state: draft | engine-generated) ──
+app.get("/api/v1/monetization/plans", (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  res.json({ success: true, plans: monetizationEngine.plans() });
+});
+
+app.post("/api/v1/monetization/escrow", (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  try {
+    const body = req.body ?? {};
+    const hold = monetizationEngine.escrow(String(body.payer ?? ""), String(body.payee ?? ""), Number(body.amount ?? 0), typeof body.currency === "string" ? body.currency : undefined);
+    res.json({ success: true, escrow: hold });
+  } catch (e) {
+    res.status(400).json({ success: false, error: e instanceof Error ? e.message : "ERROR" });
+  }
+});
+
+app.post("/api/v1/monetization/escrow/release", (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  try {
+    const body = req.body ?? {};
+    const hold = monetizationEngine.releaseEscrow(String(body.id ?? ""));
+    res.json({ success: true, escrow: hold });
+  } catch (e) {
+    res.status(400).json({ success: false, error: e instanceof Error ? e.message : "ERROR" });
+  }
+});
+
+app.post("/api/v1/monetization/payout", (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  try {
+    const body = req.body ?? {};
+    const p = monetizationEngine.payout(String(body.recipient ?? ""), Number(body.amount ?? 0), typeof body.royaltyBps === "number" ? body.royaltyBps : undefined, typeof body.currency === "string" ? body.currency : undefined);
+    res.json({ success: true, payout: p });
+  } catch (e) {
+    res.status(400).json({ success: false, error: e instanceof Error ? e.message : "ERROR" });
+  }
+});
+
+app.post("/api/v1/monetization/scer-split", (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  try {
+    const body = req.body ?? {};
+    const split = monetizationEngine.scerSplit(Number(body.amount ?? 0));
+    res.json({ success: true, split });
+  } catch (e) {
+    res.status(400).json({ success: false, error: e instanceof Error ? e.message : "ERROR" });
+  }
+});
+
+app.post("/api/v1/pricing/dynamic", (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  try {
+    const body = req.body ?? {};
+    const price = dynamicPricingEngine.price({ basePrice: Number(body.basePrice ?? 0), demandFactor: Number(body.demandFactor ?? 1), loadFactor: Number(body.loadFactor ?? 1), valueFactor: Number(body.valueFactor ?? 1) });
+    res.json({ success: true, price, stats: dynamicPricingEngine.stats() });
+  } catch (e) {
+    res.status(400).json({ success: false, error: e instanceof Error ? e.message : "ERROR" });
+  }
+});
+
+app.get("/api/v1/monetization/stats", (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  res.json({ success: true, stats: monetizationEngine.stats(), pricing: dynamicPricingEngine.stats() });
 });
 
 // Preflight de configuración (calidad de secretos y coherencia). Nunca devuelve valores de secretos.

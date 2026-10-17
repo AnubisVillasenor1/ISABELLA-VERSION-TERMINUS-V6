@@ -12,3 +12,6 @@ export * from "./affiliates";
 export * from "./fraud";
 
 export * from "./cognitive-capital-market";
+
+export * from "./monetization-engine";
+export * from "./dynamic-pricing";
