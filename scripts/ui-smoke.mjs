@@ -65,6 +65,9 @@ assert.ok(!(/\sloop(?:\s|>)/i.test(html.match(/<video\b[^>]*>/i)?.[0] || '')), '
 assert.ok(js.includes('window.requestAnimationFrame(renderIntroFrame)'), 'Intro progress updates must use the animation frame scheduler');
 assert.ok(js.includes('introVideo.currentTime / introVideo.duration'), 'Narrative timing must follow media time to avoid scene drift during buffering');
 assert.ok(js.includes("addEventListener('waiting'"), 'Buffering must trigger a visible-media fallback instead of repeated play() attempts');
+assert.ok(html.slice(html.indexOf('id="immersionGate"'), html.indexOf('<video id="introVideo"')).includes('id="skipIntro"'), 'The intro bypass must remain inside the modal consent gate');
+assert.ok(js.includes('trapImmersionDialogFocus') && js.includes("event.key === 'Escape'"), 'The consent dialog must trap keyboard focus and close on Escape');
+assert.ok(js.includes("immersionConsent?.focus({ preventScroll: true })"), 'Keyboard focus must enter the consent dialog on open');
 assert.ok(server.includes('app.get("/assets/video/IntroVideoIsabella.mp4"'), 'Runtime must serve the intro video');
 assert.ok(server.includes('IntroVideoIsabella.mp4'), 'Runtime video route must target the canonical asset');
 assert.ok(js.includes('INTRO_SCENE_MS = 4_200'), 'Intro timing must be scene-based and bounded');
