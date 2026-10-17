@@ -269,7 +269,7 @@ jobs:
             status: "CI_GATES_PASSED_NOT_PRODUCTION_CERTIFIED",
             timestamp: new Date().toISOString(),
           };
-          fs.writeFileSync("evidence/readiness.json", JSON.stringify(evidence, null, 2) + "\\n");
+          fs.writeFileSync("evidence/readiness.json", JSON.stringify(evidence, null, 2) + "\n");
           NODE
 
       - name: Upload readiness artifact
