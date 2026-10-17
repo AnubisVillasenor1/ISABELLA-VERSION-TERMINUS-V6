@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { createServer } from "node:http";
 import type { GenerationRequest, GenerationResult, InferenceAdapter, ModelDescriptor } from "../../src/inference/types";
-import { FreeProviderRouter, OllamaAdapter, createDefaultFreeProviderRouter } from "../../src/inference/free-providers";
+import { FreeProviderRouter, GratisAPIAdapter, OllamaAdapter, createDefaultFreeProviderRouter } from "../../src/inference/free-providers";
 
 function failingAdapter(name: string): InferenceAdapter {
   const descriptor: ModelDescriptor = { id: `fake-${name}`, version: "test", provider: name, capabilities: ["chat"], contextWindow: 1, maxOutputTokens: 1, latencyClass: "FAST" };
@@ -76,6 +76,31 @@ describe("free provider router", () => {
 
     try {
       await expect(adapter.generate({ prompt: "hello", maxTokens: 8 })).rejects.toThrow();
+    } finally {
+      server.closeAllConnections();
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  }, 3_000);
+
+  it("does not report an unreachable compatible provider as healthy", async () => {
+    const server = createServer((_request, response) => {
+      response.writeHead(503, { "content-type": "application/json" });
+      response.end(JSON.stringify({ error: "unavailable" }));
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const address = server.address();
+    if (!address || typeof address === "string") {
+      server.close();
+      throw new Error("TEST_SERVER_ADDRESS_UNAVAILABLE");
+    }
+
+    const adapter = new GratisAPIAdapter({
+      baseUrl: `http://127.0.0.1:${address.port}/v1`,
+      timeoutMs: 100,
+      maxRetries: 0,
+    });
+    try {
+      await expect(adapter.healthCheck()).resolves.toBe(false);
     } finally {
       server.closeAllConnections();
       await new Promise<void>((resolve) => server.close(() => resolve()));
