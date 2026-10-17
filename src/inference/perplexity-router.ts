@@ -46,6 +46,7 @@ export async function generatePerplexityNarrative(
   history: { role: string; content: string }[] = [],
   model = "perplexity/kimi-k3",
   timeoutMs = 30_000,
+  signal?: AbortSignal,
 ): Promise<string | null> {
   const client = createPerplexityRouterClient(env);
   if (!client) return null;
@@ -57,7 +58,7 @@ export async function generatePerplexityNarrative(
     ];
     const resp = await client.chat.completions.create(
       { model, messages, max_tokens: 1024, stream: false },
-      { timeout: timeoutMs },
+      { timeout: timeoutMs, ...(signal ? { signal } : {}) },
     );
     const content = resp.choices?.[0]?.message?.content;
     return typeof content === "string" && content.trim().length > 0 ? content.trim() : null;
