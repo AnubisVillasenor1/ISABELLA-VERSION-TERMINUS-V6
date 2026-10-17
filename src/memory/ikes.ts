@@ -118,7 +118,7 @@ export class IKESEngine {
 
   /** Hydrates only integrity-valid records. It never promotes epistemic state. */
   async initPersistence(): Promise<void> {
-    if (!this.persistence) return;
+    if (!this.persistence || this.persistenceInitialized) return;
     const snapshot = await this.persistence.load();
     const nextSources = new Map<string, KnowledgeSource>();
     for (const source of snapshot.sources) {
@@ -157,9 +157,7 @@ export class IKESEngine {
 
   private enqueuePersistence(write: () => Promise<void>): void {
     if (!this.persistence) return;
-    this.pendingWrites = this.pendingWrites.then(write).then(() => {
-      this.persistenceFailure = null;
-    }).catch(() => {
+    this.pendingWrites = this.pendingWrites.then(write).catch(() => {
       this.persistenceFailure = "IKES_PERSISTENCE_WRITE_FAILED";
     });
   }
@@ -186,7 +184,12 @@ export class IKESEngine {
         pending: false,
       };
     } catch {
-      return { healthy: false, backend: "SUPABASE", reason: "IKES persistence probe failed; inspect restricted server logs.", pending: false };
+      return {
+        healthy: false,
+        backend: "SUPABASE",
+        reason: this.persistenceFailure ?? "IKES persistence probe failed; inspect restricted server logs.",
+        pending: false,
+      };
     }
   }
 
