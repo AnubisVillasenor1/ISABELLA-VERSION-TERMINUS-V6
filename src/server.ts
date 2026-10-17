@@ -314,6 +314,7 @@ async function generateCompatibleProviderNarrative(systemPrompt: string, input: 
       const text = extractAssistantText(body);
       if (text) return text;
     } catch (error) {
+      if (budget?.cancelled()) return null;
       const message = error instanceof Error ? error.message : String(error);
       console.warn("[Isabella] compatible provider unavailable", { provider: candidate.name, message: message.slice(0, 180) });
     }
@@ -344,6 +345,7 @@ async function generateKeylessFreeNarrative(systemPrompt: string, input: string,
     if (!text) throw new Error(`${config.name} returned empty content`);
     return text;
   } catch (error) {
+    if (budget?.cancelled()) return null;
     keylessFreeCooldownUntil = Date.now() + providerCooldownMs;
     const message = error instanceof Error ? error.message : String(error);
     console.warn("[Isabella] keyless free provider unavailable; cooldown activated", { provider: config.name, message: message.slice(0, 180) });
@@ -442,6 +444,7 @@ async function generateFreeOpenRouterNarrative(systemPrompt: string, input: stri
     if (!text) throw new Error("OpenRouter returned empty content");
     return text;
   } catch (error) {
+    if (budget?.cancelled()) return null;
     openRouterCooldownUntil = Date.now() + providerCooldownMs;
     const message = error instanceof Error ? error.message : String(error);
     console.error("[Isabella] OpenRouter free route failed; cooldown activated", { message: message.replace(/Bearer\\s+[^\\s]+/gi, "Bearer [REDACTED]").slice(0, 300), cooldownMs: providerCooldownMs });
@@ -469,6 +472,7 @@ async function generateHuggingFaceNarrative(systemPrompt: string, input: string,
       const text = extractAssistantText(body);
       if (text) return text;
     } catch (error) {
+      if (budget?.cancelled()) return null;
       const message = error instanceof Error ? error.message : String(error);
       console.warn("[Isabella] Hugging Face candidate unavailable", { model, message: message.slice(0, 250) });
     }
@@ -491,6 +495,7 @@ async function generateGatewayNarrative(systemPrompt: string, input: string, his
     });
     return result.text.trim() || null;
   } catch (error) {
+    if (budget?.cancelled()) return null;
     const name = error instanceof Error ? error.name : "UnknownError";
     const rawMessage = error instanceof Error ? error.message : String(error);
     const safeMessage = rawMessage
