@@ -204,7 +204,12 @@ const atlasPersistence = process.env.SUPABASE_URL && process.env.SUPABASE_SERVIC
 const ikesPersistence = createSupabaseIkesPersistence(process.env);
 const runtime = new IsabellaGenesisRuntime(undefined, atlasPersistence, undefined, undefined, ikesPersistence);
 void runtime.initPersistence().catch((error) => {
-  console.error("[Genesis] Atlas persistence initialization failed:", error);
+  // A single provider failure must not hide which storage subsystem degraded.
+  const reasons = error instanceof AggregateError ? [...error.errors] : [error];
+  for (const reason of reasons) {
+    const message = reason instanceof Error ? reason.message : "PERSISTENCE_INITIALIZATION_FAILED";
+    console.error("[Genesis] persistence initialization failed:", message);
+  }
 });
 // Pipeline evidence uses a dedicated async BookPI storage port. PostgreSQL is selected
 // when DATABASE_URL exists; local JSONL is opt-in and volatile memory is explicitly degraded.
