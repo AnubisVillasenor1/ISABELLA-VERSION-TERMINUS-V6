@@ -37,8 +37,10 @@ describe("runtime integration graph contract", () => {
     expect(graph).toMatch(/id: "bookpi-legacy", state: legacyBookpiEvidence\?\.status/);
   });
 
-  it("does not misrepresent the Rust workspace as linked to the Node runtime", () => {
-    expect(graph).toMatch(/ige-omega-rust", state: "SEPARATE_WORKSPACE_NOT_LINKED/);
-    expect(graph).toMatch(/to: "ige-omega-rust", state: "NOT_VERIFIED"/);
+  it("uses the live health/readiness probe and does not overclaim inference wiring", () => {
+    expect(graph).toMatch(/const igeOmegaProbe = await probeIgeOmegaGateway\(process\.env\)/);
+    expect(graph).toMatch(/id: "ige-omega-rust", state: igeOmegaProbe\.status/);
+    expect(graph).toMatch(/to: "ige-omega-rust", state: igeOmegaProbe\.status/);
+    expect(graph).toMatch(/authenticated inference bridging remains unverified/);
   });
 });
