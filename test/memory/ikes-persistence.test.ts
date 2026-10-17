@@ -10,8 +10,8 @@ import {
 } from "../../src/memory/ikes";
 
 function fakePersistence(seed: IKESEngineSnapshot = { sources: [], claims: [] }) {
-  const sources = new Map(seed.sources.map((source) => [source.sourceId, source]));
-  const claims = new Map(seed.claims.map((claim) => [claim.claimId, claim]));
+  const sources = new Map(seed.sources.map((source) => [source.sourceId, source] as const));
+  const claims = new Map(seed.claims.map((claim) => [claim.claimId, claim] as const));
   const port: IKESEnginePersistencePort = {
     async load() { return { sources: [...sources.values()], claims: [...claims.values()] }; },
     async saveSource(source: KnowledgeSource) { sources.set(source.sourceId, source); },
