@@ -240,6 +240,18 @@ add("RA-038", "BLOCKER",
   "PostgreSQL TIMESTAMPTZ values are normalized to canonical ISO strings before hashing; invalid timestamps fail closed with regression coverage.",
   ["src/bookpi/storage-postgres.ts", "test/bookpi/storage-postgres.test.ts"]);
 
+const ikesConcurrencyMigration = await read("supabase/migrations/20261017000001_ikes-memory.sql");
+const ikesConcurrencyTests = await read("test/memory/ikes-migration.test.ts");
+add("RA-039", "BLOCKER",
+  !!ikesConcurrencyMigration &&
+    /atlas_knowledge_guard_source_identity/.test(ikesConcurrencyMigration) &&
+    /IKES_SOURCE_IDENTITY_IMMUTABLE/.test(ikesConcurrencyMigration) &&
+    /atlas_knowledge_guard_claim_version/.test(ikesConcurrencyMigration) &&
+    /IKES_CLAIM_VERSION_CONFLICT/.test(ikesConcurrencyMigration) &&
+    !!ikesConcurrencyTests && /optimistic claim concurrency/.test(ikesConcurrencyTests),
+  "IKES migrations protect source identity and reject stale or conflicting claim writes across replicas, with regression tests.",
+  ["supabase/migrations/20261017000001_ikes-memory.sql", "test/memory/ikes-migration.test.ts"]);
+
 const report = {
   schemaVersion: "1.0.0",
   audit: "isabella-genesis-repository-assurance",
