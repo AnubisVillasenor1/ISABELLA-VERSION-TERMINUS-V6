@@ -179,7 +179,13 @@ async function appendLedger(
     record("BOOKPI_IGDS", true, "evento sellado en el ledger", event.hash);
     return event;
   } catch (err) {
-    record("BOOKPI_IGDS", false, `ledger no selló: ${(err as Error).message}`);
+    const message = err instanceof Error ? err.message : "";
+    const safeReason = /integrity secret|required.*secret/iu.test(message)
+      ? "secreto de integridad no configurado"
+      : /permission|RLS|42501/iu.test(message)
+        ? "permiso de almacenamiento denegado"
+        : "almacenamiento de evidencia no disponible";
+    record("BOOKPI_IGDS", false, `ledger no selló: ${safeReason}`);
     return undefined;
   }
 }
