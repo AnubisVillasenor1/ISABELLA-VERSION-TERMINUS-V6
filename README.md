@@ -10,7 +10,7 @@
 
 Estimación conservadora de preparación operativa; no es una métrica de calidad del modelo ni una garantía de disponibilidad. Se conserva el último valor de referencia documentado. Este cambio de documentación no incrementa el porcentaje: sólo debe aumentar cuando mejoras funcionales estén implementadas y validadas con evidencia reproducible sobre un SHA concreto.
 
-**Estado: preproducción; no declarar listo para producción.** La inspección documental detecta ejecuciones recientes de GitHub Actions con resultado failure, discrepancia entre la versión de Node requerida por package.json y la usada por el workflow de assurance, y un paso de despliegue que actualmente registra mensajes y delega el despliegue real a un operador.
+**Estado: preproducción; no declarar listo para producción.** La inspección documental detecta ejecuciones recientes de GitHub Actions con resultado failure, el workflow de despliegue no demuestra una publicación automática real: su paso final registra mensajes y delega el despliegue a un operador. La rama de auditoría alinea el workflow de assurance con Node 24; esta corrección aún necesita una ejecución CI verde para considerarse validada.
 
 - Repositorio: https://github.com/OsoPanda1/ISABELLA-VERSION-TERMINUS-V6
 - Rama principal: main
@@ -114,7 +114,7 @@ El README previo declara GET /api/v1/ops/preflight protegido por token administr
 
 La inspección estática de los workflows encontró puntos que deben resolverse antes de afirmar que el despliegue es automático y productivo:
 
-1. **Desalineación de runtime:** package.json declara Node 24.x, mientras .github/workflows/repository-assurance.yml fija Node 22. Los resultados pueden no representar el runtime declarado.
+1. **Desalineación de runtime — corregida en esta rama:** package.json declara Node 24.x y se cambió .github/workflows/repository-assurance.yml a Node 24. La corrección queda pendiente de confirmación mediante una ejecución CI verde.
 2. **CI en rojo:** ejecuciones recientes consultadas de GitHub Actions muestran al menos un workflow con conclusión failure. Inspeccionar el job y log exactos, corregir la causa y repetir sobre el SHA candidato.
 3. **Despliegue real no demostrado:** .github/workflows/deploy-production.yml termina con un paso que imprime mensajes y declara que el despliegue real se delega al operador. Un gate de aceptación no equivale a publicar una versión en un proveedor.
 4. **Protección de rama:** la consulta de GitHub indicó que main no tenía protección habilitada. Exigir revisiones, checks obligatorios, evitar pushes directos y aplicar permisos mínimos.
