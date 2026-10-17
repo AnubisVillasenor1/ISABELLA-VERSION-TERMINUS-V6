@@ -61,7 +61,7 @@ assert.ok(!html.includes('mux.com'), 'Cinematic intro must not depend on externa
 assert.ok(js.includes('startIntroMedia'), 'Intro video must have an explicit media lifecycle');
 assert.ok(ids.has('immersionConsent') && ids.has('immersionConsentStatus'), 'Intro requires a clear audiovisual consent control and status');
 assert.ok(!html.includes('humanCheckCode') && !js.includes('humanCheckCode'), 'The UI must not pretend a client-side display code is identity verification');
-assert.ok(!/<video\\b[^>]*\\bloop(?:[\\s=>])/i.test(html), 'Intro video must stop at its narrative end rather than silently loop');
+assert.ok(!(/\sloop(?:\s|>)/i.test(html.match(/<video\b[^>]*>/i)?.[0] || '')), 'Intro video must stop at its narrative end rather than silently loop');
 assert.ok(js.includes('window.requestAnimationFrame(renderIntroFrame)'), 'Intro progress updates must use the animation frame scheduler');
 assert.ok(js.includes('introVideo.currentTime / introVideo.duration'), 'Narrative timing must follow media time to avoid scene drift during buffering');
 assert.ok(js.includes("addEventListener('waiting'"), 'Buffering must trigger a visible-media fallback instead of repeated play() attempts');
