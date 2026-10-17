@@ -131,9 +131,19 @@ add("RA-029", "WARN",
   "The interface does not depend on the retired external cinematic background asset.",
   ["src/ui/cinematic.css"]);
 add("RA-030", "BLOCKER",
-  !!server && !/process\\.env\\.ISABELLA_KEYLESS_FREE_PROVIDER\\s*=\\s*["']pollinations["']/.test(server),
+  !!server && !/process\.env\.ISABELLA_KEYLESS_FREE_PROVIDER\s*=\s*["']pollinations["']/.test(server),
   "External keyless inference remains disabled unless the operator explicitly opts in.",
   ["src/server.ts"]);
+
+const atlasMigration = await read("supabase/migrations/20261017000000_atlas-store-core.sql");
+add("RA-031", "BLOCKER",
+  !!atlasMigration &&
+    /create table if not exists public\.atlas_users/i.test(atlasMigration) &&
+    /alter table public\.atlas_users enable row level security/i.test(atlasMigration) &&
+    /revoke all on table[\s\S]*from anon, authenticated/i.test(atlasMigration) &&
+    /to service_role/i.test(atlasMigration),
+  "AtlasStore migration includes the health-probe table and denies direct browser-role access.",
+  ["supabase/migrations/20261017000000_atlas-store-core.sql"]);
 
 const report = {
   schemaVersion: "1.0.0",
