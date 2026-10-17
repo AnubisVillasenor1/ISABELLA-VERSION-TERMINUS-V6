@@ -2223,11 +2223,25 @@ app.post("/api/v1/security/triangulate", (req, res) => {
 
 // Configuration presence alone is not proof of provider health.
 async function currentOpsState() {
-  const localBookPiConfigured = Boolean(process.env.BOOKPI_LEDGER_PATH?.trim());
-  const bookPiBackend = localBookPiConfigured ? "DURABLE_APPEND_ONLY_JSONL_LOCAL_SCOPE" : "VOLATILE_IN_MEMORY_HASH_CHAIN";
-  const bookPiReason = localBookPiConfigured
-    ? "Local JSONL with fsync is configured; shared persistence, distributed concurrency, external signatures and WORM/HA are not runtime-verified."
-    : "The application uses the in-memory hash chain; events do not survive a process restart.";
+  // Probe the legacy synchronous ledger instead of hardcoding it as degraded.
+  // This is deliberately separate from pipelineBookPi: the two stores are not yet unified.
+  let legacyLedgerStatus: "healthy" | "degraded" = "degraded";
+  let bookPiBackend = "UNKNOWN";
+  let bookPiReason = "Legacy BookPI ledger probe has not completed.";
+  try {
+    const verification = bookPiLedger.verify();
+    bookPiBackend = verification.storage;
+    if (!verification.valid) {
+      bookPiReason = "Legacy BookPI chain verification failed; inspect the restricted operator report.";
+    } else if (verification.durable) {
+      legacyLedgerStatus = "healthy";
+      bookPiReason = "Legacy BookPI durable local chain verified; this is not shared PostgreSQL durability.";
+    } else {
+      bookPiReason = "Legacy BookPI in-memory chain is valid but volatile; events will not survive process restart.";
+    }
+  } catch {
+    bookPiReason = "Legacy BookPI ledger is unavailable or requires maintenance recovery.";
+  }
   let atlasStatus: "healthy" | "degraded" | "unavailable" = "unavailable";
   let atlasReason = "No Atlas persistence adapter is configured.";
   if (runtime.persistence && typeof runtime.persistence.health === "function") {
@@ -2267,14 +2281,14 @@ async function currentOpsState() {
   const ikesProbe = await ikesHealthCache.get(async () => runtime.memory.persistenceProbe());
   const ikesStatus = ikesProbe.healthy ? "healthy" as const : "degraded" as const;
   const dependencies = [
-    { name: "bookpi-ledger", status: "degraded" as const, required: true },
+    { name: "bookpi-ledger", status: legacyLedgerStatus, required: true },
     { name: "pipeline-bookpi-storage", status: pipelineLedgerStatus, required: true },
     { name: "atlas-persistence", status: atlasStatus, required: true },
     { name: "ikes-memory", status: ikesStatus, required: true },
     { name: "observability", status: "degraded" as const, required: false },
   ];
   const readinessEvidence = [
-    { dependency: "bookpi-ledger", status: "degraded", backend: bookPiBackend, reason: bookPiReason },
+    { dependency: "bookpi-ledger", status: legacyLedgerStatus, backend: bookPiBackend, reason: bookPiReason },
     { dependency: "pipeline-bookpi-storage", status: pipelineLedgerStatus, backend: pipelineLedgerProbe.backend, durable: pipelineBookPi.durable, shared: pipelineBookPi.shared, reason: pipelineLedgerProbe.reason, ...(pipelineLedgerProbe.eventCount !== undefined ? { eventCount: pipelineLedgerProbe.eventCount } : {}) },
     { dependency: "atlas-persistence", status: atlasStatus, reason: atlasReason },
     { dependency: "ikes-memory", status: ikesStatus, backend: ikesProbe.backend, pending: ikesProbe.pending, reason: ikesProbe.reason },
