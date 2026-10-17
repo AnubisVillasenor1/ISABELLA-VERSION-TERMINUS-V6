@@ -17,7 +17,6 @@ describe("BookPI PostgreSQL adapter contract", () => {
     expect(insert).toContain("$13");
     expect(params).toHaveLength(13);
   });
-});
 
   it("uses one transaction and actor-scoped RLS context for an append", async () => {
     const statements: Array<{ sql: string; params?: unknown[] }> = [];
@@ -74,7 +73,7 @@ describe("BookPI PostgreSQL adapter contract", () => {
     expect(insertedParams[2]).toBe(42);
   });
 
-  it("rejects an append that crosses the configured actor scope", async () => {
+  it("rejects an append that crosses the configured actor scope before touching the database", async () => {
     let touchedDatabase = false;
     const pool: PostgresLike = {
       query: async () => { touchedDatabase = true; return { rows: [] }; },
@@ -84,3 +83,4 @@ describe("BookPI PostgreSQL adapter contract", () => {
       .rejects.toThrow("BOOKPI_ACTOR_SCOPE_MISMATCH");
     expect(touchedDatabase).toBe(false);
   });
+});
