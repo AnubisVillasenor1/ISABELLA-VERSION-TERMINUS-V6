@@ -53,15 +53,14 @@ export class SupabaseIkesPersistence implements IKESEnginePersistencePort {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
     try {
+      const headers = new Headers(init.headers);
+      headers.set("apikey", this.key);
+      headers.set("authorization", `Bearer ${this.key}`);
+      if (!headers.has("content-type")) headers.set("content-type", "application/json");
       const response = await fetch(`${this.baseUrl}/rest/v1/${table}${query}`, {
         ...init,
         signal: controller.signal,
-        headers: {
-          apikey: this.key,
-          authorization: `Bearer ${this.key}`,
-          "content-type": "application/json",
-          ...(init.headers ?? {}),
-        },
+        headers,
       });
       if (!response.ok) throw safeHttpError(response.status);
       if (response.status === 204) return undefined as T;
@@ -192,7 +191,6 @@ export class SupabaseIkesPersistence implements IKESEnginePersistencePort {
 export function createSupabaseIkesPersistence(env: NodeJS.ProcessEnv = process.env): SupabaseIkesPersistence | undefined {
   const supabaseUrl = env.SUPABASE_URL?.trim();
   const serviceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY?.trim();
-  if (!supabaseUrl && !serviceRoleKey) return undefined;
-  if (!supabaseUrl || !serviceRoleKey) throw new Error("IKES_SUPABASE_ENV_INCOMPLETE");
+  if (!supabaseUrl || !serviceRoleKey) return undefined;
   return new SupabaseIkesPersistence({ supabaseUrl, serviceRoleKey });
 }
