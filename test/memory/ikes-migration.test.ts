@@ -19,6 +19,7 @@ describe("IKES migration concurrency contract", () => {
     expect(migration).toMatch(/new\.version = old\.version and new\.content_hash = old\.content_hash/);
     expect(migration).toMatch(/new\.version <> old\.version \+ 1/);
     expect(migration).toMatch(/IKES_CLAIM_VERSION_CONFLICT/);
+    expect(migration).toMatch(/IKES_CLAIM_SAME_VERSION_MUTATION/);
     expect(migration).toMatch(/before update on public\.atlas_knowledge_claims/);
   });
 
