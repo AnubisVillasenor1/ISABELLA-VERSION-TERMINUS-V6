@@ -49,6 +49,7 @@ import { CognitiveFabricEngine } from "./core/cognitive-fabric-engine";
 import { ConstitutionalGovernanceFabric } from "./governance/constitutional-governance-fabric";
 import { MonetizationEngine } from "./economy/monetization-engine";
 import { DynamicPricingEngine } from "./economy/dynamic-pricing";
+import { generatePerplexityNarrative, describePerplexityReadiness } from "./inference/perplexity-router";
 import { createReinaRuntime, type ReinaRequest } from "./reina";
 import { SubscriptionStore, UsageMeter, billingPriceById, billingPricesPublic, billingPriceIsConfigured, checkFeature, checkQuota, planEntitlements, PLANS, type PlanId, type QuotaKey, type SubscriptionRecord } from "./commerce";
 import { GAMEOVER_CONSTITUTION, passportAuthority, uagpGateway, type UagpRequestInput } from "./gameover";
@@ -1083,7 +1084,7 @@ app.post("/api/v1/cognition/route", async (req, res) => {
     });
 
     let generativeNarrative: string | null = null;
-    let responseEngine: "gemini" | "gateway" | "open-science" | "openrouter-free" | "huggingface-free" | "keyless-free" | "sovereign-fallback" | "sovereign" | "blocked" = "blocked";
+    let responseEngine: "gemini" | "gateway" | "open-science" | "openrouter-free" | "huggingface-free" | "keyless-free" | "perplexity-router" | "sovereign-fallback" | "sovereign" | "blocked" = "blocked";
     let nativeRouting: GenesisResult | null = null;
     try {
       nativeRouting = await classifyWithGenesisTurbo(input);
@@ -1131,6 +1132,14 @@ app.post("/api/v1/cognition/route", async (req, res) => {
       if (!generativeNarrative && (modelEngine === "open-science" || modelEngine === "auto" || modelEngine === "gemini")) {
         generativeNarrative = await generateCompatibleProviderNarrative(systemPrompt, input, history, chainBudget);
         if (generativeNarrative) responseEngine = "open-science";
+      }
+      if (!generativeNarrative && (modelEngine === "open-science" || modelEngine === "auto" || modelEngine === "gemini")) {
+        generativeNarrative = await generatePerplexityNarrative(process.env, systemPrompt, input, history);
+        if (generativeNarrative) responseEngine = "perplexity-router";
+      }
+      if (!generativeNarrative && modelEngine === "auto") {
+        generativeNarrative = await generateKeylessFreeNarrative(systemPrompt, input, history);
+        if (generativeNarrative) responseEngine = "keyless-free";
       }
       if (!generativeNarrative && process.env.ALLOW_PAID_PROVIDER_FALLBACK === "true") {
         if (genAi && modelEngine !== "gemini") {
