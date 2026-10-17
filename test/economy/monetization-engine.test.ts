@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MonetizationEngine, PLANS } from "../../src/economy/monetization-engine";
+import { MonetizationEngine } from "../../src/economy/monetization-engine";
 
 describe("Monetization Engine", () => {
   it("lists plans", () => {

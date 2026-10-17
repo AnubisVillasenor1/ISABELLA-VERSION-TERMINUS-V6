@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { createGovernedSemanticCache, type CacheVersions } from "../../src/hypercore/governed-semantic-cache";
+import { createGovernedSemanticCache } from "../../src/hypercore/governed-semantic-cache";
 import type { HyperCoreTask, VerifiedResponse } from "../../src/hypercore/types";
-
-const versions = { policyVersion: "CROWN-v20", modelVersion: "ISABELLA-HYPERCORE-OMEGA-2", dataVersion: "1.0.0" };
 
 const task: HyperCoreTask = {
   taskId: "cache-1",

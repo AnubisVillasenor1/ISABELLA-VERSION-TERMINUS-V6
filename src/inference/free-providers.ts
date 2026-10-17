@@ -15,11 +15,7 @@ export interface RetryOptions {
   timeoutMs: number;
 }
 
-const DEFAULT_RETRY_OPTIONS: RetryOptions = {
-  maxRetries: 3,
-  baseDelayMs: 500,
-  timeoutMs: 30_000,
-};
+
 
 function log(level: "info" | "warn" | "error", message: string, meta?: Record<string, unknown>): void {
   const timestamp = new Date().toISOString();

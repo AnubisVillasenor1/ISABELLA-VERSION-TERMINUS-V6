@@ -13,12 +13,6 @@ export interface UsageMeterOptions {
   readonly maxKeys?: number;
 }
 
-type Bucket = Map<QuotaKey, number>;
-
-function dayKey(at: Date): string {
-  return at.toISOString().slice(0, 10);
-}
-
 export class UsageMeter {
   private readonly now: () => Date;
   private readonly maxKeys: number;

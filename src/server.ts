@@ -22,8 +22,8 @@ import { verifyBearerToken } from "./security/api-token";
 import { FixedWindowRateLimiter } from "./security/rate-limit";
 import { hashSourceContent } from "./memory/ikes";
 import { bookPiLedger } from "./bookpi";
-import { evaluateEpistemicState, EPISTEMIC_LADDER_SPEC } from "./cognition/epistemic-evaluator";
-import { createAtlasStoreFromEnv } from "./atlas";
+
+import { createAtlasStoreFromEnv } from "./atlas/persistence";
 import { createDiffObservatory, sanitizeDiffSnapshot, snapshotMetadataHash } from "./plugins";
 import { MemoryProposalQueue } from "./memory/proposals";
 import { AckOutcome, createIdempotencyRegistry, redactSecret } from "./commerce/webhook";
@@ -49,7 +49,7 @@ import { CognitiveFabricEngine } from "./core/cognitive-fabric-engine";
 import { ConstitutionalGovernanceFabric } from "./governance/constitutional-governance-fabric";
 import { MonetizationEngine } from "./economy/monetization-engine";
 import { DynamicPricingEngine } from "./economy/dynamic-pricing";
-import { generatePerplexityNarrative, describePerplexityReadiness } from "./inference/perplexity-router";
+import { generatePerplexityNarrative } from "./inference/perplexity-router";
 import { createReinaRuntime, type ReinaRequest } from "./reina";
 import { SubscriptionStore, UsageMeter, billingPriceById, billingPricesPublic, billingPriceIsConfigured, checkFeature, checkQuota, planEntitlements, PLANS, type PlanId, type QuotaKey, type SubscriptionRecord } from "./commerce";
 import { GAMEOVER_CONSTITUTION, passportAuthority, uagpGateway, type UagpRequestInput } from "./gameover";
@@ -580,7 +580,7 @@ runtime.skills.register({
   methodId: "N.PATRIMONY.E11_VERITAS.arbitrate_epistemic_dispute.v1.0.0.MEDIUM.INSTITUTIONAL",
   riskTier: "MEDIUM",
   requiresEvidence: true,
-  handler: async (ctx) => {
+  handler: async (_ctx) => {
     return {
       skill: "epistemic_dispute_arbiter",
       disputeResolution: "NOT_ASSESSED",
@@ -599,7 +599,7 @@ runtime.skills.register({
   methodId: "N.COLLECTIVE_INTELLIGENCE.E17_COMPLIANCE.evaluate_global_frameworks.v1.0.0.HIGH.CONSTITUTIONAL",
   riskTier: "HIGH",
   requiresEvidence: true,
-  handler: async (ctx) => {
+  handler: async (_ctx) => {
     return {
       skill: "dynamic_compliance_shield",
       frameworksChecked: ["EU_AI_ACT", "NIST_AI_RMF", "ISO_IEC_42001", "UNESCO_AI_ETHICS", "MEXICO_DATA_PROTECTION"],
@@ -618,7 +618,7 @@ runtime.skills.register({
   methodId: "T.TOURISM.E04_TERRITORY.synchronize_digital_twin.v1.0.0.LOW.TERRITORIAL",
   riskTier: "LOW",
   requiresEvidence: false,
-  handler: async (ctx) => {
+  handler: async (_ctx) => {
     return {
       skill: "territorial_digital_twin_sync",
       territory: "Real del Monte (Nodo Cero)",
@@ -639,7 +639,7 @@ runtime.skills.register({
   methodId: "A.TWINS.E03_GOVERNANCE.audit_human_delegation.v1.0.0.CRITICAL.CONSTITUTIONAL",
   riskTier: "CRITICAL",
   requiresEvidence: true,
-  handler: async (ctx) => {
+  handler: async (_ctx) => {
     return {
       skill: "human_in_the_loop_delegation_audit",
       governanceInvariant: "CAPABILITY ≠ AUTHORITY ≠ EXECUTION ≠ EVIDENCE ≠ LEARNING ≠ PRODUCTION",
@@ -740,15 +740,6 @@ const CROWN_NODES = [
 ];
 
 // 6 Capas Soberanas MD-X5
-const SOVEREIGN_LAYERS = [
-  { code: "ONTO", name: "Capa Ontológica", focus: "Identidad, soberanía del ser, biocultura e invariante operativo", icon: "🧬", status: "DECLARED_NOT_RUNTIME_VERIFIED" },
-  { code: "CONST", name: "Capa Constitucional", focus: "AGENTS.md, separación de autoridad vs capacidad, primacía humana", icon: "📜", status: "DECLARED_NOT_RUNTIME_VERIFIED" },
-  { code: "POL", name: "Capa Política / Gobernanza", focus: "Arbitraje CROWN, delegación explícita y auditoría de permisos", icon: "🏛️", status: "DECLARED_NOT_RUNTIME_VERIFIED" },
-  { code: "ECON", name: "Capa Económica", focus: "Preservación de recursos, tokens de cómputo y auditoría de costes", icon: "💎", status: "DECLARED_NOT_RUNTIME_VERIFIED" },
-  { code: "COG", name: "Capa Cognitiva", focus: "IKES Epistemic Memory, síntesis multi-experto, Veritas verifier", icon: "🧠", status: "DECLARED_NOT_RUNTIME_VERIFIED" },
-  { code: "TECH", name: "Capa Técnica / Infra", focus: "BookPI SHA-256 volatile hash-chain; durable WORM and external signature adapters pending", icon: "⚙️", status: "DECLARED_NOT_RUNTIME_VERIFIED" },
-];
-
 // BookPI uses the canonical process-local hash-chain adapter. It is not durable WORM storage.
 
 // --- API ROUTES ---
@@ -1042,7 +1033,7 @@ app.post("/api/v1/cognition/route", async (req, res) => {
     const destructiveIntent = body.methodId === destructiveMethodId;
     const methodId = destructiveIntent ? destructiveMethodId : safeMethodId;
     const principal = createPrincipal({ id: "human:public-session", kind: "human", roles: ["viewer"] });
-    const memoryQuery = undefined; // Public viewer has no tenant-scoped memory authorization.
+
     const decision = runtime.evaluate({
       input,
       methodId,
@@ -1448,7 +1439,7 @@ app.post("/api/v1/cognitive/request", async (req, res) => {
     const action = "memory:recall";
     const resource = "memory";
     const riskTier = "LOW" as const;
-    const memoryQuery = undefined; // Public viewer has no tenant-scoped memory authorization.
+
 
     // Session continuity: derive or accept a caller-supplied session id and persist
     // the user turn before any model call so failures remain auditable.
@@ -1486,7 +1477,7 @@ app.post("/api/v1/cognitive/request", async (req, res) => {
     });
     const traceId = `trace-${randomUUID()}`;
     const snapshot = createCrownExperienceSnapshot(
-      { input, principal, methodId, action, resource, riskTier, memoryQuery },
+      { input, principal, methodId, action, resource, riskTier, memoryQuery: undefined },
       decision.crown,
       `req-${randomUUID()}`,
       traceId,
@@ -1494,7 +1485,7 @@ app.post("/api/v1/cognitive/request", async (req, res) => {
       decision.memory.length,
     );
     const baseSystemPrompt = buildCanonicalSystemPrompt(
-      { input, principal, methodId, action, resource, riskTier, memoryQuery },
+      { input, principal, methodId, action, resource, riskTier, memoryQuery: undefined },
       decision.crown,
       snapshot.route,
       traceId,
@@ -2974,7 +2965,6 @@ app.post("/api/v1/commerce/offers", async (req, res) => {
     res.status(402).json({ success: false, error: "QUOTA_DENIED", entitlement: quotaDecision });
     return;
   }
-  const createdAt = new Date().toISOString();
   usageMeter.increment(workspaceId, "active_offers");
   const offerId = commerceStringField(body, "offerId") ?? randomUUID();
   bookPiLedger.append({

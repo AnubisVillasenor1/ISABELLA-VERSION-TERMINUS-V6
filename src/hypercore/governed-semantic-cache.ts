@@ -100,7 +100,7 @@ export function createGovernedSemanticCache(
   function findSimilar(task: HyperCoreTask, versions: CacheVersions): readonly SemanticMatch[] {
     const queryTokens = tokenize(`${normalizeIntent(task)} ${task.prompt}`);
     const matches: SemanticMatch[] = [];
-    for (const [key, entry] of entries) {
+    for (const [_key, entry] of entries) {
       if (!isValid(entry, versions, task.risk)) continue;
       const similarity = jaccard(queryTokens, tokenize(entry.normalizedIntent));
       if (similarity >= similarityThreshold) matches.push({ entry, similarity });

@@ -1,13 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   collectDependencyReadiness,
-  nodeFilesystemProbe,
   probeBookPiLedger,
   type FilesystemProbe,
 } from "../../src/health/dependency-readiness";
 
 const writableFilesystem: FilesystemProbe = { isWritableDirectory: () => true };
-const readOnlyFilesystem: FilesystemProbe = { isWritableDirectory: () => false };
 
 const fullyConfigured = {
   BOOKPI_LEDGER_PATH: "C:/data/bookpi/ledger.jsonl",

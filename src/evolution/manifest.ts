@@ -13,8 +13,6 @@ export function buildManifest(): EvolutionManifest {
   const digest = controlMatrixDigest(controls);
   const isKnownFatal = FATAL_DIGESTS.has(digest);
 
-  const summary = controlSummary(controls);
-
   return {
     title: "Isabella Villaseñor AI — V5 Evolution Fabric",
     version: "5.0.0",

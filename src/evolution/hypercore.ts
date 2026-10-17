@@ -39,7 +39,7 @@ export function modeForPressure(pressure: number): HypercoreMode {
   if (pressure >= 0.6) return "BOOST";
   return "CRUISE";
 }
-export function decideHypercore(mode: HypercoreMode, riskTier: RiskTier, pressure: number): HypercoreDecision {
+export function decideHypercore(mode: HypercoreMode, riskTier: RiskTier, _pressure: number): HypercoreDecision {
   let activations = [...MODE_ACTIVATIONS[mode]];
   if (activations.includes("EARLY_EXIT") && RISK_RANK[riskTier] > EARLY_EXIT_MAX_RISK_RANK) activations = activations.filter((a) => a !== "EARLY_EXIT");
   return {
