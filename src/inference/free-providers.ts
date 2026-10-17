@@ -65,30 +65,33 @@ async function fetchWithTimeout(
 }
 
 async function retryWithBackoff<T>(
-  operation: () => Promise<T>,
+  operation: (attemptTimeoutMs: number) => Promise<T>,
   options: RetryOptions,
   context: string,
 ): Promise<T> {
+  // timeoutMs is the deadline for the entire retry sequence, not a fresh allowance per attempt.
+  const deadlineAt = Date.now() + options.timeoutMs;
   let lastError: unknown;
   for (let attempt = 0; attempt <= options.maxRetries; attempt++) {
+    const remainingMs = deadlineAt - Date.now();
+    if (remainingMs <= 0) break;
     try {
-      return await operation();
+      return await operation(Math.max(1, remainingMs));
     } catch (error) {
       lastError = error;
-      if (attempt >= options.maxRetries) {
-        break;
-      }
-      if (!isRetryableError(error)) {
-        throw error;
-      }
+      if (attempt >= options.maxRetries || Date.now() >= deadlineAt) break;
+      if (!isRetryableError(error)) throw error;
       const delay = options.baseDelayMs * Math.pow(2, attempt);
+      const remainingAfterFailure = deadlineAt - Date.now();
+      // Do not sleep through the entire remaining budget just to start a retry that cannot run.
+      if (delay >= remainingAfterFailure) break;
       log("warn", `${context}: attempt ${attempt + 1} failed, retrying in ${delay}ms`, {
         error: error instanceof Error ? error.message : String(error),
       });
       await sleep(delay);
     }
   }
-  throw lastError;
+  throw lastError ?? new Error(`${context}_RETRY_DEADLINE_EXCEEDED`);
 }
 
 export class OllamaAdapter implements InferenceAdapter {
@@ -119,7 +122,7 @@ export class OllamaAdapter implements InferenceAdapter {
     const url = `${this.config.baseUrl.replace(/\/$/, "")}/api/generate`;
 
     const result = await retryWithBackoff(
-      async () => {
+      async (attemptTimeoutMs) => {
         const response = await fetchWithTimeout(
           url,
           {
@@ -135,7 +138,7 @@ export class OllamaAdapter implements InferenceAdapter {
               },
             }),
           },
-          this.config.timeoutMs,
+          Math.min(this.config.timeoutMs, attemptTimeoutMs),
         );
 
         if (!response.ok) {
@@ -239,7 +242,7 @@ export class GratisAPIAdapter implements InferenceAdapter {
     }
 
     const result = await retryWithBackoff(
-      async () => {
+      async (attemptTimeoutMs) => {
         const response = await fetchWithTimeout(
           url,
           {
@@ -252,7 +255,7 @@ export class GratisAPIAdapter implements InferenceAdapter {
               temperature: request.temperature ?? 0.35,
             }),
           },
-          this.config.timeoutMs,
+          Math.min(this.config.timeoutMs, attemptTimeoutMs),
         );
 
         if (!response.ok) {
