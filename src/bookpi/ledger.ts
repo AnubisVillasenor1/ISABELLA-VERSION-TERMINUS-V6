@@ -122,15 +122,7 @@ export interface BookPiLedgerPort {
 }
 
 const GENESIS_HASH = "0000000000000000000000000000000000000000000000000000000000000000";
-const REQUIRED_FIELDS: readonly (keyof BookPiEventInput)[] = [
-  "id",
-  "timestamp",
-  "type",
-  "methodId",
-  "principal",
-  "riskTier",
-  "status",
-];
+
 
 function eventPayload(input: BookPiEventInput, previousHash: string) {
   return {
@@ -348,10 +340,6 @@ export class DurableBookPiLedger {
       events.push(Object.freeze(parsed));
     }
     return events;
-  }
-
-  private startHash(): string {
-    return this.checkpoint?.lastArchivedHash ?? GENESIS_HASH;
   }
 
   private persist(entry: BookPiEvent): void {

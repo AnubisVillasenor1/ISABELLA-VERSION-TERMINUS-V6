@@ -20,16 +20,7 @@ export interface DeploymentSmokeResult {
   checks: DeploymentSmokeCheck[];
 }
 
-type JsonRecord = Record<string, unknown>;
 
-async function readJson(response: Response): Promise<Record<string, unknown> | null> {
-  try {
-    const value: unknown = await response.json();
-    return value !== null && typeof value === "object" ? (value as Record<string, unknown>) : null;
-  } catch {
-    return null;
-  }
-}
 
 export async function verifyDeployment(baseUrl: string, fetchImpl: typeof fetch = fetch): Promise<DeploymentSmokeResult> {
   const base = baseUrl.replace(/\/+$/, "");

@@ -47,7 +47,7 @@ export function formatAsApiError(
   err: Error,
   requestId: string,
   fallbackCode = "INTERNAL",
-  fallbackStatus = 500,
+  _fallbackStatus = 500,
   retryable = false,
 ): ApiErrorShape {
   if (err instanceof ApiError) return err.toShape();

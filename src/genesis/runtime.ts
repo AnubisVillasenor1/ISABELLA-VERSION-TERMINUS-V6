@@ -30,7 +30,6 @@ import {
   createKnowledgeEntry,
   runIkesPipeline,
   toEpistemicStatus,
-  toTemporalStatus,
   type KnowledgeEntrySeed,
   type IkesPipelineResult,
 } from "../memory/knowledge-entry";
@@ -89,7 +88,7 @@ import {
   type SealVerificationReport,
   type DocumentSealEnablement,
 } from "../security";
-import { buildOpsSnapshot, assessProductionReadiness, TokenBucket, CircuitBreaker, type DependencyHealth, type MaintenanceWindow, type OpsSnapshot, type ProductionReadinessReport } from "../deployment";
+import { buildOpsSnapshot, assessProductionReadiness, type DependencyHealth, type MaintenanceWindow, type OpsSnapshot, type ProductionReadinessReport } from "../deployment";
 import { buildTapAct, validateTapAct, evaluateIsaPipeline, type TapActInput, type TapAct, type TapActValidation, type HighImpactTrigger } from "../ingress";
 import {
   CapabilityGateway,
@@ -478,7 +477,7 @@ export class IsabellaGenesisRuntime {
     this.capabilities.register({
       descriptor: low("hsf.memory.fabric", "memory", "Persistent-memory contract over semantic, relational, temporal and provenance providers."),
       health: () => "ready",
-      execute: async (input, context) => {
+      execute: async (input, _context) => {
         const value = input as { text?: string; namespace?: string; relations?: string[]; metadata?: Record<string,string> };
         if (!value.text?.trim()) throw new Error("HSF_MEMORY_TEXT_REQUIRED");
         return this.memoryFabric.write({ text: value.text, namespace: value.namespace ?? "genesis", relations: value.relations ?? [], metadata: value.metadata, });

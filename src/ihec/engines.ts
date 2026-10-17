@@ -300,7 +300,7 @@ export class CognitiveGovernanceCore {
     return Object.freeze([...this.history]);
   }
 
-  degradedResponse(payload: unknown, recovery: IhecRecoveryResult | null, reason: string): IhecDegradedResponse {
+  degradedResponse(_payload: unknown, recovery: IhecRecoveryResult | null, reason: string): IhecDegradedResponse {
     this.record("DEGRADED", reason, recovery?.restoredFrom ?? null);
     return Object.freeze({
       status: "degraded",

@@ -286,7 +286,7 @@ describe("commerce/connector — orquestación", () => {
 
   it("el log del sink recibe líneas sin el secreto en claro (ISA-217)", async () => {
     const raw = '{"id":"evt_log"}';
-    const signature = rawSignature(raw);
+    void rawSignature(raw);
     const lines: string[] = [];
     const config: ConnectorConfig = {
       providers: PROVIDERS,

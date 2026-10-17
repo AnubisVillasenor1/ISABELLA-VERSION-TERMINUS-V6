@@ -162,7 +162,7 @@ export function scoreIntent(intent: string, session: HyperPredictSession): numbe
   return weights.reduce((acc, weight, index) => acc + weight * (features[index] ?? 0), 0);
 }
 
-export function valueScore(intent: string, session: HyperPredictSession, baseValue: number): number {
+export function valueScore(_intent: string, session: HyperPredictSession, baseValue: number): number {
   let value = baseValue;
   if (session.role === "architect" || session.role === "guardian") value += 0.05;
   if (session.deviceTrusted) value += 0.03;
@@ -185,7 +185,7 @@ export function createHyperPredict(options: HyperPredictOptions = {}): HyperPred
   const counters = { observations: 0, denied: 0, deferred: 0, prefetchDecisions: 0, prepared: 0, cacheHits: 0 };
   let preparedThisSession = 0;
 
-  function decide(session: HyperPredictSession, task: PrefetchTaskDefinition, confidence: number, value: number, cost: number): { decision: PrefetchDecision; reason: string } {
+  function decide(_session: HyperPredictSession, task: PrefetchTaskDefinition, confidence: number, value: number, cost: number): { decision: PrefetchDecision; reason: string } {
     if (policy.forbiddenPrefetch.includes(task.intent)) return { decision: "DENY", reason: "PREFETCH_FORBIDDEN_BY_CROWN" };
     if (!policy.allowedPrefetch.includes(task.intent)) return { decision: "DENY", reason: "INTENT_NOT_REGISTERED" };
     if (confidence < policy.minimumConfidence) return { decision: "DENY", reason: "CONFIDENCE_BELOW_THRESHOLD" };
