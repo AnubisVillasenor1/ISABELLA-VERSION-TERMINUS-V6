@@ -32,8 +32,9 @@ describe("runtime integration graph contract", () => {
   });
 
   it("uses dependency evidence in edges without leaking out-of-scope state", () => {
-    expect(graph).toMatch(/to: "bookpi-legacy", state: bookpiEvidence\?\.status\?\.toUpperCase\(\)/);
+    expect(graph).toMatch(/to: "bookpi-legacy", state: legacyBookpiEvidence\?\.status\?\.toUpperCase\(\)/);
     expect(graph).not.toContain("legacyLedgerStatus.toUpperCase()");
+    expect(graph).toMatch(/id: "bookpi-legacy", state: legacyBookpiEvidence\?\.status/);
   });
 
   it("does not misrepresent the Rust workspace as linked to the Node runtime", () => {
