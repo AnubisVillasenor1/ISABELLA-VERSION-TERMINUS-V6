@@ -58,13 +58,10 @@ async function fetchWithTimeout(
   init: RequestInit,
   timeoutMs: number,
 ): Promise<Response> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    return await fetch(url, { ...init, signal: controller.signal });
-  } finally {
-    clearTimeout(timer);
-  }
+  // Keep the timeout signal alive for the response body, not just until headers arrive.
+  // Clearing a manual timer when fetch() resolves leaves response.json()/text() unbounded.
+  const signal = AbortSignal.timeout(timeoutMs);
+  return fetch(url, { ...init, signal });
 }
 
 async function retryWithBackoff<T>(
