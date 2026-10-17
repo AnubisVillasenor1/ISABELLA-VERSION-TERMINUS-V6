@@ -299,6 +299,18 @@ add("RA-043", "BLOCKER",
     : `Unpinned nested pnpm invocations remain in scripts: ${nestedPackageManagerScripts.join(", ")}.`,
   ["package.json"]);
 
+add("RA-044", "BLOCKER",
+  !!igeOmegaGatewayProbe &&
+    /MAX_PROBE_BODY_BYTES = 2_048/.test(igeOmegaGatewayProbe) &&
+    /readProbeJson\(response: Response\)/.test(igeOmegaGatewayProbe) &&
+    /IGE_OMEGA_PROBE_BODY_TOO_LARGE/.test(igeOmegaGatewayProbe) &&
+    /IGE_OMEGA_PROBE_INVALID_JSON/.test(igeOmegaGatewayProbe) &&
+    !!igeOmegaGatewayProbeTests &&
+    /exceeds the byte budget/.test(igeOmegaGatewayProbeTests) &&
+    /malformed health JSON/.test(igeOmegaGatewayProbeTests),
+  "The optional IGE-OMEGA probe bounds response bodies and fails closed on oversized or malformed JSON, with regression tests.",
+  ["src/ige-omega/gateway-probe.ts", "test/ige-omega/gateway-probe.test.ts"]);
+
 const report = {
   schemaVersion: "1.0.0",
   audit: "isabella-genesis-repository-assurance",
