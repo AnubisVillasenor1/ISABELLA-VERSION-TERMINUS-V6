@@ -10,7 +10,7 @@ This change addresses the public chat route's sequential model-provider chain an
 
 The `DeadlineBudget` was created after the local Genesis Turbo classification. Time spent in that classification was therefore outside the advertised whole-chain budget.
 
-**Correction:** start the budget before local classification and reuse it through provider routing. Provider attempts and the local classifier now share one time window.
+**Correction:** start the budget before local classification and reuse it through provider routing. Classifier time consumes the same budget, so an expensive classification leaves less time for provider attempts. The classifier API itself does not currently accept an abort signal, so the budget cannot interrupt a classifier that hangs; that remains a separate limitation.
 
 ### INF-02 — Two fallback paths could escape the shared budget
 
@@ -40,7 +40,7 @@ The cognition response cache accepted any successful admitted response, includin
 - This change was committed to a feature branch; it has not been merged into `main`.
 - Tests and TypeScript checks have **not** been executed in a local checkout in this workflow. Passing status must come from GitHub Actions or a reproducible local run; no green result is claimed here.
 - External provider reachability, credentials, quotas, actual generative output, Vercel deployment, and browser-level Stop behavior remain unverified.
-- The shared deadline bounds provider attempts, not every possible operation in the full HTTP request. Any future provider adapter must accept and honor the supplied timeout/cancellation contract.
+- The shared deadline bounds provider attempts, not every possible operation in the full HTTP request. Local Genesis Turbo classification consumes the budget but cannot itself be interrupted through its current API. The Gemini SDK path is limited by its request timeout but does not yet receive the caller's abort signal. Other provider adapters must accept and honor the supplied timeout/cancellation contract.
 - Cancellation is best-effort at the network/SDK layer; an upstream service may already have accepted a request before the abort reaches it.
 
 ## Invariants preserved
