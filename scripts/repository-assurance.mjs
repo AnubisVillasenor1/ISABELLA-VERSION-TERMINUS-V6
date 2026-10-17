@@ -253,6 +253,17 @@ add("RA-039", "BLOCKER",
   "IKES migrations protect source identity and reject stale or conflicting claim writes across replicas, with regression tests.",
   ["supabase/migrations/20261017000001_ikes-memory.sql", "test/memory/ikes-migration.test.ts"]);
 
+const integrationGraphTests = await read("test/deployment/integration-graph.test.ts");
+add("RA-040", "BLOCKER",
+  !!server &&
+    /\/api\/v1\/integrations\/graph/.test(server) &&
+    /authorizeApiToken\(req, res, "GENESIS_ADMIN_API_TOKEN"\)/.test(server) &&
+    /id: "ige-omega-rust", state: "SEPARATE_WORKSPACE_NOT_LINKED"/.test(server) &&
+    /to: "ige-omega-rust", state: "NOT_VERIFIED"/.test(server) &&
+    !!integrationGraphTests && /runtime integration graph contract/.test(integrationGraphTests),
+  "The authenticated integration graph enumerates connected route surfaces and explicitly labels the Rust workspace as not runtime-linked.",
+  ["src/server.ts", "test/deployment/integration-graph.test.ts"]);
+
 const report = {
   schemaVersion: "1.0.0",
   audit: "isabella-genesis-repository-assurance",
