@@ -31,11 +31,11 @@ const startIntroMedia = async () => {
   introVideo.volume = 1;
   try {
     await introVideo.play();
-    // El audio del video solo es claro en los primeros 3s; mutear despues para evitar ruido.
-    window.setTimeout(() => { if (introVideo) introVideo.muted = true; }, 3200);
+    intro?.classList.add('media-ready');
   } catch {
+    // Autoplay con audio puede ser bloqueado; el segundo intento conserva el video.
     introVideo.muted = true;
-    await introVideo.play().catch(() => undefined);
+    await introVideo.play().then(() => intro?.classList.add('media-ready')).catch(() => intro?.classList.add('media-unavailable'));
   }
 };
 const stopIntroMedia = () => {
