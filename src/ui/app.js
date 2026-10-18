@@ -749,7 +749,13 @@ document.addEventListener('click', (event) => {
   const target = event.target;
   if (!(target instanceof Element)) return;
   const link = target.closest('a[href^="#"]');
-  if (link) navigateToHash(link.getAttribute('href'), event);
+  if (!link) return;
+  navigateToHash(link.getAttribute('href'), event);
+  // These links are briefs/contact shortcuts: navigate and place the caret in
+  // the composer so the destination is actionable, not merely a scroll target.
+  if (link.dataset.focusPrompt === 'true') {
+    window.setTimeout(() => prompt?.focus(), 180);
+  }
 });
 
 // All internal links are handled by one delegated click listener above; do not bind twice.
