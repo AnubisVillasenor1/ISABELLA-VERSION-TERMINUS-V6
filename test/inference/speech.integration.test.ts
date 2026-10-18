@@ -55,7 +55,7 @@ beforeEach(() => {
 describe("speech over a real HTTP loopback", () => {
   it("synthesizes speech and returns a playable data URL", async () => {
     handler = () => ({ status: 200, raw: Buffer.from("RIFFwav-armstoffen"), contentType: "audio/wav" });
-    const env = { GROQ_API_KEY: "k", GROQ_BASE_URL: baseUrl, GROQ_TTS_VOICE: "troy" };
+    const env = { GROQ_API_KEY: "k", GROQ_BASE_URL: baseUrl, GROQ_TTS_MODEL: "test-tts-model", GROQ_TTS_VOICE: "troy" };
     const result = await synthesizeSpeech(env, { text: "hola mundo", format: "wav", timeoutMs: 5_000 });
     expect(result).toMatchObject({ provider: "groq", mimeType: "audio/wav" });
     expect(result?.dataUrl.startsWith("data:audio/wav;base64,")).toBe(true);
