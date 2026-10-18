@@ -5,6 +5,7 @@ const html = fs.readFileSync('src/ui/index.html', 'utf8');
 const js = fs.readFileSync('src/ui/app.js', 'utf8');
 const css = fs.readFileSync('src/ui/cinematic.css', 'utf8');
 const server = fs.readFileSync('src/server.ts', 'utf8');
+const vercelConfig = JSON.parse(fs.readFileSync('vercel.json', 'utf8'));
 
 const allIds = [...html.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]);
 const ids = new Set(allIds);
@@ -19,6 +20,8 @@ for (const id of ['navToggle', 'primaryLinks', 'runtimeStatus', 'soundToggle', '
 assert.ok(js.includes("fetch('/api/v1/cognition/route'"), 'Chat must call the existing cognition route');
 assert.ok(js.includes("fetch('/api/v1/health'"), 'UI must check the health endpoint');
 assert.ok(server.includes('app.get("/api/v1/health"'), 'The runtime health endpoint must exist');
+assert.ok(typeof vercelConfig.functions?.["api/index.js"]?.includeFiles === 'string', 'Vercel includeFiles must be a glob string, not an array');
+assert.ok(vercelConfig.functions["api/index.js"].includeFiles.includes('dist/**') && vercelConfig.functions["api/index.js"].includeFiles.includes('src/ui/**') && vercelConfig.functions["api/index.js"].includeFiles.includes('src/assets/video/**'), 'Vercel function must bundle the server, UI, and intro media assets');
 assert.ok(server.includes('serveAsset(req, res, htmlAsset'), 'The root UI must use the startup-cached, compressed HTML asset');
 assert.ok(server.includes('app.get("/ui/chat-plus.js"'), 'Runtime must serve the Chat+ enhancement layer');
 assert.ok(fs.existsSync('src/ui/chat-plus.js') && !/innerHTML\s*=/.test(fs.readFileSync('src/ui/chat-plus.js', 'utf8')), 'Chat+ must exist and never assign innerHTML');
