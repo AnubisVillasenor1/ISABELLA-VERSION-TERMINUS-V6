@@ -25,6 +25,7 @@ let introPausedAt = 0;
 let introWatchdog = 0;
 let introActive = false;
 let introMediaClockActive = false;
+let introMediaFallbackLocked = false;
 let introLastVideoTime = -1;
 let introLastVideoProgressAt = 0;
 const formatIntroTime = (milliseconds) => {
@@ -32,6 +33,9 @@ const formatIntroTime = (milliseconds) => {
   return `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
 };
 const markIntroVideoReady = () => {
+  // Once we have switched to the animated fallback, a late media event must not
+  // re-enable a stalled video and rewind the narrative clock.
+  if (introMediaFallbackLocked) return;
   intro?.classList.add('media-ready');
   intro?.classList.remove('media-stalled', 'media-unavailable');
   introMediaClockActive = Boolean(introVideo && Number.isFinite(introVideo.duration) && introVideo.duration > 1);
@@ -40,33 +44,23 @@ const markIntroVideoReady = () => {
 const startIntroMedia = async () => {
   if (!introVideo) return;
   window.clearInterval(introWatchdog);
-  // The user's explicit consent is the gesture that unlocks playback. Ask the browser
-  // to warm the complete small web rendition before the intro sequence advances.
+  // The user's explicit consent is the gesture that unlocks playback. Warm the
+  // fast-start rendition, but never let a pending play() promise freeze the intro.
   introVideo.preload = 'auto';
   if (introVideo.readyState === HTMLMediaElement.HAVE_NOTHING) introVideo.load();
-  // On the first user gesture metadata may not exist yet; avoid an InvalidStateError.
   if (introVideo.readyState >= HTMLMediaElement.HAVE_METADATA) {
-    try { introVideo.currentTime = 0; } catch { /* the browser will start at its current position */ }
+    try { introVideo.currentTime = 0; } catch { /* metadata may not have loaded yet */ }
   }
   introVideo.muted = false;
   introVideo.volume = 0.82;
-  try {
-    await introVideo.play();
-    markIntroVideoReady();
-  } catch {
-    // Some browser/device combinations block audio despite the click; continue only
-    // if muted playback is allowed, and keep the CSS motion background as a fallback.
-    introVideo.muted = true;
-    try {
-      await introVideo.play();
-      markIntroVideoReady();
-    } catch {
-      intro?.classList.add('media-unavailable', 'media-stalled');
-    }
-  }
   introLastVideoTime = introVideo.currentTime;
+  introLastVideoProgressAt = performance.now();
+
+  // Start the watchdog before awaiting play(): some browsers keep that promise
+  // pending while data is unavailable. A prolonged stall switches to the CSS
+  // fallback and continues the narrative from the last decoded media timestamp.
   introWatchdog = window.setInterval(() => {
-    if (!introVideo || introVideo.paused || introVideo.ended) return;
+    if (!introVideo || introVideo.ended || document.hidden || introPausedAt || introMediaFallbackLocked) return;
     const now = performance.now();
     if (introVideo.currentTime !== introLastVideoTime) {
       introLastVideoTime = introVideo.currentTime;
@@ -74,10 +68,39 @@ const startIntroMedia = async () => {
       intro?.classList.remove('media-stalled');
       return;
     }
-    // Do not spam play() while a network buffer is empty; browsers already retry
-    // automatically. Hide only the video layer so the lightweight animated scene shows.
-    if (now - introLastVideoProgressAt > 1400) intro?.classList.add('media-stalled');
+    const stalledFor = now - introLastVideoProgressAt;
+    if (stalledFor > 1400) intro?.classList.add('media-stalled');
+    if (stalledFor > 5000) {
+      introMediaFallbackLocked = true;
+      introStartedAt = now - Math.max(0, introVideo.currentTime * 1000);
+      intro?.classList.add('media-unavailable', 'media-stalled');
+      introVideo.pause();
+      window.clearInterval(introWatchdog);
+    }
   }, 500);
+
+  try {
+    await introVideo.play();
+    if (introMediaFallbackLocked) return;
+    markIntroVideoReady();
+  } catch {
+    if (introMediaFallbackLocked) return;
+    // Some browser/device combinations block audio despite the click. Retry muted
+    // once; if that fails, the scene animation remains usable without the video.
+    introVideo.muted = true;
+    try {
+      await introVideo.play();
+      if (introMediaFallbackLocked) return;
+      markIntroVideoReady();
+    } catch {
+      introMediaFallbackLocked = true;
+      introStartedAt = performance.now() - Math.max(0, introVideo.currentTime * 1000);
+      intro?.classList.add('media-unavailable', 'media-stalled');
+      window.clearInterval(introWatchdog);
+    }
+  }
+  if (introMediaFallbackLocked) return;
+  introLastVideoTime = introVideo.currentTime;
 };
 const stopIntroMedia = () => {
   window.clearInterval(introWatchdog);
@@ -126,6 +149,9 @@ introVideo?.addEventListener('timeupdate', () => {
 });
 introVideo?.addEventListener('error', () => {
   introMediaClockActive = false;
+  introMediaFallbackLocked = true;
+  introStartedAt = performance.now() - Math.max(0, (introVideo?.currentTime || 0) * 1000);
+  window.clearInterval(introWatchdog);
   intro?.classList.add('media-unavailable', 'media-stalled');
 });
 introVideo?.addEventListener('loadedmetadata', () => {
@@ -250,6 +276,7 @@ if (intro) {
       immersionGate?.classList.add('is-accepted');
       introActive = true;
       introPausedAt = 0;
+      introMediaFallbackLocked = false;
       introStartedAt = performance.now();
       void startIntroMedia();
       const renderIntroFrame = () => {
