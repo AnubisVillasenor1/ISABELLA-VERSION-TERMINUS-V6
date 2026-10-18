@@ -24,7 +24,11 @@ import { verifyBearerToken } from "./security/api-token";
 import { FixedWindowRateLimiter } from "./security/rate-limit";
 import { hashSourceContent } from "./memory/ikes";
 import { createSupabaseIkesPersistence } from "./memory/ikes-supabase";
-import { bookPiLedger } from "./bookpi";
+import { bookPiLedger, createRuntimeBookPiStorage } from "./bookpi";
+import { inspectLegacyBookPiLedger } from "./bookpi/readiness";
+import { probeIgeOmegaGateway } from "./ige-omega/gateway-probe";
+import { TtlCache } from "./inference/cache";
+import { buildCognitionCacheKey } from "./inference/cognition-cache-key";
 
 import { createAtlasStoreFromEnv } from "./atlas/persistence";
 import { createDiffObservatory, sanitizeDiffSnapshot, snapshotMetadataHash } from "./plugins";
@@ -1208,15 +1212,11 @@ app.post("/api/v1/cognition/route", async (req, res) => {
       }
       if (!generativeNarrative && (modelEngine === "open-science" || modelEngine === "gemini")) {
         generativeNarrative = await generateHuggingFaceNarrative(systemPrompt, input, history, chainBudget);
-        if (generativeNarrative) responseEngine = "huggingface-free";
+        if (generativeNarrative) responseEngine = "huggingface-provider";
       }
       if (!generativeNarrative && (modelEngine === "open-science" || modelEngine === "gemini")) {
         generativeNarrative = await generateCompatibleProviderNarrative(systemPrompt, input, history, chainBudget);
         if (generativeNarrative) responseEngine = "open-science";
-      }
-      if (!generativeNarrative && (modelEngine === "open-science" || modelEngine === "gemini")) {
-        generativeNarrative = await generatePerplexityNarrative(process.env, systemPrompt, input, history);
-        if (generativeNarrative) responseEngine = "perplexity-router";
       }
       if (!generativeNarrative && process.env.ALLOW_PAID_PROVIDER_FALLBACK === "true") {
         if (genAi && modelEngine !== "gemini") {
