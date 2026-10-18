@@ -6,18 +6,24 @@
 
 ## Estado de madurez
 
-**Contrato de evidencia:** SPECIFIED ≠ IMPLEMENTED ≠ TESTED. Una especificación no demuestra implementación y una implementación no demuestra que se haya probado.
+**Estado verificado al 18 de octubre de 2026: PREPRODUCCIÓN — NO CERTIFICADO PARA PRODUCCIÓN COMPLETA.**
 
-**Avance global estimado para producción y despliegue: 61.0%.**
+No se publica un porcentaje global de preparación mientras no pueda recalcularse a partir de evidencia reproducible del HEAD vigente. Los porcentajes históricos no sustituyen resultados de CI, readiness ni pruebas de extremo a extremo.
 
-Estimación ponderada de preparación operativa —no es una métrica de calidad del modelo ni una garantía de disponibilidad— heredada del build aislado del SHA `7f88ce93417971580c96bdeeedb30a5102b46e20`; no se ha revalidado contra el HEAD actual (`94955427dc49cd4548100f7bca1d7d91dc457619`). En Node 24.21.0 y pnpm 10.28.0, `pnpm install --frozen-lockfile && pnpm run build` terminó con código 0: **1,581 pruebas en 267 archivos**, **44/44 comprobaciones estructurales**, **14/14 invariantes de seguridad**, typecheck de compilación, bundle del servidor, smoke de interfaz/conversación y suite de seguridad aprobados. Se corrigieron todas las llamadas anidadas a pnpm (`build`, `validate`, `postgres:e2e` y `deploy:verify`) para respetar la versión fijada en `packageManager`, y assurance ahora impide regresiones. El smoke HTTP del grafo de integración también pasó: 21 nodos, 19 aristas, autorización por token verificada, estados de BookPI consistentes y readiness correctamente degradado en ausencia de dependencias remotas. Se añadió un probe HTTP acotado para el health/readiness del gateway Rust IGE-Ω, con validación de URL, HTTPS en producción, timeout y límite de 2 KiB por respuesta; el estado actual es `NOT_CONFIGURED` porque `IGE_OMEGA_GATEWAY_URL` no está configurada, y no se afirma que la inferencia autenticada esté conectada.
+Evidencia observada en el despliegue Vercel de `main`:
+- `GET /health`: HTTP 200; el proceso responde.
+- `GET /api/v1/readyz`: HTTP 503; readiness profunda bloqueada.
+- Bloqueos informados: falta `BOOKPI_INTEGRITY_SECRET` válido, persistencia Atlas/Supabase no saludable, IKES degradado y ledger BookPI heredado volátil.
+- La exportación de telemetría no está verificada.
+- Los workflows más recientes de CI y Repository Assurance consultados para el SHA de referencia terminaron en `failure`; la causa raíz requiere logs completos y una ejecución reproducible.
 
-**Estado: preproducción; no declarar listo para producción.** El preview más reciente disponible, SHA `a8a5c580ed2d54ef87b1a80c0074c974d52cd726`, está `READY`, pero `/api/v1/readyz` devuelve HTTP 503: Atlas/Supabase e IKES responden HTTP 404, falta `BOOKPI_INTEGRITY_SECRET` de al menos 32 caracteres, el ledger BookPI síncrono heredado sigue siendo volátil y la exportación de telemetría no está verificada. El smoke generativo externo se omitió por ausencia de credenciales de proveedor. Vercel rechazó el build del SHA final por cuota de builds/despliegues; el SHA `fe0f8809` pasó la compilación y suite completa en un sandbox aislado, pero no tiene un preview remoto propio. GitHub Actions sigue sin proporcionar una ejecución válida con pasos/logs y `main` requiere protección.
+El estado `READY` de Vercel indica que la plataforma completó el despliegue, no que las dependencias de la aplicación estén listas. No declarar producción hasta que CI esté verde para el mismo SHA, `/api/v1/readyz` responda 200 con evidencia válida, la persistencia sea durable y la inferencia generativa aprobada pase pruebas reales.
 
+- **Auditoría técnico-operativa y bloqueadores:** [docs/audits/PRODUCTION-READINESS-AUDIT-2026-10-18.md](docs/audits/PRODUCTION-READINESS-AUDIT-2026-10-18.md)
+- **Presentación pública y oportunidades de monetización:** [docs/ISABELLA-PRESENTACION-PUBLICA-2026-10.md](docs/ISABELLA-PRESENTACION-PUBLICA-2026-10.md)
 - Repositorio: https://github.com/OsoPanda1/ISABELLA-VERSION-TERMINUS-V6
-- Rama principal: main
-- Stack declarado: TypeScript/Node.js, Express, Vitest, PostgreSQL, Redis/Upstash, AI SDK/Gateway, Google GenAI y manifiestos Kubernetes.
-- El porcentaje no sustituye el estado de CI, el estado de un despliegue ni una auditoría independiente.
+- Rama principal: `main`
+- Stack declarado: TypeScript/Node.js 24.x, pnpm 10.28.0, Express, Vitest, PostgreSQL/Supabase, AI SDK/Gateway, Google GenAI, Rust y Maven.
 
 ## Qué es
 
