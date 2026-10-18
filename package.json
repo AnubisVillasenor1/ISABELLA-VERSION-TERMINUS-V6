@@ -17,7 +17,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "build": "node scripts/repository-assurance.mjs && tsc -p tsconfig.build.json && vitest run && esbuild src/server.ts --bundle --platform=node --format=esm --packages=external --target=node24 --outfile=dist/server.js && node --check src/ui/app.js && node scripts/ui-smoke.mjs && node scripts/runtime-smoke.mjs && corepack pnpm run security:suite",
-    "build:dist": "tsc -p tsconfig.build.json && esbuild src/server.ts --bundle --platform=node --format=esm --packages=external --target=node24 --outfile=dist/server.js",
+    "build:dist": "tsc -p tsconfig.build.json && esbuild src/server.ts --bundle --platform=node --format=esm --packages=external --target=node24 --outfile=dist/server.js && node --check src/ui/app.js && node scripts/ui-smoke.mjs",
     "lint": "tsc --noEmit",
     "reconcile:pids": "tsx src/cli/reconcilePids.ts",
     "bookpi:maintenance": "tsx src/cli/bookpiMaintenance.ts",
