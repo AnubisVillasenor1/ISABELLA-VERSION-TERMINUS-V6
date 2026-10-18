@@ -30,6 +30,7 @@ assert.ok(fs.existsSync('src/ui/chat-plus.js') && !/innerHTML\s*=/.test(fs.readF
 assert.ok(fs.existsSync('src/assets/video/IntroVideoIsabella-web.mp4'), 'The fast-start web rendition of the intro must be present');
 assert.ok(server.includes('fs.readFileSync(path.join(uiPath, "cinematic.css")'), 'The stylesheet route must serve the current CSS asset');
 assert.ok(css.includes('.nav-links.is-open'), 'Responsive menu open state must be styled');
+assert.ok(css.includes('@media (max-width:1180px){\n  .topbar{position:sticky') && css.includes('.nav-toggle{display:inline-flex'), 'The primary navigation toggle must be visible wherever tablet navigation links are collapsed');
 assert.ok(css.includes('.side-rail.rail-left.is-open,.side-rail.rail-right.is-open'), 'Responsive side rails must be hidden until opened and reveal on click');
 assert.ok(css.includes('@media(max-width:1180px){\n  .side-rail,.side-rail.rail-left,.side-rail.rail-right{'), 'Tablet and mobile widths must use the same functional drawer behavior');
 assert.ok(!/\.side-rail\{[^}]*!important/.test(css), 'Legacy !important rules must not override the responsive drawer state');
