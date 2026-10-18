@@ -1357,7 +1357,7 @@ footer{border-top:1px solid var(--ent-line)}
 @keyframes entRise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 @media(max-width:1180px){.topbar .nav-links{display:none}}
 @media(max-width:860px){
-  .side-rail{position:static!important;transform:none!important;width:auto!important;margin:0 16px 12px!important;z-index:1}
+  /* Responsive drawers are governed by the unified UI integrity layer below. */
   .topbar{padding-left:0;padding-right:0}
   .command-launcher kbd{display:none}
 }
