@@ -3,7 +3,7 @@
   "buildCommand": "pnpm run build:dist",
   "functions": {
     "api/index.js": {
-      "includeFiles": ["dist/**"]
+      "includeFiles": "{dist/**,src/ui/**,src/assets/video/**}"
     }
   },
   "rewrites": [{
