@@ -546,9 +546,9 @@ const speechChunks = (text, maxChunk = 220) => {
 const speak = async (rawText) => {
   if (!soundOn) return;
   const text = String(rawText)
-    .replace(/`{3}[\\s\\S]*?`{3}/g, ' bloque de código. ')
-    .replace(/[\\x60*_#>|]+/g, '')
-    .replace(/\\[([^\\]]+)\\]\\([^)]+\\)/g, '$1')
+    .replace(/`{3}[\s\S]*?`{3}/g, ' bloque de código. ')
+    .replace(/[\x60*_#>|]+/g, '')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
     .trim();
   if (!text) return;
   stopSpeech();
@@ -564,7 +564,7 @@ const speak = async (rawText) => {
     });
     const payload = await response.json().catch(() => ({}));
     if (session !== speechSession || !soundOn) return;
-    if (response.ok && payload.success === true && typeof payload.audio === 'string' && /^data:audio\\/(?:mpeg|mp3|wav);base64,/.test(payload.audio)) {
+    if (response.ok && payload.success === true && typeof payload.audio === 'string' && /^data:audio\/(?:mpeg|mp3|wav);base64,/.test(payload.audio)) {
       const audio = new Audio(payload.audio);
       activeSpeechAudio = audio;
       audio.preload = 'auto';
