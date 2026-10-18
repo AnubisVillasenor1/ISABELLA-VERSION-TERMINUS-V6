@@ -31,6 +31,9 @@ assert.ok(fs.existsSync('src/assets/video/IntroVideoIsabella-web.mp4'), 'The fas
 assert.ok(server.includes('fs.readFileSync(path.join(uiPath, "cinematic.css")'), 'The stylesheet route must serve the current CSS asset');
 assert.ok(css.includes('.nav-links.is-open'), 'Responsive menu open state must be styled');
 assert.ok(css.includes('.side-rail.rail-left.is-open,.side-rail.rail-right.is-open'), 'Responsive side rails must be hidden until opened and reveal on click');
+assert.ok(!/\.side-rail\{[^}]*!important/.test(css), 'Legacy !important rules must not override the responsive drawer state');
+assert.ok(css.includes('transform:translateX(calc(-100% - 20px))'), 'Closed left rail must remain off-canvas until explicitly opened');
+assert.ok(css.includes('transform:translateX(calc(100% + 20px))'), 'Closed right rail must remain off-canvas until explicitly opened');
 assert.equal((html.match(/class="side-rail /g) || []).length, 2, 'The interface must render one folded rail on each side');
 assert.ok(html.includes('class="rail-panel"'), 'Each side rail must expose folded command panels');
 assert.ok(html.includes('class="command-palette"'), 'A native command palette must be available');
