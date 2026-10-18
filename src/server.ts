@@ -1220,7 +1220,7 @@ app.post("/api/v1/cognition/route", async (req, res) => {
         generativeNarrative = await generateCompatibleProviderNarrative(systemPrompt, input, history, chainBudget);
         if (generativeNarrative) responseEngine = "open-science";
       }
-      if (!generativeNarrative && process.env.ALLOW_PAID_PROVIDER_FALLBACK === "true") {
+      if (!generativeNarrative && modelEngine !== "open-science" && process.env.ALLOW_PAID_PROVIDER_FALLBACK === "true") {
         if (genAi && modelEngine !== "gemini") {
           try {
             const contents = [
