@@ -22,6 +22,7 @@ assert.ok(js.includes("fetch('/api/v1/health'"), 'UI must check the health endpo
 assert.ok(server.includes('app.get("/api/v1/health"'), 'The runtime health endpoint must exist');
 assert.ok(typeof vercelConfig.functions?.["api/index.js"]?.includeFiles === 'string', 'Vercel includeFiles must be a glob string, not an array');
 assert.ok(vercelConfig.functions["api/index.js"].includeFiles.includes('dist/**') && vercelConfig.functions["api/index.js"].includeFiles.includes('src/ui/**') && vercelConfig.functions["api/index.js"].includeFiles.includes('src/assets/video/**'), 'Vercel function must bundle the server, UI, and intro media assets');
+assert.ok(vercelConfig.rewrites?.some((rule) => rule.source === '/:path*' && rule.destination === '/api/:path*'), 'Vercel catch-all must preserve each request path when forwarding to Express');
 assert.ok(server.includes('serveAsset(req, res, htmlAsset'), 'The root UI must use the startup-cached, compressed HTML asset');
 assert.ok(server.includes('app.get("/ui/chat-plus.js"'), 'Runtime must serve the Chat+ enhancement layer');
 assert.ok(fs.existsSync('src/ui/chat-plus.js') && !/innerHTML\s*=/.test(fs.readFileSync('src/ui/chat-plus.js', 'utf8')), 'Chat+ must exist and never assign innerHTML');
