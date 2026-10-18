@@ -31,6 +31,7 @@ assert.ok(fs.existsSync('src/assets/video/IntroVideoIsabella-web.mp4'), 'The fas
 assert.ok(server.includes('fs.readFileSync(path.join(uiPath, "cinematic.css")'), 'The stylesheet route must serve the current CSS asset');
 assert.ok(css.includes('.nav-links.is-open'), 'Responsive menu open state must be styled');
 assert.ok(css.includes('.side-rail.rail-left.is-open,.side-rail.rail-right.is-open'), 'Responsive side rails must be hidden until opened and reveal on click');
+assert.ok(css.includes('@media(max-width:1180px){\n  .side-rail,.side-rail.rail-left,.side-rail.rail-right{'), 'Tablet and mobile widths must use the same functional drawer behavior');
 assert.ok(!/\.side-rail\{[^}]*!important/.test(css), 'Legacy !important rules must not override the responsive drawer state');
 assert.ok(!/\.side-rail\{\s*display\s*:\s*none\s*!important/.test(css), 'A global !important display:none must not make navigation rails permanently inaccessible');
 assert.ok(css.includes('transform:translateX(calc(-100% - 20px))'), 'Closed left rail must remain off-canvas until explicitly opened');
