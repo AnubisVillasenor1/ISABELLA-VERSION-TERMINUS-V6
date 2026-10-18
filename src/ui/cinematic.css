@@ -1509,7 +1509,7 @@ body.chat-focus .topbar,body.chat-focus .side-rail,body.chat-focus .rail-launche
 /* UI integrity patch — consistent responsive navigation and stable intro media clock. */
 .rail-launcher{z-index:45}
 .side-rail{z-index:44;overscroll-behavior:contain;overflow-y:auto}
-@media(max-width:860px){
+@media(max-width:1180px){
   .side-rail,.side-rail.rail-left,.side-rail.rail-right{
     position:fixed;top:76px;bottom:12px;display:flex;flex-direction:column;
     width:min(300px,calc(100vw - 48px));max-height:calc(100dvh - 88px);
