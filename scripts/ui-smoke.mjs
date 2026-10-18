@@ -20,9 +20,10 @@ for (const id of ['navToggle', 'primaryLinks', 'runtimeStatus', 'soundToggle', '
 assert.ok(js.includes("fetch('/api/v1/cognition/route'"), 'Chat must call the existing cognition route');
 assert.ok(js.includes("fetch('/api/v1/health'"), 'UI must check the health endpoint');
 assert.ok(server.includes('app.get("/api/v1/health"'), 'The runtime health endpoint must exist');
-assert.ok(typeof vercelConfig.functions?.["api/index.js"]?.includeFiles === 'string', 'Vercel includeFiles must be a glob string, not an array');
-assert.ok(vercelConfig.functions["api/index.js"].includeFiles.includes('dist/**') && vercelConfig.functions["api/index.js"].includeFiles.includes('src/ui/**') && vercelConfig.functions["api/index.js"].includeFiles.includes('src/assets/video/**'), 'Vercel function must bundle the server, UI, and intro media assets');
-assert.ok(vercelConfig.rewrites?.some((rule) => rule.source === '/:path*' && rule.destination === '/api/:path*'), 'Vercel catch-all must preserve each request path when forwarding to Express');
+assert.ok(typeof vercelConfig.functions?.["server.js"]?.includeFiles === 'string', 'Vercel includeFiles must be a glob string, not an array');
+assert.ok(vercelConfig.functions["server.js"].includeFiles.includes('dist/**') && vercelConfig.functions["server.js"].includeFiles.includes('src/ui/**') && vercelConfig.functions["server.js"].includeFiles.includes('src/assets/video/**'), 'Express function must bundle the server, UI, and intro media assets');
+assert.equal((vercelConfig.rewrites || []).length, 0, 'Native Express entrypoint must own routing; no catch-all rewrite may collapse paths');
+assert.ok(!fs.existsSync('api/index.js'), 'Express must have a single entrypoint to avoid ambiguous routing');
 assert.ok(server.includes('serveAsset(req, res, htmlAsset'), 'The root UI must use the startup-cached, compressed HTML asset');
 assert.ok(server.includes('app.get("/ui/chat-plus.js"'), 'Runtime must serve the Chat+ enhancement layer');
 assert.ok(fs.existsSync('src/ui/chat-plus.js') && !/innerHTML\s*=/.test(fs.readFileSync('src/ui/chat-plus.js', 'utf8')), 'Chat+ must exist and never assign innerHTML');
