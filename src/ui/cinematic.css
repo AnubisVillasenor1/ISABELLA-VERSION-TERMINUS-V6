@@ -28,7 +28,7 @@ body[data-workspace-layout="split-2"] .workspace-pane.design-pane{display:block}
 .status[data-state="degraded"] i{background:#ffb36b}
 .status i{transition:background .2s ease}
 button:disabled{opacity:.55;cursor:wait}
-@media (max-width:760px){
+@media (max-width:1180px){
   .topbar{position:sticky;top:0;align-items:center;flex-wrap:wrap;gap:12px;padding:12px 0;background:rgba(6,7,11,.96);backdrop-filter:blur(18px)}
   .nav-toggle{display:inline-flex;align-items:center;gap:9px;margin-left:auto}
   .nav-links{display:none;order:5;flex-direction:column;align-items:stretch;gap:0;width:100%;margin:0;padding:8px 0;border-top:1px solid var(--line);background:rgba(6,7,11,.98);overflow:visible}
@@ -334,7 +334,7 @@ html{scroll-padding-top:100px}
 body{background:#080c12;color:var(--text);font-size:14px;line-height:1.5}
 .stage{max-width:1720px;padding:0 clamp(18px,4.4vw,72px) 76px;overflow:visible;background:radial-gradient(ellipse at 74% 8%,rgba(84,133,174,.12),transparent 42rem),linear-gradient(180deg,#090d13,#080c12 50rem)}
 .stage:before{display:none}
-.side-rail{display:none!important}
+/* Side rails remain available; responsive visibility is controlled by their open state. */
 .topbar{
   position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:20px;flex-wrap:nowrap;
   margin:0 calc(clamp(18px,4.4vw,72px)*-1);padding:18px clamp(18px,4.4vw,72px) 16px;
@@ -1357,7 +1357,7 @@ footer{border-top:1px solid var(--ent-line)}
 @keyframes entRise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 @media(max-width:1180px){.topbar .nav-links{display:none}}
 @media(max-width:860px){
-  .side-rail{position:static!important;transform:none!important;width:auto!important;margin:0 16px 12px!important;z-index:1}
+  /* Responsive drawers are governed by the unified UI integrity layer below. */
   .topbar{padding-left:0;padding-right:0}
   .command-launcher kbd{display:none}
 }
@@ -1504,3 +1504,34 @@ body.chat-focus .topbar,body.chat-focus .side-rail,body.chat-focus .rail-launche
 #historyTop{background:rgba(255,255,255,.03);color:var(--ent-text);border:1px solid var(--ent-line)}
 @media(max-width:1480px){#historyTop .header-action-label{display:none}#historyTop{width:38px;padding:0;justify-content:center}}
 /* ==== END TERMINUS ENTERPRISE LAYER v2 ==== */
+
+
+/* UI integrity patch — consistent responsive navigation and stable intro media clock. */
+.rail-launcher{z-index:45}
+.side-rail{z-index:44;overscroll-behavior:contain;overflow-y:auto}
+.side-rail.is-open{pointer-events:auto}
+@media(max-width:1180px){
+  .side-rail,.side-rail.rail-left,.side-rail.rail-right{
+    position:fixed;top:76px;bottom:12px;display:flex;flex-direction:column;
+    width:min(300px,calc(100vw - 48px));max-height:calc(100dvh - 88px);
+    margin:0;padding:12px;gap:8px;overflow-x:hidden;overflow-y:auto;
+    background:rgba(5,10,20,.98);border:1px solid var(--line);
+    box-shadow:0 24px 70px rgba(0,0,0,.55);transform:translateX(calc(-100% - 20px));
+    transition:transform .22s ease;z-index:44;
+  }
+  .side-rail.rail-left{left:8px;right:auto}
+  .side-rail.rail-right{right:8px;left:auto;transform:translateX(calc(100% + 20px))}
+  .side-rail.rail-left.is-open,.side-rail.rail-right.is-open{transform:translateX(0)}
+  .side-rail .rail-panel{flex:0 0 auto;min-width:0}
+  .side-rail .rail-panel nav{max-height:35vh;overflow:auto}
+  .rail-launcher{top:auto;bottom:16px;transform:none;writing-mode:horizontal-tb;min-height:42px;padding:10px 12px}
+  .rail-launcher-left{left:10px;right:auto}
+  .rail-launcher-right{right:10px;left:auto}
+}
+@media(max-width:480px){
+  .rail-launcher{font-size:8px;letter-spacing:.08em}
+  .side-rail,.side-rail.rail-left,.side-rail.rail-right{width:min(284px,calc(100vw - 32px))}
+}
+@media(prefers-reduced-motion:reduce){
+  .side-rail,.rail-launcher{transition:none!important}
+}

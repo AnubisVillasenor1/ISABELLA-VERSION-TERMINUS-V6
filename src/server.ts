@@ -481,6 +481,9 @@ async function generateFreeOpenRouterNarrative(systemPrompt: string, input: stri
 /** Optional Hugging Face OpenAI-compatible router. Only explicitly configured model IDs are attempted. */
 async function generateHuggingFaceNarrative(systemPrompt: string, input: string, history: PublicChatTurn[] = [], budget?: DeadlineBudget): Promise<string | null> {
   if (budget?.expired()) return null;
+  // Hugging Face Inference can consume account credits. A model name in HF_FREE_MODELS
+  // is operator configuration, not proof of zero cost; require explicit spend opt-in.
+  if (process.env.ALLOW_PAID_PROVIDER_FALLBACK !== "true") return null;
   const key = process.env.HF_TOKEN;
   const models = (process.env.HF_FREE_MODELS || "").split(",").map((model) => model.trim()).filter(Boolean);
   if (!key || models.length === 0 || Date.now() < huggingFaceCooldownUntil) return null;
@@ -1176,9 +1179,8 @@ app.post("/api/v1/cognition/route", async (req, res) => {
       // Free/open inference is the default. Paid or billing-enabled providers are never
       // silently selected by Auto/Open Science; they require an explicit operator opt-in.
       if (modelEngine === "auto") {
-        // Hedged race over FREE providers only (AUD-13b): the next candidate starts as soon as the
-        // previous one is unavailable/failed, or after HEDGE_DELAY_MS without an answer. Unconfigured or
-        // cooling-down providers return null instantly, so they cost no waiting. Paid fallbacks stay out.
+        // Hedge configured providers so an unavailable route does not stall the user. Any provider
+        // that can consume credits must independently enforce the exact operator opt-in before network I/O.
         const winner = await hedgedFirst<string>([
           { label: "keyless-free", run: () => generateKeylessFreeNarrative(systemPrompt, input, history, chainBudget) },
           { label: "gateway", run: () => generateGatewayNarrative(systemPrompt, input, history, chainBudget) },
@@ -1210,15 +1212,15 @@ app.post("/api/v1/cognition/route", async (req, res) => {
         generativeNarrative = await generateFreeOpenRouterNarrative(systemPrompt, input, history, chainBudget);
         if (generativeNarrative) responseEngine = "openrouter-free";
       }
-      if (!generativeNarrative && (modelEngine === "open-science" || modelEngine === "gemini")) {
+      if (!generativeNarrative && modelEngine === "gemini") {
         generativeNarrative = await generateHuggingFaceNarrative(systemPrompt, input, history, chainBudget);
         if (generativeNarrative) responseEngine = "huggingface-provider";
       }
-      if (!generativeNarrative && (modelEngine === "open-science" || modelEngine === "gemini")) {
+      if (!generativeNarrative && modelEngine === "gemini") {
         generativeNarrative = await generateCompatibleProviderNarrative(systemPrompt, input, history, chainBudget);
         if (generativeNarrative) responseEngine = "open-science";
       }
-      if (!generativeNarrative && process.env.ALLOW_PAID_PROVIDER_FALLBACK === "true") {
+      if (!generativeNarrative && modelEngine !== "open-science" && process.env.ALLOW_PAID_PROVIDER_FALLBACK === "true") {
         if (genAi && modelEngine !== "gemini") {
           try {
             const contents = [

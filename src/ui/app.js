@@ -25,6 +25,7 @@ let introPausedAt = 0;
 let introWatchdog = 0;
 let introActive = false;
 let introMediaClockActive = false;
+let introMediaFallbackLocked = false;
 let introLastVideoTime = -1;
 let introLastVideoProgressAt = 0;
 const formatIntroTime = (milliseconds) => {
@@ -32,6 +33,9 @@ const formatIntroTime = (milliseconds) => {
   return `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
 };
 const markIntroVideoReady = () => {
+  // Once we have switched to the animated fallback, a late media event must not
+  // re-enable a stalled video and rewind the narrative clock.
+  if (introMediaFallbackLocked) return;
   intro?.classList.add('media-ready');
   intro?.classList.remove('media-stalled', 'media-unavailable');
   introMediaClockActive = Boolean(introVideo && Number.isFinite(introVideo.duration) && introVideo.duration > 1);
@@ -40,33 +44,23 @@ const markIntroVideoReady = () => {
 const startIntroMedia = async () => {
   if (!introVideo) return;
   window.clearInterval(introWatchdog);
-  // The user's explicit consent is the gesture that unlocks playback. Ask the browser
-  // to warm the complete small web rendition before the intro sequence advances.
+  // The user's explicit consent is the gesture that unlocks playback. Warm the
+  // fast-start rendition, but never let a pending play() promise freeze the intro.
   introVideo.preload = 'auto';
   if (introVideo.readyState === HTMLMediaElement.HAVE_NOTHING) introVideo.load();
-  // On the first user gesture metadata may not exist yet; avoid an InvalidStateError.
   if (introVideo.readyState >= HTMLMediaElement.HAVE_METADATA) {
-    try { introVideo.currentTime = 0; } catch { /* the browser will start at its current position */ }
+    try { introVideo.currentTime = 0; } catch { /* metadata may not have loaded yet */ }
   }
   introVideo.muted = false;
   introVideo.volume = 0.82;
-  try {
-    await introVideo.play();
-    markIntroVideoReady();
-  } catch {
-    // Some browser/device combinations block audio despite the click; continue only
-    // if muted playback is allowed, and keep the CSS motion background as a fallback.
-    introVideo.muted = true;
-    try {
-      await introVideo.play();
-      markIntroVideoReady();
-    } catch {
-      intro?.classList.add('media-unavailable', 'media-stalled');
-    }
-  }
   introLastVideoTime = introVideo.currentTime;
+  introLastVideoProgressAt = performance.now();
+
+  // Start the watchdog before awaiting play(): some browsers keep that promise
+  // pending while data is unavailable. A prolonged stall switches to the CSS
+  // fallback and continues the narrative from the last decoded media timestamp.
   introWatchdog = window.setInterval(() => {
-    if (!introVideo || introVideo.paused || introVideo.ended) return;
+    if (!introVideo || introVideo.ended || document.hidden || introPausedAt || introMediaFallbackLocked) return;
     const now = performance.now();
     if (introVideo.currentTime !== introLastVideoTime) {
       introLastVideoTime = introVideo.currentTime;
@@ -74,15 +68,46 @@ const startIntroMedia = async () => {
       intro?.classList.remove('media-stalled');
       return;
     }
-    // Do not spam play() while a network buffer is empty; browsers already retry
-    // automatically. Hide only the video layer so the lightweight animated scene shows.
-    if (now - introLastVideoProgressAt > 1400) intro?.classList.add('media-stalled');
+    const stalledFor = now - introLastVideoProgressAt;
+    if (stalledFor > 1400) intro?.classList.add('media-stalled');
+    if (stalledFor > 5000) {
+      introMediaFallbackLocked = true;
+      introStartedAt = now - Math.max(0, introVideo.currentTime * 1000);
+      intro?.classList.add('media-unavailable', 'media-stalled');
+      introVideo.pause();
+      window.clearInterval(introWatchdog);
+    }
   }, 500);
+
+  try {
+    await introVideo.play();
+    if (introMediaFallbackLocked) return;
+    markIntroVideoReady();
+  } catch {
+    if (introMediaFallbackLocked) return;
+    // Some browser/device combinations block audio despite the click. Retry muted
+    // once; if that fails, the scene animation remains usable without the video.
+    introVideo.muted = true;
+    try {
+      await introVideo.play();
+      if (introMediaFallbackLocked) return;
+      markIntroVideoReady();
+    } catch {
+      introMediaFallbackLocked = true;
+      introStartedAt = performance.now() - Math.max(0, introVideo.currentTime * 1000);
+      intro?.classList.add('media-unavailable', 'media-stalled');
+      window.clearInterval(introWatchdog);
+    }
+  }
+  if (introMediaFallbackLocked) return;
+  introLastVideoTime = introVideo.currentTime;
 };
 const stopIntroMedia = () => {
   window.clearInterval(introWatchdog);
   introVideo?.pause();
-  if (introVideo) introVideo.currentTime = 0;
+  if (introVideo) {
+    try { introVideo.currentTime = 0; } catch { /* metadata may not have loaded yet */ }
+  }
 };
 // Warm the small fast-start rendition while the consent control is visible.
 const warmIntroVideo = () => {
@@ -124,6 +149,9 @@ introVideo?.addEventListener('timeupdate', () => {
 });
 introVideo?.addEventListener('error', () => {
   introMediaClockActive = false;
+  introMediaFallbackLocked = true;
+  introStartedAt = performance.now() - Math.max(0, (introVideo?.currentTime || 0) * 1000);
+  window.clearInterval(introWatchdog);
   intro?.classList.add('media-unavailable', 'media-stalled');
 });
 introVideo?.addEventListener('loadedmetadata', () => {
@@ -150,16 +178,11 @@ const dismissIntro = () => {
   if (restoreFocus) byId('enterChat')?.focus({ preventScroll: true });
 };
 const getIntroElapsed = () => {
-  if (
-    introMediaClockActive &&
-    introVideo &&
-    Number.isFinite(introVideo.duration) &&
-    introVideo.duration > 1
-  ) {
-    // Tie scene transitions to decoded media time; buffering freezes the story instead
-    // of letting titles outrun the video, then desynchronizing when playback resumes.
-    return (introVideo.currentTime / introVideo.duration) * introTotalMs;
-  }
+  // The decoded media clock is authoritative from the first frame. When buffering
+  // stalls currentTime, the narrative freezes too; it never races ahead on wall time.
+  // Use wall-clock timing only after the browser reports that media cannot be played.
+  const mediaUnavailable = !introVideo || intro?.classList.contains('media-unavailable');
+  if (!mediaUnavailable) return Math.max(0, introVideo.currentTime * 1000);
   return performance.now() - introStartedAt;
 };
 const advanceIntro = (elapsed = getIntroElapsed()) => {
@@ -253,6 +276,7 @@ if (intro) {
       immersionGate?.classList.add('is-accepted');
       introActive = true;
       introPausedAt = 0;
+      introMediaFallbackLocked = false;
       introStartedAt = performance.now();
       void startIntroMedia();
       const renderIntroFrame = () => {
@@ -266,21 +290,31 @@ if (intro) {
     startImmersion?.addEventListener('click', beginImmersion, { once: true });
   }
 }
+const closeSideRails = (exceptId = '') => {
+  document.querySelectorAll('.side-rail').forEach((rail) => {
+    if (rail.id !== exceptId) rail.classList.remove('is-open');
+    const launcher = document.querySelector(`[aria-controls="${rail.id}"]`);
+    if (launcher) launcher.setAttribute('aria-expanded', String(rail.id === exceptId && rail.classList.contains('is-open')));
+  });
+};
 document.querySelectorAll('.rail-launcher').forEach((launcher) => {
   launcher.addEventListener('click', () => {
     const targetId = launcher.getAttribute('aria-controls');
     const target = targetId ? byId(targetId) : null;
-    const isOpen = target?.classList.toggle('is-open') ?? false;
-    launcher.setAttribute('aria-expanded', String(isOpen));
+    if (!target) return;
+    const opening = !target.classList.contains('is-open');
+    closeSideRails(opening ? target.id : '');
+    target.classList.toggle('is-open', opening);
+    launcher.setAttribute('aria-expanded', String(opening));
   });
 });
 document.querySelectorAll('.side-rail a[href^="#"]').forEach((link) => {
-  link.addEventListener('click', () => {
-    const rail = link.closest('.side-rail');
-    const launcher = rail ? document.querySelector(`[aria-controls="${rail.id}"]`) : null;
-    rail?.classList.remove('is-open');
-    launcher?.setAttribute('aria-expanded', 'false');
-  });
+  link.addEventListener('click', () => closeSideRails());
+});
+document.addEventListener('click', (event) => {
+  if (!(event.target instanceof Element)) return;
+  if (event.target.closest('.side-rail, .rail-launcher')) return;
+  closeSideRails();
 });
 document.querySelectorAll('.workspace-mode').forEach((button) => {
   button.addEventListener('click', () => {
@@ -539,9 +573,9 @@ const speechChunks = (text, maxChunk = 220) => {
 const speak = async (rawText) => {
   if (!soundOn) return;
   const text = String(rawText)
-    .replace(/`{3}[\\s\\S]*?`{3}/g, ' bloque de código. ')
-    .replace(/[\\x60*_#>|]+/g, '')
-    .replace(/\\[([^\\]]+)\\]\\([^)]+\\)/g, '$1')
+    .replace(/`{3}[\s\S]*?`{3}/g, ' bloque de código. ')
+    .replace(/[\x60*_#>|]+/g, '')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
     .trim();
   if (!text) return;
   stopSpeech();
@@ -557,7 +591,7 @@ const speak = async (rawText) => {
     });
     const payload = await response.json().catch(() => ({}));
     if (session !== speechSession || !soundOn) return;
-    if (response.ok && payload.success === true && typeof payload.audio === 'string' && /^data:audio\\/(?:mpeg|mp3|wav);base64,/.test(payload.audio)) {
+    if (response.ok && payload.success === true && typeof payload.audio === 'string' && /^data:audio\/(?:mpeg|mp3|wav);base64,/.test(payload.audio)) {
       const audio = new Audio(payload.audio);
       activeSpeechAudio = audio;
       audio.preload = 'auto';
@@ -715,21 +749,16 @@ document.addEventListener('click', (event) => {
   const target = event.target;
   if (!(target instanceof Element)) return;
   const link = target.closest('a[href^="#"]');
-  if (link) navigateToHash(link.getAttribute('href'), event);
+  if (!link) return;
+  navigateToHash(link.getAttribute('href'), event);
+  // These links are briefs/contact shortcuts: navigate and place the caret in
+  // the composer so the destination is actionable, not merely a scroll target.
+  if (link.dataset.focusPrompt === 'true') {
+    window.setTimeout(() => prompt?.focus(), 180);
+  }
 });
 
-// Keep every navigation surface on the same interaction path. Some embedded
-// preview shells intercept native hash navigation, so the app owns the scroll
-// and history update instead of relying on browser defaults.
-const bindNavigationSurface = (selector) => {
-  document.querySelectorAll(selector).forEach((link) => {
-    link.addEventListener('click', (event) => {
-      const href = link.getAttribute('href');
-      if (href?.startsWith('#')) navigateToHash(href, event);
-    });
-  });
-};
-bindNavigationSurface('.topbar a[href^="#"], .side-rail a[href^="#"], .hero a[href^="#"], .access-section a[href^="#"], .intro-enter[href^="#"]');
+// All internal links are handled by one delegated click listener above; do not bind twice.
 if (window.location.hash) {
   window.requestAnimationFrame(() => navigateToHash(window.location.hash));
 }
