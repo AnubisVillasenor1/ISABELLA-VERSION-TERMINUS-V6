@@ -51,3 +51,30 @@ describe("DeadlineBudget", () => {
     expect(boundedBudgetMs("999999", 20_000, 6_000, 60_000)).toBe(60_000);
   });
 });
+
+import { hedgedFirst } from "../../src/inference/deadline";
+
+const later = <T>(ms: number, v: T | null) => () => new Promise<T | null>((r) => setTimeout(() => r(v), ms));
+
+describe("hedgedFirst", () => {
+  it("returns the first success and does not wait for slower earlier tasks", async () => {
+    const t0 = Date.now();
+    const win = await hedgedFirst([{ label: "slow", run: later(400, "S") }, { label: "fast", run: later(20, "F") }], 30);
+    expect(win?.label).toBe("fast");
+    expect(Date.now() - t0).toBeLessThan(300);
+  });
+  it("moves on immediately when a task yields null (no hedge wait)", async () => {
+    const t0 = Date.now();
+    const win = await hedgedFirst([{ label: "off", run: later(0, null) }, { label: "ok", run: later(10, "OK") }], 5_000);
+    expect(win?.label).toBe("ok");
+    expect(Date.now() - t0).toBeLessThan(500);
+  });
+  it("treats throws as null and resolves null when all fail", async () => {
+    const boom = { label: "boom", run: () => Promise.reject(new Error("x")) };
+    expect(await hedgedFirst([boom, boom], 10)).toBeNull();
+    expect(await hedgedFirst([], 10)).toBeNull();
+  });
+  it("rejects a negative hedge delay", () => {
+    expect(() => hedgedFirst([], -1)).toThrow();
+  });
+});

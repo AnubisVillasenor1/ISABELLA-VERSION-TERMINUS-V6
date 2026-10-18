@@ -82,9 +82,27 @@ const startIntroMedia = async () => {
 const stopIntroMedia = () => {
   window.clearInterval(introWatchdog);
   introVideo?.pause();
-  if (introVideo && introVideo.readyState >= HTMLMediaElement.HAVE_METADATA) {
-    try { introVideo.currentTime = 0; } catch { /* cleanup must not block dismissal */ }
-  }
+  if (introVideo) introVideo.currentTime = 0;
+};
+// Warm the intro video buffer while the person completes the human check (poster shows meanwhile).
+const warmIntroVideo = () => { if (introVideo && introVideo.preload !== 'auto') { introVideo.preload = 'auto'; introVideo.load(); } };
+humanCheckBox?.addEventListener('change', warmIntroVideo, { once: true });
+// Warm the 540p faststart rendition as soon as the main thread is idle (skipped on Save-Data / 2g links),
+// so "INICIAR INMERSIÓN" starts playback instantly instead of buffering after the click.
+{
+  const conn = navigator.connection;
+  const constrained = Boolean(conn && (conn.saveData || /(^|-)2g$/.test(String(conn.effectiveType || ''))));
+  if (!constrained) (window.requestIdleCallback || ((fn) => window.setTimeout(fn, 800)))(warmIntroVideo, { timeout: 2500 });
+}
+const humanCode = String(Math.floor(1000 + Math.random() * 9000));
+let humanVerified = false;
+if (humanCheckCode) humanCheckCode.textContent = humanCode;
+const updateHumanCheck = () => {
+  const checked = Boolean(humanCheckBox?.checked);
+  if (humanCheckChallenge) humanCheckChallenge.hidden = !checked;
+  if (humanCheckMark) humanCheckMark.classList.toggle('is-visible', checked);
+  if (humanCheckStatus) humanCheckStatus.textContent = checked ? 'Ahora escribe los 4 números mostrados.' : 'Selecciona el recuadro para comenzar.';
+  if (checked) humanCheckInput?.focus();
 };
 // This checkbox records multimedia consent only; it is deliberately not presented as
 // bot protection or identity verification. Server-side rate limits remain separate.
@@ -589,7 +607,7 @@ const sendCurrentMessage = async () => {
     const requestCognition = (modelEngine) => fetch('/api/v1/cognition/route', {
       method: 'POST',
       headers: { 'content-type': 'application/json', accept: 'application/json', 'x-session-id': sessionId },
-      body: JSON.stringify({ input, modelEngine, focusLens: 'general', history }),
+      body: JSON.stringify({ input, modelEngine, focusLens: window.IsabellaChatPlus?.getLens?.() ?? 'general', history }),
       signal: abortController.signal
     });
     const engine = selectEngine();
