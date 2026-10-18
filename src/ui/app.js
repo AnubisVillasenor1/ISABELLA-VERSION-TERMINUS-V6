@@ -3,12 +3,8 @@ const byId = (id) => document.getElementById(id);
 const intro = byId('cinematicIntro');
 const immersionGate = byId('immersionGate');
 const startImmersion = byId('startImmersion');
-const humanCheckBox = byId('humanCheckBox');
-const humanCheckChallenge = byId('humanCheckChallenge');
-const humanCheckCode = byId('humanCheckCode');
-const humanCheckInput = byId('humanCheckInput');
-const humanCheckMark = byId('humanCheckMark');
-const humanCheckStatus = byId('humanCheckStatus');
+const immersionConsent = byId('immersionConsent');
+const immersionConsentStatus = byId('immersionConsentStatus');
 const introVideo = byId('introVideo');
 const introScenes = [...document.querySelectorAll('.intro-scene')];
 const introProgressBar = byId('introProgressBar');
@@ -27,6 +23,8 @@ let introStartedAt = 0;
 let introTimer = 0;
 let introPausedAt = 0;
 let introWatchdog = 0;
+let introActive = false;
+let introMediaClockActive = false;
 let introLastVideoTime = -1;
 let introLastVideoProgressAt = 0;
 const formatIntroTime = (milliseconds) => {
@@ -35,25 +33,37 @@ const formatIntroTime = (milliseconds) => {
 };
 const markIntroVideoReady = () => {
   intro?.classList.add('media-ready');
-  intro?.classList.remove('media-stalled');
+  intro?.classList.remove('media-stalled', 'media-unavailable');
+  introMediaClockActive = Boolean(introVideo && Number.isFinite(introVideo.duration) && introVideo.duration > 1);
   introLastVideoProgressAt = performance.now();
 };
 const startIntroMedia = async () => {
   if (!introVideo) return;
   window.clearInterval(introWatchdog);
-  introVideo.currentTime = 0;
+  // The user's explicit consent is the gesture that unlocks playback. Ask the browser
+  // to warm the complete small web rendition before the intro sequence advances.
+  introVideo.preload = 'auto';
+  if (introVideo.readyState === HTMLMediaElement.HAVE_NOTHING) introVideo.load();
+  // On the first user gesture metadata may not exist yet; avoid an InvalidStateError.
+  if (introVideo.readyState >= HTMLMediaElement.HAVE_METADATA) {
+    try { introVideo.currentTime = 0; } catch { /* the browser will start at its current position */ }
+  }
   introVideo.muted = false;
-  introVideo.volume = 1;
-  const playVideo = async () => {
+  introVideo.volume = 0.82;
+  try {
+    await introVideo.play();
+    markIntroVideoReady();
+  } catch {
+    // Some browser/device combinations block audio despite the click; continue only
+    // if muted playback is allowed, and keep the CSS motion background as a fallback.
+    introVideo.muted = true;
     try {
       await introVideo.play();
       markIntroVideoReady();
     } catch {
-      introVideo.muted = true;
-      await introVideo.play().then(markIntroVideoReady).catch(() => intro?.classList.add('media-unavailable'));
+      intro?.classList.add('media-unavailable', 'media-stalled');
     }
-  };
-  await playVideo();
+  }
   introLastVideoTime = introVideo.currentTime;
   introWatchdog = window.setInterval(() => {
     if (!introVideo || introVideo.paused || introVideo.ended) return;
@@ -64,11 +74,9 @@ const startIntroMedia = async () => {
       intro?.classList.remove('media-stalled');
       return;
     }
-    if (now - introLastVideoProgressAt > 1200) {
-      intro?.classList.add('media-stalled');
-      void playVideo();
-      introLastVideoProgressAt = now;
-    }
+    // Do not spam play() while a network buffer is empty; browsers already retry
+    // automatically. Hide only the video layer so the lightweight animated scene shows.
+    if (now - introLastVideoProgressAt > 1400) intro?.classList.add('media-stalled');
   }, 500);
 };
 const stopIntroMedia = () => {
@@ -96,44 +104,136 @@ const updateHumanCheck = () => {
   if (humanCheckStatus) humanCheckStatus.textContent = checked ? 'Ahora escribe los 4 números mostrados.' : 'Selecciona el recuadro para comenzar.';
   if (checked) humanCheckInput?.focus();
 };
-const validateHumanCheck = () => {
-  humanVerified = Boolean(humanCheckBox?.checked && humanCheckInput?.value === humanCode);
-  if (startImmersion) startImmersion.disabled = !humanVerified;
-  if (humanCheckStatus) humanCheckStatus.textContent = humanVerified ? 'Verificación completada. El video está listo para iniciar.' : 'El código no coincide todavía.';
-  humanCheckInput?.classList.toggle('is-valid', humanVerified);
+// This checkbox records multimedia consent only; it is deliberately not presented as
+// bot protection or identity verification. Server-side rate limits remain separate.
+const updateImmersionConsent = () => {
+  const accepted = Boolean(immersionConsent?.checked);
+  if (startImmersion) startImmersion.disabled = !accepted;
+  if (immersionConsentStatus) {
+    immersionConsentStatus.textContent = accepted
+      ? 'Autorización registrada. El video se está preparando para una reproducción fluida.'
+      : 'La reproducción permanece desactivada hasta que la autorices.';
+  }
+  if (accepted && introVideo) {
+    introVideo.preload = 'auto';
+    if (introVideo.readyState === HTMLMediaElement.HAVE_NOTHING) introVideo.load();
+  }
 };
-humanCheckBox?.addEventListener('change', updateHumanCheck);
-humanCheckInput?.addEventListener('input', validateHumanCheck);
+immersionConsent?.addEventListener('change', updateImmersionConsent);
+introVideo?.addEventListener('waiting', () => intro?.classList.add('media-stalled'));
+introVideo?.addEventListener('stalled', () => intro?.classList.add('media-stalled'));
+introVideo?.addEventListener('playing', markIntroVideoReady);
+introVideo?.addEventListener('timeupdate', () => {
+  if (!introVideo) return;
+  introLastVideoTime = introVideo.currentTime;
+  introLastVideoProgressAt = performance.now();
+  introMediaClockActive = Number.isFinite(introVideo.duration) && introVideo.duration > 1;
+  intro?.classList.remove('media-stalled');
+});
+introVideo?.addEventListener('error', () => {
+  introMediaClockActive = false;
+  intro?.classList.add('media-unavailable', 'media-stalled');
+});
 introVideo?.addEventListener('loadedmetadata', () => {
   if (Number.isFinite(introVideo.duration) && introVideo.duration > 1) {
-    introTotalMs = Math.max(INTRO_SCENE_MS * introScenes.length, introVideo.duration * 1000);
+    // Use actual duration; distributing 12 scenes proportionally prevents early end
+    // or a long tail on media whose duration differs from the fallback estimate.
+    introTotalMs = introVideo.duration * 1000;
+    introMediaClockActive = !introVideo.paused;
   }
 });
 introVideo?.addEventListener('ended', () => {
   dismissIntro();
 });
 const dismissIntro = () => {
-  window.clearInterval(introTimer);
+  const restoreFocus = document.body.classList.contains('intro-lock');
+  introActive = false;
+  if (introTimer) window.cancelAnimationFrame(introTimer);
+  introTimer = 0;
+  window.clearInterval(introWatchdog);
   stopIntroMedia();
   immersionGate?.classList.add('is-accepted');
   intro?.classList.add('is-dismissed');
   document.body.classList.remove('intro-lock');
+  if (restoreFocus) byId('enterChat')?.focus({ preventScroll: true });
 };
-const advanceIntro = (elapsed = performance.now() - introStartedAt) => {
+const getIntroElapsed = () => {
+  if (
+    introMediaClockActive &&
+    introVideo &&
+    Number.isFinite(introVideo.duration) &&
+    introVideo.duration > 1
+  ) {
+    // Tie scene transitions to decoded media time; buffering freezes the story instead
+    // of letting titles outrun the video, then desynchronizing when playback resumes.
+    return (introVideo.currentTime / introVideo.duration) * introTotalMs;
+  }
+  return performance.now() - introStartedAt;
+};
+const advanceIntro = (elapsed = getIntroElapsed()) => {
   if (!intro || !introScenes.length) return;
   const boundedElapsed = Math.max(0, Math.min(elapsed, introTotalMs));
-  const sceneIndex = Math.min(introScenes.length - 1, Math.floor(boundedElapsed / INTRO_SCENE_MS));
+  const sceneIndex = Math.min(
+    introScenes.length - 1,
+    Math.floor((boundedElapsed / Math.max(1, introTotalMs)) * introScenes.length),
+  );
   intro.dataset.scene = String(sceneIndex);
   introScenes.forEach((scene, index) => {
     const active = index === sceneIndex;
     scene.classList.toggle('is-active', active);
     scene.setAttribute('aria-hidden', String(!active));
+    scene.inert = !active;
   });
   if (introSceneLabel) introSceneLabel.textContent = introLabels[sceneIndex] || `SECUENCIA ${String(sceneIndex + 1).padStart(2, '0')}`;
   if (introProgressBar) introProgressBar.style.width = `${(boundedElapsed / introTotalMs) * 100}%`;
   if (introTimecode) introTimecode.textContent = `${formatIntroTime(boundedElapsed)} / ${formatIntroTime(introTotalMs)}`;
   if (boundedElapsed >= introTotalMs) dismissIntro();
 };
+document.addEventListener('visibilitychange', () => {
+  if (!introActive) return;
+  if (document.hidden) {
+    if (!introPausedAt) introPausedAt = performance.now();
+    introVideo?.pause();
+    return;
+  }
+  if (introPausedAt) {
+    introStartedAt += performance.now() - introPausedAt;
+    introPausedAt = 0;
+  }
+  if (introVideo && introVideo.paused && !introVideo.ended) {
+    void introVideo.play().then(markIntroVideoReady).catch(() => {
+      introVideo.muted = true;
+      void introVideo.play().then(markIntroVideoReady).catch(() => {
+        intro?.classList.add('media-unavailable', 'media-stalled');
+      });
+    });
+  }
+});
+
+const trapImmersionDialogFocus = (event) => {
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    dismissIntro();
+    return;
+  }
+  if (event.key !== 'Tab' || !immersionGate) return;
+  const focusable = [...immersionGate.querySelectorAll('input:not(:disabled), button:not(:disabled), a[href], [tabindex]:not([tabindex="-1"])')]
+    .filter((node) => !node.hasAttribute('hidden') && node.getAttribute('aria-hidden') !== 'true');
+  if (!focusable.length) {
+    event.preventDefault();
+    return;
+  }
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+};
+
 if (intro) {
   const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   const cinematicDisabled = new URLSearchParams(window.location.search).get('intro') === '0';
@@ -144,26 +244,32 @@ if (intro) {
     dismissIntro();
   } else {
     document.body.classList.add('intro-lock');
-    introScenes.forEach((scene, index) => scene.setAttribute('aria-hidden', String(index !== 0)));
+    introScenes.forEach((scene, index) => {
+      const inactive = index !== 0;
+      scene.setAttribute('aria-hidden', String(inactive));
+      scene.inert = inactive;
+    });
+    immersionGate?.addEventListener('keydown', trapImmersionDialogFocus);
+    immersionConsent?.focus({ preventScroll: true });
     skipIntro?.addEventListener('click', dismissIntro);
     intro.querySelector('.intro-enter')?.addEventListener('click', dismissIntro);
     const beginImmersion = () => {
-      if (!humanVerified) {
-        humanCheckStatus?.focus?.();
+      if (!immersionConsent?.checked) {
+        immersionConsent?.focus?.();
         return;
       }
       immersionGate?.classList.add('is-accepted');
-      void startIntroMedia();
+      introActive = true;
+      introPausedAt = 0;
       introStartedAt = performance.now();
-      introTimer = window.setInterval(() => {
-        if (document.hidden) {
-          if (!introPausedAt) introPausedAt = performance.now();
-          return;
-        }
-        if (introPausedAt) { introStartedAt += performance.now() - introPausedAt; introPausedAt = 0; }
-        advanceIntro();
-      }, 80);
+      void startIntroMedia();
+      const renderIntroFrame = () => {
+        if (!introActive) return;
+        if (!document.hidden && !introPausedAt) advanceIntro();
+        if (introActive) introTimer = window.requestAnimationFrame(renderIntroFrame);
+      };
       advanceIntro(0);
+      introTimer = window.requestAnimationFrame(renderIntroFrame);
     };
     startImmersion?.addEventListener('click', beginImmersion, { once: true });
   }
@@ -238,11 +344,13 @@ let canUseExternalEngine = false;
 const ENGINE_LABELS = {
   sovereign: 'MOTOR · LOCAL SOBERANO',
   'sovereign-fallback': 'MOTOR · RESPALDO LOCAL',
-  'openrouter-free': 'MOTOR · OPENROUTER (GRATIS)',
-  'huggingface-free': 'MOTOR · HUGGING FACE (GRATIS)',
+  'openrouter-free': 'MOTOR · OPENROUTER FREE',
+  'huggingface-provider': 'MOTOR · HUGGING FACE (OPT-IN DE PAGO)',
+  'compatible-provider': 'MOTOR · API COMPATIBLE (OPT-IN DE PAGO)',
+  'perplexity-router': 'MOTOR · PERPLEXITY ROUTER (OPT-IN DE PAGO)',
   'open-science': 'MOTOR · PASARELA ABIERTA',
-  'keyless-free': 'MOTOR · PROVEEDOR LIBRE SIN CLAVE',
-  gemini: 'MOTOR · GEMINI',
+  'keyless-free': 'MOTOR · PROVEEDOR EXTERNO SIN CLAVE',
+  gemini: 'MOTOR · GEMINI (OPT-IN DE PAGO)',
   gateway: 'MOTOR · VERCEL AI GATEWAY',
   blocked: 'MOTOR · BLOQUEADO POR GOBERNANZA'
 };
@@ -268,10 +376,24 @@ const setResponseMeta = (paragraph, meta) => {
     chip.textContent = `${BAND_LABELS[band] || band}${meta.trafficLight.humanReviewRequired ? ' · REVISIÓN HUMANA' : ''}`;
     row.append(chip);
   }
-  if (engine.startsWith('sovereign') || engine === 'gateway' || engine === 'open-science' || engine === 'keyless-free') {
+  const externalEngines = new Set([
+    'gateway', 'open-science', 'openrouter-free', 'huggingface-provider',
+    'compatible-provider', 'perplexity-router', 'keyless-free', 'gemini'
+  ]);
+  if (engine.startsWith('sovereign') || externalEngines.has(engine)) {
     const note = document.createElement('span');
     note.className = 'meta-chip engine-note';
-    note.textContent = engine === 'gateway' || engine === 'open-science' || engine === 'keyless-free' ? 'AGENTE EXTERNO · RESPUESTA GENERATIVA' : meta.modelConfigured ? 'PROVEEDOR DISPONIBLE · FALLBACK LOCAL' : 'MODO LOCAL (SIN PROVEEDOR EXTERNO)';
+    const engineNotes = {
+      gateway: 'MODELO FREE EN PASARELA EXTERNA',
+      'open-science': 'PASARELA EXTERNA · RESPUESTA GENERATIVA',
+      'openrouter-free': 'RUTA FREE · DISPONIBILIDAD SEGÚN CUOTA DEL PROVEEDOR',
+      'huggingface-provider': 'API EXTERNA · OPT-IN DE PAGO ACTIVO',
+      'compatible-provider': 'API EXTERNA · MODELO EXPLÍCITO Y OPT-IN DE PAGO',
+      'perplexity-router': 'API EXTERNA · MODELO EXPLÍCITO Y OPT-IN DE PAGO',
+      'keyless-free': 'PROVEEDOR EXTERNO · OPT-IN DEL OPERADOR',
+      gemini: 'API EXTERNA · OPT-IN DE PAGO'
+    };
+    note.textContent = engineNotes[engine] || (meta.modelConfigured ? 'PROVEEDOR CONFIGURADO · FALLBACK LOCAL DISPONIBLE' : 'MODO LOCAL (SIN PROVEEDOR EXTERNO)');
     row.append(note);
   }
   row.hidden = row.childElementCount === 0;
