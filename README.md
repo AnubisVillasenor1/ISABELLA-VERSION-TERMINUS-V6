@@ -15,6 +15,7 @@ Evidencia observada en el despliegue Vercel de `main`:
 - `GET /api/v1/readyz`: HTTP 503; readiness profunda bloqueada.
 - Bloqueos informados: falta `BOOKPI_INTEGRITY_SECRET` válido, persistencia Atlas/Supabase no saludable, IKES degradado y ledger BookPI heredado volátil.
 - La exportación de telemetría no está verificada.
+- La protección SSO de Vercel está habilitada para despliegues que no usan un dominio personalizado; confirmar el modo de acceso antes de abrirlo al público.
 - Los workflows más recientes de CI y Repository Assurance consultados para el SHA de referencia terminaron en `failure`; la causa raíz requiere logs completos y una ejecución reproducible.
 
 El estado `READY` de Vercel indica que la plataforma completó el despliegue, no que las dependencias de la aplicación estén listas. No declarar producción hasta que CI esté verde para el mismo SHA, `/api/v1/readyz` responda 200 con evidencia válida, la persistencia sea durable y la inferencia generativa aprobada pase pruebas reales.
