@@ -1504,3 +1504,33 @@ body.chat-focus .topbar,body.chat-focus .side-rail,body.chat-focus .rail-launche
 #historyTop{background:rgba(255,255,255,.03);color:var(--ent-text);border:1px solid var(--ent-line)}
 @media(max-width:1480px){#historyTop .header-action-label{display:none}#historyTop{width:38px;padding:0;justify-content:center}}
 /* ==== END TERMINUS ENTERPRISE LAYER v2 ==== */
+
+
+/* UI integrity patch — consistent responsive navigation and stable intro media clock. */
+.rail-launcher{z-index:45}
+.side-rail{z-index:44;overscroll-behavior:contain;overflow-y:auto}
+@media(max-width:860px){
+  .side-rail,.side-rail.rail-left,.side-rail.rail-right{
+    position:fixed;top:76px;bottom:12px;display:flex;flex-direction:column;
+    width:min(300px,calc(100vw - 48px));max-height:calc(100dvh - 88px);
+    margin:0;padding:12px;gap:8px;overflow-x:hidden;overflow-y:auto;
+    background:rgba(5,10,20,.98);border:1px solid var(--line);
+    box-shadow:0 24px 70px rgba(0,0,0,.55);transform:translateX(calc(-100% - 20px));
+    transition:transform .22s ease;z-index:44;
+  }
+  .side-rail.rail-left{left:8px;right:auto}
+  .side-rail.rail-right{right:8px;left:auto;transform:translateX(calc(100% + 20px))}
+  .side-rail.rail-left.is-open,.side-rail.rail-right.is-open{transform:translateX(0)}
+  .side-rail .rail-panel{flex:0 0 auto;min-width:0}
+  .side-rail .rail-panel nav{max-height:35vh;overflow:auto}
+  .rail-launcher{top:auto;bottom:16px;transform:none;writing-mode:horizontal-tb;min-height:42px;padding:10px 12px}
+  .rail-launcher-left{left:10px;right:auto}
+  .rail-launcher-right{right:10px;left:auto}
+}
+@media(max-width:480px){
+  .rail-launcher{font-size:8px;letter-spacing:.08em}
+  .side-rail,.side-rail.rail-left,.side-rail.rail-right{width:min(284px,calc(100vw - 32px))}
+}
+@media(prefers-reduced-motion:reduce){
+  .side-rail,.rail-launcher{transition:none!important}
+}
