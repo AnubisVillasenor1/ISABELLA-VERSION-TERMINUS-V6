@@ -24,6 +24,7 @@ export class DeadlineBudget {
   constructor(
     private readonly totalMs: number,
     private readonly clock: DeadlineClock = SYSTEM_CLOCK,
+    private readonly parentSignal?: AbortSignal,
   ) {
     if (!Number.isFinite(totalMs) || totalMs <= 0) throw new Error("DEADLINE: totalMs must be a positive finite number");
     this.startedAt = clock.now();
@@ -37,9 +38,14 @@ export class DeadlineBudget {
     return Math.max(0, this.totalMs - this.elapsedMs());
   }
 
-  /** True when no further attempt should be started. */
+  /** True only when the caller disconnected/cancelled; timeout expiry is separate. */
+  cancelled(): boolean {
+    return this.parentSignal?.aborted ?? false;
+  }
+
+  /** True when the caller cancelled or no useful attempt window remains. */
   expired(): boolean {
-    return this.remainingMs() < MIN_ATTEMPT_MS;
+    return this.cancelled() || this.remainingMs() < MIN_ATTEMPT_MS;
   }
 
   /** Timeout for the next attempt: never longer than the per-attempt cap nor the remaining budget. */
@@ -49,7 +55,8 @@ export class DeadlineBudget {
   }
 
   signal(perAttemptMs: number): AbortSignal {
-    return AbortSignal.timeout(this.attemptMs(perAttemptMs));
+    const timeout = AbortSignal.timeout(this.attemptMs(perAttemptMs));
+    return this.parentSignal ? AbortSignal.any([timeout, this.parentSignal]) : timeout;
   }
 }
 

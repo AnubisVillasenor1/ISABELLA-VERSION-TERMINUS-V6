@@ -44,23 +44,24 @@ interface CandidateSpec {
 }
 
 /**
- * Deterministic, credential-gated candidate list for OpenAI-compatible
- * providers, in attempt order. A candidate is included only when both its key
- * and model are present; Isabella never invents credentials or silently
- * upgrades to a paid route. Ollama Cloud is OpenAI-compatible and defaults to
- * its documented base URL and a model observed available to the account.
+ * Candidate list for APIs whose billing/quota cannot be proven from an API key.
+ * These providers are considered potentially billable: they are completely
+ * disabled unless the operator opts into paid fallbacks and supplies an
+ * explicit model ID for every provider. A provider key alone is not consent to
+ * spend money, and default model IDs must not silently select a tariff.
  */
 export function buildOpenAICompatibleCandidates(
   env: Readonly<Record<string, string | undefined>>,
 ): readonly OpenAICompatibleCandidate[] {
+  if (env.ALLOW_PAID_PROVIDER_FALLBACK !== "true") return Object.freeze([]);
   const ollamaBase = (env.OLLAMA_BASE_URL?.trim() || "https://ollama.com/v1").replace(/\/+$/, "");
   const specs: readonly CandidateSpec[] = [
-    { name: "ollama", key: env.OLLAMA_API_KEY, url: `${ollamaBase}/chat/completions`, model: env.OLLAMA_MODEL?.trim() || "gpt-oss:20b" },
-    { name: "groq", key: env.GROQ_API_KEY, url: "https://api.groq.com/openai/v1/chat/completions", model: env.GROQ_MODEL?.trim() || "openai/gpt-oss-20b" },
-    { name: "cerebras", key: env.CEREBRAS_API_KEY, url: "https://api.cerebras.ai/v1/chat/completions", model: env.CEREBRAS_MODEL?.trim() || "llama-3.1-8b" },
-    { name: "together", key: env.TOGETHER_API_KEY, url: "https://api.together.xyz/v1/chat/completions", model: env.TOGETHER_MODEL?.trim() || "meta-llama/Llama-3.3-70B-Instruct-Turbo" },
-    { name: "deepinfra", key: env.DEEPINFRA_API_KEY, url: "https://api.deepinfra.com/v1/openai/chat/completions", model: env.DEEPINFRA_MODEL?.trim() || "meta-llama/Meta-Llama-3.1-8B-Instruct" },
-    { name: "fireworks", key: env.FIREWORKS_API_KEY, url: "https://api.fireworks.ai/inference/v1/chat/completions", model: env.FIREWORKS_MODEL?.trim() || "accounts/fireworks/models/llama-v3p1-8b-instruct" },
+    { name: "ollama", key: env.OLLAMA_API_KEY, url: `${ollamaBase}/chat/completions`, model: env.OLLAMA_MODEL?.trim() },
+    { name: "groq", key: env.GROQ_API_KEY, url: "https://api.groq.com/openai/v1/chat/completions", model: env.GROQ_MODEL?.trim() },
+    { name: "cerebras", key: env.CEREBRAS_API_KEY, url: "https://api.cerebras.ai/v1/chat/completions", model: env.CEREBRAS_MODEL?.trim() },
+    { name: "together", key: env.TOGETHER_API_KEY, url: "https://api.together.xyz/v1/chat/completions", model: env.TOGETHER_MODEL?.trim() },
+    { name: "deepinfra", key: env.DEEPINFRA_API_KEY, url: "https://api.deepinfra.com/v1/openai/chat/completions", model: env.DEEPINFRA_MODEL?.trim() },
+    { name: "fireworks", key: env.FIREWORKS_API_KEY, url: "https://api.fireworks.ai/inference/v1/chat/completions", model: env.FIREWORKS_MODEL?.trim() },
   ];
   const candidates: OpenAICompatibleCandidate[] = [];
   for (const spec of specs) {

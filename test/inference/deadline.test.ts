@@ -38,6 +38,19 @@ describe("DeadlineBudget", () => {
     expect(b.elapsedMs()).toBeLessThanOrEqual(20_000);
   });
 
+
+  it("propagates caller cancellation to provider signals and prevents retries", () => {
+    const controller = new AbortController();
+    const budget = new DeadlineBudget(20_000, undefined, controller.signal);
+    expect(budget.expired()).toBe(false);
+    const signal = budget.signal(8_000);
+    expect(signal.aborted).toBe(false);
+    controller.abort();
+    expect(budget.cancelled()).toBe(true);
+    expect(budget.expired()).toBe(true);
+    expect(signal.aborted).toBe(true);
+  });
+
   it("rejects invalid input", () => {
     expect(() => new DeadlineBudget(0)).toThrow();
     expect(() => new DeadlineBudget(Number.NaN)).toThrow();

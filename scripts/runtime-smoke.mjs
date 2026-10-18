@@ -139,6 +139,9 @@ try {
   if (process.env.ALLOW_PAID_PROVIDER_FALLBACK !== "true") {
     assert.notEqual(explicitGeminiBody.responseEngine, "gemini", "Gemini must not be invoked without explicit paid-provider opt-in");
     assert.notEqual(explicitGeminiBody.responseEngine, "open-science", "paid AI Gateway must not be invoked without explicit paid-provider opt-in");
+    assert.notEqual(explicitGeminiBody.responseEngine, "perplexity-router", "Perplexity Router must remain disabled without paid-provider opt-in");
+    assert.notEqual(explicitGeminiBody.responseEngine, "compatible-provider", "compatible API providers must remain disabled without paid-provider opt-in");
+    assert.notEqual(explicitGeminiBody.responseEngine, "huggingface-provider", "Hugging Face must remain disabled without paid-provider opt-in");
   }
   const savedProviderEnv = {
     openRouterKey: process.env.OPENROUTER_API_KEY,
@@ -172,6 +175,92 @@ try {
   }
   console.log("PUBLIC_API_GUARDRAILS_OK", JSON.stringify({ blankInput: emptyInput.status, oversizedInput: oversizedInput.status, unscopedMemory: unscopedMemory.status, destructiveRequest: destructiveRequest.status }));
   console.log("LOCAL_CONVERSATION_SMOKE_OK", JSON.stringify({ health: health.status, chat: chat.status, followUp: followUp.status, responseEngine: chatBody.responseEngine }));
+
+  // Cost guard integration test: even if the environment contains credentials and
+  // model IDs for potentially billable providers, no such endpoint may be called unless
+  // ALLOW_PAID_PROVIDER_FALLBACK is exactly "true".
+  const costEnvKeys = [
+    "OPENROUTER_API_KEY", "OPENROUTER_FREE_MODEL", "HF_TOKEN", "HF_FREE_MODELS",
+    "PERPLEXITY_API_KEY", "PERPLEXITY_ROUTER_MODEL", "OLLAMA_API_KEY", "OLLAMA_MODEL",
+    "GROQ_API_KEY", "GROQ_MODEL", "CEREBRAS_API_KEY", "CEREBRAS_MODEL",
+    "TOGETHER_API_KEY", "TOGETHER_MODEL", "DEEPINFRA_API_KEY", "DEEPINFRA_MODEL",
+    "FIREWORKS_API_KEY", "FIREWORKS_MODEL", "ALLOW_PAID_PROVIDER_FALLBACK",
+  ];
+  const costEnvBefore = Object.fromEntries(costEnvKeys.map((key) => [key, process.env[key]]));
+  const providerHosts = /^(https?:\/\/)?(openrouter\.ai|router\.huggingface\.co|api-inference\.huggingface\.co|api\.perplexity\.ai|ollama\.com|api\.groq\.com|api\.cerebras\.ai|api\.together\.xyz|api\.deepinfra\.com|api\.fireworks\.ai)(?=\/|:|$)/i;
+  const contactedBillableProviders = [];
+  const originalGlobalFetch = globalThis.fetch;
+  try {
+    process.env.OPENROUTER_API_KEY = "smoke-placeholder";
+    process.env.OPENROUTER_FREE_MODEL = "publisher/paid-model";
+    process.env.HF_TOKEN = "smoke-placeholder";
+    process.env.HF_FREE_MODELS = "publisher/model";
+    process.env.PERPLEXITY_API_KEY = "smoke-placeholder";
+    process.env.PERPLEXITY_ROUTER_MODEL = "publisher/paid-model";
+    process.env.OLLAMA_API_KEY = "smoke-placeholder";
+    process.env.OLLAMA_MODEL = "publisher/paid-model";
+    process.env.GROQ_API_KEY = "smoke-placeholder";
+    process.env.GROQ_MODEL = "publisher/paid-model";
+    process.env.CEREBRAS_API_KEY = "smoke-placeholder";
+    process.env.CEREBRAS_MODEL = "publisher/paid-model";
+    process.env.TOGETHER_API_KEY = "smoke-placeholder";
+    process.env.TOGETHER_MODEL = "publisher/paid-model";
+    process.env.DEEPINFRA_API_KEY = "smoke-placeholder";
+    process.env.DEEPINFRA_MODEL = "publisher/paid-model";
+    process.env.FIREWORKS_API_KEY = "smoke-placeholder";
+    process.env.FIREWORKS_MODEL = "publisher/paid-model";
+    process.env.ALLOW_PAID_PROVIDER_FALLBACK = "false";
+    globalThis.fetch = async (input, init) => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      if (providerHosts.test(url)) {
+        contactedBillableProviders.push(new URL(url).host);
+        throw new Error("SMOKE_PAID_PROVIDER_MUST_NOT_BE_CALLED");
+      }
+      return originalGlobalFetch(input, init);
+    };
+    const costGuard = await originalGlobalFetch(`${baseUrl}/api/v1/cognition/route`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        input: "Verifica que las API potencialmente facturables estén bloqueadas.",
+        modelEngine: "open-science",
+        focusLens: "general",
+        history: [],
+      }),
+      signal: AbortSignal.timeout(10_000),
+    });
+    const costGuardBody = await costGuard.json();
+    assert.equal(costGuard.status, 200);
+    assert.equal(costGuardBody.responseEngine, "sovereign-fallback", "paid-capable providers must not be used when opt-in is false");
+    assert.deepEqual(contactedBillableProviders, [], "no paid-capable provider HTTP request may be sent without opt-in");
+    console.log("PAID_PROVIDER_OPT_IN_GUARD_OK", JSON.stringify({ responseEngine: costGuardBody.responseEngine, externalProviderCalls: 0 }));
+
+    // An explicit open-science selection remains open-only even if the operator
+    // enabled paid fallbacks for other modes such as Auto or Gemini.
+    process.env.ALLOW_PAID_PROVIDER_FALLBACK = "true";
+    const openScienceGuard = await originalGlobalFetch(`${baseUrl}/api/v1/cognition/route`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        input: "Comprueba que Open Science no cambia a un proveedor facturable.",
+        modelEngine: "open-science",
+        focusLens: "general",
+        history: [],
+      }),
+      signal: AbortSignal.timeout(10_000),
+    });
+    const openScienceBody = await openScienceGuard.json();
+    assert.equal(openScienceGuard.status, 200);
+    assert.equal(openScienceBody.responseEngine, "sovereign-fallback", "Open Science mode must not fall through to paid-capable providers");
+    assert.deepEqual(contactedBillableProviders, [], "Open Science mode must remain open-only even when paid fallback is globally enabled");
+    console.log("OPEN_SCIENCE_PAID_ISOLATION_OK", JSON.stringify({ responseEngine: openScienceBody.responseEngine, externalProviderCalls: 0 }));
+  } finally {
+    globalThis.fetch = originalGlobalFetch;
+    for (const key of costEnvKeys) {
+      if (costEnvBefore[key] === undefined) delete process.env[key];
+      else process.env[key] = costEnvBefore[key];
+    }
+  }
 
   // Multimodal + speech HTTP surface: readiness is always disclosed; generation
   // capabilities must fail closed (HTTP 503) whenever no provider is configured.
@@ -225,7 +314,7 @@ try {
   });
   assert.equal(badAudio.status, 400, "transcription must reject missing audio/mime before any provider call");
   console.log("MULTIMODAL_SPEECH_GUARDRAILS_OK", JSON.stringify({ visionProviders: readinessBody.readiness.vision.length, imageProviders: readinessBody.readiness.image.length, tts: readinessBody.speech.textToSpeech }));
-  const gatewayCredentialsAvailable = Boolean(process.env.OPENROUTER_API_KEY || (process.env.HF_TOKEN && process.env.HF_FREE_MODELS));
+  const gatewayCredentialsAvailable = Boolean(process.env.OPENROUTER_API_KEY);
   if (gatewayCredentialsAvailable) {
     try {
       const llm = await fetch(`${baseUrl}/api/v1/cognition/route`, {
@@ -242,7 +331,7 @@ try {
       });
       const llmBody = await llm.json();
       assert.equal(llm.status, 200, `gateway chat returned HTTP ${llm.status}: ${JSON.stringify(llmBody)}`);
-      assert.ok(["openrouter-free", "huggingface-free"].includes(llmBody.responseEngine), `a real free/open provider must answer; got ${llmBody.responseEngine}`);
+      assert.equal(llmBody.responseEngine, "openrouter-free", `the billable-free gate must use a verified OpenRouter free route; got ${llmBody.responseEngine}`);
       assert.equal(typeof llmBody.generativeNarrative, "string");
       assert.ok(llmBody.generativeNarrative.trim().length > 0);
       console.log("EXTERNAL_MODEL_SMOKE_OK", JSON.stringify({ responseEngine: llmBody.responseEngine }));
@@ -252,7 +341,7 @@ try {
       console.warn("LLM_GATEWAY_SMOKE_FAILED_NONBLOCKING", message);
     }
   } else {
-    const message = "No free/open provider credentials are available for this smoke test. Configure OPENROUTER_API_KEY or both HF_TOKEN and HF_FREE_MODELS. Paid AI Gateway credentials do not count because paid fallback is opt-in.";
+    const message = "No OpenRouter credentials are available for this smoke test. Configure OPENROUTER_API_KEY and an eligible free model ID. Hugging Face/provider-credit routes are potentially billable and are not used by this gate.";
     if (process.env.ISABELLA_REQUIRE_LLM_SMOKE === "true") throw new Error(message);
     console.warn("LLM_GATEWAY_SMOKE_SKIPPED", message);
   }

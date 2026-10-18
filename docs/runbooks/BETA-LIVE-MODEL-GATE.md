@@ -4,14 +4,13 @@ This gate checks the real provider path; the ordinary build smoke test alone is 
 
 ## Configure once in GitHub
 
-In **Settings → Environments**, create an environment named `beta-live-model-gate`. Add required reviewers/protection rules if available, then store provider credentials as **environment secrets** (not repository-wide secrets):
+In **Settings → Environments**, create an environment named `beta-live-model-gate`. Add required reviewers/protection rules if available, then store `OPENROUTER_API_KEY` as an **environment secret** (not a repository-wide secret).
 
-- Add environment secret `OPENROUTER_API_KEY`, using a key created in the OpenRouter account; **or**
-- Add environment secret `HF_TOKEN` and repository variable `HF_FREE_MODELS` with one or more comma-separated model IDs that the account can actually access.
+Optional environment variable:
 
-Keep the workflow restricted to reviewed branch commits. The environment boundary ensures the job does not receive provider secrets until its environment protection is satisfied. Optional variables:
+- `OPENROUTER_FREE_MODEL`: defaults to `openrouter/free`. Only `openrouter/free` or model IDs ending in `:free` are allowed by this gate.
 
-- `OPENROUTER_FREE_MODEL`: defaults to `openrouter/free`. Use a specific eligible free model only if the account and provider support it.
+Hugging Face Inference has account/model-dependent credits and pricing; the gate no longer calls it while paid inference is disabled. A model ID or an env variable named `HF_FREE_MODELS` is not proof that requests are cost-free. Keep billable or uncertain providers out of this gate.
 
 Do not paste provider keys into issues, commits, workflow inputs, or chat. The workflow passes secrets only as environment variables and never prints them.
 
@@ -22,9 +21,9 @@ The `workflow_dispatch` workflow must first be present on the repository's defau
 1. Open **Actions → Isabella Beta Live Model Gate**.
 2. Select **Run workflow** on the branch being evaluated.
 3. Require the step **Build and require a real external model response** to pass.
-4. Inspect the build output for `EXTERNAL_MODEL_SMOKE_OK` and a response engine of `openrouter-free` or `huggingface-free`.
+4. Inspect the build output for `EXTERNAL_MODEL_SMOKE_OK` and a response engine of `openrouter-free`.
 
-The gate sets `ISABELLA_REQUIRE_LLM_SMOKE=true` and `ALLOW_PAID_PROVIDER_FALLBACK=false`. Missing credentials, a timeout, a provider error, an empty response, or a local fallback makes the job fail. It does not deploy to production or enable paid inference.
+The gate sets `ISABELLA_REQUIRE_LLM_SMOKE=true` and `ALLOW_PAID_PROVIDER_FALLBACK=false`. Before making a request, the workflow rejects `OPENROUTER_FREE_MODEL` values other than `openrouter/free` or IDs ending in `:free`. Missing credentials, a timeout, a provider error, an empty response, or a local fallback makes the job fail. It does not deploy to production or enable paid inference.
 
 ## Evidence boundary
 
