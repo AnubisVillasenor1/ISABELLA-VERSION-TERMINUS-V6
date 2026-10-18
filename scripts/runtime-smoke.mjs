@@ -28,9 +28,9 @@ try {
   assert.equal(statusResponse.status, 200, "runtime status must remain available");
   assert.match(statusResponse.headers.get("content-security-policy") ?? "", /default-src 'none'/, "API responses must retain the strict CSP and must not be overwritten by the UI policy");
   const statusBody = await statusResponse.json();
-  assert.ok(["VOLATILE_IN_MEMORY_HASH_CHAIN", "DURABLE_APPEND_ONLY_JSONL_LOCAL_SCOPE"].includes(statusBody.engines?.bookpi),
+  assert.ok(["VOLATILE_IN_MEMORY_HASH_CHAIN", "DURABLE_APPEND_ONLY_JSONL_LOCAL_SCOPE", "POSTGRES_SHARED_DURABLE"].includes(statusBody.engines?.bookpi),
     "BookPI status must disclose the configured backend without asserting external durability");
-  assert.ok(["PROCESS_MEMORY_NOT_DURABLE", "LOCAL_FILE_FSYNCED_NOT_SHARED_NOT_WORM"].includes(statusBody.engines?.bookpiDurability),
+  assert.ok(["PROCESS_MEMORY_NOT_DURABLE", "LOCAL_FILE_FSYNCED_NOT_SHARED_NOT_WORM", "POSTGRES_SHARED_DURABLE_NOT_WORM"].includes(statusBody.engines?.bookpiDurability),
     "BookPI status must disclose its durability scope");
 
   const readyz = await fetch(baseUrl + "/api/v1/readyz", { signal: AbortSignal.timeout(5_000) });
