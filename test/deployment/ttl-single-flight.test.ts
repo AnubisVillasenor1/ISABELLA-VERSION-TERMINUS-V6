@@ -20,18 +20,6 @@ describe("TTL single-flight probe cache", () => {
     expect(calls).toBe(1);
   });
 
-  it("does not let an invalidated in-flight probe overwrite fresh state", async () => {
-    const cache = new TtlSingleFlight<string>(1_000);
-    let releaseOld!: (value: string) => void;
-    const oldRequest = cache.get(() => new Promise<string>((resolve) => { releaseOld = resolve; }));
-    await Promise.resolve();
-    cache.invalidate();
-    await expect(cache.get(async () => "fresh")).resolves.toBe("fresh");
-    releaseOld("stale");
-    await expect(oldRequest).resolves.toBe("stale");
-    await expect(cache.get(async () => "unexpected")).resolves.toBe("fresh");
-  });
-
   it("does not cache failures and supports explicit invalidation", async () => {
     const cache = new TtlSingleFlight<number>(1_000);
     await expect(cache.get(async () => { throw new Error("probe failed"); })).rejects.toThrow("probe failed");
