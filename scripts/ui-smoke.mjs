@@ -25,6 +25,7 @@ assert.ok(fs.existsSync('src/ui/chat-plus.js') && !/innerHTML\s*=/.test(fs.readF
 assert.ok(fs.existsSync('src/assets/video/IntroVideoIsabella-web.mp4'), 'The fast-start web rendition of the intro must be present');
 assert.ok(server.includes('fs.readFileSync(path.join(uiPath, "cinematic.css")'), 'The stylesheet route must serve the current CSS asset');
 assert.ok(css.includes('.nav-links.is-open'), 'Responsive menu open state must be styled');
+assert.ok(css.includes('.side-rail.rail-left.is-open,.side-rail.rail-right.is-open'), 'Responsive side rails must be hidden until opened and reveal on click');
 assert.equal((html.match(/class="side-rail /g) || []).length, 2, 'The interface must render one folded rail on each side');
 assert.ok(html.includes('class="rail-panel"'), 'Each side rail must expose folded command panels');
 assert.ok(html.includes('class="command-palette"'), 'A native command palette must be available');
@@ -60,7 +61,11 @@ assert.ok(html.includes('/assets/video/IntroVideoIsabella.mp4'), 'Cinematic intr
 assert.ok(!html.includes('mux.com'), 'Cinematic intro must not depend on external Mux streaming');
 assert.ok(js.includes('startIntroMedia'), 'Intro video must have an explicit media lifecycle');
 assert.ok(ids.has('immersionConsent') && ids.has('immersionConsentStatus'), 'Intro requires a clear audiovisual consent control and status');
-assert.ok(!html.includes('humanCheckCode') && !js.includes('humanCheckCode'), 'The UI must not pretend a client-side display code is identity verification');
+assert.ok(!html.includes('humanCheckCode') && !js.includes('humanCheckCode') && !js.includes('humanCheckBox'), 'The UI must not contain stale client-side verification references');
+assert.ok(js.includes("navToggle?.addEventListener('click'"), 'Primary mobile navigation must have a live click handler');
+assert.ok(js.includes("closeSideRails"), 'Side rail state must be synchronized across both launchers');
+assert.ok(js.includes("introVideo.currentTime * 1000"), 'Intro narrative must use media time even before metadata is fully ready');
+assert.ok(!js.includes('bindNavigationSurface'), 'Internal links must use a single delegated handler, not duplicate scroll actions');
 assert.ok(!(/\sloop(?:\s|>)/i.test(html.match(/<video\b[^>]*>/i)?.[0] || '')), 'Intro video must stop at its narrative end rather than silently loop');
 assert.ok(js.includes('window.requestAnimationFrame(renderIntroFrame)'), 'Intro progress updates must use the animation frame scheduler');
 assert.ok(js.includes('introVideo.currentTime / introVideo.duration'), 'Narrative timing must follow media time to avoid scene drift during buffering');
