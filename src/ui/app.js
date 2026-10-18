@@ -517,9 +517,16 @@ if ('speechSynthesis' in window) {
 }
 const ISABELLA_PROSODY = Object.freeze({ rate: 0.93, pitch: 1.0, sentencePauseMs: 420 });
 let speechSession = 0;
+let activeSpeechAudio = null;
 const stopSpeech = () => {
   speechSession += 1;
   if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+  if (activeSpeechAudio) {
+    activeSpeechAudio.pause();
+    activeSpeechAudio.removeAttribute('src');
+    activeSpeechAudio.load();
+    activeSpeechAudio = null;
+  }
 };
 const speechChunks = (text, maxChunk = 220) => {
   const clean = String(text).replace(/\s+/g, ' ').trim();
@@ -537,32 +544,56 @@ const speechChunks = (text, maxChunk = 220) => {
   }
   return out;
 };
-const speak = (rawText) => {
+const speak = async (rawText) => {
   if (!soundOn) return;
-  const text = String(rawText).replace(/```[\s\S]*?```/g, ' bloque de código. ').replace(/[*_`#>|]+/g, '').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+  const text = String(rawText)
+    .replace(/`{3}[\\s\\S]*?`{3}/g, ' bloque de código. ')
+    .replace(/[\\x60*_#>|]+/g, '')
+    .replace(/\\[([^\\]]+)\\]\\([^)]+\\)/g, '$1')
+    .trim();
+  if (!text) return;
+  stopSpeech();
+  const session = speechSession;
+  // Prefer server TTS only when an operator explicitly configured a suitable model.
+  // If unavailable, fall back to local Web Speech without blocking the text answer.
+  try {
+    const response = await fetch('/api/v1/cognition/speech', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', accept: 'application/json', 'x-session-id': sessionId },
+      body: JSON.stringify({ text: text.slice(0, 2_000), format: 'mp3' }),
+      signal: AbortSignal.timeout(12_000)
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (session !== speechSession || !soundOn) return;
+    if (response.ok && payload.success === true && typeof payload.audio === 'string' && /^data:audio\\/(?:mpeg|mp3|wav);base64,/.test(payload.audio)) {
+      const audio = new Audio(payload.audio);
+      activeSpeechAudio = audio;
+      audio.preload = 'auto';
+      audio.onended = () => { if (activeSpeechAudio === audio) activeSpeechAudio = null; };
+      audio.onerror = () => { if (activeSpeechAudio === audio) activeSpeechAudio = null; };
+      try { await audio.play(); return; } catch { if (activeSpeechAudio === audio) activeSpeechAudio = null; }
+    }
+  } catch { /* Expected when server TTS is not configured or a provider is unavailable. */ }
+  if (session !== speechSession || !soundOn) return;
   if (!('speechSynthesis' in window)) {
     addMessage('La síntesis de voz no está disponible en este navegador. La respuesta permanece disponible como texto.', 'isabella');
     return;
   }
   const voice = chooseIsabellaVoice();
   if (!voice) {
-    addMessage('La síntesis de voz no tiene una voz española disponible en este navegador; la respuesta queda disponible en texto.', 'isabella');
+    addMessage('No hay una voz española disponible en este navegador y el TTS del servidor no está configurado. La respuesta permanece disponible como texto.', 'isabella');
     return;
   }
-  stopSpeech();
-  // Prosody mirrors ISABELLA_PROSODY (src/inference/voice-profile.ts): unhurried mid-female register,
-  // sentence-sized chunks so speech starts after the first sentence (lower perceived latency).
   const chunks = speechChunks(text);
-  const sessionId = ++speechSession;
   const playChunk = (index) => {
-    if (sessionId !== speechSession || index >= chunks.length) return;
+    if (session !== speechSession || index >= chunks.length) return;
     const utterance = new SpeechSynthesisUtterance(chunks[index]);
     utterance.voice = voice;
-    utterance.lang = voice.lang;
+    utterance.lang = voice.lang || 'es-MX';
     utterance.rate = ISABELLA_PROSODY.rate;
     utterance.pitch = ISABELLA_PROSODY.pitch;
     utterance.onend = () => window.setTimeout(() => playChunk(index + 1), ISABELLA_PROSODY.sentencePauseMs);
-    utterance.onerror = () => { speechSession += 1; };
+    utterance.onerror = () => { if (session === speechSession) speechSession += 1; };
     window.speechSynthesis.speak(utterance);
   };
   playChunk(0);

@@ -38,7 +38,9 @@ interface GroqSpeechConfig {
 }
 
 const DEFAULT_GROQ_BASE = "https://api.groq.com/openai/v1";
-const DEFAULT_TTS_MODEL = "canopylabs/orpheus-v1-english";
+// Do not silently select an English-only model for Spanish-language output.
+// Operators must explicitly configure a model suitable for their target language.
+const DEFAULT_TTS_MODEL = "";
 const DEFAULT_TTS_VOICE = "troy";
 const DEFAULT_STT_MODEL = "whisper-large-v3";
 
@@ -88,7 +90,7 @@ function groqSpeechConfig(env: Record<string, string | undefined>): GroqSpeechCo
 export function describeSpeechReadiness(env: Record<string, string | undefined>): SpeechReadiness {
   const config = groqSpeechConfig(env);
   return {
-    textToSpeech: config !== null,
+    textToSpeech: config !== null && config.ttsModel.length > 0,
     speechToText: config !== null,
     providers: config ? ["groq"] : [],
   };
@@ -103,7 +105,7 @@ export async function synthesizeSpeech(
   input: { text: string; voice?: string; format?: "wav" | "mp3"; timeoutMs?: number },
 ): Promise<SynthesizedSpeech | null> {
   const config = groqSpeechConfig(env);
-  if (!config) return null;
+  if (!config || !config.ttsModel) return null;
   const text = nonEmpty(input.text)?.slice(0, 2_000);
   if (!text) return null;
   const format = input.format === "mp3" ? "mp3" : "wav";
