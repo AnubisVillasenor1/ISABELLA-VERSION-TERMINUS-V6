@@ -84,6 +84,9 @@ assert.ok(js.includes('scene.inert = !active'), 'Inactive intro scenes must be r
 assert.ok(js.includes('readyState >= HTMLMediaElement.HAVE_METADATA'), 'Intro rewind must guard against seeking before metadata loads');
 assert.ok(css.includes('.cinematic-intro.media-stalled .intro-video{visibility:hidden}'), 'Stalled video must reveal the CSS scene fallback');
 assert.ok(js.includes("addEventListener('waiting'"), 'Buffering must trigger a visible-media fallback instead of repeated play() attempts');
+assert.ok(js.includes('introMediaFallbackLocked'), 'Intro fallback must be terminal for the current playback to prevent late media events from rewinding scenes');
+assert.ok(js.includes('stalledFor > 5000'), 'A prolonged media stall must switch to the CSS fallback instead of freezing the narrative indefinitely');
+assert.ok(js.includes('introStartedAt = now - Math.max(0, introVideo.currentTime * 1000)'), 'Switching to the fallback must preserve elapsed media time');
 assert.ok(html.slice(html.indexOf('id="immersionGate"'), html.indexOf('<video id="introVideo"')).includes('id="skipIntro"'), 'The intro bypass must remain inside the modal consent gate');
 assert.ok(js.includes('trapImmersionDialogFocus') && js.includes("event.key === 'Escape'"), 'The consent dialog must trap keyboard focus and close on Escape');
 assert.ok(js.includes("immersionConsent?.focus({ preventScroll: true })"), 'Keyboard focus must enter the consent dialog on open');
