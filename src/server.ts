@@ -852,11 +852,17 @@ app.get("/api/v1/healthz", (_req, res) => {
 });
 
 app.get("/api/v1/status", (_req, res) => {
-  const localBookPiConfigured = Boolean(process.env.BOOKPI_LEDGER_PATH?.trim());
-  const bookPiBackend = localBookPiConfigured ? "DURABLE_APPEND_ONLY_JSONL_LOCAL_SCOPE" : "VOLATILE_IN_MEMORY_HASH_CHAIN";
-  const bookPiDurability = localBookPiConfigured
-    ? "LOCAL_FILE_FSYNCED_NOT_SHARED_NOT_WORM"
-    : "PROCESS_MEMORY_NOT_DURABLE";
+  // Report the adapter actually selected at startup, not the unrelated legacy BOOKPI_LEDGER_PATH.
+  const bookPiBackend = pipelineBookPi.backend === "POSTGRES"
+    ? "POSTGRES_SHARED_DURABLE"
+    : pipelineBookPi.backend === "DURABLE_JSONL_LOCAL"
+      ? "DURABLE_APPEND_ONLY_JSONL_LOCAL_SCOPE"
+      : "VOLATILE_IN_MEMORY_HASH_CHAIN";
+  const bookPiDurability = pipelineBookPi.backend === "POSTGRES"
+    ? "POSTGRES_SHARED_DURABLE_NOT_WORM"
+    : pipelineBookPi.backend === "DURABLE_JSONL_LOCAL"
+      ? "LOCAL_FILE_FSYNCED_NOT_SHARED_NOT_WORM"
+      : "PROCESS_MEMORY_NOT_DURABLE";
   res.json({
     runtime: "Isabella Genesis TINA",
     version: "v40.0.0",
