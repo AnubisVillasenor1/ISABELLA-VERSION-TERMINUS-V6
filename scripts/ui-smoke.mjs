@@ -50,6 +50,7 @@ assert.ok(css.includes('.system-inspector'), 'The system inspector must have ded
 assert.ok(html.includes('data-nav-target="chat"'), 'Primary navigation must expose a task-oriented Chat destination');
 assert.ok(html.includes('data-nav-target="governance"'), 'Primary navigation must expose a task-oriented Governance destination');
 assert.ok(js.includes('IntersectionObserver'), 'Navigation must track the active workspace section');
+assert.ok(js.includes("link.dataset.focusPrompt === 'true'") && js.includes('window.setTimeout(() => prompt?.focus(), 180)'), 'Brief and contact links must focus the composer after navigation');
 assert.ok(js.includes('refreshWorkspaceContext'), 'Session context must be reflected in the workspace shell');
 assert.ok(!js.includes('.rail-panel'), 'Legacy rail navigation code must be removed from the unified workspace');
 assert.ok(css.includes('.studio-panel'), 'The Studio workspace must have dedicated styling');
