@@ -1,6 +1,5 @@
-import { boundedBudgetMs, DeadlineBudget } from "./inference/deadline";
-import { TtlCache } from "./inference/cache";
-import { buildCognitionCacheKey } from "./inference/cognition-cache-key";
+import { buildPricingCatalog } from "./commerce/catalog";
+import { boundedBudgetMs, DeadlineBudget, hedgedFirst } from "./inference/deadline";
 import { buildAsset, contentHash, serveAsset, type StaticAsset } from "./http/static-assets";
 import express, { type Application, type NextFunction, type Request, type Response } from "express";
 import { randomUUID, timingSafeEqual } from "node:crypto";
@@ -246,6 +245,8 @@ const providerTimeoutMs = boundedMilliseconds(process.env.INFERENCE_TIMEOUT_MS, 
 const multimodalTimeoutMs = boundedMilliseconds(process.env.MULTIMODAL_TIMEOUT_MS, 120_000, 20_000, 600_000);
 /** Whole-chain latency cap for one chat reply (AUD-13); each attempt gets min(per-attempt timeout, remaining). */
 const chatChainBudgetMs = boundedBudgetMs(process.env.CHAT_CHAIN_BUDGET_MS, 20_000, 6_000, 60_000);
+/** Delay before a parallel backup free provider is started when the first has not answered yet. */
+const chatHedgeDelayMs = boundedBudgetMs(process.env.CHAT_HEDGE_DELAY_MS, 3_500, 500, 15_000);
 const providerCooldownMs = boundedMilliseconds(process.env.PROVIDER_FAILURE_COOLDOWN_MS, 60_000, 10_000, 300_000);
 const keylessFreeTimeoutMs = boundedMilliseconds(process.env.KEYLESS_FREE_PROVIDER_TIMEOUT_MS, 12_000, 5_000, 60_000);
 let gatewayCooldownUntil = 0;
@@ -1171,14 +1172,20 @@ app.post("/api/v1/cognition/route", async (req, res) => {
       // Free/open inference is the default. Paid or billing-enabled providers are never
       // silently selected by Auto/Open Science; they require an explicit operator opt-in.
       if (modelEngine === "auto") {
-        // Preferimos primero un proveedor gratuito sin tarjeta; el Gateway queda como
-        // acelerador opcional y no debe bloquear la conversación si exige billing.
-        generativeNarrative = await generateKeylessFreeNarrative(systemPrompt, input, history, chainBudget);
-        if (generativeNarrative) responseEngine = "keyless-free";
-      }
-      if (!generativeNarrative && modelEngine === "auto") {
-        generativeNarrative = await generateGatewayNarrative(systemPrompt, input, history, chainBudget);
-        if (generativeNarrative) responseEngine = "gateway";
+        // Hedged race over FREE providers only (AUD-13b): the next candidate starts as soon as the
+        // previous one is unavailable/failed, or after HEDGE_DELAY_MS without an answer. Unconfigured or
+        // cooling-down providers return null instantly, so they cost no waiting. Paid fallbacks stay out.
+        const winner = await hedgedFirst<string>([
+          { label: "keyless-free", run: () => generateKeylessFreeNarrative(systemPrompt, input, history, chainBudget) },
+          { label: "gateway", run: () => generateGatewayNarrative(systemPrompt, input, history, chainBudget) },
+          { label: "openrouter-free", run: () => generateFreeOpenRouterNarrative(systemPrompt, input, history, chainBudget) },
+          { label: "huggingface-free", run: () => generateHuggingFaceNarrative(systemPrompt, input, history, chainBudget) },
+          { label: "open-science", run: () => generateCompatibleProviderNarrative(systemPrompt, input, history, chainBudget) },
+        ], chatHedgeDelayMs, chainBudget);
+        if (winner) {
+          generativeNarrative = winner.value;
+          responseEngine = winner.label as typeof responseEngine;
+        }
       }
       if (!generativeNarrative && modelEngine === "gemini" && genAi && process.env.ALLOW_PAID_PROVIDER_FALLBACK === "true") {
         try {
@@ -1195,27 +1202,23 @@ app.post("/api/v1/cognition/route", async (req, res) => {
           if (generativeNarrative) responseEngine = "gemini";
         } catch { generativeNarrative = null; }
       }
-      if (!generativeNarrative && (modelEngine === "open-science" || modelEngine === "auto" || modelEngine === "gemini")) {
+      if (!generativeNarrative && (modelEngine === "open-science" || modelEngine === "gemini")) {
         generativeNarrative = await generateFreeOpenRouterNarrative(systemPrompt, input, history, chainBudget);
         if (generativeNarrative) responseEngine = "openrouter-free";
       }
-      if (!generativeNarrative && modelEngine === "auto") {
-        generativeNarrative = await generateKeylessFreeNarrative(systemPrompt, input, history, chainBudget);
-        if (generativeNarrative) responseEngine = "keyless-free";
+      if (!generativeNarrative && (modelEngine === "open-science" || modelEngine === "gemini")) {
+        generativeNarrative = await generateHuggingFaceNarrative(systemPrompt, input, history, chainBudget);
+        if (generativeNarrative) responseEngine = "huggingface-free";
       }
-      // The Open Science mode is never allowed to degrade into paid proprietary APIs;
-      // operator-level paid opt-in applies to Auto/Gemini, not to an explicit open-only request.
-      if (!generativeNarrative && modelEngine !== "open-science" && process.env.ALLOW_PAID_PROVIDER_FALLBACK === "true") {
-        // These APIs may consume provider credits or incur usage charges. Only attempt
-        // them after the operator opts in and explicitly configures models.
-        if (!generativeNarrative && process.env.HF_TOKEN && process.env.HF_FREE_MODELS?.trim() && !chainBudget.expired()) {
-          generativeNarrative = await generateHuggingFaceNarrative(systemPrompt, input, history, chainBudget);
-          if (generativeNarrative) responseEngine = "huggingface-provider";
-        }
-        if (!generativeNarrative && buildOpenAICompatibleCandidates(process.env).length > 0 && !chainBudget.expired()) {
-          generativeNarrative = await generateCompatibleProviderNarrative(systemPrompt, input, history, chainBudget);
-          if (generativeNarrative) responseEngine = "compatible-provider";
-        }
+      if (!generativeNarrative && (modelEngine === "open-science" || modelEngine === "gemini")) {
+        generativeNarrative = await generateCompatibleProviderNarrative(systemPrompt, input, history, chainBudget);
+        if (generativeNarrative) responseEngine = "open-science";
+      }
+      if (!generativeNarrative && (modelEngine === "open-science" || modelEngine === "gemini")) {
+        generativeNarrative = await generatePerplexityNarrative(process.env, systemPrompt, input, history);
+        if (generativeNarrative) responseEngine = "perplexity-router";
+      }
+      if (!generativeNarrative && process.env.ALLOW_PAID_PROVIDER_FALLBACK === "true") {
         if (genAi && modelEngine !== "gemini") {
           try {
             const contents = [
@@ -2891,7 +2894,7 @@ const stripeClient = process.env.STRIPE_SECRET_KEY?.trim()
 const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET?.trim() ?? "";
 
 app.get("/api/v1/billing/prices", (_req, res) => {
-  res.json({ success: true, prices: billingPricesPublic(), currency: "usd", source: "server_catalog" });
+  res.json({ success: true, prices: billingPricesPublic(), catalog: buildPricingCatalog(), currency: "usd", source: "server_catalog" });
 });
 
 app.post("/api/v1/billing/checkout", async (req, res) => {

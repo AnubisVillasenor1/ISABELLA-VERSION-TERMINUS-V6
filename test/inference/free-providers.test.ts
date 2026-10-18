@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
+import { createServer } from "node:http";
 import type { GenerationRequest, GenerationResult, InferenceAdapter, ModelDescriptor } from "../../src/inference/types";
-import { FreeProviderRouter, OllamaAdapter, createDefaultFreeProviderRouter } from "../../src/inference/free-providers";
+import { FreeProviderRouter, GratisAPIAdapter, OllamaAdapter, createDefaultFreeProviderRouter } from "../../src/inference/free-providers";
 
 function failingAdapter(name: string): InferenceAdapter {
   const descriptor: ModelDescriptor = { id: `fake-${name}`, version: "test", provider: name, capabilities: ["chat"], contextWindow: 1, maxOutputTokens: 1, latencyClass: "FAST" };
@@ -52,6 +53,88 @@ describe("free provider router", () => {
       else process.env.GRATIS_API_KEY = previousKey;
     }
   });
+
+
+  it("aborts when a provider sends headers but stalls the response body", async () => {
+    const server = createServer((_request, response) => {
+      response.writeHead(200, { "content-type": "application/json" });
+      response.write('{"response":"');
+      // Intentionally leave the body open: the client timeout must cover body parsing too.
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const address = server.address();
+    if (!address || typeof address === "string") {
+      server.close();
+      throw new Error("TEST_SERVER_ADDRESS_UNAVAILABLE");
+    }
+
+    const adapter = new OllamaAdapter({
+      baseUrl: `http://127.0.0.1:${address.port}`,
+      timeoutMs: 80,
+      maxRetries: 0,
+    });
+
+    try {
+      await expect(adapter.generate({ prompt: "hello", maxTokens: 8 })).rejects.toThrow();
+    } finally {
+      server.closeAllConnections();
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  }, 3_000);
+
+  it("does not report an unreachable compatible provider as healthy", async () => {
+    const server = createServer((_request, response) => {
+      response.writeHead(503, { "content-type": "application/json" });
+      response.end(JSON.stringify({ error: "unavailable" }));
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const address = server.address();
+    if (!address || typeof address === "string") {
+      server.close();
+      throw new Error("TEST_SERVER_ADDRESS_UNAVAILABLE");
+    }
+
+    const adapter = new GratisAPIAdapter({
+      baseUrl: `http://127.0.0.1:${address.port}/v1`,
+      timeoutMs: 100,
+      maxRetries: 0,
+    });
+    try {
+      await expect(adapter.healthCheck()).resolves.toBe(false);
+    } finally {
+      server.closeAllConnections();
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  }, 3_000);
+
+  it("bounds retries and backoff by one total timeout budget", async () => {
+    let requests = 0;
+    const server = createServer((_request, response) => {
+      requests += 1;
+      response.writeHead(503, { "content-type": "application/json" });
+      response.end(JSON.stringify({ error: "temporarily unavailable" }));
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const address = server.address();
+    if (!address || typeof address === "string") {
+      server.close();
+      throw new Error("TEST_SERVER_ADDRESS_UNAVAILABLE");
+    }
+
+    const adapter = new GratisAPIAdapter({
+      baseUrl: `http://127.0.0.1:${address.port}/v1`,
+      timeoutMs: 100,
+      maxRetries: 3,
+      retryBaseDelayMs: 500,
+    });
+    try {
+      await expect(adapter.generate({ prompt: "hello", maxTokens: 8 })).rejects.toThrow("GRATIS_API_HTTP_503");
+      expect(requests).toBe(1);
+    } finally {
+      server.closeAllConnections();
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  }, 3_000);
 
   it("declares a local ollama descriptor without network calls", () => {
     const adapter = new OllamaAdapter({ baseUrl: "http://127.0.0.1:1" });

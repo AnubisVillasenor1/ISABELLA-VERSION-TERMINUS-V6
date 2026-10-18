@@ -234,6 +234,28 @@
     prompt.dispatchEvent(new Event('input'));
     prompt.focus();
   };
+  /* Sources row (Perplexity-style): numbered chips for every http(s) link the answer itself contains.
+   * Nothing is fetched or verified here — a chip is a link the model wrote, labelled by hostname. */
+  const sourcesRow = (raw) => {
+    const seen = new Map();
+    for (const m of String(raw).matchAll(/https?:\/\/[^\s<>)\]"']+/g)) {
+      const href = safeHref(m[0].replace(/[.,;:!?]+$/, ''));
+      if (!href || seen.has(href)) continue;
+      seen.set(href, new URL(href).hostname.replace(/^www\./, ''));
+      if (seen.size >= 6) break;
+    }
+    if (seen.size === 0) return null;
+    const row = el('div', 'sources-row');
+    row.append(el('span', 'sources-label', 'FUENTES CITADAS'));
+    let i = 1;
+    for (const [href, host] of seen) {
+      const a = el('a', 'source-chip'); a.href = href; a.target = '_blank'; a.rel = 'noopener noreferrer nofollow';
+      a.append(el('b', '', String(i++)), el('span', '', host));
+      row.append(a);
+    }
+    row.append(el('span', 'sources-note', 'Enlaces escritos por el modelo; no verificados por Isabella.'));
+    return row;
+  };
   const feedbackKey = 'isabella.feedback.v1';
   const decorate = (paragraph, meta = {}) => {
     const article = paragraph?.closest('.message');
@@ -252,11 +274,14 @@
         up.disabled = down.disabled = true; (idx === 0 ? up : down).classList.add('is-on');
       });
     });
+    const sources = sourcesRow(raw);
     bar.append(regen, up, down);
     if (Number.isFinite(meta.latencyMs)) bar.append(el('span', 'latency-chip', `⏱ ${(meta.latencyMs / 1000).toFixed(1)} s`));
     const chips = el('div', 'followups');
     followUps(raw).forEach((text) => { const c = el('button', 'followup', text); c.type = 'button'; c.addEventListener('click', () => submitText(text)); chips.append(c); });
-    article.querySelector(':scope > div')?.append(bar, chips);
+    const host = article.querySelector(':scope > div');
+    if (sources) host?.append(sources);
+    host?.append(bar, chips);
   };
 
   /* ------------------------------------------------------------------ history */
@@ -503,9 +528,72 @@
     if (e.key === 'Escape') { if (document.body.classList.contains('chat-focus') && !document.querySelector('dialog[open]')) setFocusMode(false); if (!drawer.hidden) closeDrawer(); }
   });
 
+  /* ----------------------------------------------------------------- focus lens */
+  const LENSES = [['general', 'General'], ['territorial', 'Territorial'], ['epistemic', 'Epistémico'], ['security', 'Seguridad'], ['governance', 'Gobernanza']];
+  const LENS_KEY = 'isabella.lens.v1';
+  let lens = LENSES.some(([id]) => id === safeStorage.get(LENS_KEY)) ? safeStorage.get(LENS_KEY) : 'general';
+  const lensBar = el('div', 'lens-bar'); lensBar.setAttribute('role', 'radiogroup'); lensBar.setAttribute('aria-label', 'Lente de análisis');
+  lensBar.append(el('span', 'lens-label', 'LENTE'));
+  const lensButtons = LENSES.map(([id, label]) => {
+    const b = el('button', 'lens-chip', label); b.type = 'button'; b.setAttribute('role', 'radio'); b.dataset.lens = id;
+    b.addEventListener('click', () => setLens(id));
+    lensBar.append(b); return b;
+  });
+  const basePlaceholder = prompt.placeholder;
+  function setLens(id) {
+    lens = id; safeStorage.set(LENS_KEY, id);
+    lensButtons.forEach((b) => { const on = b.dataset.lens === id; b.classList.toggle('is-active', on); b.setAttribute('aria-checked', String(on)); });
+    prompt.placeholder = id === 'general' ? basePlaceholder : `Lente ${LENSES.find(([k]) => k === id)?.[1].toLowerCase()} activa · ${basePlaceholder}`;
+  }
+  form.before(lensBar); setLens(lens);
+
+  /* ---------------------------------------------------------------------- plans */
+  const plansGrid = $('plansGrid');
+  if (plansGrid) {
+    let catalog = null; let interval = 'month';
+    const usd = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+    const paint = () => {
+      plansGrid.replaceChildren();
+      if (!catalog) { plansGrid.append(el('p', 'plans-loading', 'El catálogo no está disponible ahora. Inténtalo de nuevo más tarde.')); return; }
+      for (const plan of catalog.plans) {
+        const price = interval === 'year' ? plan.yearly : plan.monthly;
+        const card = el('article', `plan-card${plan.recommended ? ' is-recommended' : ''}`);
+        if (plan.recommended) card.append(el('span', 'plan-badge', 'MÁS ELEGIDO'));
+        card.append(el('h3', '', plan.label));
+        const amount = el('p', 'plan-price');
+        if (plan.contactSales) amount.append(el('strong', '', 'A medida'), el('span', '', 'contrato'));
+        else if (!price) amount.append(el('strong', '', usd.format(0)), el('span', '', 'siempre'));
+        else {
+          const shown = interval === 'year' ? price.effectiveMonthly : price.unitAmount;
+          amount.append(el('strong', '', usd.format(shown / 100)), el('span', '', interval === 'year' ? '/mes · facturado anual' : '/mes'));
+        }
+        card.append(amount);
+        if (interval === 'year' && plan.yearlySavingsPct > 0) card.append(el('p', 'plan-save', `Ahorras ${plan.yearlySavingsPct}% · ${plan.monthsFree} meses gratis`));
+        card.append(el('p', 'plan-desc', plan.description.split('. ')[0].replace(/\.$/, '') + '.'));
+        const list = el('ul', 'plan-list'); plan.highlights.forEach((h) => list.append(el('li', '', h))); card.append(list);
+        const cta = el('button', 'plan-cta', plan.contactSales ? 'Hablar con ventas' : plan.id === 'free' ? 'Empezar gratis' : `Consultar ${plan.label}`); cta.type = 'button';
+        cta.addEventListener('click', () => {
+          document.getElementById('chat')?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' });
+          prompt.value = plan.id === 'free' ? 'Quiero empezar con el plan gratuito. ¿Qué puedo hacer en él?' : `Quiero conocer el plan ${plan.label} (${interval === 'year' ? 'anual' : 'mensual'}). ¿Qué incluye y cómo se contrata?`;
+          prompt.dispatchEvent(new Event('input')); prompt.focus();
+        });
+        card.append(cta); plansGrid.append(card);
+      }
+      const save = $('plansSave'); const best = Math.max(0, ...catalog.plans.map((p) => p.yearlySavingsPct));
+      if (save) { save.hidden = best <= 0; save.textContent = `−${best}%`; }
+    };
+    document.querySelectorAll('.plans-interval').forEach((b) => b.addEventListener('click', () => {
+      interval = b.dataset.interval === 'year' ? 'year' : 'month';
+      document.querySelectorAll('.plans-interval').forEach((o) => { const on = o === b; o.classList.toggle('is-active', on); o.setAttribute('aria-pressed', String(on)); });
+      paint();
+    }));
+    fetch('/api/v1/billing/prices', { headers: { accept: 'application/json' } })
+      .then((r) => (r.ok ? r.json() : null)).then((j) => { catalog = j?.catalog?.plans ? j.catalog : null; paint(); }).catch(() => paint());
+  }
+
   /* --------------------------------------------------------------------- bridge */
   window.IsabellaChatPlus = Object.freeze({
-    renderInto, beginPending, latencySince, decorate, persist,
+    renderInto, beginPending, latencySince, decorate, persist, getLens: () => lens,
     setAbort(controller) { activeController = controller; },
     stamp(article) { article.dataset.ts = String(Date.now()); }
   });

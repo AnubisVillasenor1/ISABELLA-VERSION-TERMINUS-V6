@@ -10,7 +10,7 @@
 
 **Avance global estimado para producción y despliegue: 61.0%.**
 
-Estimación ponderada de preparación operativa —no es una métrica de calidad del modelo ni una garantía de disponibilidad— calculada sobre el build aislado del SHA `7f88ce93417971580c96bdeeedb30a5102b46e20`. En Node 24.21.0 y pnpm 10.28.0, `pnpm install --frozen-lockfile && pnpm run build` terminó con código 0: **1,581 pruebas en 267 archivos**, **44/44 comprobaciones estructurales**, **14/14 invariantes de seguridad**, typecheck de compilación, bundle del servidor, smoke de interfaz/conversación y suite de seguridad aprobados. Se corrigieron todas las llamadas anidadas a pnpm (`build`, `validate`, `postgres:e2e` y `deploy:verify`) para respetar la versión fijada en `packageManager`, y assurance ahora impide regresiones. El smoke HTTP del grafo de integración también pasó: 21 nodos, 19 aristas, autorización por token verificada, estados de BookPI consistentes y readiness correctamente degradado en ausencia de dependencias remotas. Se añadió un probe HTTP acotado para el health/readiness del gateway Rust IGE-Ω, con validación de URL, HTTPS en producción, timeout y límite de 2 KiB por respuesta; el estado actual es `NOT_CONFIGURED` porque `IGE_OMEGA_GATEWAY_URL` no está configurada, y no se afirma que la inferencia autenticada esté conectada.
+Estimación ponderada de preparación operativa —no es una métrica de calidad del modelo ni una garantía de disponibilidad— heredada del build aislado del SHA `7f88ce93417971580c96bdeeedb30a5102b46e20`; no se ha revalidado contra el HEAD actual (`94955427dc49cd4548100f7bca1d7d91dc457619`). En Node 24.21.0 y pnpm 10.28.0, `pnpm install --frozen-lockfile && pnpm run build` terminó con código 0: **1,581 pruebas en 267 archivos**, **44/44 comprobaciones estructurales**, **14/14 invariantes de seguridad**, typecheck de compilación, bundle del servidor, smoke de interfaz/conversación y suite de seguridad aprobados. Se corrigieron todas las llamadas anidadas a pnpm (`build`, `validate`, `postgres:e2e` y `deploy:verify`) para respetar la versión fijada en `packageManager`, y assurance ahora impide regresiones. El smoke HTTP del grafo de integración también pasó: 21 nodos, 19 aristas, autorización por token verificada, estados de BookPI consistentes y readiness correctamente degradado en ausencia de dependencias remotas. Se añadió un probe HTTP acotado para el health/readiness del gateway Rust IGE-Ω, con validación de URL, HTTPS en producción, timeout y límite de 2 KiB por respuesta; el estado actual es `NOT_CONFIGURED` porque `IGE_OMEGA_GATEWAY_URL` no está configurada, y no se afirma que la inferencia autenticada esté conectada.
 
 **Estado: preproducción; no declarar listo para producción.** El preview más reciente disponible, SHA `a8a5c580ed2d54ef87b1a80c0074c974d52cd726`, está `READY`, pero `/api/v1/readyz` devuelve HTTP 503: Atlas/Supabase e IKES responden HTTP 404, falta `BOOKPI_INTEGRITY_SECRET` de al menos 32 caracteres, el ledger BookPI síncrono heredado sigue siendo volátil y la exportación de telemetría no está verificada. El smoke generativo externo se omitió por ausencia de credenciales de proveedor. Vercel rechazó el build del SHA final por cuota de builds/despliegues; el SHA `fe0f8809` pasó la compilación y suite completa en un sandbox aislado, pero no tiene un preview remoto propio. GitHub Actions sigue sin proporcionar una ejecución válida con pasos/logs y `main` requiere protección.
 
@@ -59,6 +59,16 @@ La aplicación declara un servidor Node.js con Express y TypeScript. Incluye scr
 6. Exigir autorización explícita para acciones sensibles o externas; no inferir consentimiento a partir de una salida del modelo.
 
 Este flujo describe el objetivo de arquitectura. La persistencia, el aislamiento por tenant, las integraciones y el comportamiento ante fallos deben demostrarse con pruebas de extremo a extremo y configuración de despliegue.
+
+## Cambios recientes de latencia, voz, monetización e interfaz (17-oct-2026)
+
+Estado de evidencia: implementado y probado localmente con pruebas unitarias; **no** cambia el porcentaje de madurez de arriba (no hay build/CI verde de este SHA).
+
+- **Latencia:** `DeadlineBudget` limita toda la cadena de proveedores por respuesta (`CHAT_CHAIN_BUDGET_MS`, 20 s) y `hedgedFirst` compite proveedores *gratuitos* en modo Auto: el respaldo arranca al fallar el primero o tras `CHAT_HEDGE_DELAY_MS` (3.5 s). Los proveedores de pago siguen siendo opt-in. Ver AUD-13 en `docs/audits/AUDIT-2026-10-17.md`.
+- **Voz:** `src/inference/voice-profile.ts` fija un perfil objetivo medido de una muestra de referencia (F0 mediana 205 Hz, pausas ≈0.7 s). No es clonación de voz: selecciona la voz del navegador y ajusta ritmo/pausas; `scripts/voice-profile-compare.ts <audio.wav>` compara cualquier audio con el perfil.
+- **Monetización:** `buildPricingCatalog()` añade ahorro anual (16.7 % ≈ 2 meses gratis), precio mensual efectivo y un único plan recomendado a `GET /api/v1/billing/prices`; la sección «Planes» de la interfaz lo muestra. Mostrar un plan no concede acceso ni cobra: los derechos siguen dependiendo de suscripciones verificadas.
+- **Chat:** el selector de lente (General, Territorial, Epistémico, Seguridad, Gobernanza) ahora llega al API —antes la interfaz enviaba siempre `general`—, fuentes citadas como chips (enlaces escritos por el modelo, no verificados), mayor área de mensajes y barra superior sin colisiones.
+- **Intro:** precarga ociosa del video 540p con índice al inicio (omitida con Save-Data/2G).
 
 ## Instalación y validación local
 
@@ -179,7 +189,7 @@ La estimación de **61.0%** usa esta rúbrica ponderada (puntos disponibles = pe
 
 | Dominio | Puntos obtenidos / disponibles | Evidencia y limitación principal |
 |---|---:|---|
-| Runtime, compilación y pruebas | 25 / 25 | Build completo, typecheck, 1,568 pruebas en 264 archivos, bundle y smoke local aprobados; faltan E2E con dependencias productivas. |
+| Runtime, compilación y pruebas | 25 / 25 | El README contiene dos recuentos históricos incompatibles (1,568/264 y 1,581/267); deben reproducirse en el SHA candidato. Faltan E2E con dependencias productivas. |
 | Seguridad y CI | 16 / 20 | 44/44 checks estructurales y 14/14 invariantes de seguridad aprobados; GitHub Actions sigue sin ejecución válida y main requiere protección. |
 | Persistencia e integridad de datos | 5 / 20 | Adaptadores BookPI/IKES implementados y probados, pero Atlas/IKES remoto devuelve 404, falta BOOKPI_INTEGRITY_SECRET y el ledger síncrono heredado sigue volátil. |
 | Inferencia y conversación | 7 / 15 | Chat local y seguimiento funcionan; smoke generativo externo omitido por falta de credenciales configuradas. |
@@ -196,3 +206,8 @@ El README anterior declara software bajo Apache-2.0 y documentación bajo CC BY 
 ---
 
 **Transparencia:** este README documenta la arquitectura y las señales visibles en los archivos consultados. No sustituye una ejecución completa de la suite, una auditoría línea por línea de todo el repositorio ni una prueba de despliegue real. Cada capacidad debe considerarse implementada sólo en el grado que la evidencia reproducible correspondiente demuestre.
+
+
+## Mapa de documentación
+
+El índice canónico, la jerarquía de fuentes y la política de consolidación están en [`docs/README.md`](docs/README.md). Antes de actualizar una cifra o declarar un módulo operativo, consulta el estado real y el runbook; los informes archivados conservan contexto histórico, no certifican el estado actual.

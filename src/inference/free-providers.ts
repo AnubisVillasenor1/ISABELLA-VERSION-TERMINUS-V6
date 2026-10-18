@@ -58,40 +58,40 @@ async function fetchWithTimeout(
   init: RequestInit,
   timeoutMs: number,
 ): Promise<Response> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    return await fetch(url, { ...init, signal: controller.signal });
-  } finally {
-    clearTimeout(timer);
-  }
+  // Keep the timeout signal alive for the response body, not just until headers arrive.
+  // Clearing a manual timer when fetch() resolves leaves response.json()/text() unbounded.
+  const signal = AbortSignal.timeout(timeoutMs);
+  return fetch(url, { ...init, signal });
 }
 
 async function retryWithBackoff<T>(
-  operation: () => Promise<T>,
+  operation: (attemptTimeoutMs: number) => Promise<T>,
   options: RetryOptions,
   context: string,
 ): Promise<T> {
+  // timeoutMs is the deadline for the entire retry sequence, not a fresh allowance per attempt.
+  const deadlineAt = Date.now() + options.timeoutMs;
   let lastError: unknown;
   for (let attempt = 0; attempt <= options.maxRetries; attempt++) {
+    const remainingMs = deadlineAt - Date.now();
+    if (remainingMs <= 0) break;
     try {
-      return await operation();
+      return await operation(Math.max(1, remainingMs));
     } catch (error) {
       lastError = error;
-      if (attempt >= options.maxRetries) {
-        break;
-      }
-      if (!isRetryableError(error)) {
-        throw error;
-      }
+      if (attempt >= options.maxRetries || Date.now() >= deadlineAt) break;
+      if (!isRetryableError(error)) throw error;
       const delay = options.baseDelayMs * Math.pow(2, attempt);
+      const remainingAfterFailure = deadlineAt - Date.now();
+      // Do not sleep through the entire remaining budget just to start a retry that cannot run.
+      if (delay >= remainingAfterFailure) break;
       log("warn", `${context}: attempt ${attempt + 1} failed, retrying in ${delay}ms`, {
         error: error instanceof Error ? error.message : String(error),
       });
       await sleep(delay);
     }
   }
-  throw lastError;
+  throw lastError ?? new Error(`${context}_RETRY_DEADLINE_EXCEEDED`);
 }
 
 export class OllamaAdapter implements InferenceAdapter {
@@ -122,7 +122,7 @@ export class OllamaAdapter implements InferenceAdapter {
     const url = `${this.config.baseUrl.replace(/\/$/, "")}/api/generate`;
 
     const result = await retryWithBackoff(
-      async () => {
+      async (attemptTimeoutMs) => {
         const response = await fetchWithTimeout(
           url,
           {
@@ -138,7 +138,7 @@ export class OllamaAdapter implements InferenceAdapter {
               },
             }),
           },
-          this.config.timeoutMs,
+          Math.min(this.config.timeoutMs, attemptTimeoutMs),
         );
 
         if (!response.ok) {
@@ -215,6 +215,21 @@ export class GratisAPIAdapter implements InferenceAdapter {
     };
   }
 
+  async healthCheck(): Promise<boolean> {
+    try {
+      const headers: Record<string, string> = {};
+      if (this.config.apiKey) headers.Authorization = `Bearer ${this.config.apiKey}`;
+      const response = await fetchWithTimeout(
+        `${this.config.baseUrl.replace(/\/$/, "")}/models`,
+        { method: "GET", headers },
+        5_000,
+      );
+      return response.ok;
+    } catch {
+      return false;
+    }
+  }
+
   async generate(request: GenerationRequest): Promise<GenerationResult> {
     const started = Date.now();
     const url = `${this.config.baseUrl.replace(/\/$/, "")}/chat/completions`;
@@ -227,7 +242,7 @@ export class GratisAPIAdapter implements InferenceAdapter {
     }
 
     const result = await retryWithBackoff(
-      async () => {
+      async (attemptTimeoutMs) => {
         const response = await fetchWithTimeout(
           url,
           {
@@ -240,7 +255,7 @@ export class GratisAPIAdapter implements InferenceAdapter {
               temperature: request.temperature ?? 0.35,
             }),
           },
-          this.config.timeoutMs,
+          Math.min(this.config.timeoutMs, attemptTimeoutMs),
         );
 
         if (!response.ok) {
@@ -309,10 +324,11 @@ export class FreeProviderRouter {
   async healthCheck(): Promise<Record<string, boolean>> {
     const results: Record<string, boolean> = {};
     for (const adapter of this.adapters) {
-      if (adapter instanceof OllamaAdapter) {
+      if (adapter instanceof OllamaAdapter || adapter instanceof GratisAPIAdapter) {
         results[adapter.descriptor.provider] = await adapter.healthCheck();
       } else {
-        results[adapter.descriptor.provider] = true;
+        // Unknown adapters must not be reported healthy without an actual probe.
+        results[adapter.descriptor.provider] = false;
       }
     }
     return results;
