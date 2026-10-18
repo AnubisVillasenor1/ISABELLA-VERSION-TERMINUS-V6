@@ -22,7 +22,14 @@ export interface AegisVerdict {
 const RULES: ReadonlyArray<{ kind: AegisFindingKind; severity: AegisFinding["severity"]; patterns: readonly RegExp[] }> = [
   { kind: "prompt_injection", severity: "HIGH", patterns: [/ignore\s+(all|previous|prior)\s+instructions/i, /system\s+message\s*:/i] },
   { kind: "indirect_injection", severity: "HIGH", patterns: [/instructions?\s+for\s+the\s+assistant/i, /do\s+not\s+tell\s+the\s+user/i] },
-  { kind: "secret_exfiltration", severity: "CRITICAL", patterns: [/api[_ -]?key/i, /private[_ -]?key/i, /access[_ -]?token/i, /password/i] },
+  {
+    kind: "secret_exfiltration",
+    severity: "CRITICAL",
+    patterns: [
+      /(?:reveal|show|send|share|export|exfiltrat|dump|bypass)[^.!?\n]{0,80}(?:api[_ -]?key|private[_ -]?key|access[_ -]?token|password|secret)/i,
+      /(?:api[_ -]?key|private[_ -]?key|access[_ -]?token|password|secret)\s*[:=]\s*[^\s,;]{8,}/i,
+    ],
+  },
   { kind: "pii", severity: "HIGH", patterns: [/\bcurp\b/i, /\brfc\b/i, /social\s+security/i] },
   { kind: "tool_poisoning", severity: "CRITICAL", patterns: [/tool\s+description\s+override/i, /call\s+this\s+tool\s+without/i] },
   { kind: "retrieval_poisoning", severity: "HIGH", patterns: [/retrieval\s+instruction/i, /rank\s+this\s+source\s+above/i] },

@@ -1,4 +1,14 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "pnpm run build:dist",
+  "functions": {
+    "api/index.js": {
+      "includeFiles": ["dist/**"]
+    }
+  },
+  "rewrites": [{
+    "source": "/(.*)",
+    "destination": "/api"
+  }],
   "headers": []
 }
