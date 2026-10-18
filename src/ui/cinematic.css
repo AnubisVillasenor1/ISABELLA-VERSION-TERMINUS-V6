@@ -28,7 +28,7 @@ body[data-workspace-layout="split-2"] .workspace-pane.design-pane{display:block}
 .status[data-state="degraded"] i{background:#ffb36b}
 .status i{transition:background .2s ease}
 button:disabled{opacity:.55;cursor:wait}
-@media (max-width:760px){
+@media (max-width:1180px){
   .topbar{position:sticky;top:0;align-items:center;flex-wrap:wrap;gap:12px;padding:12px 0;background:rgba(6,7,11,.96);backdrop-filter:blur(18px)}
   .nav-toggle{display:inline-flex;align-items:center;gap:9px;margin-left:auto}
   .nav-links{display:none;order:5;flex-direction:column;align-items:stretch;gap:0;width:100%;margin:0;padding:8px 0;border-top:1px solid var(--line);background:rgba(6,7,11,.98);overflow:visible}
