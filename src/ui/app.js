@@ -82,7 +82,9 @@ const startIntroMedia = async () => {
 const stopIntroMedia = () => {
   window.clearInterval(introWatchdog);
   introVideo?.pause();
-  if (introVideo) introVideo.currentTime = 0;
+  if (introVideo) {
+    try { introVideo.currentTime = 0; } catch { /* metadata may not have loaded yet */ }
+  }
 };
 // Warm the small fast-start rendition while the consent control is visible.
 const warmIntroVideo = () => {
@@ -150,16 +152,11 @@ const dismissIntro = () => {
   if (restoreFocus) byId('enterChat')?.focus({ preventScroll: true });
 };
 const getIntroElapsed = () => {
-  if (
-    introMediaClockActive &&
-    introVideo &&
-    Number.isFinite(introVideo.duration) &&
-    introVideo.duration > 1
-  ) {
-    // Tie scene transitions to decoded media time; buffering freezes the story instead
-    // of letting titles outrun the video, then desynchronizing when playback resumes.
-    return (introVideo.currentTime / introVideo.duration) * introTotalMs;
-  }
+  // The decoded media clock is authoritative from the first frame. When buffering
+  // stalls currentTime, the narrative freezes too; it never races ahead on wall time.
+  // Use wall-clock timing only after the browser reports that media cannot be played.
+  const mediaUnavailable = !introVideo || intro?.classList.contains('media-unavailable');
+  if (!mediaUnavailable) return Math.max(0, introVideo.currentTime * 1000);
   return performance.now() - introStartedAt;
 };
 const advanceIntro = (elapsed = getIntroElapsed()) => {
@@ -266,21 +263,31 @@ if (intro) {
     startImmersion?.addEventListener('click', beginImmersion, { once: true });
   }
 }
+const closeSideRails = (exceptId = '') => {
+  document.querySelectorAll('.side-rail').forEach((rail) => {
+    if (rail.id !== exceptId) rail.classList.remove('is-open');
+    const launcher = document.querySelector(`[aria-controls="${rail.id}"]`);
+    if (launcher) launcher.setAttribute('aria-expanded', String(rail.id === exceptId && rail.classList.contains('is-open')));
+  });
+};
 document.querySelectorAll('.rail-launcher').forEach((launcher) => {
   launcher.addEventListener('click', () => {
     const targetId = launcher.getAttribute('aria-controls');
     const target = targetId ? byId(targetId) : null;
-    const isOpen = target?.classList.toggle('is-open') ?? false;
-    launcher.setAttribute('aria-expanded', String(isOpen));
+    if (!target) return;
+    const opening = !target.classList.contains('is-open');
+    closeSideRails(opening ? target.id : '');
+    target.classList.toggle('is-open', opening);
+    launcher.setAttribute('aria-expanded', String(opening));
   });
 });
 document.querySelectorAll('.side-rail a[href^="#"]').forEach((link) => {
-  link.addEventListener('click', () => {
-    const rail = link.closest('.side-rail');
-    const launcher = rail ? document.querySelector(`[aria-controls="${rail.id}"]`) : null;
-    rail?.classList.remove('is-open');
-    launcher?.setAttribute('aria-expanded', 'false');
-  });
+  link.addEventListener('click', () => closeSideRails());
+});
+document.addEventListener('click', (event) => {
+  if (!(event.target instanceof Element)) return;
+  if (event.target.closest('.side-rail, .rail-launcher')) return;
+  closeSideRails();
 });
 document.querySelectorAll('.workspace-mode').forEach((button) => {
   button.addEventListener('click', () => {
@@ -718,18 +725,7 @@ document.addEventListener('click', (event) => {
   if (link) navigateToHash(link.getAttribute('href'), event);
 });
 
-// Keep every navigation surface on the same interaction path. Some embedded
-// preview shells intercept native hash navigation, so the app owns the scroll
-// and history update instead of relying on browser defaults.
-const bindNavigationSurface = (selector) => {
-  document.querySelectorAll(selector).forEach((link) => {
-    link.addEventListener('click', (event) => {
-      const href = link.getAttribute('href');
-      if (href?.startsWith('#')) navigateToHash(href, event);
-    });
-  });
-};
-bindNavigationSurface('.topbar a[href^="#"], .side-rail a[href^="#"], .hero a[href^="#"], .access-section a[href^="#"], .intro-enter[href^="#"]');
+// All internal links are handled by one delegated click listener above; do not bind twice.
 if (window.location.hash) {
   window.requestAnimationFrame(() => navigateToHash(window.location.hash));
 }
