@@ -26,6 +26,7 @@ try {
   assert.equal(health.headers.get("x-powered-by"), null, "Express fingerprint header must be disabled");
   const statusResponse = await fetch(baseUrl + "/api/v1/status", { signal: AbortSignal.timeout(5_000) });
   assert.equal(statusResponse.status, 200, "runtime status must remain available");
+  assert.match(statusResponse.headers.get("content-security-policy") ?? "", /default-src 'none'/, "API responses must retain the strict CSP and must not be overwritten by the UI policy");
   const statusBody = await statusResponse.json();
   assert.ok(["VOLATILE_IN_MEMORY_HASH_CHAIN", "DURABLE_APPEND_ONLY_JSONL_LOCAL_SCOPE"].includes(statusBody.engines?.bookpi),
     "BookPI status must disclose the configured backend without asserting external durability");
