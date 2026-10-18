@@ -481,6 +481,9 @@ async function generateFreeOpenRouterNarrative(systemPrompt: string, input: stri
 /** Optional Hugging Face OpenAI-compatible router. Only explicitly configured model IDs are attempted. */
 async function generateHuggingFaceNarrative(systemPrompt: string, input: string, history: PublicChatTurn[] = [], budget?: DeadlineBudget): Promise<string | null> {
   if (budget?.expired()) return null;
+  // Hugging Face Inference can consume account credits. A model name in HF_FREE_MODELS
+  // is operator configuration, not proof of zero cost; require explicit spend opt-in.
+  if (process.env.ALLOW_PAID_PROVIDER_FALLBACK !== "true") return null;
   const key = process.env.HF_TOKEN;
   const models = (process.env.HF_FREE_MODELS || "").split(",").map((model) => model.trim()).filter(Boolean);
   if (!key || models.length === 0 || Date.now() < huggingFaceCooldownUntil) return null;
