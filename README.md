@@ -189,21 +189,15 @@ No se afirma liderazgo mundial, superioridad frente a proveedores consolidados n
 
 ## Medición del avance real
 
-El porcentaje sólo debe subir cuando una capacidad funcional nueva o una mejora relevante quede implementada y validada con evidencia. La documentación, el número de archivos, las declaraciones arquitectónicas y los tests que no se ejecutan no incrementan por sí solos el avance.
+No se publica un porcentaje de avance vigente porque los resultados históricos no están vinculados a una ejecución verde del HEAD actual. Un porcentaje sólo puede actualizarse cuando las capacidades funcionales y las pruebas que lo sustentan se hayan ejecutado de forma reproducible en el mismo SHA. Documentación, cantidad de archivos, declaraciones arquitectónicas o tests que no se ejecutan no incrementan el avance.
 
-La estimación de **61.0%** usa esta rúbrica ponderada (puntos disponibles = peso del dominio). El total incorpora el build reproducible del SHA validado y las pruebas ejecutadas; no equivale a despliegue productivo:
+En el corte del 18 de octubre de 2026, la evidencia remota disponible confirma:
+- El runtime de Vercel responde en `GET /health` con HTTP 200.
+- `GET /api/v1/readyz` responde HTTP 503 y señala dependencias bloqueantes.
+- Los workflows recientes de CI y Repository Assurance terminaron en fallo; la causa raíz todavía necesita una ejecución con logs completos.
+- El entorno local de esta auditoría no pudo ejecutar la suite completa porque tiene Node.js 22.x, el proyecto requiere 24.x y no se pudo descargar pnpm.
 
-| Dominio | Puntos obtenidos / disponibles | Evidencia y limitación principal |
-|---|---:|---|
-| Runtime, compilación y pruebas | 25 / 25 | El README contiene dos recuentos históricos incompatibles (1,568/264 y 1,581/267); deben reproducirse en el SHA candidato. Faltan E2E con dependencias productivas. |
-| Seguridad y CI | 16 / 20 | 44/44 checks estructurales y 14/14 invariantes de seguridad aprobados; GitHub Actions sigue sin ejecución válida y main requiere protección. |
-| Persistencia e integridad de datos | 5 / 20 | Adaptadores BookPI/IKES implementados y probados, pero Atlas/IKES remoto devuelve 404, falta BOOKPI_INTEGRITY_SECRET y el ledger síncrono heredado sigue volátil. |
-| Inferencia y conversación | 7 / 15 | Chat local y seguimiento funcionan; smoke generativo externo omitido por falta de credenciales configuradas. |
-| Despliegue y recuperación | 5 / 10 | Preview READY; no se ha demostrado promoción real a producción ni rollback. |
-| Observabilidad y operación | 3 / 10 | Readiness y métricas en proceso disponibles; exportación OTLP y alertas no verificadas. |
-| **Total** | **61 / 100** | **Preproducción; no certificado para producción.** |
-
-Para elevar la cifra de nuevo, exigir build verde del SHA final, CI/CD verde, migración aplicada y probe Atlas saludable, persistencia durable/recuperación de BookPI e IKES, smoke generativo aprobado, telemetría exportada y despliegue/rollback reales.
+**Criterio para reanudar la medición:** build y suites de calidad verdes para el mismo SHA, readiness profunda HTTP 200 con evidencia válida, persistencia durable demostrada tras reinicio, inferencia externa aprobada verificada, observabilidad configurada y smoke/rollback de despliegue superados. Consulta la [auditoría técnico-operativa vigente](docs/audits/PRODUCTION-READINESS-AUDIT-2026-10-18.md).
 
 ## Licencias y uso
 
