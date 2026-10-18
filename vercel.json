@@ -1,5 +1,10 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "pnpm run build:dist",
+  "functions": {
+    "server.js": {
+      "includeFiles": ["dist/**"]
+    }
+  },
   "headers": []
 }
