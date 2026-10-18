@@ -334,7 +334,7 @@ html{scroll-padding-top:100px}
 body{background:#080c12;color:var(--text);font-size:14px;line-height:1.5}
 .stage{max-width:1720px;padding:0 clamp(18px,4.4vw,72px) 76px;overflow:visible;background:radial-gradient(ellipse at 74% 8%,rgba(84,133,174,.12),transparent 42rem),linear-gradient(180deg,#090d13,#080c12 50rem)}
 .stage:before{display:none}
-.side-rail{display:none!important}
+/* Side rails remain available; responsive visibility is controlled by their open state. */
 .topbar{
   position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:20px;flex-wrap:nowrap;
   margin:0 calc(clamp(18px,4.4vw,72px)*-1);padding:18px clamp(18px,4.4vw,72px) 16px;
