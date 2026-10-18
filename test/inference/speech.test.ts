@@ -9,7 +9,8 @@ describe("speech readiness", () => {
 
   it("enables both directions when a Groq credential is present", () => {
     const readiness = describeSpeechReadiness({ GROQ_API_KEY: "k" });
-    expect(readiness).toEqual({ textToSpeech: true, speechToText: true, providers: ["groq"] });
+    expect(readiness).toEqual({ textToSpeech: false, speechToText: true, providers: ["groq"] });
+    expect(describeSpeechReadiness({ GROQ_API_KEY: "k", GROQ_TTS_MODEL: "configured-multilingual-model" }).textToSpeech).toBe(true);
   });
 
   it("treats a blank credential as absent", () => {
