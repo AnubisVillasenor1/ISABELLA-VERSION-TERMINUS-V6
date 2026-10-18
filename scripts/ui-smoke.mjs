@@ -73,7 +73,7 @@ assert.ok(js.includes("introVideo.currentTime * 1000"), 'Intro narrative must us
 assert.ok(!js.includes('bindNavigationSurface'), 'Internal links must use a single delegated handler, not duplicate scroll actions');
 assert.ok(!(/\sloop(?:\s|>)/i.test(html.match(/<video\b[^>]*>/i)?.[0] || '')), 'Intro video must stop at its narrative end rather than silently loop');
 assert.ok(js.includes('window.requestAnimationFrame(renderIntroFrame)'), 'Intro progress updates must use the animation frame scheduler');
-assert.ok(js.includes('introVideo.currentTime / introVideo.duration'), 'Narrative timing must follow media time to avoid scene drift during buffering');
+assert.ok(js.includes('introVideo.currentTime * 1000'), 'Narrative timing must follow raw media time from the first frame to avoid scene drift during buffering');
 assert.ok(js.includes('Math.floor((boundedElapsed / Math.max(1, introTotalMs)) * introScenes.length)'), 'Intro scenes must be distributed over the actual media duration');
 assert.ok(js.includes('scene.inert = !active'), 'Inactive intro scenes must be removed from keyboard tab order');
 assert.ok(js.includes('readyState >= HTMLMediaElement.HAVE_METADATA'), 'Intro rewind must guard against seeking before metadata loads');
