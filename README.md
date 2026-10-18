@@ -60,6 +60,16 @@ La aplicación declara un servidor Node.js con Express y TypeScript. Incluye scr
 
 Este flujo describe el objetivo de arquitectura. La persistencia, el aislamiento por tenant, las integraciones y el comportamiento ante fallos deben demostrarse con pruebas de extremo a extremo y configuración de despliegue.
 
+## Cambios recientes de latencia, voz, monetización e interfaz (17-oct-2026)
+
+Estado de evidencia: implementado y probado localmente con pruebas unitarias; **no** cambia el porcentaje de madurez de arriba (no hay build/CI verde de este SHA).
+
+- **Latencia:** `DeadlineBudget` limita toda la cadena de proveedores por respuesta (`CHAT_CHAIN_BUDGET_MS`, 20 s) y `hedgedFirst` compite proveedores *gratuitos* en modo Auto: el respaldo arranca al fallar el primero o tras `CHAT_HEDGE_DELAY_MS` (3.5 s). Los proveedores de pago siguen siendo opt-in. Ver AUD-13 en `docs/audits/AUDIT-2026-10-17.md`.
+- **Voz:** `src/inference/voice-profile.ts` fija un perfil objetivo medido de una muestra de referencia (F0 mediana 205 Hz, pausas ≈0.7 s). No es clonación de voz: selecciona la voz del navegador y ajusta ritmo/pausas; `scripts/voice-profile-compare.ts <audio.wav>` compara cualquier audio con el perfil.
+- **Monetización:** `buildPricingCatalog()` añade ahorro anual (16.7 % ≈ 2 meses gratis), precio mensual efectivo y un único plan recomendado a `GET /api/v1/billing/prices`; la sección «Planes» de la interfaz lo muestra. Mostrar un plan no concede acceso ni cobra: los derechos siguen dependiendo de suscripciones verificadas.
+- **Chat:** el selector de lente (General, Territorial, Epistémico, Seguridad, Gobernanza) ahora llega al API —antes la interfaz enviaba siempre `general`—, fuentes citadas como chips (enlaces escritos por el modelo, no verificados), mayor área de mensajes y barra superior sin colisiones.
+- **Intro:** precarga ociosa del video 540p con índice al inicio (omitida con Save-Data/2G).
+
 ## Instalación y validación local
 
 Requisitos declarados: Node.js 24.x y pnpm 10.28.0. Los workflows principales y el ingest de Atlas quedaron alineados en esta rama con Node 24 y una instalación reproducible mediante pnpm; la alineación debe confirmarse con una ejecución CI verde.
