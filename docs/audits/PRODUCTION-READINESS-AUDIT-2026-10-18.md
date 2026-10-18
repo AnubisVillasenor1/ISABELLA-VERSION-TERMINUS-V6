@@ -30,8 +30,14 @@ En la inspección en vivo de `GET /api/v1/readyz`, el servicio respondió HTTP 5
 - `GET /api/v1/readyz`: HTTP 503; `snapshot.readiness.ready=false`.
 - La existencia de un despliegue con estado Vercel `READY` significa que Vercel finalizó el despliegue, no que todas las dependencias de aplicación estén listas.
 
+### Validación local parcial ejecutada sobre el ZIP adjunto
+- `node --check src/ui/app.js`: PASS.
+- `node scripts/ui-smoke.mjs`: PASS; salidas `UI_NAVIGATION_SMOKE_OK`, `CINEMATIC_INTRO_12_SCENES_OK`, `UNIFIED_WORKSPACE_COMMAND_CENTER_OK` y `LOCAL_STUDIO_EXPORT_ATTACHMENT_OK`.
+- `node scripts/repository-assurance.mjs`: PASS, 44/44 comprobaciones estructurales y 0 fallos.
+- `server.js` existe en la raíz y delega en `dist/server.js`; la configuración de entrada Express no está ausente en el snapshot revisado.
+
 ### Limitaciones de la validación local
-El entorno de auditoría dispone de Node.js 22.16.0, mientras el proyecto requiere Node.js 24.x; pnpm no está instalado y Corepack no pudo descargar pnpm por falta de conectividad con el registro npm. No se pudo ejecutar honestamente `pnpm install --frozen-lockfile`, `pnpm run validate` ni la suite completa en este entorno. No se sustituyen esos resultados por pruebas simuladas.
+El entorno de auditoría dispone de Node.js 22.16.0, mientras el proyecto requiere Node.js 24.x; pnpm no está instalado y Corepack no pudo descargar pnpm por falta de conectividad con el registro npm. No se pudo ejecutar honestamente `pnpm install --frozen-lockfile`, `pnpm run validate`, `pnpm test`, el build de TypeScript/esbuild ni el runtime smoke sobre un artefacto recién construido. Los checks sin dependencias anteriores no sustituyen esas pruebas.
 
 ## 3. Bloqueadores confirmados
 
