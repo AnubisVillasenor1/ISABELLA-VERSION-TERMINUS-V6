@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 const html = fs.readFileSync('src/ui/index.html', 'utf8');
 const js = fs.readFileSync('src/ui/app.js', 'utf8');
+const chatPlus = fs.readFileSync('src/ui/chat-plus.js', 'utf8');
 const css = fs.readFileSync('src/ui/cinematic.css', 'utf8');
 const server = fs.readFileSync('src/server.ts', 'utf8');
 const vercelConfig = JSON.parse(fs.readFileSync('vercel.json', 'utf8'));
@@ -18,15 +19,21 @@ for (const id of ['navToggle', 'primaryLinks', 'runtimeStatus', 'soundToggle', '
   assert.ok(js.includes(`byId('${id}')`) || js.includes(`byId("${id}")`) || js.includes(`#${id}`), `Missing interaction wiring for #${id}`);
 }
 assert.ok(js.includes("fetch('/api/v1/cognition/route'"), 'Chat must call the existing cognition route');
+assert.ok(js.includes('response.ok && payload.success === true') && js.includes('/^data:audio\\/(?:mpeg|mp3|wav);base64,/'), 'Server TTS playback must require a valid successful audio payload');
+assert.ok(js.includes("fetch('/api/v1/cognition/speech'"), 'Voice reading must call the server speech endpoint');
 assert.ok(js.includes("fetch('/api/v1/health'"), 'UI must check the health endpoint');
 assert.ok(server.includes('app.get("/api/v1/health"'), 'The runtime health endpoint must exist');
+assert.ok(chatPlus.includes("if (!catalog)"), 'Pricing failures must render an explicit unavailable state instead of an endless loading message');
+assert.ok(chatPlus.includes("document.querySelectorAll('.plans-interval')") && chatPlus.includes('const paint = () =>'), 'Monthly/yearly controls must rerender real catalog data');
+assert.ok(server.includes('app.get("/api/v1/billing/prices"'), 'The public pricing catalog route must exist');
+assert.ok(chatPlus.includes("fetch('/api/v1/billing/prices'"), 'The plans UI must load the public pricing catalog from the server');
 assert.ok(typeof vercelConfig.functions?.["server.js"]?.includeFiles === 'string', 'Vercel includeFiles must be a glob string, not an array');
 assert.ok(vercelConfig.functions["server.js"].includeFiles.includes('dist/**') && vercelConfig.functions["server.js"].includeFiles.includes('src/ui/**') && vercelConfig.functions["server.js"].includeFiles.includes('src/assets/video/**'), 'Express function must bundle the server, UI, and intro media assets');
 assert.equal((vercelConfig.rewrites || []).length, 0, 'Native Express entrypoint must own routing; no catch-all rewrite may collapse paths');
 assert.ok(!fs.existsSync('api/index.js'), 'Express must have a single entrypoint to avoid ambiguous routing');
 assert.ok(server.includes('serveAsset(req, res, htmlAsset'), 'The root UI must use the startup-cached, compressed HTML asset');
 assert.ok(server.includes('app.get("/ui/chat-plus.js"'), 'Runtime must serve the Chat+ enhancement layer');
-assert.ok(fs.existsSync('src/ui/chat-plus.js') && !/innerHTML\s*=/.test(fs.readFileSync('src/ui/chat-plus.js', 'utf8')), 'Chat+ must exist and never assign innerHTML');
+assert.ok(fs.existsSync('src/ui/chat-plus.js') && !/innerHTML\s*=/.test(chatPlus), 'Chat+ must exist and never assign innerHTML');
 assert.ok(fs.existsSync('src/assets/video/IntroVideoIsabella-web.mp4'), 'The fast-start web rendition of the intro must be present');
 assert.ok(server.includes('fs.readFileSync(path.join(uiPath, "cinematic.css")'), 'The stylesheet route must serve the current CSS asset');
 assert.ok(css.includes('.nav-links.is-open'), 'Responsive menu open state must be styled');
