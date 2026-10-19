@@ -1,4 +1,5 @@
 [
+  "DELETE /api/v1/tts/memory",
   "GET /",
   "GET /api/v1/billing/entitlements",
   "GET /api/v1/billing/plans",
@@ -145,6 +146,8 @@
   "POST /api/v1/temporal/record",
   "POST /api/v1/tools/execute",
   "POST /api/v1/triple-blockade/scan",
+  "POST /api/v1/tts/memory",
+  "POST /api/v1/tts/plan",
   "POST /api/v1/tts/synthesize",
   "POST /api/v1/yun/events",
   "POST /api/v3/affiliates/attribute",
