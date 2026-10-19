@@ -77,6 +77,7 @@ import { registerYunEventRoutes } from "./routes/yun-events";
 import { registerEconomyRoutes } from "./routes/economy";
 import { registerTreasuryRoutes } from "./routes/treasury";
 import { registerOmegaRoutes } from "./routes/omega";
+import { registerRevenueFabricRoutes } from "./routes/revenue-fabric";
 import { EconomicLedger, TreasuryRuntime, AffiliateLedger } from "./economy";
 import { generateControls } from "./evolution/catalog";
 import { classifyWithGenesisTurbo, type GenesisResult } from "./lib/native-ml/genesis-turbo";
@@ -3564,6 +3565,18 @@ registerOmegaRoutes({
   enforceRateLimit,
   rateLimiter: publicOmegaLimiter,
   authorizeAdmin: (req, res) => authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN"),
+});
+
+// ── Isabella Sovereign Revenue Fabric v4 (state: engine-generated) ─ 12 revenue streams,
+// IETS Trust Score, normalized settlement, immutable ledger, metering, outbox/inbox.
+registerRevenueFabricRoutes({
+  app,
+  enforceRateLimit,
+  rateLimiter: publicEconomyLimiter,
+  publicCognitionLimiter,
+  providerTimeoutMs: Math.max(30_000, 30_000),
+  authorizeAdmin: (req, res) => authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN"),
+  authorizeProviderRoute: (req, res) => authorizeProviderRoute(req, res),
 });
 
 // ── Plataforma civilizatoria: endpoints de los nuevos módulos (state: draft | engine-generated) ──
