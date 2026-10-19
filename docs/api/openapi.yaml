@@ -1079,6 +1079,55 @@ paths:
         "200":
           description: OK
 
+  /api/v1/tts/status:
+    get:
+      summary: Estado veraz del motor de voz nativo (qué corre aquí y qué es solo especificación)
+      operationId: getTtsStatus
+      security: []
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/tts/plan:
+    post:
+      summary: Plan de prosodia es-MX (normalización, pistas culturales, emoción, ruta). No autoriza ni ejecuta.
+      operationId: planTts
+      security: []
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: text requerido
+        "413":
+          description: texto demasiado largo
+
+  /api/v1/tts/synthesize:
+    post:
+      summary: Síntesis con anti-replay y sello de evidencia; audio solo si un backend real lo entrega, si no un plan para la voz del navegador
+      description: En producción exige el token público de proveedores (GENESIS_PUBLIC_API_TOKEN); fuera de producción sin token configurado queda abierto. Límite de tasa aplicado.
+      operationId: synthesizeTts
+      responses:
+        "200":
+          description: OK
+        "409":
+          description: nonce repetido
+
+  /api/v1/tts/memory:
+    post:
+      summary: Memoria de pronunciación por sesión (solo instrucciones explícitas)
+      operationId: learnTtsPronunciation
+      security: []
+      responses:
+        "200":
+          description: OK
+    delete:
+      summary: Borra la memoria de pronunciación de la sesión
+      operationId: forgetTtsPronunciation
+      security: []
+      responses:
+        "200":
+          description: OK
+
   /api/v1/billing/entitlements:
     get:
       summary: Entitlements de un plan
