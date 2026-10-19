@@ -22,31 +22,13 @@
           <label id="immersionConsentLabel" class="immersion-consent-control" for="immersionConsent">
             <input id="immersionConsent" type="checkbox" aria-describedby="immersionConsentStatus" />
             <span class="immersion-consent-indicator" aria-hidden="true">✓</span>
-            <span class="immersion-consent-copy"><strong>Autorizar experiencia audiovisual</strong><small>El video y su audio se iniciarán tras tu confirmación.</small></span>
+            <span class="immersion-consent-copy"><strong>Autorizar experiencia audiovisual</strong><small>Al confirmar, el video y su audio inician de inmediato a pantalla completa.</small></span>
           </label>
           <p id="immersionConsentStatus" class="immersion-consent-status" role="status" aria-live="polite">La reproducción permanece desactivada hasta que la autorices.</p>
           <p class="immersion-consent-note">Este control registra tu consentimiento multimedia; no es una verificación de identidad.</p>
         </div>
         
-        <!-- Human Verification (CAPTCHA) -->
-        <div id="humanVerification" class="human-verification" aria-labelledby="verification-title" hidden>
-          <h2 id="verification-title" class="verification-title">Verificación humana</h2>
-          <p class="verification-instruction">Escribe los <strong>4 números</strong> que ves en la imagen para continuar.</p>
-          <div class="verification-captcha" aria-label="Código de verificación">
-            <canvas id="captchaCanvas" class="captcha-canvas" aria-hidden="true"></canvas>
-            <button type="button" id="captchaRefresh" class="captcha-refresh" aria-label="Generar nuevo código" title="Nuevo código">
-              <span aria-hidden="true">⟳</span>
-            </button>
-          </div>
-          <div class="verification-input-group">
-            <label for="captchaInput" class="visually-hidden">Código de verificación (4 dígitos)</label>
-            <input id="captchaInput" type="text" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="off" placeholder="••••" aria-describedby="captchaStatus" aria-label="Introduce los 4 números" />
-            <p id="captchaStatus" class="verification-status" role="status" aria-live="polite"></p>
-          </div>
-          <button id="verifyHuman" class="verification-submit" type="button" disabled>VERIFICAR Y CONTINUAR <span>↗</span></button>
-        </div>
-        
-        <button id="startImmersion" class="immersion-start" type="button" disabled>INICIAR INMERSIÓN <span>↗</span></button>
+
         <div class="immersion-dedication">
           <div class="immersion-network">TAMV ONLINE NETWORK <span>«Orgullosamente Realmontenses»</span></div>
           <div class="immersion-tribute">Proyecto desarrollado entre neblina y montaña, dedicado a Reyna Trejo Serrano; levanta el rostro y sonríe, hoy tu oveja negra logró algo por lo que puedas sentir orgullo. Te amo, madre.</div>

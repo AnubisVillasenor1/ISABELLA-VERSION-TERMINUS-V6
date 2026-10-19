@@ -9,7 +9,7 @@
   transition: filter .3s ease;
 }
 /* Keep the video out of the way while the CSS narrative fallback is visible. */
-.cinematic-intro.media-stalled .intro-video{visibility:hidden}
+.cinematic-intro.media-stalled .intro-video{visibility:visible}
 .cinematic-intro.media-stalled .intro-video-tint {
   opacity: .85;
   transition: opacity .3s ease;
@@ -1592,3 +1592,17 @@ body.chat-focus .topbar,body.chat-focus .side-rail,body.chat-focus .rail-launche
 @media(prefers-reduced-motion:reduce){
   .side-rail,.rail-launcher{transition:none!important}
 }
+
+/* ── Video-first intro (2026-10-19) ─────────────────────────────────────────────
+   Goal: the video never competes with other paint work. Once the viewer authorizes, the dialog leaves
+   at once (full view) and every decorative layer that would be re-composited on top of each video
+   frame (blend modes, filters, backdrop blur, animated grid/rings/grain) is removed while it plays. */
+.immersion-card{zoom:.8}
+.immersion-gate.is-accepted{opacity:0;visibility:hidden;pointer-events:none;background:transparent;-webkit-backdrop-filter:none;backdrop-filter:none;transition:opacity .22s ease,visibility 0s linear .22s}
+.immersion-gate.is-accepted .immersion-card{-webkit-backdrop-filter:none;backdrop-filter:none}
+.cinematic-intro.is-playing .immersion-gate{display:none}
+.cinematic-intro.is-playing .intro-video{filter:none;opacity:1;will-change:auto}
+.cinematic-intro.is-playing .intro-video-tint{mix-blend-mode:normal;background:linear-gradient(180deg,rgba(3,8,18,.16),rgba(3,8,18,0) 34%,rgba(3,8,18,.36))}
+.cinematic-intro.is-playing .intro-backdrop,.cinematic-intro.is-playing .intro-world{display:none}
+.cinematic-intro.is-playing ~ .grain{display:none}
+.cinematic-intro.media-stalled .intro-video{filter:none}

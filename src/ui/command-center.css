@@ -1,5 +1,4 @@
 /* Command center composition: chat is the primary surface, secondary modules stay discoverable without competing for attention. */
-.cinematic-intro{display:none!important}
 .stage{max-width:1480px}
 .hero,.workspace-context-bar,.workspace-modebar,.side-rail,.rail-launcher,.studio-panel,.access-section,.workspace-pane,.stage>footer,.topbar .nav-links,.topbar .command-launcher,.topbar .status,.topbar .quiet,.topbar .nav-toggle{display:none!important}
 .stage > :not(.topbar):not(#chat){display:none!important}
