@@ -24,6 +24,8 @@ Una capacidad disponible no concede autoridad; una decisión no ejecuta por sí 
 
 ### Cómo se mide el avance
 
+**No se publica un porcentaje de avance vigente**. El 61% es una línea base de madurez del sistema; estimación, no certificación.
+
 El 61% se mantiene como línea base global hasta que exista una revisión de alcance completo que justifique una actualización. La regla de control es:
 
 - El código debe estar integrado en la rama y conectado a un flujo real; un archivo aislado no basta.
@@ -247,3 +249,7 @@ Para contribuir:
 ---
 
 **Declaración final de estado:** Isabella mantiene un avance global de implementación estimado del **61%**. El sistema continúa en preproducción hasta que las pruebas del mismo SHA estén verdes, la readiness de dependencias responda saludable, la persistencia durable y la inferencia real estén verificadas, y el despliegue/rollback hayan sido demostrados. Esta declaración debe actualizarse únicamente con evidencia nueva y reproducible.
+
+
+
+
