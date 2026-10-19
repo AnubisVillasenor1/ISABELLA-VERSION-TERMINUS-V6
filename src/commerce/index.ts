@@ -13,3 +13,4 @@ export * from "./entitlements";
 export * from "./metering";
 export * from "./provider-events";
 export * from "./pricing";
+export * from "./revenue-share";
