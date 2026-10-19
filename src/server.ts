@@ -78,8 +78,10 @@ import { registerOmegaRoutes } from "./routes/omega";
 import { EconomicLedger, TreasuryRuntime, AffiliateLedger } from "./economy";
 import { generateControls } from "./evolution/catalog";
 import { classifyWithGenesisTurbo, type GenesisResult } from "./lib/native-ml/genesis-turbo";
+import { LatinoGenesis, SEED_LATAM, type IngestRecord } from "./linguistics";
 
 const app: Application = express();
+const latinoGenesis = new LatinoGenesis(SEED_LATAM);
 // La inferencia gratuita sin clave reenvía el prompt y parte del historial a un proveedor externo.
 // Por privacidad, sólo se activa con opt-in explícito del operador:
 // ISABELLA_KEYLESS_FREE_PROVIDER=pollinations (o on/true/1).
@@ -811,9 +813,32 @@ const CROWN_NODES = [
 // 6 Capas Soberanas MD-X5
 // BookPI uses the canonical process-local hash-chain adapter. It is not durable WORM storage.
 
-// --- API ROUTES ---
+  // --- API ROUTES ---
 
-app.get("/health", (_req, res) => {
+  app.get("/api/v1/linguistics/stats", (_req, res) => {
+    res.json({ ok: true, ...latinoGenesis.stats() });
+  });
+
+  app.get("/api/v1/linguistics/search", (req, res) => {
+    const term = typeof req.query.term === "string" ? req.query.term : "";
+    if (!term.trim()) return res.status(400).json({ error: "term is required" });
+    res.json({ ok: true, term, matches: latinoGenesis.search(term) });
+  });
+
+  app.post("/api/v1/linguistics/analyze", (req, res) => {
+    const text = typeof req.body?.text === "string" ? req.body.text : "";
+    if (!text.trim() || text.length > 8_000) return res.status(400).json({ error: "text must be non-empty and <= 8000 characters" });
+    res.json({ ok: true, analysis: latinoGenesis.analyze(text) });
+  });
+
+  app.post("/api/v1/linguistics/ingest", (req, res) => {
+    const records = Array.isArray(req.body?.entries) ? req.body.entries as IngestRecord[] : [];
+    if (records.length > 1_000) return res.status(413).json({ error: "entries limit is 1000" });
+    const added = latinoGenesis.ingest(records, "operator-api");
+    res.status(201).json({ ok: true, added, stats: latinoGenesis.stats() });
+  });
+
+  app.get("/health", (_req, res) => {
   res.json({
     status: "healthy",
     runtime: "Isabella Genesis TINA V6",
