@@ -1,9 +1,7 @@
-/* Isabella Chat+ — state: engine-generated.
- * Additive enhancement layer for the conversation surface (loaded after app.js, classic script).
- * Everything here is client-side presentation: safe markdown, history in this browser only,
- * slash commands, stop/regenerate/edit, focus mode, shortcuts. It never widens permissions and
- * never sends data anywhere except through the existing /api/v1/cognition/route call in app.js.
- * No innerHTML with dynamic data anywhere in this file (XSS-safe by construction). */
+/* Isabella Chat+ v2 — state: engine-generated.
+ * Fixes: per-message pending timers, double-submit guard, hoisting order,
+ * debounced history search, aria-live, safer regenerate, Escape closes slash menu.
+ * Still client-side only; no innerHTML with dynamic data; no new permissions. */
 (() => {
   'use strict';
   const $ = (id) => document.getElementById(id);
@@ -13,9 +11,7 @@
   if (!messages || !form || !prompt) return;
   const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
   const HISTORY_KEY = 'isabella.chats.v1';
-  const MAX_CHATS = 40;
-  const MAX_TURNS = 60;
-  const MAX_TURN_CHARS = 8000;
+  const MAX_CHATS = 40, MAX_TURNS = 60, MAX_TURN_CHARS = 8000;
 
   const el = (tag, className, text) => {
     const node = document.createElement(tag);
@@ -24,8 +20,8 @@
     return node;
   };
   const safeStorage = {
-    get(key) { try { return window.localStorage.getItem(key); } catch { return null; } },
-    set(key, value) { try { window.localStorage.setItem(key, value); return true; } catch { return false; } }
+    get(k){ try{ return window.localStorage.getItem(k);}catch{return null;} },
+    set(k,v){ try{ window.localStorage.setItem(k,v); return true;}catch{return false;} }
   };
   const app = () => window.IsabellaApp || null;
 
@@ -155,294 +151,198 @@
   };
 
   /* --------------------------------------------------------- message rendering */
-  let pendingTimer = 0;
-  let pendingStart = 0;
-  const THINKING = ['Leyendo tu mensaje', 'Aplicando gobernanza', 'Consultando el motor', 'Redactando la respuesta'];
-  const renderInto = (paragraph, raw, { animate = true } = {}) => {
-    if (!paragraph) return;
-    window.clearInterval(pendingTimer);
-    paragraph.dataset.raw = raw;
-    paragraph.classList.remove('is-pending');
-    paragraph.classList.add('md-body');
-    const frag = renderMarkdown(raw);
-    if (animate && !reduceMotion) [...frag.childNodes].forEach((node, idx) => { if (node instanceof HTMLElement) node.style.setProperty('--i', String(Math.min(idx, 14))); node.classList?.add('reveal'); });
-    paragraph.replaceChildren(frag);
-    scrollIfPinned(true);
+  /* per-message pending timers (fix: global timer bug) */
+  const pendingTimers = new Map();
+  const THINKING=['Leyendo tu mensaje','Aplicando gobernanza','Consultando el motor','Redactando la respuesta'];
+  const renderInto=(paragraph,raw,{animate=true}={})=>{
+    if(!paragraph)return;
+    const t=pendingTimers.get(paragraph); if(t){clearInterval(t);pendingTimers.delete(paragraph);}
+    paragraph.dataset.raw=raw; paragraph.classList.remove('is-pending'); paragraph.classList.add('md-body');
+    const frag=renderMarkdown(raw);
+    if(animate&&!reduceMotion)[...frag.childNodes].forEach((n,idx)=>{if(n instanceof HTMLElement){n.style.setProperty('--i',String(Math.min(idx,14)));n.classList?.add('reveal');}});
+    paragraph.replaceChildren(frag); scrollIfPinned(true);
   };
-  const beginPending = (paragraph) => {
-    if (!paragraph) return;
-    window.clearInterval(pendingTimer);
-    pendingStart = performance.now();
-    paragraph.dataset.raw = '';
-    paragraph.classList.add('is-pending');
-    const label = el('span', 'think-label', THINKING[0]);
-    const clock = el('span', 'think-clock', '0.0 s');
-    const dots = el('span', 'think-dots'); dots.append(el('i'), el('i'), el('i'));
-    const bar = el('span', 'think-bar'); bar.append(el('i'));
-    const row = el('span', 'think-row'); row.append(dots, label, clock);
-    paragraph.replaceChildren(row, bar);
-    pendingTimer = window.setInterval(() => {
-      const s = (performance.now() - pendingStart) / 1000;
-      clock.textContent = `${s.toFixed(1)} s`;
-      label.textContent = THINKING[Math.min(THINKING.length - 1, Math.floor(s / 1.8))] ?? THINKING[0];
-      if (s > 12) label.textContent = 'El proveedor tarda más de lo normal; si no responde, se usará el motor local';
-    }, 100);
+  const beginPending=(paragraph)=>{
+    if(!paragraph)return;
+    const old=pendingTimers.get(paragraph); if(old)clearInterval(old);
+    const start=performance.now();
+    paragraph.dataset.raw=''; paragraph.classList.add('is-pending');
+    const label=el('span','think-label',THINKING[0]); const clock=el('span','think-clock','0.0 s');
+    const dots=el('span','think-dots');dots.append(el('i'),el('i'),el('i'));
+    const bar=el('span','think-bar');bar.append(el('i'));
+    const row=el('span','think-row');row.append(dots,label,clock);
+    paragraph.replaceChildren(row,bar);
+    const timer=setInterval(()=>{
+      const s=(performance.now()-start)/1000;
+      clock.textContent=`${s.toFixed(1)} s`;
+      label.textContent=THINKING[Math.min(THINKING.length-1,Math.floor(s/1.8))]??THINKING[0];
+      if(s>12)label.textContent='El proveedor tarda más de lo normal; se usará el motor local si no responde';
+    },100);
+    pendingTimers.set(paragraph,timer);
   };
-  const latencySince = () => Math.max(0, performance.now() - pendingStart);
+  const latencySince=(start)=>Math.max(0,performance.now()-start);
 
   /* ----------------------------------------------------------- scroll behaviour */
-  const toBottom = el('button', 'scroll-bottom', '↓');
-  toBottom.type = 'button'; toBottom.hidden = true; toBottom.setAttribute('aria-label', 'Ir al último mensaje');
-  const nearBottom = () => messages.scrollHeight - messages.scrollTop - messages.clientHeight < 90;
-  function scrollIfPinned(force) {
-    if (force || nearBottom()) messages.scrollTo({ top: messages.scrollHeight, behavior: reduceMotion ? 'auto' : 'smooth' });
-  }
-  messages.addEventListener('scroll', () => { toBottom.hidden = nearBottom(); }, { passive: true });
-  toBottom.addEventListener('click', () => { messages.scrollTo({ top: messages.scrollHeight, behavior: 'smooth' }); });
+  const toBottom=el('button','scroll-bottom','↓');toBottom.type='button';toBottom.hidden=true;toBottom.setAttribute('aria-label','Ir al último mensaje');
+  const nearBottom=()=>messages.scrollHeight-messages.scrollTop-messages.clientHeight<90;
+  function scrollIfPinned(force){if(force||nearBottom())messages.scrollTo({top:messages.scrollHeight,behavior:reduceMotion?'auto':'smooth'});}
+  messages.addEventListener('scroll',()=>{toBottom.hidden=nearBottom();},{passive:true});
+  toBottom.addEventListener('click',()=>messages.scrollTo({top:messages.scrollHeight,behavior:'smooth'}));
   $('chat')?.append(toBottom);
 
-  /* ------------------------------------------------- per-message tools / follow-ups */
-  const followUps = (raw) => {
-    if (/```/.test(raw)) return ['Explícalo línea por línea', 'Añade pruebas', 'Optimízalo y señala riesgos'];
-    if (/^\s*(\d+[.)]|[-*•])\s+/m.test(raw)) return ['Conviértelo en checklist', 'Profundiza el primer punto', 'Señala los riesgos'];
-    return ['Resúmelo en 3 puntos', 'Dame un ejemplo concreto', 'Separa hechos de supuestos'];
+  /* follow-ups / regenerate / edit */
+  const followUps=(raw)=>{
+    if(/```/.test(raw))return['Explícalo línea por línea','Añade pruebas','Optimízalo y señala riesgos'];
+    if(/^\s*(\d+[.)]|[-*•])\s+/m.test(raw))return['Conviértelo en checklist','Profundiza el primer punto','Señala los riesgos'];
+    return['Resúmelo en 3 puntos','Dame un ejemplo concreto','Separa hechos de supuestos'];
   };
-  const lastTurn = (role) => [...messages.querySelectorAll(`.message.${role}`)].at(-1) || null;
-  const removeFrom = (article) => {
-    let node = article;
-    while (node) { const next = node.nextElementSibling; node.remove(); node = next; }
-  };
-  const submitText = (text) => {
-    prompt.value = text;
-    prompt.dispatchEvent(new Event('input'));
+  const lastTurn=(role)=>[...messages.querySelectorAll(`.message.${role}`)].at(-1)||null;
+  const removeFrom=(article)=>{let n=article;while(n){const next=n.nextElementSibling;n.remove();n=next;}};
+  let submitting=false;
+  const submitText=(text)=>{
+    if(submitting)return; submitting=true;
+    prompt.value=text; prompt.dispatchEvent(new Event('input'));
     form.requestSubmit();
+    setTimeout(()=>{submitting=false;},50);
   };
-  const regenerate = () => {
-    const user = lastTurn('user');
-    if (!user) return;
-    const raw = user.querySelector('p')?.dataset.raw || user.querySelector('p')?.textContent || '';
-    const text = raw.replace(/\n\nArchivo adjunto:[\s\S]*$/, '');
-    removeFrom(user);
-    submitText(text);
+  const regenerate=()=>{
+    const user=lastTurn('user'); if(!user)return;
+    const raw=user.querySelector('p')?.dataset.raw||user.querySelector('p')?.textContent||'';
+    const text=raw.replace(/\n\nArchivo adjunto:[\s\S]*$/,'');
+    removeFrom(user); submitText(text);
   };
-  const editLast = () => {
-    const user = lastTurn('user');
-    if (!user) return;
-    const raw = user.querySelector('p')?.dataset.raw || user.querySelector('p')?.textContent || '';
-    removeFrom(user);
-    prompt.value = raw.replace(/\n\nArchivo adjunto:[\s\S]*$/, '');
-    prompt.dispatchEvent(new Event('input'));
-    prompt.focus();
+  const editLast=()=>{
+    const user=lastTurn('user'); if(!user)return;
+    const raw=user.querySelector('p')?.dataset.raw||user.querySelector('p')?.textContent||'';
+    removeFrom(user); prompt.value=raw.replace(/\n\nArchivo adjunto:[\s\S]*$/,'');
+    prompt.dispatchEvent(new Event('input')); prompt.focus();
   };
-  /* Sources row (Perplexity-style): numbered chips for every http(s) link the answer itself contains.
-   * Nothing is fetched or verified here — a chip is a link the model wrote, labelled by hostname. */
-  const sourcesRow = (raw) => {
-    const seen = new Map();
-    for (const m of String(raw).matchAll(/https?:\/\/[^\s<>)\]"']+/g)) {
-      const href = safeHref(m[0].replace(/[.,;:!?]+$/, ''));
-      if (!href || seen.has(href)) continue;
-      seen.set(href, new URL(href).hostname.replace(/^www\./, ''));
-      if (seen.size >= 6) break;
+  const sourcesRow=(raw)=>{
+    const seen=new Map();
+    for(const m of String(raw).matchAll(/https?:\/\/[^\s<>)\]"']+/g)){
+      const href=safeHref(m[0].replace(/[.,;:!?]+$/,''));
+      if(!href||seen.has(href))continue;
+      seen.set(href,new URL(href).hostname.replace(/^www\./,''));
+      if(seen.size>=6)break;
     }
-    if (seen.size === 0) return null;
-    const row = el('div', 'sources-row');
-    row.append(el('span', 'sources-label', 'FUENTES CITADAS'));
-    let i = 1;
-    for (const [href, host] of seen) {
-      const a = el('a', 'source-chip'); a.href = href; a.target = '_blank'; a.rel = 'noopener noreferrer nofollow';
-      a.append(el('b', '', String(i++)), el('span', '', host));
-      row.append(a);
-    }
-    row.append(el('span', 'sources-note', 'Enlaces escritos por el modelo; no verificados por Isabella.'));
+    if(!seen.size)return null;
+    const row=el('div','sources-row');row.append(el('span','sources-label','FUENTES CITADAS'));
+    let i=1;
+    for(const[href,host]of seen){const a=el('a','source-chip');a.href=href;a.target='_blank';a.rel='noopener noreferrer nofollow';a.append(el('b','',String(i++)),el('span','',host));row.append(a);}
+    row.append(el('span','sources-note','Enlaces escritos por el modelo; no verificados por Isabella.'));
     return row;
   };
-  const feedbackKey = 'isabella.feedback.v1';
-  const decorate = (paragraph, meta = {}) => {
-    const article = paragraph?.closest('.message');
-    if (!article || article.classList.contains('user')) return;
-    messages.querySelectorAll('.message-tools').forEach((n) => n.remove());
-    const raw = paragraph.dataset.raw || paragraph.textContent || '';
-    const bar = el('div', 'message-tools');
-    const regen = el('button', 'tool-btn', '↻ Regenerar'); regen.type = 'button'; regen.addEventListener('click', regenerate);
-    const up = el('button', 'tool-btn', '👍'); const down = el('button', 'tool-btn', '👎');
-    [up, down].forEach((b, idx) => {
-      b.type = 'button'; b.setAttribute('aria-label', idx === 0 ? 'Respuesta útil' : 'Respuesta no útil');
-      b.addEventListener('click', () => {
-        const store = JSON.parse(safeStorage.get(feedbackKey) || '[]');
-        store.push({ at: new Date().toISOString(), value: idx === 0 ? 1 : -1, engine: meta.engine || null });
-        safeStorage.set(feedbackKey, JSON.stringify(store.slice(-200)));
-        up.disabled = down.disabled = true; (idx === 0 ? up : down).classList.add('is-on');
-      });
-    });
-    const sources = sourcesRow(raw);
-    bar.append(regen, up, down);
-    if (Number.isFinite(meta.latencyMs)) bar.append(el('span', 'latency-chip', `⏱ ${(meta.latencyMs / 1000).toFixed(1)} s`));
-    const chips = el('div', 'followups');
-    followUps(raw).forEach((text) => { const c = el('button', 'followup', text); c.type = 'button'; c.addEventListener('click', () => submitText(text)); chips.append(c); });
-    const host = article.querySelector(':scope > div');
-    if (sources) host?.append(sources);
-    host?.append(bar, chips);
+  const feedbackKey='isabella.feedback.v1';
+  const decorate=(paragraph,meta={})=>{
+    const article=paragraph?.closest('.message');
+    if(!article||article.classList.contains('user'))return;
+    messages.querySelectorAll('.message-tools').forEach(n=>n.remove());
+    const raw=paragraph.dataset.raw||paragraph.textContent||'';
+    const bar=el('div','message-tools');
+    const regen=el('button','tool-btn','↻ Regenerar');regen.type='button';regen.addEventListener('click',regenerate);
+    const up=el('button','tool-btn','👍');const down=el('button','tool-btn','👎');
+    [up,down].forEach((b,idx)=>{b.type='button';b.setAttribute('aria-label',idx===0?'Respuesta útil':'Respuesta no útil');
+      b.addEventListener('click',()=>{const store=JSON.parse(safeStorage.get(feedbackKey)||'[]');store.push({at:new Date().toISOString(),value:idx===0?1:-1,engine:meta.engine||null});safeStorage.set(feedbackKey,JSON.stringify(store.slice(-200)));up.disabled=down.disabled=true;(idx===0?up:down).classList.add('is-on');});});
+    const sources=sourcesRow(raw);bar.append(regen,up,down);
+    if(Number.isFinite(meta.latencyMs))bar.append(el('span','latency-chip',`⏱ ${(meta.latencyMs/1000).toFixed(1)} s`));
+    const chips=el('div','followups');followUps(raw).forEach(t=>{const c=el('button','followup',t);c.type='button';c.addEventListener('click',()=>submitText(t));chips.append(c);});
+    const host=article.querySelector(':scope > div');
+    if(sources)host?.append(sources);
+    host?.append(bar,chips);
   };
 
   /* ------------------------------------------------------------------ history */
-  const readChats = () => { try { const v = JSON.parse(safeStorage.get(HISTORY_KEY) || '[]'); return Array.isArray(v) ? v : []; } catch { return []; } };
-  const writeChats = (list) => {
-    const pinned = list.filter((c) => c.pinned);
-    const rest = list.filter((c) => !c.pinned).sort((a, b) => b.updated - a.updated).slice(0, Math.max(0, MAX_CHATS - pinned.length));
-    safeStorage.set(HISTORY_KEY, JSON.stringify([...pinned, ...rest]));
-  };
-  const collectTurns = () => [...messages.querySelectorAll('.message')].map((n) => {
-    const p = n.querySelector('p');
-    return { role: n.classList.contains('user') ? 'user' : 'assistant', text: (p?.dataset.raw || p?.textContent || '').slice(0, MAX_TURN_CHARS), ts: Number(n.dataset.ts) || Date.now() };
-  }).filter((t) => t.text && !n_isWelcome(t)).slice(-MAX_TURNS);
-  const n_isWelcome = (t) => t.role === 'assistant' && /^Estoy aquí\./.test(t.text);
-  const persist = () => {
-    const sid = app()?.getSessionId?.();
-    const turns = collectTurns();
-    if (!sid || !turns.some((t) => t.role === 'user')) return;
-    const chats = readChats();
-    const existing = chats.find((c) => c.sid === sid);
-    const title = (turns.find((t) => t.role === 'user')?.text || 'Conversación').replace(/\s+/g, ' ').slice(0, 64);
-    if (existing) { existing.turns = turns; existing.updated = Date.now(); if (!existing.renamed) existing.title = title; }
-    else chats.push({ sid, title, turns, updated: Date.now(), pinned: false, renamed: false });
-    writeChats(chats);
-    renderHistory();
-  };
-  const drawer = el('aside', 'history-drawer');
-  drawer.id = 'historyDrawer'; drawer.setAttribute('aria-label', 'Historial de conversaciones'); drawer.hidden = true;
-  const dHead = el('div', 'hd-head');
-  dHead.append(el('strong', '', 'HISTORIAL'), el('span', 'hd-note', 'Solo en este navegador'));
-  const dClose = el('button', 'hd-close', '×'); dClose.type = 'button'; dClose.setAttribute('aria-label', 'Cerrar historial');
-  dHead.append(dClose);
-  const dSearch = el('input', 'hd-search'); dSearch.type = 'search'; dSearch.placeholder = 'Buscar conversaciones…'; dSearch.setAttribute('aria-label', 'Buscar conversaciones');
-  const dList = el('div', 'hd-list');
-  const dFoot = el('div', 'hd-foot');
-  const dNew = el('button', 'hd-new', '＋ Nueva conversación'); dNew.type = 'button';
-  const dWipe = el('button', 'hd-wipe', 'Borrar todo'); dWipe.type = 'button';
-  dFoot.append(dNew, dWipe);
-  drawer.append(dHead, dSearch, dList, dFoot);
-  document.body.append(drawer);
-  const fmtDate = (ts) => { const d = new Date(ts); return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' }) + ' · ' + d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }); };
-  function renderHistory() {
-    const q = dSearch.value.trim().toLocaleLowerCase('es-MX');
-    const chats = readChats().filter((c) => !q || c.title.toLocaleLowerCase('es-MX').includes(q) || c.turns.some((t) => t.text.toLocaleLowerCase('es-MX').includes(q)))
-      .sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updated - a.updated);
+  const readChats=()=>{try{const v=JSON.parse(safeStorage.get(HISTORY_KEY)||'[]');return Array.isArray(v)?v:[];}catch{return[];}};
+  const writeChats=(list)=>{const pinned=list.filter(c=>c.pinned);const rest=list.filter(c=>!c.pinned).sort((a,b)=>b.updated-a.updated).slice(0,Math.max(0,MAX_CHATS-pinned.length));safeStorage.set(HISTORY_KEY,JSON.stringify([...pinned,...rest]));};
+  const isWelcome=(t)=>t.role==='assistant'&&/^Estoy aquí\./.test(t.text);
+  const collectTurns=()=>[...messages.querySelectorAll('.message')].map(n=>{const p=n.querySelector('p');return{role:n.classList.contains('user')?'user':'assistant',text:(p?.dataset.raw||p?.textContent||'').slice(0,MAX_TURN_CHARS),ts:Number(n.dataset.ts)||Date.now()};}).filter(t=>t.text&&!isWelcome(t)).slice(-MAX_TURNS);
+  const persist=()=>{const sid=app()?.getSessionId?.();const turns=collectTurns();if(!sid||!turns.some(t=>t.role==='user'))return;const chats=readChats();const existing=chats.find(c=>c.sid===sid);const title=(turns.find(t=>t.role==='user')?.text||'Conversación').replace(/\s+/g,' ').slice(0,64);
+    if(existing){existing.turns=turns;existing.updated=Date.now();if(!existing.renamed)existing.title=title;}else chats.push({sid,title,turns,updated:Date.now(),pinned:false,renamed:false});
+    writeChats(chats);renderHistory();};
+  const drawer=el('aside','history-drawer');drawer.id='historyDrawer';drawer.setAttribute('aria-label','Historial de conversaciones');drawer.hidden=true;
+  const dHead=el('div','hd-head');dHead.append(el('strong','','HISTORIAL'),el('span','hd-note','Solo en este navegador'));
+  const dClose=el('button','hd-close','×');dClose.type='button';dClose.setAttribute('aria-label','Cerrar historial');dHead.append(dClose);
+  const dSearch=el('input','hd-search');dSearch.type='search';dSearch.placeholder='Buscar conversaciones…';dSearch.setAttribute('aria-label','Buscar conversaciones');
+  const dList=el('div','hd-list');const dFoot=el('div','hd-foot');
+  const dNew=el('button','hd-new','＋ Nueva conversación');dNew.type='button';const dWipe=el('button','hd-wipe','Borrar todo');dWipe.type='button';
+  dFoot.append(dNew,dWipe);drawer.append(dHead,dSearch,dList,dFoot);document.body.append(drawer);
+  const fmtDate=(ts)=>{const d=new Date(ts);return d.toLocaleDateString('es-MX',{day:'2-digit',month:'short'})+' · '+d.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});};
+  let searchTimer=0;
+  function renderHistory(){const q=dSearch.value.trim().toLocaleLowerCase('es-MX');const chats=readChats().filter(c=>!q||c.title.toLocaleLowerCase('es-MX').includes(q)||c.turns.some(t=>t.text.toLocaleLowerCase('es-MX').includes(q))).sort((a,b)=>Number(b.pinned)-Number(a.pinned)||b.updated-a.updated);
     dList.replaceChildren();
-    if (!chats.length) { dList.append(el('p', 'hd-empty', q ? 'Sin resultados.' : 'Aún no hay conversaciones guardadas. Se guardan automáticamente en este navegador.')); return; }
-    chats.forEach((c) => {
-      const row = el('div', `hd-item${c.sid === app()?.getSessionId?.() ? ' is-current' : ''}`);
-      const open = el('button', 'hd-open'); open.type = 'button';
-      open.append(el('span', 'hd-title', `${c.pinned ? '★ ' : ''}${c.title}`), el('span', 'hd-date', `${fmtDate(c.updated)} · ${c.turns.length} msgs`));
-      open.addEventListener('click', () => loadChat(c.sid));
-      const tools = el('span', 'hd-tools');
-      const pin = el('button', 'hd-tool', c.pinned ? '★' : '☆'); pin.type = 'button'; pin.title = c.pinned ? 'Quitar fijado' : 'Fijar';
-      pin.addEventListener('click', () => { const all = readChats(); const t = all.find((x) => x.sid === c.sid); if (t) { t.pinned = !t.pinned; writeChats(all); renderHistory(); } });
-      const ren = el('button', 'hd-tool', '✎'); ren.type = 'button'; ren.title = 'Renombrar';
-      ren.addEventListener('click', () => { const name = window.prompt('Nuevo nombre', c.title); if (name && name.trim()) { const all = readChats(); const t = all.find((x) => x.sid === c.sid); if (t) { t.title = name.trim().slice(0, 80); t.renamed = true; writeChats(all); renderHistory(); } } });
-      const del = el('button', 'hd-tool', '🗑'); del.type = 'button'; del.title = 'Eliminar';
-      del.addEventListener('click', () => { writeChats(readChats().filter((x) => x.sid !== c.sid)); renderHistory(); });
-      tools.append(pin, ren, del);
-      row.append(open, tools);
-      dList.append(row);
-    });
-  }
-  function loadChat(sid) {
-    const chat = readChats().find((c) => c.sid === sid);
-    if (!chat || !app()) return;
-    app().resetConversation({ keepFocus: true });
-    app().setSessionId(chat.sid);
-    messages.querySelectorAll('.message').forEach((n) => n.remove());
-    chat.turns.forEach((t) => {
-      const p = app().addMessage(t.role === 'user' ? t.text : '', t.role === 'user' ? 'user' : 'isabella');
-      if (t.role !== 'user' && p) renderInto(p, t.text, { animate: false });
-    });
-    const lastAssistant = lastTurn('isabella')?.querySelector('p');
-    if (lastAssistant) decorate(lastAssistant, {});
-    closeDrawer(); scrollIfPinned(true);
-  }
-  function openDrawer() { renderHistory(); drawer.hidden = false; document.body.classList.add('history-open'); dSearch.focus(); }
-  function closeDrawer() { drawer.hidden = true; document.body.classList.remove('history-open'); }
-  const toggleDrawer = () => (drawer.hidden ? openDrawer() : closeDrawer());
-  dClose.addEventListener('click', closeDrawer);
-  dSearch.addEventListener('input', renderHistory);
-  dNew.addEventListener('click', () => { app()?.resetConversation(); closeDrawer(); });
-  dWipe.addEventListener('click', () => { if (window.confirm('¿Borrar todo el historial de este navegador?')) { safeStorage.set(HISTORY_KEY, '[]'); renderHistory(); } });
+    if(!chats.length){dList.append(el('p','hd-empty',q?'Sin resultados.':'Aún no hay conversaciones guardadas.'));return;}
+    chats.forEach(c=>{const row=el('div',`hd-item${c.sid===app()?.getSessionId?.()?' is-current':''}`);
+      const open=el('button','hd-open');open.type='button';open.append(el('span','hd-title',`${c.pinned?'★ ':''}${c.title}`),el('span','hd-date',`${fmtDate(c.updated)} · ${c.turns.length} msgs`));
+      open.addEventListener('click',()=>loadChat(c.sid));
+      const tools=el('span','hd-tools');
+      const pin=el('button','hd-tool',c.pinned?'★':'☆');pin.type='button';pin.title=c.pinned?'Quitar fijado':'Fijar';
+      pin.addEventListener('click',()=>{const all=readChats();const t=all.find(x=>x.sid===c.sid);if(t){t.pinned=!t.pinned;writeChats(all);renderHistory();}});
+      const ren=el('button','hd-tool','✎');ren.type='button';ren.title='Renombrar';
+      ren.addEventListener('click',()=>{const name=window.prompt('Nuevo nombre',c.title);if(name&&name.trim()){const all=readChats();const t=all.find(x=>x.sid===c.sid);if(t){t.title=name.trim().slice(0,80);t.renamed=true;writeChats(all);renderHistory();}}});
+      const del=el('button','hd-tool','🗑');del.type='button';del.title='Eliminar';
+      del.addEventListener('click',()=>{writeChats(readChats().filter(x=>x.sid!==c.sid));renderHistory();});
+      tools.append(pin,ren,del);row.append(open,tools);dList.append(row);});}
+  function loadChat(sid){const chat=readChats().find(c=>c.sid===sid);if(!chat||!app())return;app().resetConversation({keepFocus:true});app().setSessionId(chat.sid);
+    messages.querySelectorAll('.message').forEach(n=>n.remove());
+    chat.turns.forEach(t=>{const p=app().addMessage(t.role==='user'?t.text:'',t.role==='user'?'user':'isabella');if(t.role!=='user'&&p)renderInto(p,t.text,{animate:false});});
+    const lastA=lastTurn('isabella')?.querySelector('p');if(lastA)decorate(lastA,{});closeDrawer();scrollIfPinned(true);}
+  function openDrawer(){renderHistory();drawer.hidden=false;document.body.classList.add('history-open');dSearch.focus();}
+  function closeDrawer(){drawer.hidden=true;document.body.classList.remove('history-open');}
+  const toggleDrawer=()=>drawer.hidden?openDrawer():closeDrawer();
+  dClose.addEventListener('click',closeDrawer);
+  dSearch.addEventListener('input',()=>{clearTimeout(searchTimer);searchTimer=setTimeout(renderHistory,180);});
+  dNew.addEventListener('click',()=>{app()?.resetConversation();closeDrawer();});
+  dWipe.addEventListener('click',()=>{if(window.confirm('¿Borrar todo el historial de este navegador?')){safeStorage.set(HISTORY_KEY,'[]');renderHistory();}});
 
-  /* ---------------------------------------------------------------- focus mode */
-  const setFocusMode = (on) => {
-    document.body.classList.toggle('chat-focus', on);
-    const btn = $('focusToggle'); if (btn) { btn.setAttribute('aria-pressed', String(on)); btn.textContent = on ? 'Salir de enfoque' : 'Enfoque'; }
-    if (on) { $('chat')?.scrollIntoView({ block: 'start' }); prompt.focus(); }
-  };
-  const toggleFocus = () => setFocusMode(!document.body.classList.contains('chat-focus'));
-  const actionsRow = document.querySelector('.console-actions');
-  if (actionsRow) {
-    const hist = el('button', 'subtle-action', 'Historial'); hist.type = 'button'; hist.id = 'historyToggle'; hist.addEventListener('click', toggleDrawer);
-    const foc = el('button', 'subtle-action', 'Enfoque'); foc.type = 'button'; foc.id = 'focusToggle'; foc.setAttribute('aria-pressed', 'false'); foc.addEventListener('click', toggleFocus);
-    actionsRow.prepend(hist, foc);
-  }
-  const topActions = document.querySelector('.topbar-actions');
-  if (topActions && !$('historyTop')) {
-    const b = el('button', 'header-action ghost', ''); b.id = 'historyTop'; b.type = 'button'; b.title = 'Historial (Ctrl+Shift+H)'; b.setAttribute('aria-label', 'Abrir historial');
-    b.append(el('span', '', '☰'), el('span', 'header-action-label', 'Historial'));
-    b.addEventListener('click', toggleDrawer);
-    topActions.insertBefore(b, topActions.firstChild);
-  }
+/* ---------------------------------------------------------------- focus mode */
+  const setFocusMode=(on)=>{document.body.classList.toggle('chat-focus',on);const btn=$('focusToggle');if(btn){btn.setAttribute('aria-pressed',String(on));btn.textContent=on?'Salir de enfoque':'Enfoque';}if(on){$('chat')?.scrollIntoView({block:'start'});prompt.focus();}};
+  const toggleFocus=()=>setFocusMode(!document.body.classList.contains('chat-focus'));
+  const actionsRow=document.querySelector('.console-actions');
+  if(actionsRow){const hist=el('button','subtle-action','Historial');hist.type='button';hist.id='historyToggle';hist.addEventListener('click',toggleDrawer);
+    const foc=el('button','subtle-action','Enfoque');foc.type='button';foc.id='focusToggle';foc.setAttribute('aria-pressed','false');foc.addEventListener('click',toggleFocus);
+    actionsRow.prepend(hist,foc);}
+  const topActions=document.querySelector('.topbar-actions');
+  if(topActions&&!$('historyTop')){const b=el('button','header-action ghost','');b.id='historyTop';b.type='button';b.title='Historial (Ctrl+Shift+H)';b.setAttribute('aria-label','Abrir historial');
+    b.append(el('span','','☰'),el('span','header-action-label','Historial'));b.addEventListener('click',toggleDrawer);topActions.insertBefore(b,topActions.firstChild);}
 
-  /* ------------------------------------------------------------- slash commands */
-  const SLASH = [
-    { cmd: '/resumir', desc: 'Resumen en 5 puntos', text: 'Resume lo siguiente en 5 puntos clave y una conclusión: ' },
-    { cmd: '/traducir', desc: 'Traducir al inglés', text: 'Traduce al inglés manteniendo tono profesional: ' },
-    { cmd: '/explicar', desc: 'Explicar paso a paso', text: 'Explícalo paso a paso, como a un colega nuevo: ' },
-    { cmd: '/corregir', desc: 'Corregir ortografía y estilo', text: 'Corrige ortografía, gramática y estilo sin cambiar el sentido: ' },
-    { cmd: '/codigo', desc: 'Revisar código o diseño', text: 'Revisa este código o diseño técnico. Busca errores, riesgos, deuda técnica y pruebas que faltan: ' },
-    { cmd: '/plan', desc: 'Plan por fases', text: 'Crea un plan de trabajo por fases con entregables, dependencias, criterios de aceptación y riesgos: ' },
-    { cmd: '/investigar', desc: 'Investigar con evidencias', text: 'Investiga este tema con una estructura de preguntas, evidencias necesarias, posibles contradicciones y conclusiones provisionales: ' },
-    { cmd: '/analizar', desc: 'Analizar supuestos y riesgos', text: 'Analiza este problema paso a paso, identifica supuestos, riesgos, alternativas y una recomendación verificable: ' },
-    { cmd: '/redactar', desc: 'Redactar documento', text: 'Ayúdame a redactar un documento claro y profesional. Objetivo, audiencia, tono y resultado esperado: ' },
-    { cmd: '/nuevo', desc: 'Nueva conversación', run: () => app()?.resetConversation() },
-    { cmd: '/historial', desc: 'Abrir historial', run: () => openDrawer() },
-    { cmd: '/enfoque', desc: 'Modo enfoque', run: () => toggleFocus() },
-    { cmd: '/exportar', desc: 'Exportar .md', run: () => $('exportChat')?.click() },
-    { cmd: '/voz', desc: 'Activar o desactivar voz', run: () => $('soundToggle')?.click() },
-    { cmd: '/atajos', desc: 'Ver atajos de teclado', run: () => openShortcuts() }
+  /* slash commands */
+  const SLASH=[
+    {cmd:'/resumir',desc:'Resumen en 5 puntos',text:'Resume lo siguiente en 5 puntos clave y una conclusión: '},
+    {cmd:'/traducir',desc:'Traducir al inglés',text:'Traduce al inglés manteniendo tono profesional: '},
+    {cmd:'/explicar',desc:'Explicar paso a paso',text:'Explícalo paso a paso, como a un colega nuevo: '},
+    {cmd:'/corregir',desc:'Corregir ortografía y estilo',text:'Corrige ortografía, gramática y estilo sin cambiar el sentido: '},
+    {cmd:'/codigo',desc:'Revisar código o diseño',text:'Revisa este código o diseño técnico. Busca errores, riesgos, deuda técnica y pruebas que faltan: '},
+    {cmd:'/plan',desc:'Plan por fases',text:'Crea un plan de trabajo por fases con entregables, dependencias, criterios de aceptación y riesgos: '},
+    {cmd:'/investigar',desc:'Investigar con evidencias',text:'Investiga este tema con preguntas, evidencias, contradicciones y conclusiones provisionales: '},
+    {cmd:'/analizar',desc:'Analizar supuestos y riesgos',text:'Analiza este problema paso a paso, identifica supuestos, riesgos, alternativas y una recomendación verificable: '},
+    {cmd:'/redactar',desc:'Redactar documento',text:'Ayúdame a redactar un documento claro y profesional. Objetivo, audiencia, tono y resultado esperado: '},
+    {cmd:'/nuevo',desc:'Nueva conversación',run:()=>app()?.resetConversation()},
+    {cmd:'/historial',desc:'Abrir historial',run:()=>openDrawer()},
+    {cmd:'/enfoque',desc:'Modo enfoque',run:()=>toggleFocus()},
+    {cmd:'/exportar',desc:'Exportar .md',run:()=>$('exportChat')?.click()},
+    {cmd:'/voz',desc:'Activar o desactivar voz',run:()=>$('soundToggle')?.click()},
+    {cmd:'/atajos',desc:'Ver atajos de teclado',run:()=>openShortcuts()}
   ];
-  const menu = el('div', 'slash-menu'); menu.hidden = true; menu.setAttribute('role', 'listbox');
-  form.parentElement?.insertBefore(menu, form);
-  let menuItems = []; let menuIndex = 0;
-  const paintMenu = () => menu.querySelectorAll('.slash-item').forEach((n, i) => { n.classList.toggle('is-active', i === menuIndex); n.setAttribute('aria-selected', String(i === menuIndex)); });
-  const closeMenu = () => { menu.hidden = true; menuItems = []; };
-  const applySlash = (item) => {
-    closeMenu();
-    if (item.run) { prompt.value = ''; prompt.dispatchEvent(new Event('input')); item.run(); return; }
-    prompt.value = item.text; prompt.dispatchEvent(new Event('input')); prompt.focus();
-    prompt.setSelectionRange(prompt.value.length, prompt.value.length);
-  };
-  const updateMenu = () => {
-    const v = prompt.value;
-    if (!/^\/[a-záéíóúñ]*$/i.test(v)) { closeMenu(); return; }
-    menuItems = SLASH.filter((s) => s.cmd.startsWith(v.toLowerCase()));
-    if (!menuItems.length) { closeMenu(); return; }
-    menuIndex = 0; menu.replaceChildren();
-    menuItems.forEach((s, i) => {
-      const b = el('button', 'slash-item'); b.type = 'button'; b.setAttribute('role', 'option');
-      b.append(el('b', '', s.cmd), el('span', '', s.desc));
-      b.addEventListener('mousedown', (e) => { e.preventDefault(); applySlash(s); });
-      b.addEventListener('mousemove', () => { menuIndex = i; paintMenu(); });
-      menu.append(b);
-    });
-    paintMenu(); menu.hidden = false;
-  };
-  prompt.addEventListener('input', updateMenu);
-  form.addEventListener('keydown', (e) => {
-    if (e.target !== prompt) return;
-    if (!menu.hidden && menuItems.length) {
-      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); e.stopPropagation(); menuIndex = (menuIndex + (e.key === 'ArrowDown' ? 1 : -1) + menuItems.length) % menuItems.length; paintMenu(); return; }
-      if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); e.stopPropagation(); const item = menuItems[menuIndex]; if (item) applySlash(item); return; }
-      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeMenu(); return; }
+  const menu=el('div','slash-menu');menu.hidden=true;menu.setAttribute('role','listbox');
+  form.parentElement?.insertBefore(menu,form);
+  let menuItems=[],menuIndex=0;
+  const paintMenu=()=>menu.querySelectorAll('.slash-item').forEach((n,i)=>{n.classList.toggle('is-active',i===menuIndex);n.setAttribute('aria-selected',String(i===menuIndex));});
+  const closeMenu=()=>{menu.hidden=true;menuItems=[];};
+  const applySlash=(item)=>{closeMenu();if(item.run){prompt.value='';prompt.dispatchEvent(new Event('input'));item.run();return;}prompt.value=item.text;prompt.dispatchEvent(new Event('input'));prompt.focus();prompt.setSelectionRange(prompt.value.length,prompt.value.length);};
+  const updateMenu=()=>{const v=prompt.value;if(!/^\/[a-záéíóúñ]*$/i.test(v)){closeMenu();return;}menuItems=SLASH.filter(s=>s.cmd.startsWith(v.toLowerCase()));if(!menuItems.length){closeMenu();return;}menuIndex=0;menu.replaceChildren();
+    menuItems.forEach((s,i)=>{const b=el('button','slash-item');b.type='button';b.setAttribute('role','option');b.append(el('b','',s.cmd),el('span','',s.desc));
+      b.addEventListener('mousedown',e=>{e.preventDefault();applySlash(s);});b.addEventListener('mousemove',()=>{menuIndex=i;paintMenu();});menu.append(b);});
+    paintMenu();menu.hidden=false;};
+  prompt.addEventListener('input',updateMenu);
+  form.addEventListener('keydown',(e)=>{
+    if(e.target!==prompt)return;
+    if(!menu.hidden&&menuItems.length){
+      if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();e.stopPropagation();menuIndex=(menuIndex+(e.key==='ArrowDown'?1:-1)+menuItems.length)%menuItems.length;paintMenu();return;}
+      if(e.key==='Enter'||e.key==='Tab'){e.preventDefault();e.stopPropagation();const item=menuItems[menuIndex];if(item)applySlash(item);return;}
+      if(e.key==='Escape'){e.preventDefault();e.stopPropagation();closeMenu();return;}
     }
-    if (e.key === 'ArrowUp' && !prompt.value && !e.shiftKey) { e.preventDefault(); editLast(); }
-  }, true);
+    if(e.key==='ArrowUp'&&!prompt.value&&!e.shiftKey){e.preventDefault();editLast();}
+  },true);
 
   /* ---------------------------------------------------- composer: counter + drop */
   const counter = el('span', 'char-counter'); counter.hidden = true;
