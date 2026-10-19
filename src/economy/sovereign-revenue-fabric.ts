@@ -192,7 +192,7 @@ function validateRate(rate: number, field: string): void {
 }
 
 function canonicalJson(value: unknown): string {
-  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (value === null || typeof value !== "object") return JSON.stringify(value) ?? "null";
   if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
   const record = value as Record<string, unknown>;
   return `{${Object.keys(record).sort().map((key) => `${JSON.stringify(key)}:${canonicalJson(record[key])}`).join(",")}}`;
@@ -277,7 +277,7 @@ export class IsabellaSovereignRevenueFabric {
     }));
     const prior = this.settlements.get(input.idempotencyKey);
     if (prior) {
-      if (prior.journal.postings.length >= 0 && this.fingerprintForSettlement.get(input.idempotencyKey) !== fingerprint) {
+      if (this.fingerprintForSettlement.get(input.idempotencyKey) !== fingerprint) {
         throw new Error("REVENUE_IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_PAYLOAD");
       }
       return prior;
