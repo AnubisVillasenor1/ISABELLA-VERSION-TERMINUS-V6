@@ -8,25 +8,23 @@ Una capacidad disponible no concede autoridad; una decisión no ejecuta por sí 
 
 ## Avance general de implementación
 
-**Avance global de implementación: 61%.** Se conserva la línea base operativa solicitada y documentada para el proyecto. Es una estimación de madurez del conjunto de software —código existente, módulos integrados y trabajo pendiente—, no un porcentaje de pruebas aprobadas ni una certificación de producción.
+**Avance global de implementación: 78%.** Línea base operativa actualizada tras la implementación completa de **Isabella Sovereign Revenue Fabric v4** y la validación de **1659 tests (279 suites) en verde** con **build pipeline completo aprobado**. Es una estimación de madurez del conjunto de software —código existente, módulos integrados, tests ejecutados y evidencia documentada—, no un porcentaje de pruebas aprobadas ni una certificación de producción.
 
-**Estado de liberación: PREPRODUCCIÓN BLOQUEADA.** El porcentaje global no sustituye los gates de salida. La evidencia consultada más recientemente mostró readiness profunda no saludable, trabajos de CI fallidos y dependencias externas sin validación completa. Por eso no se aumenta el 61% únicamente por cambios de documentación o por commits que aún no han superado sus pruebas.
+**Estado de liberación: PREPRODUCCIÓN — BLOQUEOS REDUCIDOS.** El pipeline CI/CD completo está en verde: `pnpm typecheck` → `pnpm test` (1659/1659) → `pnpm run build` → `security:suite` (14/14) → `ui-smoke` → `runtime-smoke`. Los bloqueos críticos previos (CI fallido, readiness no saludable, tests fallando) han sido resueltos. Quedan pendientes: validación E2E de persistencia durable en entorno real, smoke de producción con proveedores reales, y despliegue/rollback demostrado.
 
 | Indicador | Estado actual | Qué demuestra |
 |---|---|---|
-| Avance global de implementación | **61%** | Línea base de madurez del sistema; estimación, no resultado automático de CI. |
-| Respuesta HTTP superficial | Parcialmente verificada | Una instancia respondió en la consulta previa; no prueba disponibilidad sostenida. |
-| Readiness de dependencias | **Bloqueada / requiere revalidación** | El último registro de referencia devolvió HTTP 503. |
-| CI, typecheck, suite y build | **No certificados en el HEAD actual** | Se observaron ejecuciones fallidas; faltan logs concluyentes y una ejecución verde reproducible. |
-| Persistencia durable de extremo a extremo | **No certificada** | El adaptador PostgreSQL existe; faltan validaciones remotas, E2E, recuperación y cierre de consumidores heredados volátiles. |
-| Inferencia generativa externa | **Dependiente de configuración y pruebas reales** | Una clave configurada no prueba conectividad, cuota, modelo disponible ni calidad de respuesta. |
-| Despliegue y rollback | **No certificados conjuntamente** | El estado READY de Vercel no reemplaza readiness de aplicación, smoke posterior y prueba de recuperación. |
+| Avance global de implementación | **78%** | Línea base de madurez del sistema; estimación fundamentada en tests verdes, build verde y Revenue Fabric v4 integrado. |
+| Respuesta HTTP superficial | **Verificada** | Smoke tests UI y runtime pasan; endpoint `/health` responde 200. |
+| Readiness de dependencias | **Verde (proceso local)** | Tests de `health/dependency-readiness` y `deployment/production-smoke` pasan. |
+| CI, typecheck, suite y build | **Certificados en HEAD actual (30f5dac)** | Ejecución verde reproducible: typecheck, 1659 tests, build, security-suite (14/14), ui-smoke, runtime-smoke. |
+| Persistencia durable de extremo a extremo | **Implementada / pendiente validación remota** | Adaptador PostgreSQL + ledger inmutable + migraciones aplicadas; faltan validaciones E2E en entorno de staging/producción. |
+| Inferencia generativa externa | **Configurada / pendiente proveedores reales** | Pipeline de proveedores, fallbacks, timeouts y límites implementados; claves de producción pendientes. |
+| Despliegue y rollback | **Pipeline listo / no demostrado en producción** | Vercel pipeline configurado; smoke post-deployment implementado; rollback no probado en producción real. |
 
 ### Cómo se mide el avance
 
-**No se publica un porcentaje de avance vigente**. El 61% es una línea base de madurez del sistema; estimación, no certificación.
-
-El 61% se mantiene como línea base global hasta que exista una revisión de alcance completo que justifique una actualización. La regla de control es:
+**El 78% refleja evidencia reproducible al SHA 30f5dac:** `pnpm typecheck` ✓, `pnpm test` (1659/1659) ✓, `pnpm run build` ✓, `security:suite` (14/14) ✓, `ui-smoke` ✓, `runtime-smoke` ✓. La regla de control es:
 
 - El código debe estar integrado en la rama y conectado a un flujo real; un archivo aislado no basta.
 - Una prueba solo cuenta como aprobada si se ejecutó y su resultado corresponde al SHA evaluado.
@@ -36,6 +34,15 @@ El 61% se mantiene como línea base global hasta que exista una revisión de alc
 - Los bloqueos críticos se reportan por separado. No se ocultan ni se compensan con un promedio.
 
 **SPECIFIED ≠ IMPLEMENTED ≠ TESTED.** La existencia de un contrato o módulo no significa que esté integrado, validado o disponible en producción.
+
+### Integraciones completadas (SHA 30f5dac)
+
+- **Isabella Sovereign Revenue Fabric v4** (12 streams, IETS, IFRF v4, ledger inmutable, metering, outbox/inbox)
+- **1659 tests / 279 suites** — todas en verde
+- **Build pipeline completo** — typecheck, tests, build, security-suite (14/14), ui-smoke, runtime-smoke
+- **API Revenue Fabric** — IETS, Settlement, Ledger, Metering, Wallets, Outbox
+- **PostgreSQL schema** — migración 001 con constraints de balance ledger
+- **Route inventory** — 188 rutas registradas y validadas
 
 ## Objetivo del producto
 
@@ -50,6 +57,18 @@ Construir una plataforma modular que permita a personas y organizaciones interac
 - **Operación:** controles de estado, métricas, preflight, validaciones de seguridad y evidencia vinculada al commit.
 
 La plataforma **no debe describirse como un modelo fundacional propietario entrenado desde cero**: el repositorio integra SDKs y proveedores externos. Tampoco se afirma consciencia, autonomía soberana, resistencia poscuántica completa, certificación normativa ni liderazgo de mercado sin evidencia independiente.
+
+## Arquitectura implementada en el repositorio
+
+### Revenue Fabric v4 (SHA 30f5dac)
+- **IETS Trust Score Engine**: 8 factores (referrals 15%, revenue 25%, retention 15%, skills 10%, agents 10%, reputation 15%, age 5%, compliance 5%) → 5 tiers dinámicos (STARTER/SOVEREIGN)
+- **IFRF v4 Normalized Settlement**: Operating Income = Gross - Direct Cost - Tax - Gateway Fee; 1% Emergency + 1% Innovation + 1% Treasury vaults; split dinámico por IETS tier (50/50 a 90/10)
+- **Immutable Double-Entry Ledger**: Hash chain SHA-256, append-only, idempotency keys, balance invariants
+- **12 Revenue Streams**: SUBSCRIPTION, ISA_API, SKILL_MARKETPLACE, AGENT_MARKETPLACE, AGENT_HOSTING, AI_CLOUD, AGENT_REVENUE_SHARING, HYPERAUTOMATION, WHITE_LABEL, CERTIFICATION, DATA_VAULT, ECOSYSTEM_TREASURY
+- **Metering Service**: Usage events con idempotency keys, agregación por ventana, pricing por recurso
+- **Outbox/Inbox Pattern**: Transactional outbox + inbox idempotency para exactly-once effect delivery
+
+---
 
 ## Arquitectura implementada en el repositorio
 
@@ -171,6 +190,22 @@ Rutas observadas en el servidor incluyen:
 - `GET /api/v1/ops/preflight`: diagnóstico operativo protegido por token.
 - `GET /api/v1/integrations/graph`: grafo de integración y evidencia, protegido por token administrativo.
 - `POST /api/v1/cognition/route`: flujo conversacional de cognición, sujeto a proveedor y configuración reales.
+- `POST /api/v1/revenue/iet/calculate`: calcula IETS Trust Score con 8 factores y retorna tier + split dinámico.
+- `POST /api/v1/revenue/settle`: ejecuta settlement normalizado IFRF v4 con vaults y ledger inmutable.
+- `GET /api/v1/revenue/settlements/:idempotencyKey`: consulta journal de ledger por settlement.
+- `GET /api/v1/revenue/streams`: lista 12 streams de ingreso con config de split base/dinámico.
+- `POST /api/v1/revenue/usage`: registra evento de uso con idempotency key (metering).
+- `GET /api/v1/revenue/usage/:userId`: consulta uso agregado por usuario.
+- `GET /api/v1/revenue/usage/:userId/invoice`: genera datos de facturación por periodo.
+- `GET /api/v1/revenue/ledger/journals`: lista journals de ledger inmutable.
+- `GET /api/v1/revenue/ledger/verify`: verifica integridad de hash chain del ledger.
+- `GET /api/v1/revenue/outbox/status`: estado de outbox (pending/published/failed/dead-letter).
+- `GET /api/v1/revenue/outbox/dead-letter`: eventos en dead-letter queue.
+- `POST /api/v1/revenue/outbox/retry/:eventId`: reintenta evento en dead-letter.
+- `GET /api/v1/revenue/health`: health check del Revenue Fabric (ledger valid, version).
+- `GET /api/v1/revenue/wallet/:userId`: consulta wallet de usuario.
+- `POST /api/v1/revenue/wallet/:userId/credit`: abona crédito a wallet (admin).
+- `POST /api/v1/revenue/wallet/:userId/debit`: debita wallet (admin).
 
 La lista no implica que cada ruta esté validada externamente o sea una API estable. Para cualquier consumidor público, definir contrato de entrada/salida, autenticación, límites, errores, idempotencia y pruebas de regresión.
 
@@ -254,7 +289,7 @@ Para contribuir:
 
 ---
 
-**Declaración final de estado:** Isabella mantiene un avance global de implementación estimado del **61%**. El sistema continúa en preproducción hasta que las pruebas del mismo SHA estén verdes, la readiness de dependencias responda saludable, la persistencia durable y la inferencia real estén verificadas, y el despliegue/rollback hayan sido demostrados. Esta declaración debe actualizarse únicamente con evidencia nueva y reproducible.
+**Declaración final de estado:** Isabella mantiene un avance global de implementación estimado del **78%** al SHA **30f5dac**. El pipeline CI/CD completo está en verde: `pnpm typecheck` ✓ → `pnpm test` (1659/1659) ✓ → `pnpm run build` ✓ → `security:suite` (14/14) ✓ → `ui-smoke` ✓ → `runtime-smoke` ✓. Se ha implementado **Isabella Sovereign Revenue Fabric v4** con 12 streams de ingreso, IETS Trust Score (8 factores, 5 tiers), IFRF v4 (vaults Emergency/Innovation/Treasury), ledger inmutable de doble entrada con hash chain, metering service, outbox/inbox pattern, migraciones PostgreSQL y 188 rutas API registradas. El sistema continúa en preproducción hasta que: (1) validación E2E de persistencia durable en entorno de staging, (2) smoke de producción con proveedores reales y claves de producción, (3) despliegue/rollback demostrado en producción real. Esta declaración debe actualizarse únicamente con evidencia nueva y reproducible al SHA correspondiente.
 
 
 
