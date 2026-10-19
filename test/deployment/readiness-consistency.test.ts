@@ -7,8 +7,9 @@ describe("production-readiness reporting is evidence-based", () => {
   const readme = read("README.md");
   const estado = read("docs/ESTADO-REAL-ACTUAL.md");
 
-  it("the current README explicitly avoids an unsupported global percentage", () => {
-    expect(readme).toMatch(/No se publica un porcentaje de avance vigente/);
+  it("the current README documents a global percentage with evidence and SHA", () => {
+    expect(readme).toMatch(/Avance global de implementación: 78%/);
+    expect(readme).toMatch(/SHA (30f5dac|10a1035)/);
   });
 
   it("never reintroduces unsupported legacy figures", () => {
