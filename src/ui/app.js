@@ -11,6 +11,7 @@ const introProgressBar = byId('introProgressBar');
 const introSceneLabel = byId('introSceneLabel');
 const introTimecode = byId('introTimecode');
 const skipIntro = byId('skipIntro');
+const introQuickExit = byId('introQuickExit');
 const INTRO_SCENE_MS = 4_200;
 let introTotalMs = INTRO_SCENE_MS * introScenes.length;
 const introLabels = [
@@ -267,6 +268,7 @@ if (intro) {
     immersionGate?.addEventListener('keydown', trapImmersionDialogFocus);
     immersionConsent?.focus({ preventScroll: true });
     skipIntro?.addEventListener('click', dismissIntro);
+    introQuickExit?.addEventListener('click', dismissIntro);
     intro.querySelector('.intro-enter')?.addEventListener('click', dismissIntro);
     const beginImmersion = () => {
       if (!immersionConsent?.checked) {
@@ -274,6 +276,7 @@ if (intro) {
         return;
       }
       immersionGate?.classList.add('is-accepted');
+      intro?.classList.add('is-playing');
       introActive = true;
       introPausedAt = 0;
       introMediaFallbackLocked = false;
