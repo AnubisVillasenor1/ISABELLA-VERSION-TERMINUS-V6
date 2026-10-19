@@ -1,0 +1,13 @@
+/* Command center composition: chat is the primary surface, secondary modules stay discoverable without competing for attention. */
+.stage{max-width:1480px}
+.hero,.workspace-context-bar,.workspace-modebar,.side-rail,.rail-launcher,.studio-panel,.access-section,.workspace-pane,.stage>footer{display:none!important}
+.topbar{margin-inline:0!important;padding-inline:0!important;border-radius:0!important;background:rgba(8,12,18,.94)!important}
+.topbar .nav-links{display:none!important}
+.console{width:min(940px,100%)!important;max-width:940px!important;margin:clamp(38px,8vh,92px) auto 48px!important;min-height:min(670px,calc(100vh - 210px));display:flex;flex-direction:column;justify-content:space-between}
+.console-head{padding-bottom:20px}
+.console-head h2{font-size:clamp(30px,4vw,46px)!important}
+.messages{flex:1;min-height:360px;max-height:none;margin-block:18px;display:flex;flex-direction:column;justify-content:flex-end}
+.prompt-starters{margin-top:12px}
+body{background:radial-gradient(circle at 50% 0%,rgba(94,148,190,.12),transparent 34rem),#080c12}
+@media(max-width:860px){.topbar{margin-inline:-12px!important;padding-inline:12px!important}.console{margin-top:28px!important;min-height:calc(100vh - 150px);border-radius:14px!important}.messages{min-height:260px}}
+@media(max-width:600px){.console{margin-top:18px!important;padding:18px 14px!important}.messages{min-height:220px}}

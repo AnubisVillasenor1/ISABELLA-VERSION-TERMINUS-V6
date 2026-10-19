@@ -172,11 +172,13 @@ app.use(
 const uiPath = path.join(process.cwd(), "src", "ui");
 let htmlAsset: StaticAsset | null = null;
 let cssAsset: StaticAsset | null = null;
+let commandCenterCssAsset: StaticAsset | null = null;
 let jsAsset: StaticAsset | null = null;
 let chatPlusAsset: StaticAsset | null = null;
 try {
   const rawHtml = fs.readFileSync(path.join(uiPath, "index.html"), "utf-8");
   const cinematicCss = fs.readFileSync(path.join(uiPath, "cinematic.css"), "utf-8");
+  const commandCenterCss = fs.readFileSync(path.join(uiPath, "command-center.css"), "utf-8");
   const cinematicJs = fs.readFileSync(path.join(uiPath, "app.js"), "utf-8");
   const chatPlusJs = fs.readFileSync(path.join(uiPath, "chat-plus.js"), "utf-8");
   const versioned = rawHtml
@@ -185,6 +187,7 @@ try {
     .replace(/(\/ui\/chat-plus\.js)\?v=[^"']*/, `$1?v=${contentHash(chatPlusJs)}`);
   htmlAsset = buildAsset(versioned, "text/html; charset=utf-8");
   cssAsset = buildAsset(cinematicCss, "text/css; charset=utf-8");
+  commandCenterCssAsset = buildAsset(commandCenterCss, "text/css; charset=utf-8");
   jsAsset = buildAsset(cinematicJs, "text/javascript; charset=utf-8");
   chatPlusAsset = buildAsset(chatPlusJs, "text/javascript; charset=utf-8");
 } catch {
@@ -204,6 +207,13 @@ app.get("/styles/cinematic.css", (req, res) => {
     return;
   }
   serveAsset(req, res, cssAsset, IMMUTABLE_CACHE);
+});
+app.get("/styles/command-center.css", (req, res) => {
+  if (commandCenterCssAsset === null) {
+    res.status(404).type("css").send("/* Command center CSS unavailable */");
+    return;
+  }
+  serveAsset(req, res, commandCenterCssAsset, IMMUTABLE_CACHE);
 });
 app.get("/ui/app.js", (req, res) => {
   if (jsAsset === null) {

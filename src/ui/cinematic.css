@@ -8,10 +8,8 @@
   filter: brightness(.6) saturate(.7);
   transition: filter .3s ease;
 }
-/* Legacy rule for smoke test compatibility */
-.cinematic-intro.media-stalled .intro-video {
-  visibility: hidden;
-}
+/* Keep the video out of the way while the CSS narrative fallback is visible. */
+.cinematic-intro.media-stalled .intro-video{visibility:hidden}
 .cinematic-intro.media-stalled .intro-video-tint {
   opacity: .85;
   transition: opacity .3s ease;

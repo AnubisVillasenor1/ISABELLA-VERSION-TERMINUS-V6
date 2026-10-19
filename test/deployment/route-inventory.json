@@ -62,6 +62,7 @@
   "GET /assets/video/IntroVideoIsabella.mp4",
   "GET /health",
   "GET /styles/cinematic.css",
+  "GET /styles/command-center.css",
   "GET /ui/app.js",
   "GET /v1/models",
   "POST /api/v1/audio-overview/generate",
