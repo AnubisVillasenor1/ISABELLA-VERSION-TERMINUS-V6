@@ -4,7 +4,7 @@
 .intro-video{position:absolute;inset:0;z-index:0;width:100%;height:100%;object-fit:cover;opacity:.9;filter:saturate(1.1) contrast(1.05);pointer-events:none;background:#050914;will-change:transform;contain:strict}.cinematic-intro.media-stalled .intro-video{visibility:hidden}.cinematic-intro.media-ready .intro-world,.cinematic-intro.media-ready .intro-ring,.cinematic-intro.media-ready .intro-core,.cinematic-intro.media-ready .intro-particle-field,.cinematic-intro.media-ready .intro-light{animation-play-state:paused}
   .intro-video-tint{position:absolute;inset:0;z-index:1;background:linear-gradient(135deg,rgba(3,8,18,.42),rgba(15,37,76,.2) 45%,rgba(85,8,31,.28));mix-blend-mode:multiply;pointer-events:none}
 .immersion-gate{position:absolute;inset:0;z-index:100;display:grid;place-items:center;padding:24px;background:rgba(3,6,16,.38);backdrop-filter:blur(8px);transition:opacity .9s ease,visibility .9s ease;pointer-events:auto}.immersion-gate.is-accepted{pointer-events:none}
-.immersion-gate.is-accepted{opacity:0;visibility:hidden;pointer-events:none}
+.immersion-gate.is-accepted{opacity:0;visibility:hidden;pointer-events:none}.intro-quick-exit{position:absolute;right:22px;bottom:22px;z-index:110;display:none;padding:10px 13px;border:1px solid rgba(141,243,255,.5);border-radius:999px;background:rgba(3,8,18,.68);color:#dffbff;font:700 10px/1 ui-monospace,monospace;letter-spacing:.12em;cursor:pointer;pointer-events:auto}.cinematic-intro.is-playing{pointer-events:none}.cinematic-intro.is-playing .intro-quick-exit{display:inline-flex;align-items:center;gap:8px;pointer-events:auto}.cinematic-intro.is-playing ~ .stage .topbar,.cinematic-intro.is-playing ~ .stage .rail-launcher,.cinematic-intro.is-playing ~ .stage .side-rail{position:relative;z-index:120}.intro-quick-exit:hover{background:rgba(141,243,255,.16);border-color:#8df3ff}
 .immersion-card{width:min(560px,100%);padding:clamp(28px,5vw,64px);border:1px solid rgba(141,243,255,.5);background:linear-gradient(145deg,rgba(8,18,42,.96),rgba(12,16,34,.88));box-shadow:0 30px 120px rgba(0,0,0,.48),0 0 70px rgba(56,189,248,.12);text-align:center;color:#f5f7fb}
 .immersion-mark{display:grid;place-items:center;width:58px;height:58px;margin:0 auto 24px;border:1px solid #8df3ff;border-radius:50%;color:#8df3ff;font:600 18px/1 ui-monospace,monospace;box-shadow:0 0 28px rgba(141,243,255,.3)}
 .immersion-card h1{margin:12px 0 16px;font-size:clamp(32px,5vw,58px);letter-spacing:-.06em;font-weight:500}.immersion-card p:not(.eyebrow){max-width:430px;margin:0 auto 28px;color:rgba(245,247,251,.72);line-height:1.7}.immersion-card small{display:block;margin-top:18px;color:rgba(245,247,251,.46);font-size:11px}.immersion-start{display:inline-flex;gap:14px;align-items:center;padding:15px 20px;border:1px solid #8df3ff;background:#8df3ff;color:#061016;font:700 10px/1 ui-monospace,monospace;letter-spacing:.14em;cursor:pointer;box-shadow:0 0 34px rgba(141,243,255,.28)}
@@ -1306,6 +1306,32 @@ button.primary:hover, .immersion-start:hover {
   .hero { padding: 20px 16px; }
   .human-check-challenge{grid-template-columns:1fr auto}.human-check-input{grid-column:2;grid-row:1}
 }
+
+/* === FUTURE HUMAN INTERFACE (state: draft | engine-generated) === */
+:root{--future-ink:#07090d;--future-panel:rgba(15,19,27,.76);--future-line:rgba(255,255,255,.11);--future-cyan:#9bf3e6;--future-lilac:#c6b7ff;--future-warm:#f4e9d4}
+body{background:var(--future-ink);color:var(--future-warm);font-family:Inter,ui-sans-serif,system-ui,sans-serif}
+body:before{content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;background:radial-gradient(circle at 12% 8%,rgba(155,243,230,.08),transparent 28%),radial-gradient(circle at 88% 38%,rgba(198,183,255,.08),transparent 30%),linear-gradient(180deg,#07090d 0%,#0b0f16 52%,#07090d 100%)}
+body:after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.12;background-image:linear-gradient(rgba(255,255,255,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.08) 1px,transparent 1px);background-size:72px 72px;mask-image:linear-gradient(to bottom,black,transparent 80%)}
+.topbar{border-bottom:1px solid var(--future-line);background:rgba(7,9,13,.78);box-shadow:0 12px 40px rgba(0,0,0,.2)}
+.wordmark{letter-spacing:-.06em}.wordmark span{color:var(--future-cyan)}
+.nav-links a{color:rgba(244,233,212,.64);transition:color .2s ease,transform .2s ease}.nav-links a:hover{color:var(--future-cyan);transform:translateY(-1px)}
+.workspace-context-bar,.workspace-modebar{border-color:var(--future-line);background:rgba(15,19,27,.6);box-shadow:0 18px 60px rgba(0,0,0,.14)}
+.hero{min-height:600px;border:1px solid var(--future-line);border-radius:28px;overflow:hidden;background:linear-gradient(135deg,rgba(15,19,27,.9),rgba(9,13,19,.62));box-shadow:0 30px 100px rgba(0,0,0,.28)}
+.hero:after{content:"";position:absolute;inset:auto 0 0;height:1px;background:linear-gradient(90deg,transparent,var(--future-cyan),var(--future-lilac),transparent);opacity:.75}
+.hero-kicker,.console-overline,.pane-label{letter-spacing:.24em}.hero h1{font-size:clamp(58px,8vw,124px);line-height:.87;letter-spacing:-.09em}.hero h1 em{background:linear-gradient(110deg,var(--future-cyan),var(--future-lilac));-webkit-background-clip:text;background-clip:text;color:transparent}
+.lede{max-width:560px;color:rgba(244,233,212,.68);font-size:clamp(16px,1.45vw,20px);line-height:1.7}
+button.primary,.send,.immersion-start{border-radius:999px;background:var(--future-cyan);color:#081012;box-shadow:0 0 0 1px rgba(155,243,230,.4),0 14px 40px rgba(155,243,230,.14)}
+button.primary:hover,.send:hover,.immersion-start:hover{background:#c9fff5;box-shadow:0 0 0 1px var(--future-cyan),0 16px 44px rgba(155,243,230,.25)}
+.console,.studio-panel,.protocols,.workspace-pane{border:1px solid var(--future-line);border-radius:24px;background:var(--future-panel);box-shadow:0 24px 90px rgba(0,0,0,.2)}
+.console-head,.studio-head{border-bottom-color:var(--future-line)}
+.message{border:1px solid transparent;border-radius:18px}.message.isabella{border-color:rgba(155,243,230,.16);background:linear-gradient(135deg,rgba(155,243,230,.07),rgba(198,183,255,.04))}.message.user{background:rgba(255,255,255,.035)}
+.composer{border-color:var(--future-line);border-radius:22px;background:rgba(7,9,13,.72);box-shadow:0 14px 50px rgba(0,0,0,.24)}.composer:focus-within{border-color:var(--future-cyan);box-shadow:0 0 0 3px rgba(155,243,230,.08),0 20px 70px rgba(0,0,0,.28)}
+.protocol-grid article{border-color:var(--future-line);border-radius:20px;background:rgba(255,255,255,.035);box-shadow:none}.protocol-grid article:hover{border-color:rgba(155,243,230,.6);background:rgba(155,243,230,.06);transform:translateY(-6px)}
+.capability-pill.is-active,.workspace-mode.is-active{border-color:var(--future-cyan);color:var(--future-cyan);background:rgba(155,243,230,.1);box-shadow:none}
+.rail-launcher,.side-rail{border-color:var(--future-line);background:rgba(10,13,19,.92)}
+.rail-launcher{color:var(--future-cyan);box-shadow:0 14px 44px rgba(0,0,0,.28)}
+.intro-quick-exit,.intro-skip{border-color:rgba(155,243,230,.5);color:var(--future-cyan);border-radius:999px}
+@media (max-width:768px){.hero{min-height:unset;border-radius:20px}.hero h1{font-size:clamp(48px,16vw,78px)}.console,.studio-panel,.protocols,.workspace-pane{border-radius:18px}.context-actions{display:none}}
 
 /* ==== TERMINUS ENTERPRISE LAYER v1 — state: engine-generated (additive; safe to remove as one block) ==== */
 :root{
