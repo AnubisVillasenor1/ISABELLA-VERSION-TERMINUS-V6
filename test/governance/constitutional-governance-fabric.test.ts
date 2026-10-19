@@ -31,4 +31,24 @@ describe("Constitutional Governance Fabric (CGF)", () => {
     expect(() => cgf.evaluate({ actor: "", action: "x", resource: "r", riskScore: 0.1, policyAllowed: true, approvalGranted: true, evidencePresent: true })).toThrow();
     expect(() => cgf.evaluate({ actor: "a", action: "x", resource: "r", riskScore: 2, policyAllowed: true, approvalGranted: true, evidencePresent: true })).toThrow();
   });
+
+  it("bounds the in-memory dossier cache without resetting sequence IDs", () => {
+    const cgf = new ConstitutionalGovernanceFabric(2);
+    const input = { actor: "a", action: "read", resource: "r", riskScore: 0.1, policyAllowed: true, approvalGranted: true, evidencePresent: true };
+    const first = cgf.evaluate(input);
+    cgf.evaluate(input);
+    const third = cgf.evaluate(input);
+    expect(cgf.listDossiers()).toHaveLength(2);
+    expect(cgf.listDossiers().map((d) => d.id)).toEqual(["dossier-2", "dossier-3"]);
+    expect(cgf.stats().total).toBe(2);
+    expect(first.id).toBe("dossier-1");
+    expect(third.id).toBe("dossier-3");
+  });
+
+  it("rejects invalid runtime flags and cache limits", () => {
+    expect(() => new ConstitutionalGovernanceFabric(0)).toThrow();
+    const cgf = new ConstitutionalGovernanceFabric();
+    expect(() => cgf.evaluate({ actor: "a", action: "x", resource: "r", riskScore: 0.1, policyAllowed: "yes" as unknown as boolean, approvalGranted: true, evidencePresent: true })).toThrow();
+    expect(() => cgf.evaluate({ actor: "a".repeat(257), action: "x", resource: "r", riskScore: 0.1, policyAllowed: true, approvalGranted: true, evidencePresent: true })).toThrow();
+  });
 });
