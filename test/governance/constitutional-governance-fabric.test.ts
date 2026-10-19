@@ -40,7 +40,7 @@ describe("Constitutional Governance Fabric (CGF)", () => {
     const third = cgf.evaluate(input);
     expect(cgf.listDossiers()).toHaveLength(2);
     expect(cgf.listDossiers().map((d) => d.id)).toEqual(["dossier-2", "dossier-3"]);
-    expect(cgf.stats().total).toBe(2);
+    expect(cgf.stats()).toEqual({ total: 3, allow: 3, deny: 0, escalate: 0 });
     expect(first.id).toBe("dossier-1");
     expect(third.id).toBe("dossier-3");
   });
