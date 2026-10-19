@@ -781,26 +781,32 @@ refreshWorkspaceContext();
 
 /* ------------------------------------------------------------ TTS / Speech */
 const speakMessage = async (text) => {
+  const payloadFor = (audio) => audio?.dataUrl || audio?.audio || (audio?.audioBase64?.startsWith('data:') ? audio.audioBase64 : '');
   try {
-    const response = await fetch('/api/v1/cognition/speech', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, sessionId })
+    let response = await fetch('/api/v1/tts/synthesize', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, sessionId, format: 'mp3', voice: 'troy' })
     });
-    
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    
-    const payload = await response.json();
-    
-    if (response.ok && payload.success === true && payload.audioBase64) {
-      const audioRegex = /^data:audio\/(?:mpeg|mp3|wav);base64,/;
-      if (audioRegex.test(payload.audioBase64)) {
-        const audio = new Audio(payload.audioBase64);
-        audio.play().catch(() => {});
+    if (!response.ok) {
+      response = await fetch('/api/v1/cognition/speech', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, sessionId, format: 'mp3', voice: 'troy' })
+      });
+    }
+    if (response.ok) {
+      const audioUrl = payloadFor(await response.json());
+      if (/^data:audio\/(?:mpeg|mp3|wav);base64,/.test(audioUrl)) {
+        const audio = new Audio(audioUrl); await audio.play(); return;
       }
     }
-  } catch (err) {
-    console.warn('TTS playback failed:', err);
+  } catch (error) {
+    console.warn('[Isabella] server TTS unavailable', error);
+  }
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'es-MX';
+    window.speechSynthesis.speak(utterance);
   }
 };
 

@@ -10,7 +10,7 @@ import { generateText } from "ai";
 import Stripe from "stripe";
 import { boundedMilliseconds, buildKeylessFreeMessages, buildOpenAICompatibleCandidates, extractAssistantText, extractKeylessFreeText, isOpenRouterModelAllowed, resolveKeylessFreeProvider } from "./inference/provider-policy";
 import { MULTIMODAL_CONTRACT_VERSION, buildImageCandidates, buildVisionCandidates, describeMultimodalReadiness, parseImageDataUrl, performImage, performVision } from "./inference/multimodal";
-import { describeSpeechReadiness, synthesizeSpeech, transcribeAudio } from "./inference/speech";
+import { SPEECH_CONTRACT_VERSION, describeSpeechReadiness, synthesizeSpeech, transcribeAudio } from "./inference/speech";
 import { gateway } from "@ai-sdk/gateway";
 import { IsabellaGenesisRuntime } from "./genesis/runtime";
 import { assertBalancedAuthority, createPrincipal } from "./identity/principal";
@@ -1468,6 +1468,22 @@ app.post("/api/v1/cognition/image", async (req, res) => {
   } catch {
     res.status(500).json({ success: false, error: "IMAGE_ROUTE_FAILED" });
   }
+});
+
+app.get("/api/v1/tts/status", (req, res) => {
+  if (!authorizeProviderRoute(req, res)) return;
+  res.json({ success: true, contractVersion: SPEECH_CONTRACT_VERSION, readiness: describeSpeechReadiness(process.env) });
+});
+
+app.post("/api/v1/tts/synthesize", async (req, res) => {
+  if (!authorizeProviderRoute(req, res)) return;
+  if (!enforceRateLimit(req, res, publicCognitionLimiter, "tts-synthesize")) return;
+  const text = typeof req.body?.text === "string" ? req.body.text.trim() : "";
+  if (!text) return res.status(400).json({ success: false, error: "text es requerido" });
+  if (text.length > 2_000) return res.status(413).json({ success: false, error: "SPEECH_TEXT_SIZE_LIMIT_EXCEEDED" });
+  const result = await synthesizeSpeech(process.env, { text, voice: typeof req.body?.voice === "string" ? req.body.voice : undefined, format: req.body?.format === "mp3" ? "mp3" : "wav", timeoutMs: Math.max(providerTimeoutMs, 30_000) });
+  if (!result) return res.status(503).json({ success: false, error: "NO_SPEECH_PROVIDER_CONFIGURED", readiness: describeSpeechReadiness(process.env) });
+  return res.json({ success: true, provider: result.provider, audio: result.dataUrl, audioBase64: result.dataUrl, mimeType: result.mimeType, bytes: result.bytes });
 });
 
 // Public text-to-speech route: viewer-only. Bounded text in, base64 audio out.
