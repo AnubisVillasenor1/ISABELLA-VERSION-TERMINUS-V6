@@ -27,10 +27,11 @@ assert.ok(chatPlus.includes("if (!catalog)"), 'Pricing failures must render an e
 assert.ok(chatPlus.includes("document.querySelectorAll('.plans-interval')") && chatPlus.includes('const paint = () =>'), 'Monthly/yearly controls must rerender real catalog data');
 assert.ok(server.includes('app.get("/api/v1/billing/prices"'), 'The public pricing catalog route must exist');
 assert.ok(chatPlus.includes("fetch('/api/v1/billing/prices'"), 'The plans UI must load the public pricing catalog from the server');
-assert.ok(typeof vercelConfig.functions?.["server.js"]?.includeFiles === 'string', 'Vercel includeFiles must be a glob string, not an array');
-assert.ok(vercelConfig.functions["server.js"].includeFiles.includes('dist/**') && vercelConfig.functions["server.js"].includeFiles.includes('src/ui/**') && vercelConfig.functions["server.js"].includeFiles.includes('src/assets/video/**'), 'Express function must bundle the server, UI, and intro media assets');
-assert.equal((vercelConfig.rewrites || []).length, 0, 'Native Express entrypoint must own routing; no catch-all rewrite may collapse paths');
-assert.ok(!fs.existsSync('api/index.js'), 'Express must have a single entrypoint to avoid ambiguous routing');
+assert.ok(typeof vercelConfig.functions?.["api/index.js"]?.includeFiles === 'string', 'Vercel includeFiles must be a glob string, not an array');
+assert.ok(vercelConfig.functions["api/index.js"].includeFiles.includes('dist/**') && vercelConfig.functions["api/index.js"].includeFiles.includes('src/ui/**') && vercelConfig.functions["api/index.js"].includeFiles.includes('src/assets/video/**'), 'Express function must bundle the server, UI, and intro media assets');
+assert.equal(vercelConfig.rewrites?.length, 1, 'Vercel must route application paths through the serverless Express function');
+assert.equal(vercelConfig.rewrites?.[0]?.destination, '/api', 'Vercel rewrite must target the API function');
+assert.ok(fs.existsSync('api/index.js'), 'The serverless Express entrypoint must exist');
 assert.ok(server.includes('serveAsset(req, res, htmlAsset'), 'The root UI must use the startup-cached, compressed HTML asset');
 assert.ok(server.includes('app.get("/ui/chat-plus.js"'), 'Runtime must serve the Chat+ enhancement layer');
 assert.ok(fs.existsSync('src/ui/chat-plus.js') && !/innerHTML\s*=/.test(chatPlus), 'Chat+ must exist and never assign innerHTML');
