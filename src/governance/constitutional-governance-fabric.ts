@@ -32,6 +32,7 @@ export interface GovernanceDossier {
 export class ConstitutionalGovernanceFabric {
   private readonly dossiers: GovernanceDossier[] = [];
   private seq = 0;
+  private readonly totals = { total: 0, allow: 0, deny: 0, escalate: 0 };
 
   /**
    * The in-process dossier cache is deliberately bounded. It is not the durable
@@ -63,6 +64,8 @@ export class ConstitutionalGovernanceFabric {
       decision, riskScore: input.riskScore, reasons, timestamp: new Date().toISOString(),
     };
     this.dossiers.push(dossier);
+    this.totals.total += 1;
+    this.totals[dossier.decision] += 1;
     if (this.dossiers.length > this.maxDossiers) {
       this.dossiers.splice(0, this.dossiers.length - this.maxDossiers);
     }
@@ -78,12 +81,8 @@ export class ConstitutionalGovernanceFabric {
   byActor(actor: string): readonly GovernanceDossier[] { return this.dossiers.filter((d) => d.actor === actor); }
   byDecision(decision: ConstitutionalDecision): readonly GovernanceDossier[] { return this.dossiers.filter((d) => d.decision === decision); }
 
+  /** Lifetime counters; dossier queries expose only the bounded in-process cache. */
   stats(): { total: number; allow: number; deny: number; escalate: number } {
-    return {
-      total: this.dossiers.length,
-      allow: this.dossiers.filter((d) => d.decision === "allow").length,
-      deny: this.dossiers.filter((d) => d.decision === "deny").length,
-      escalate: this.dossiers.filter((d) => d.decision === "escalate").length,
-    };
+    return { ...this.totals };
   }
 }
