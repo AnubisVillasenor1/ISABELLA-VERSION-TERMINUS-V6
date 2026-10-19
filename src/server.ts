@@ -64,6 +64,8 @@ import { registerHyperCoreRoutes } from "./routes/hypercore";
 import { registerOpenAiCompatibleRoutes } from "./routes/openai";
 import { registerOrderPermissionRoutes } from "./routes/governance-permissions";
 import { registerTurboPlannerRoutes } from "./routes/turbo-planner";
+import { registerTtsRoutes } from "./routes/tts";
+import { GenesisTtsEngine } from "./tts/engine";
 import { registerTrafficLightRoutes } from "./routes/traffic-light";
 import { registerCivilizationRoutes } from "./routes/civilization";
 import { registerHfHubRoutes } from "./routes/hf-hub";
@@ -3406,6 +3408,29 @@ registerTurboPlannerRoutes({
   enforceRateLimit,
   rateLimiter: publicScanLimiter,
   authorizeAdmin: (req, res) => authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN"),
+});
+
+// ── Génesis TTS MX-Prime (state: engine-generated) ─ normalización es-MX, prosodia cultural, router de
+// backends reales (servicio neuronal del operador / TTS por clave / voz del navegador), memoria de
+// pronunciación, anti-replay y sello de evidencia. Hablar NO autoriza ni ejecuta nada.
+const ttsEngine = new GenesisTtsEngine({ env: process.env });
+registerTtsRoutes({
+  app,
+  engine: ttsEngine,
+  enforceRateLimit,
+  rateLimiter: publicCognitionLimiter,
+  authorizeAdmin: (req, res) => authorizeProviderRoute(req, res),
+  recordEvidence: (event) => {
+    bookPiLedger.append({
+      id: `evt-${randomUUID()}`,
+      timestamp: new Date().toISOString(),
+      type: "MULTIMODAL_SPEECH",
+      methodId: "A.TWINS.E14_SPEECH.genesis_tts.v1.0.0.LOW.AUTONOMOUS",
+      principal: "human:public-session",
+      riskTier: "LOW",
+      status: "ADMITTED",
+    });
+  },
 });
 
 // ── Governed Flow Traffic Light Ω (state: draft | engine-generated) ─ clasifica la
