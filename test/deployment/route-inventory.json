@@ -1,5 +1,4 @@
 [
-  "DELETE /api/v1/tts/memory",
   "GET /",
   "GET /api/v1/billing/entitlements",
   "GET /api/v1/billing/plans",
@@ -61,13 +60,11 @@
   "GET /api/v3/omega/constitution",
   "GET /api/v3/omega/nexus",
   "GET /api/v3/treasury/balance/:partyId",
-  "GET /assets/video/IntroVideoIsabella-poster.jpg",
-  "GET /assets/video/IntroVideoIsabella-web.mp4",
   "GET /assets/video/IntroVideoIsabella.mp4",
   "GET /health",
   "GET /styles/cinematic.css",
+  "GET /styles/command-center.css",
   "GET /ui/app.js",
-  "GET /ui/chat-plus.js",
   "GET /v1/models",
   "POST /api/v1/audio-overview/generate",
   "POST /api/v1/billing/cancel",
@@ -148,8 +145,6 @@
   "POST /api/v1/temporal/record",
   "POST /api/v1/tools/execute",
   "POST /api/v1/triple-blockade/scan",
-  "POST /api/v1/tts/memory",
-  "POST /api/v1/tts/plan",
   "POST /api/v1/tts/synthesize",
   "POST /api/v1/yun/events",
   "POST /api/v3/affiliates/attribute",
@@ -170,5 +165,8 @@
   "POST /api/v3/treasury/credit",
   "POST /api/v3/treasury/debit",
   "POST /v1/chat/completions",
-  "POST /v1/completions"
+  "POST /v1/completions",
+  "GET /ui/chat-plus.js",
+  "GET /assets/video/IntroVideoIsabella-web.mp4",
+  "GET /assets/video/IntroVideoIsabella-poster.jpg"
 ]

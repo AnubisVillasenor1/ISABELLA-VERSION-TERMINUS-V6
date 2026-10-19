@@ -18,7 +18,25 @@ const enterChat = byId('enterChat');
 const commandLauncher = byId('commandLauncher');
 const commandPalette = byId('commandPalette');
 const commandSearch = byId('commandSearch');
+const commandList = byId('commandList');
 const studio = byId('studio');
+document.addEventListener('keydown', (event) => {
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+    event.preventDefault();
+    if (typeof commandPalette?.showModal === 'function') commandPalette.showModal();
+  }
+});
+commandLauncher?.addEventListener('click', () => {
+  if (typeof commandPalette?.showModal === 'function') commandPalette.showModal();
+  else commandPalette?.setAttribute('open', '');
+});
+commandList?.addEventListener('keydown', (event) => {
+  if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+  const items = [...commandList.querySelectorAll('button:not([hidden])')];
+  const current = items.indexOf(document.activeElement);
+  const next = items[(current + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length];
+  if (next) { event.preventDefault(); next.focus(); }
+});
 const draftShelf = byId('draftShelf');
 const exportChat = byId('exportChat');
 const clearChat = byId('clearChat');
@@ -51,6 +69,10 @@ const verifyHuman = byId('verifyHuman');
 let captchaCode = '';
 let captchaVerified = false;
 const INTRO_SCENE_MS = 4_200; // 4.2 seconds per scene (matches test expectation)
+const MAX_LOCAL_FILE_BYTES = 25 * 1024;
+const MAX_LOCAL_FILE_CHARS = 12_000;
+const MAX_COMBINED_PROMPT_CHARS = 18_000;
+const DRAFT_STORAGE_KEY = 'isabella.drafts';
 const introLabels = [
   'SECUENCIA 01 · APERTURA', 'SECUENCIA 02 · EL ORIGEN', 'SECUENCIA 03 · LA CALLE',
   'SECUENCIA 04 · NUESTRA GENTE', 'SECUENCIA 05 · RESILIENCIA', 'SECUENCIA 06 · IDENTIDAD',
@@ -282,10 +304,14 @@ class IsabellaIntroPlayer {
 
   syncScenes() {
     if (!this.video || !this.root) return;
-    const t = this.video.currentTime;
+    const t = Math.max(0, this.video.currentTime);
+    const introTotalMs = Number.isFinite(this.video.duration) && this.video.duration > 1
+      ? this.video.duration * 1000
+      : this.totalDuration * 1000;
+    const boundedElapsed = Math.min(t * 1000, introTotalMs);
     const idx = Math.min(
       this.scenes.length - 1,
-      Math.floor(t / this.sceneDuration)
+      Math.floor((boundedElapsed / Math.max(1, introTotalMs)) * introScenes.length)
     );
     this.scenes.forEach((scene, i) => {
       const active = i === idx;
@@ -293,18 +319,19 @@ class IsabellaIntroPlayer {
       scene.setAttribute('aria-hidden', String(!active));
       scene.inert = !active;
     });
-    this.root.dataset.scene = String(idx);
+    const sceneIndex = idx;
+    intro.dataset.scene = String(sceneIndex);
     if (this.sceneLabel) this.sceneLabel.textContent = introLabels[idx] || `SECUENCIA ${String(idx + 1).padStart(2, '0')}`;
     // Progress bar: progress within current scene
     if (this.progressBar) {
-      const sceneProgress = (t % this.sceneDuration) / this.sceneDuration;
+      const sceneProgress = ((boundedElapsed / Math.max(1, introTotalMs)) * this.scenes.length) % 1;
       this.progressBar.style.width = `${sceneProgress * 100}%`;
     }
     if (this.timecode) {
-      this.timecode.textContent = `${formatIntroTime(t * 1000)} / ${formatIntroTime(this.totalDuration * 1000)}`;
+      this.timecode.textContent = `${formatIntroTime(boundedElapsed)} / ${formatIntroTime(introTotalMs)}`;
     }
-    // Auto-dismiss at end
-    if (t >= this.totalDuration) {
+    // Auto-dismiss at the actual media boundary, or the deterministic fallback boundary.
+    if (t * 1000 >= introTotalMs) {
       this.dismiss();
       return;
     }
@@ -612,6 +639,21 @@ const setRuntimeStatus = (label, state, title) => {
 let sessionId = crypto.randomUUID?.() || Math.random().toString(36).slice(2);
 let abortController = null;
 
+const exportConversation = () => {
+  const transcript = [...messages.querySelectorAll('.message')].map((message) => {
+    const speaker = message.classList.contains('user') ? 'Tú' : 'Isabella';
+    return `## ${speaker}\n\n${message.querySelector('p')?.textContent?.trim() || ''}`;
+  }).join('\n\n');
+  const blob = new Blob([`# Conversación Isabella\n\n${transcript}\n`], { type: 'text/markdown;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url; link.download = `isabella-conversacion-${new Date().toISOString().slice(0, 10)}.md`;
+  link.click(); URL.revokeObjectURL(url);
+};
+exportChat?.addEventListener('click', exportConversation);
+
+const saveAssistantDraft = (paragraph) => window.IsabellaApp?.saveDraft(paragraph.dataset.raw || paragraph.textContent || '');
+
 const addMessage = (text, role = 'isabella') => {
   const article = document.createElement('article');
   article.className = `message ${role}`;
@@ -622,7 +664,12 @@ const addMessage = (text, role = 'isabella') => {
 };
 
 const sendMessage = async (text) => {
-  const userPara = addMessage(text, 'user');
+  const input = String(text || '').trim();
+  if (!input || input.length > 18_000) {
+    addMessage(input.length > 18_000 ? 'La solicitud supera el límite permitido de 18.000 caracteres.' : 'Escribe una solicitud para continuar.', 'isabella');
+    return;
+  }
+  const userPara = addMessage(input, 'user');
   if (window.IsabellaChatPlus?.stamp) window.IsabellaChatPlus.stamp(userPara.parentElement);
   
   const assistantPara = addMessage('', 'isabella');
@@ -637,7 +684,7 @@ const sendMessage = async (text) => {
     const response = await fetch('/api/v1/cognition/route', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ input: text, sessionId, lens: window.IsabellaChatPlus?.getLens?.() || 'general' }),
+      body: JSON.stringify({ input, sessionId, lens: window.IsabellaChatPlus?.getLens?.() || 'general' }),
       signal: abortController.signal
     });
     
@@ -671,6 +718,13 @@ const sendMessage = async (text) => {
   }
 };
 
+prompt?.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent?.isComposing && event.keyCode !== 229) {
+    event.preventDefault();
+    form?.requestSubmit();
+  }
+});
+
 form?.addEventListener('submit', (e) => {
   e.preventDefault();
   const text = prompt.value.trim();
@@ -680,20 +734,24 @@ form?.addEventListener('submit', (e) => {
   sendMessage(text);
 });
 
+const resetConversation = ({ keepFocus } = {}) => {
+  messages.querySelectorAll('.message').forEach((node) => node.remove());
+  sessionId = crypto.randomUUID?.() || Math.random().toString(36).slice(2);
+  if (!keepFocus) prompt?.focus();
+};
+clearChat?.addEventListener('click', resetConversation);
+newChat?.addEventListener('click', resetConversation);
+
 window.IsabellaApp = Object.freeze({
   addMessage,
   getSessionId: () => sessionId,
   setSessionId: (id) => { sessionId = id; },
-  resetConversation: ({ keepFocus } = {}) => {
-    messages.querySelectorAll('.message').forEach(n => n.remove());
-    sessionId = crypto.randomUUID?.() || Math.random().toString(36).slice(2);
-    if (!keepFocus) prompt?.focus();
-  },
+  resetConversation,
   saveDraft: (code) => {
     // Save to localStorage or draft shelf
-    const drafts = JSON.parse(localStorage.getItem('isabella.drafts') || '[]');
+    const drafts = JSON.parse(localStorage.getItem(DRAFT_STORAGE_KEY) || '[]');
     drafts.unshift({ code, ts: Date.now() });
-    localStorage.setItem('isabella.drafts', JSON.stringify(drafts.slice(0, 20)));
+    localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(drafts.slice(0, 20)));
     if (draftShelf) {
       const item = document.createElement('div');
       item.className = 'draft-item';
@@ -723,26 +781,32 @@ refreshWorkspaceContext();
 
 /* ------------------------------------------------------------ TTS / Speech */
 const speakMessage = async (text) => {
+  const payloadFor = (audio) => audio?.dataUrl || audio?.audio || (audio?.audioBase64?.startsWith('data:') ? audio.audioBase64 : '');
   try {
-    const response = await fetch('/api/v1/cognition/speech', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, sessionId })
+    let response = await fetch('/api/v1/tts/synthesize', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, sessionId, format: 'mp3', voice: 'troy' })
     });
-    
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    
-    const payload = await response.json();
-    
-    if (response.ok && payload.success === true && payload.audioBase64) {
-      const audioRegex = /^data:audio\/(?:mpeg|mp3|wav);base64,/;
-      if (audioRegex.test(payload.audioBase64)) {
-        const audio = new Audio(payload.audioBase64);
-        audio.play().catch(() => {});
+    if (!response.ok) {
+      response = await fetch('/api/v1/cognition/speech', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, sessionId, format: 'mp3', voice: 'troy' })
+      });
+    }
+    if (response.ok) {
+      const audioUrl = payloadFor(await response.json());
+      if (/^data:audio\/(?:mpeg|mp3|wav);base64,/.test(audioUrl)) {
+        const audio = new Audio(audioUrl); await audio.play(); return;
       }
     }
-  } catch (err) {
-    console.warn('TTS playback failed:', err);
+  } catch (error) {
+    console.warn('[Isabella] server TTS unavailable', error);
+  }
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'es-MX';
+    window.speechSynthesis.speak(utterance);
   }
 };
 

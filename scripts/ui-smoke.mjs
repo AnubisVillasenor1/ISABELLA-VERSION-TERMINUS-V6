@@ -19,8 +19,9 @@ for (const id of ['navToggle', 'primaryLinks', 'runtimeStatus', 'soundToggle', '
   assert.ok(js.includes(`byId('${id}')`) || js.includes(`byId("${id}")`) || js.includes(`#${id}`), `Missing interaction wiring for #${id}`);
 }
 assert.ok(js.includes("fetch('/api/v1/cognition/route'"), 'Chat must call the existing cognition route');
-assert.ok(js.includes('response.ok && payload.success === true') && js.includes('/^data:audio\\/(?:mpeg|mp3|wav);base64,/'), 'Server TTS playback must require a valid successful audio payload');
-assert.ok(js.includes("fetch('/api/v1/cognition/speech'"), 'Voice reading must call the server speech endpoint');
+assert.ok(js.includes('response.ok') && js.includes('payloadFor') && js.includes('/^data:audio\\/(?:mpeg|mp3|wav);base64,/'), 'Server TTS playback must require a valid audio payload');
+assert.ok(js.includes("fetch('/api/v1/tts/synthesize'"), 'Voice reading must call the canonical TTS endpoint');
+assert.ok(js.includes("fetch('/api/v1/cognition/speech'"), 'Voice reading must retain the legacy speech fallback endpoint');
 assert.ok(js.includes("fetch('/api/v1/health'"), 'UI must check the health endpoint');
 assert.ok(server.includes('app.get("/api/v1/health"'), 'The runtime health endpoint must exist');
 assert.ok(chatPlus.includes("if (!catalog)"), 'Pricing failures must render an explicit unavailable state instead of an endless loading message');

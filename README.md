@@ -150,6 +150,12 @@ Las variables exactas deben contrastarse con los módulos de configuración ante
 | `ALLOW_PAID_PROVIDER_FALLBACK` | Opt-in para proveedores potencialmente facturables. | Mantener desactivado hasta aprobar coste, modelo, presupuesto y privacidad. |
 | `ISABELLA_KEYLESS_FREE_PROVIDER` | Habilita explícitamente un proveedor gratuito externo compatible. | No enviar datos sensibles sin autorización y evaluación del proveedor. |
 | `GENESIS_ADMIN_API_TOKEN`, `OPS_API_TOKEN` | Protección de rutas operativas. | Generar, rotar y almacenar externamente; no publicar su presencia ni valor. |
+| `HSF_API_TOKEN`, `GENESIS_PUBLIC_API_TOKEN` | Acceso a capacidades HSF/proveedor. | Separar tokens por superficie y aplicar mínimo privilegio. |
+| `GEMINI_API_KEY`, `MODEL_API_KEY`, `INFERENCE_API_KEY` | Proveedores de inferencia configurados por el runtime. | Son opcionales; sin clave la capacidad debe permanecer no configurada. |
+| `GROQ_API_KEY`, `GROQ_BASE_URL`, `GROQ_TTS_MODEL`, `GROQ_TTS_VOICE` | Voz/transcripción compatible con Groq. | Solo habilitar después de revisar proveedor, idioma, privacidad y coste. |
+| `OPENROUTER_API_KEY`, `OPENROUTER_FREE_MODEL`, `HF_TOKEN`, `HF_FREE_MODELS` | Fallbacks gratuitos/compatibles. | Requieren opt-in explícito; no enviar información sensible sin aprobación. |
+| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PUBLISHABLE_KEY`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Facturación y webhooks Stripe. | Usar claves separadas por entorno; validar firma de webhook y precios server-side. |
+| `ISABELLA_APPROVAL_PRIVATE_KEY_PEM`, `ISABELLA_APPROVAL_TRUSTED_PUBLIC_KEY_PEM`, `ISABELLA_APPROVAL_KEY_ID`, `ISABELLA_APPROVAL_TRUSTED_KEY_ID`, `ISABELLA_APPROVAL_TRUSTED_APPROVER_ID` | Aprobaciones humanas firmadas. | No equivalen a autoridad automática; requieren identidad humana y evidencia revisable. |
 | `STRICT_PREFLIGHT` | Política de preflight de arranque. | Confirmar que las dependencias obligatorias se detectan de forma real. |
 
 Nunca se deben pegar credenciales en issues, commits, documentación o chats. Tras cambiar secretos, reiniciar/re-desplegar según el proveedor y verificar el comportamiento sin revelar sus valores.
