@@ -53,7 +53,7 @@ Ya existen: `DeadlineBudget`, `hedgedFirst`, cooldowns, `turbo-planner`. Pendien
 - [ ] Streaming SSE de tokens al chat (primer byte < 400 ms) + cancelación por `AbortController`.
 - [ ] Precalentamiento (warm) de conexiones a proveedores y pool keep-alive HTTP/2.
 - [ ] Compresión (br/gzip) y `Cache-Control` inmutable con hash para `src/ui/*`; `preload` de fuentes y poster del video.
-- [ ] Video intro: servir `IntroVideoIsabella-web.mp4` con `Range`, `preload="metadata"`, poster y lazy en móvil; sacar el de 90 MB del bundle.
+- [ ] Video intro: servir `IntroVideoIsabella-web.mp4` con `Range`, `preload="metadata"`, poster y lazy en móvil; sacar el original de 23 MB del bundle (la versión web pesa 8.8 MB).
 - [ ] Batching/deduplicación de llamadas idénticas concurrentes (single-flight).
 - [ ] Presupuesto por etapa y métricas p50/p95 en `/metrics`; alerta si p95 > objetivo.
 - [ ] Prueba de carga (k6/autocannon) con resultados guardados en `docs/ops`.
