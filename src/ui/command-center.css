@@ -1,6 +1,16 @@
 /* Command center composition: chat is the primary surface, secondary modules stay discoverable without competing for attention. */
+.cinematic-intro{display:none!important}
 .stage{max-width:1480px}
-.hero,.workspace-context-bar,.workspace-modebar,.side-rail,.rail-launcher,.studio-panel,.access-section,.workspace-pane,.stage>footer{display:none!important}
+.hero,.workspace-context-bar,.workspace-modebar,.side-rail,.rail-launcher,.studio-panel,.access-section,.workspace-pane,.stage>footer,.topbar .nav-links,.topbar .command-launcher,.topbar .status,.topbar .quiet,.topbar .nav-toggle{display:none!important}
+.stage > :not(.topbar):not(#chat){display:none!important}
+#chat.console{display:flex!important}
+#chat .console-overline,#chat .console-state,#chat .prompt-starters,#chat .console-actions .modes{display:none!important}
+#chat .console-head{display:flex;align-items:center;justify-content:space-between;padding-bottom:12px;border-bottom:1px solid rgba(150,180,205,.13)}
+#chat .console-head h2{margin:0!important;font-size:clamp(24px,3vw,34px)!important;letter-spacing:-.03em}
+#chat .console-actions{display:flex!important;gap:8px}
+#chat .subtle-action{font-size:10px!important}
+#chat .messages{margin-top:24px!important}
+#chat .prompt{margin-top:20px!important}
 .topbar{margin-inline:0!important;padding-inline:0!important;border-radius:0!important;background:rgba(8,12,18,.94)!important}
 .topbar .nav-links{display:none!important}
 .console{width:min(940px,100%)!important;max-width:940px!important;margin:clamp(38px,8vh,92px) auto 48px!important;min-height:min(670px,calc(100vh - 210px));display:flex;flex-direction:column;justify-content:space-between}
