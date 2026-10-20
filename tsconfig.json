@@ -28,5 +28,9 @@
     "src",
     "test",
     "vitest.config.ts"
+  ],
+  "exclude": [
+    "src/components",
+    "src/hooks"
   ]
 }

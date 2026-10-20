@@ -106,9 +106,9 @@ export interface ConsensusProposal {
   readonly proposer: string;
   readonly payload: unknown;
   readonly votes: ConsensusVote[];
-  readonly status: "pending" | "committed" | "rejected" | "expired";
+  status: "pending" | "committed" | "rejected" | "expired";
   readonly createdAt: number;
-  readonly committedAt?: number;
+  committedAt?: number;
 }
 
 export interface ConsensusVote {
@@ -120,12 +120,13 @@ export interface ConsensusVote {
 
 export interface FederationState {
   readonly federationId: FederationId;
-  readonly term: number;
-  readonly leader?: string;
+  term: number;
+  leader?: string;
+  role: NodeRole;
   readonly nodes: Map<string, FederationNode>;
   readonly log: ConsensusProposal[];
-  readonly commitIndex: number;
-  readonly lastApplied: number;
+  commitIndex: number;
+  lastApplied: number;
 }
 
 export interface CrossFederationRequest {
@@ -204,6 +205,7 @@ export class ConsensusEngine extends EventEmitter {
     this.state = {
       federationId: config.id,
       term: 0,
+      role: "follower",
       nodes: new Map(initialNodes.map(n => [n.id, n])),
       log: [],
       commitIndex: 0,
@@ -266,8 +268,9 @@ export class ConsensusEngine extends EventEmitter {
   private isLogUpToDate(lastLogIndex: number, lastLogTerm: number): boolean {
     const ourLastLog = this.state.log[this.state.log.length - 1];
     if (!ourLastLog) return true;
-    if (ourLastLog.id !== lastLogTerm) return lastLogTerm > ourLastLog.id;
-    return lastLogIndex >= this.state.log.indexOf(ourLastLog);
+    const ourLastLogIndex = this.state.log.indexOf(ourLastLog);
+    if (lastLogTerm !== this.state.term) return lastLogTerm >= this.state.term;
+    return lastLogIndex >= ourLastLogIndex;
   }
 
   private becomeFollower(): void {

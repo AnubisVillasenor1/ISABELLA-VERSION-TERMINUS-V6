@@ -24,6 +24,7 @@ export class CapabilityRegistry {
     }
 
     const first = input.requestedCapabilities[0];
+    if (!first) return null;
     return {
       capabilityId: first,
       name: `Capability_${first}`,
