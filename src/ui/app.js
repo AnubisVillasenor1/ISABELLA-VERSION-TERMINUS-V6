@@ -379,7 +379,27 @@ const addMessage = (text, role = 'isabella') => {
   const article = document.createElement('article');
   article.className = `message ${role}`;
   const p = document.createElement('p');
+  p.textContent = text;
   article.append(p);
+  if (role === 'isabella') {
+    const copy = document.createElement('button');
+    copy.type = 'button';
+    copy.className = 'message-copy';
+    copy.setAttribute('aria-label', 'Copiar respuesta de Isabella');
+    copy.textContent = 'Copiar';
+    copy.addEventListener('click', async () => {
+      const value = p.dataset.raw || p.textContent || '';
+      if (!value || !navigator.clipboard?.writeText) return;
+      try {
+        await navigator.clipboard.writeText(value);
+        copy.textContent = 'Copiado';
+        window.setTimeout(() => { copy.textContent = 'Copiar'; }, 1400);
+      } catch {
+        copy.textContent = 'No disponible';
+      }
+    });
+    article.append(copy);
+  }
   messages.append(article);
   return p;
 };

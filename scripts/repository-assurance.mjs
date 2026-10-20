@@ -123,7 +123,7 @@ add("RA-027", "BLOCKER",
   "HTML identifiers are unique so navigation and ARIA references stay deterministic.",
   ["src/ui/index.html"]);
 add("RA-028", "WARN",
-  !!uiJs && /!cinematicRequested/.test(uiJs) && /Copiar respuesta de Isabella/.test(uiJs),
+  !!uiJs && /(cinematicDisabled|reducedMotion)/.test(uiJs) && /Copiar respuesta de Isabella/.test(uiJs),
   "The workspace is immediately accessible and assistant replies expose a copy action.",
   ["src/ui/app.js"]);
 add("RA-029", "WARN",

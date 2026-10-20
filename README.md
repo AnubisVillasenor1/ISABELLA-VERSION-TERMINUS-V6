@@ -3,6 +3,8 @@
 Isabella es una plataforma TypeScript/Express para conversación gobernada, orquestación de inferencia, memoria, evidencia operacional y automatización con controles explícitos. El repositorio integra proveedores externos; no afirma consciencia, autonomía legal, un modelo fundacional propio ni certificación de producción.
 
 > **Invariante:** `CAPABILITY ≠ AUTHORITY ≠ EXECUTION ≠ EVIDENCE ≠ LEARNING ≠ PRODUCTION`.
+>
+> **SPECIFIED ≠ IMPLEMENTED ≠ TESTED.** Un gate automatizado no equivale a evidencia humana ni certificación de producción.
 
 ## Estado real
 
@@ -162,6 +164,14 @@ Antes de declarar producción:
 - Logs sin secretos ni PII innecesaria.
 - Backup, restauración y rollback ejecutados y observados.
 - Evidencia guardada y revisada por una persona responsable.
+
+### Gates pendientes para liberar
+
+- Ejecutar smoke HTTP contra el despliegue real.
+- Confirmar persistencia E2E, migraciones y aislamiento por tenant.
+- Validar proveedores reales de inferencia/TTS y límites de coste.
+- Ejecutar backup, restauración y rollback observados.
+- Registrar revisión humana responsable del mismo SHA.
 
 La promoción automática no sustituye una aprobación humana ni convierte un test en evidencia de producción.
 
