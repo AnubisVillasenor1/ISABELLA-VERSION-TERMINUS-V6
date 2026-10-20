@@ -12,6 +12,7 @@
  */
 
 import { EventEmitter } from "node:events";
+import { createHash, randomBytes } from "node:crypto";
 
 export type MemoryType = 
   | "episodic" 
@@ -253,6 +254,14 @@ export class RedisBackend extends MemoryBackendAdapter {
       async rollback() { /* DISCARD */ },
     };
   }
+
+  async commitTransaction(tx: Transaction): Promise<void> {
+    await tx.commit();
+  }
+
+  async rollbackTransaction(tx: Transaction): Promise<void> {
+    await tx.rollback();
+  }
 }
 
 /**
@@ -351,6 +360,14 @@ export class PostgresBackend extends MemoryBackendAdapter {
       async rollback() { await client.query('ROLLBACK'); client.release(); },
     };
   }
+
+  async commitTransaction(tx: Transaction): Promise<void> {
+    await tx.commit();
+  }
+
+  async rollbackTransaction(tx: Transaction): Promise<void> {
+    await tx.rollback();
+  }
 }
 
 /**
@@ -417,7 +434,7 @@ export class QdrantBackend extends MemoryBackendAdapter {
     // upsert vector
   }
 
-  async searchByEmbedding(
+async searchByEmbedding(
     embedding: Float32Array,
     filter: Partial<MemoryQuery>,
     limit: number
@@ -435,11 +452,19 @@ export class QdrantBackend extends MemoryBackendAdapter {
       async rollback() {},
     };
   }
+
+  async commitTransaction(tx: Transaction): Promise<void> {
+    await tx.commit();
+  }
+
+  async rollbackTransaction(tx: Transaction): Promise<void> {
+    await tx.rollback();
+  }
 }
 
 /**
  * Neo4j Backend - Procedural/Graph Memory
- */
+*/
 export class Neo4jBackend extends MemoryBackendAdapter {
   readonly type: MemoryBackend = "neo4j";
   readonly config: MemoryBackendConfig;
@@ -520,6 +545,14 @@ export class Neo4jBackend extends MemoryBackendAdapter {
       async commit() { await session.commitTransaction(); await session.close(); },
       async rollback() { await session.rollbackTransaction(); await session.close(); },
     };
+  }
+
+  async commitTransaction(tx: Transaction): Promise<void> {
+    await tx.commit();
+  }
+
+  async rollbackTransaction(tx: Transaction): Promise<void> {
+    await tx.rollback();
   }
 }
 
@@ -604,6 +637,14 @@ export class ObjectStorageBackend extends MemoryBackendAdapter {
       async rollback() {},
     };
   }
+
+  async commitTransaction(tx: Transaction): Promise<void> {
+    await tx.commit();
+  }
+
+  async rollbackTransaction(tx: Transaction): Promise<void> {
+    await tx.rollback();
+  }
 }
 
 /**
@@ -687,6 +728,14 @@ export class LedgerBackend extends MemoryBackendAdapter {
       async commit() {},
       async rollback() {},
     };
+  }
+
+  async commitTransaction(tx: Transaction): Promise<void> {
+    await tx.commit();
+  }
+
+  async rollbackTransaction(tx: Transaction): Promise<void> {
+    await tx.rollback();
   }
 }
 
@@ -776,13 +825,13 @@ export class MemoryMesh extends EventEmitter {
     const byBackend = new Map<MemoryBackend, MemoryRecord[]>();
     for (const record of records) {
       const backendType = this.getBackendTypeForRecord(record);
-      const list = byBackend.get(record.type) || [];
+      const list = byBackend.get(backendType) || [];
       list.push(record);
-      byBackend.set(record.type, list);
+      byBackend.set(backendType, list);
     }
     
-    for (const [type, records] of byBackend) {
-      const backend = this.getBackendForType(type);
+    for (const [backendType, records] of byBackend) {
+      const backend = this.getBackendForBackendType(backendType);
       await backend.storeBatch(records);
     }
     
@@ -793,6 +842,14 @@ export class MemoryMesh extends EventEmitter {
     }
     
     this.emit("batchStored", records);
+  }
+
+  private getBackendForBackendType(backendType: MemoryBackend): MemoryBackendAdapter {
+    const backend = this.backends.get(backendType);
+    if (!backend) {
+      throw new Error(`NO_BACKEND_FOR_BACKEND_TYPE: ${backendType}`);
+    }
+    return backend;
   }
 
   /**
@@ -847,10 +904,12 @@ export class MemoryMesh extends EventEmitter {
       const allRecords = results.flatMap(r => r.records);
       allRecords.sort((a, b) => b.importance - a.importance || b.createdAt - a.createdAt);
       
+      const queryTimeMs = Date.now() - startTime;
+      
       return {
         records: allRecords.slice(0, query.limit || this.config.maxRecordsPerQuery),
         totalCount: allRecords.length,
-        queryTimeMs: Date.now() - Date.now(), // placeholder
+        queryTimeMs,
       };
     }
     
@@ -995,7 +1054,7 @@ export class MemoryMesh extends EventEmitter {
       .sort((a, b) => b.score - a.score)
       .slice(0, limit);
     
-    return result;
+    return results;
   }
 
   /**

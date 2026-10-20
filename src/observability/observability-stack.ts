@@ -282,20 +282,18 @@ export class StructuredLogger extends EventEmitter {
   private log(level: LogLevel, message: string, fields: Record<string, unknown> = {}): void {
     if (!this.shouldLog(level)) return;
 
+    // Add trace context if available
+    const traceContext = getCurrentTraceContext();
+    
     const entry: LogEntry = {
       level,
       message,
       timestamp: Date.now(),
+      traceId: traceContext?.traceId,
+      spanId: traceContext?.spanId,
       fields: { ...this.defaultFields, ...fields },
       logger: "isabella",
     };
-
-    // Add trace context if available
-    const traceContext = getCurrentTraceContext();
-    if (traceContext) {
-      entry.traceId = traceContext.traceId;
-      entry.spanId = traceContext.spanId;
-    }
 
     this.emit("log", entry);
     
@@ -686,12 +684,12 @@ export class AlertManager extends EventEmitter {
 }
 
 interface ActiveAlert {
-  readonly rule: AlertRule;
-  readonly state: "firing" | "resolved";
-  readonly startsAt: number;
-  readonly endsAt?: number;
-  readonly labels: Record<string, string>;
-  readonly annotations: Record<string, string>;
+  rule: AlertRule;
+  state: "firing" | "resolved";
+  startsAt: number;
+  endsAt?: number;
+  labels: Record<string, string>;
+  annotations: Record<string, string>;
 }
 
 /**
