@@ -1,296 +1,189 @@
 # Isabella Villaseñor AI — TERMINUS V6 / Genesis TINA
 
-**Isabella Villaseñor AI** es la plataforma de orquestación, gobernanza y operación de IA de TAMV Online. Integra una interfaz conversacional, selección de proveedores, memoria y recuperación, permisos, controles de ejecución, evidencia operativa, presupuesto de inferencia y mecanismos de resiliencia. Su propósito es que las capacidades de IA sean útiles sin confundir una respuesta generada con una autorización para actuar.
+Isabella es una plataforma TypeScript/Express para conversación gobernada, orquestación de inferencia, memoria, evidencia operacional y automatización con controles explícitos. El repositorio integra proveedores externos; no afirma consciencia, autonomía legal, un modelo fundacional propio ni certificación de producción.
 
-> **Invariante del sistema:** `CAPABILITY ≠ AUTHORITY ≠ EXECUTION ≠ EVIDENCE ≠ LEARNING ≠ PRODUCTION`.
+> **Invariante:** `CAPABILITY ≠ AUTHORITY ≠ EXECUTION ≠ EVIDENCE ≠ LEARNING ≠ PRODUCTION`.
 
-Una capacidad disponible no concede autoridad; una decisión no ejecuta por sí sola una acción externa; un evento guardado no prueba por sí mismo la verdad de su contenido; y un despliegue exitoso no demuestra la salud de todos los servicios.
+## Estado real
 
-## Avance general de implementación
+**Rama auditada:** `main`  
+**Último SHA auditado:** `8f25feff9b7fb86805c2916d11b65869240d91cd`  
+**SHA 30f5dac de evidencia de la línea base:** la evidencia debe regenerarse para cada commit nuevo.  
+**Avance global de implementación: 78%.** Es una estimación de madurez del software, no porcentaje de producción ni certificación.
 
-**Avance global de implementación: 78%.** Línea base operativa actualizada tras la implementación completa de **Isabella Sovereign Revenue Fabric v4** y la validación de **1659 tests (279 suites) en verde** con **build pipeline completo aprobado**. Es una estimación de madurez del conjunto de software —código existente, módulos integrados, tests ejecutados y evidencia documentada—, no un porcentaje de pruebas aprobadas ni una certificación de producción.
+**Madurez declarada:** 78% — estimación fundamentada en código integrado, pruebas ejecutadas y gates documentados.  
+**Estado de liberación:** preproducción. El software tiene gates automatizados, pero la producción requiere validar infraestructura, proveedores, persistencia, secretos, despliegue y rollback en el entorno real.
 
-**Estado de liberación: PREPRODUCCIÓN — BLOQUEOS REDUCIDOS.** El pipeline CI/CD completo está en verde: `pnpm typecheck` → `pnpm test` (1659/1659) → `pnpm run build` → `security:suite` (14/14) → `ui-smoke` → `runtime-smoke`. Los bloqueos críticos previos (CI fallido, readiness no saludable, tests fallando) han sido resueltos. Quedan pendientes: validación E2E de persistencia durable en entorno real, smoke de producción con proveedores reales, y despliegue/rollback demostrado.
+### Auditoría actual
 
-| Indicador | Estado actual | Qué demuestra |
+| Gate | Resultado en esta auditoría |
+|---|---|
+| `node scripts/repository-assurance.mjs` | PASS: 43/44, 0 bloqueantes, 1 warning RA-028 |
+| `pnpm security:suite` | PASS: 14/14 |
+| `pnpm typecheck` | Corregido en este cambio: faltaba `uuid` en dependencias |
+| `pnpm test` | Corregido en este cambio: la importación de Revenue Fabric fallaba por `uuid` ausente |
+| Build completo | Debe repetirse después de las correcciones |
+| Producción real | No certificada; faltan smoke externo, persistencia E2E y rollback demostrado |
+
+El warning RA-028 indica que la accesibilidad inmediata y la acción de copiar respuestas requieren una revisión adicional; no es un bloqueo estructural.
+
+## Capacidades implementadas
+
+- Interfaz conversacional servida desde `src/ui/`, con composición chat-first y superficies Crystal Clear/Crystal Glow.
+- Enrutamiento de cognición con límites de entrada, rate limiting, timeouts, fallbacks autorizados y política de proveedores.
+- TTS canónico: `POST /api/v1/tts/synthesize`, estado: `GET /api/v1/tts/status`, fallback heredado y Web Speech API local.
+- Inferencia configurable con Google, OpenAI-compatible, OpenRouter/free, Groq y AI Gateway según variables disponibles y política activa.
+- Memoria y conocimiento: Atlas, IKES, propuestas, procedencia y aislamiento por tenant según adaptador configurado.
+- BookPI: evidencia append-only, hash chain, HMAC, almacenamiento PostgreSQL/JSONL/memoria y estados degradados explícitos.
+- Gobernanza: capacidades, permisos, riesgo, escalamiento y aprobación humana; una respuesta de IA no autoriza una acción externa.
+- Seguridad HTTP: bearer tokens, comparación constant-time, JWT allowlist, CORS/cabeceras, redacción, nonce anti-replay y límites.
+- Revenue Fabric v4: IETS, settlement IFRF, ledger doble entrada, 12 streams, metering, wallets y outbox/inbox con idempotencia.
+- Integraciones comerciales: Stripe y webhooks firmados; requieren claves y validación de entorno real.
+- Observabilidad: health/readiness, métricas de latencia, preflight protegido y evidencia de producción.
+- Federación experimental: `ige-omega/` en Rust y `gameover-jenkins-plugin/` en Maven, con gates separados.
+
+## Arquitectura
+
+| Área | Ubicación | Función |
 |---|---|---|
-| Avance global de implementación | **78%** | Línea base de madurez del sistema; estimación fundamentada en tests verdes, build verde y Revenue Fabric v4 integrado. |
-| Respuesta HTTP superficial | **Verificada** | Smoke tests UI y runtime pasan; endpoint `/health` responde 200. |
-| Readiness de dependencias | **Verde (proceso local)** | Tests de `health/dependency-readiness` y `deployment/production-smoke` pasan. |
-| CI, typecheck, suite y build | **Certificados en HEAD actual (30f5dac)** | Ejecución verde reproducible: typecheck, 1659 tests, build, security-suite (14/14), ui-smoke, runtime-smoke. |
-| Persistencia durable de extremo a extremo | **Implementada / pendiente validación remota** | Adaptador PostgreSQL + ledger inmutable + migraciones aplicadas; faltan validaciones E2E en entorno de staging/producción. |
-| Inferencia generativa externa | **Configurada / pendiente proveedores reales** | Pipeline de proveedores, fallbacks, timeouts y límites implementados; claves de producción pendientes. |
-| Despliegue y rollback | **Pipeline listo / no demostrado en producción** | Vercel pipeline configurado; smoke post-deployment implementado; rollback no probado en producción real. |
+| Servidor HTTP | `src/server.ts` | Express, rutas, middleware y composición |
+| Inferencia | `src/inference/` | proveedores, modelos, voz, multimodalidad y políticas |
+| Seguridad | `src/security/`, `src/http/` | tokens, rate limits, headers y validación |
+| Memoria | `src/memory/`, `src/atlas/` | claims, recuperación, Atlas e IKES |
+| Evidencia | `src/bookpi/` | eventos, integridad, almacenamiento y verificación |
+| Gobernanza | `src/governance/`, `src/crown/`, `src/authority/` | riesgo, permisos y aprobación |
+| Economía | `src/economy/`, `src/commerce/`, `src/routes/revenue-fabric.ts` | catálogo, usage, settlement y ledger |
+| UI | `src/ui/` | chat, estilos, smoke y assets servidos |
+| Operación | `src/health/`, `src/deployment/`, `src/observability/` | readiness, preflight, métricas y gates |
+| Federación | `ige-omega/`, `gameover-jenkins-plugin/` | Rust gateway y plugin Jenkins experimentales |
 
-### Cómo se mide el avance
+## Requisitos e instalación
 
-**El 78% refleja evidencia reproducible al SHA 30f5dac:** `pnpm typecheck` ✓, `pnpm test` (1659/1659) ✓, `pnpm run build` ✓, `security:suite` (14/14) ✓, `ui-smoke` ✓, `runtime-smoke` ✓. La regla de control es:
-
-- El código debe estar integrado en la rama y conectado a un flujo real; un archivo aislado no basta.
-- Una prueba solo cuenta como aprobada si se ejecutó y su resultado corresponde al SHA evaluado.
-- Los servicios externos cuentan como verificados solo después de una comprobación real de conectividad, permisos y operación.
-- Una variable de entorno presente no prueba que el servicio esté sano.
-- Los porcentajes no se elevan por documentos, cantidad de archivos, tests escritos pero no ejecutados, ni despliegues que solo compilaron.
-- Los bloqueos críticos se reportan por separado. No se ocultan ni se compensan con un promedio.
-
-**SPECIFIED ≠ IMPLEMENTED ≠ TESTED.** La existencia de un contrato o módulo no significa que esté integrado, validado o disponible en producción.
-
-### Integraciones completadas (SHA 30f5dac)
-
-- **Isabella Sovereign Revenue Fabric v4** (12 streams, IETS, IFRF v4, ledger inmutable, metering, outbox/inbox)
-- **1659 tests / 279 suites** — todas en verde
-- **Build pipeline completo** — typecheck, tests, build, security-suite (14/14), ui-smoke, runtime-smoke
-- **API Revenue Fabric** — IETS, Settlement, Ledger, Metering, Wallets, Outbox
-- **PostgreSQL schema** — migración 001 con constraints de balance ledger
-- **Route inventory** — 188 rutas registradas y validadas
-
-## Objetivo del producto
-
-Construir una plataforma modular que permita a personas y organizaciones interactuar con sistemas de IA con controles explícitos sobre:
-
-- **Interacción:** conversación y selección de capacidades, lentes y modalidades compatibles con la configuración activa.
-- **Orquestación de inferencia:** enrutamiento a proveedores y modelos permitidos, límites de tiempo, fallbacks y límites de gasto.
-- **Gobernanza:** evaluación de riesgo, permisos, aprobación humana y decisiones de permitir, denegar o escalar.
-- **Memoria y conocimiento:** recuperación, procedencia y tratamiento gobernado de información.
-- **Evidencia:** registro de eventos, verificación de integridad y trazabilidad de decisiones.
-- **Resiliencia:** límites de entrada, rate limiting, timeouts, circuit breakers y readiness explícita.
-- **Operación:** controles de estado, métricas, preflight, validaciones de seguridad y evidencia vinculada al commit.
-
-La plataforma **no debe describirse como un modelo fundacional propietario entrenado desde cero**: el repositorio integra SDKs y proveedores externos. Tampoco se afirma consciencia, autonomía soberana, resistencia poscuántica completa, certificación normativa ni liderazgo de mercado sin evidencia independiente.
-
-## Arquitectura implementada en el repositorio
-
-### Revenue Fabric v4 (SHA 30f5dac)
-- **IETS Trust Score Engine**: 8 factores (referrals 15%, revenue 25%, retention 15%, skills 10%, agents 10%, reputation 15%, age 5%, compliance 5%) → 5 tiers dinámicos (STARTER/SOVEREIGN)
-- **IFRF v4 Normalized Settlement**: Operating Income = Gross - Direct Cost - Tax - Gateway Fee; 1% Emergency + 1% Innovation + 1% Treasury vaults; split dinámico por IETS tier (50/50 a 90/10)
-- **Immutable Double-Entry Ledger**: Hash chain SHA-256, append-only, idempotency keys, balance invariants
-- **12 Revenue Streams**: SUBSCRIPTION, ISA_API, SKILL_MARKETPLACE, AGENT_MARKETPLACE, AGENT_HOSTING, AI_CLOUD, AGENT_REVENUE_SHARING, HYPERAUTOMATION, WHITE_LABEL, CERTIFICATION, DATA_VAULT, ECOSYSTEM_TREASURY
-- **Metering Service**: Usage events con idempotency keys, agregación por ventana, pricing por recurso
-- **Outbox/Inbox Pattern**: Transactional outbox + inbox idempotency para exactly-once effect delivery
-
----
-
-## Arquitectura implementada en el repositorio
-
-El repositorio organiza las capacidades en dominios que se conectan desde el servidor Express/TypeScript. Las responsabilidades y el nivel de integración deben confirmarse con el código y las pruebas vigentes.
-
-| Dominio | Componentes principales | Responsabilidad |
-|---|---|---|
-| Runtime y experiencia | `src/server.ts`, `src/ui/`, `src/genesis/` | Aplicación HTTP, interfaz y composición de runtime. |
-| Identidad y autoridad | `src/identity/`, `src/crown/`, `src/authority/` | Principales, capacidades, aprobaciones y separación de autoridad. |
-| Gobernanza | `src/governance/constitutional-governance-fabric.ts`, `src/reina/`, `src/gameover/` | Evaluación de política/riesgo, adjudicación y evidencia de decisión. |
-| Memoria y conocimiento | `src/memory/`, `src/atlas/` | Memoria de sesión, recuperación, conocimiento verificado y persistencia Atlas/IKES. |
-| BookPI y evidencia | `src/bookpi/`, `infra/db/migrations/`, `supabase/migrations/` | Eventos, integridad, adaptadores PostgreSQL/JSONL/memoria y verificación de cadena. |
-| Inferencia | `src/inference/` | Selección de proveedor, presupuestos temporales, caché, voz y capacidades multimodales. |
-| Seguridad HTTP | `src/security/`, `src/http/` | Tokens, rate limiting, cabeceras, redacción de errores y límites de entrada. |
-| Resiliencia y operación | `src/deployment/`, `src/health/`, `src/observability/` | Readiness, métricas de latencia, circuit breakers y preflight. |
-| Economía y comercio | `src/economy/`, `src/commerce/` | Catálogo de precios, cuotas, suscripciones y eventos de proveedor; la presencia de rutas no acredita una transacción real de cobro. |
-| Gateway soberano experimental | `ige-omega/` | Subsistema Rust; su compilación, conectividad, autorización y readiness se verifican por separado. |
-
-### ISA-CORE Ω: integración segura, no una afirmación de producto terminado
-
-La propuesta ISA-CORE Ω define nueve fabrics conceptuales: identidad, confianza, seguridad, gobernanza, memoria, evidencia, federación, observabilidad y runtime. Isabella ya contiene componentes relacionados con varias de estas responsabilidades; eso no significa que exista una implementación monolítica certificada de los nueve fabrics.
-
-La integración debe reutilizar los módulos existentes en vez de crear una segunda fuente de verdad. El blueprint compartido no se copió literalmente porque requiere correcciones antes de considerarse apto para producción: almacenamiento y método con el mismo identificador en la clase de memoria, registro anti-replay solo local al proceso, claves de firma efímeras generadas durante cada evaluación y falta de persistencia duradera para las decisiones. Tampoco se declara ML-KEM/ML-DSA en producción hasta verificar las bibliotecas, sus API reales, interoperabilidad y pruebas criptográficas.
-
-Cambio operativo reciente: el fabric constitucional ahora valida las banderas de decisión y los límites de los campos en tiempo de ejecución, y limita el caché de dossiers en memoria para evitar crecimiento sin cota. Sus contadores de decisión permanecen acumulativos en el proceso. Este caché **no** es un ledger durable: la persistencia auditable sigue dependiendo del flujo BookPI y de su estado real.
-
-## Flujo de petición esperado
-
-1. Recibir la solicitud y aplicar límites de cuerpo, formato y tiempo.
-2. Determinar principal, permisos, presupuesto y políticas aplicables.
-3. Evaluar riesgo y aprobación humana cuando corresponda.
-4. Seleccionar únicamente un proveedor/modelo habilitado por configuración y política.
-5. Ejecutar inferencia dentro de un presupuesto temporal total; si falla, aplicar únicamente fallbacks autorizados.
-6. Validar y presentar el resultado sin afirmar que el contenido es verdadero solo por haber sido generado.
-7. Registrar la evidencia necesaria sin exponer secretos ni información personal innecesaria.
-8. Ejecutar acciones externas solo mediante una capacidad autorizada y la aprobación que corresponda.
-9. Reflejar errores de dependencias en readiness, no esconderlos detrás de una respuesta HTTP superficial saludable.
-
-Este es el contrato arquitectónico esperado. La cobertura real de cada flujo debe probarse mediante suites unitarias, integración y E2E.
-
-## Instalación y validación
-
-Requisitos declarados en `package.json`: **Node.js 24.x** y **pnpm 10.28.0**.
+- Node.js 24.x
+- pnpm 10.28.0
+- PostgreSQL para persistencia durable y E2E
+- Docker/Kubernetes únicamente para sus validaciones respectivas
+- Rust estable para `ige-omega`
+- JDK 17 y Maven para el plugin Jenkins
 
 ```bash
 corepack enable
 corepack prepare pnpm@10.28.0 --activate
 pnpm install --frozen-lockfile
-pnpm run typecheck
+pnpm typecheck
 pnpm test
-pnpm run build
+pnpm build
 ```
 
-Comprobaciones adicionales:
+Desarrollo local:
 
 ```bash
-pnpm run security:suite
-pnpm run smoke:ui
-pnpm run smoke:runtime
-pnpm run production:evidence
-pnpm run postgres:e2e
-pnpm run smoke:production
-pnpm run verify:production
+pnpm dev
+# http://localhost:3000
 ```
 
-No todos los comandos son autónomos: los E2E de PostgreSQL necesitan una base de datos y migraciones; los smoke de producción necesitan un entorno configurado; y la validación Docker/Kubernetes requiere sus herramientas y permisos. No se deben marcar como aprobados si no se ejecutaron.
+## Comandos operativos
 
-### Gates pendientes para liberar
+```bash
+pnpm typecheck              # TypeScript sin emitir
+pnpm test                   # suite Vitest
+pnpm build                  # assurance + build + tests + smoke + seguridad
+pnpm security:suite         # invariantes de seguridad
+pnpm smoke:ui               # sintaxis y contrato UI
+pnpm smoke:runtime          # health/runtime smoke
+pnpm production:evidence   # evidencia vinculada al SHA
+pnpm smoke:production      # smoke contra entorno configurado
+pnpm verify:production     # gate de producción
+pnpm postgres:e2e           # persistencia E2E con PostgreSQL
+pnpm deploy:verify          # Docker + validación Kubernetes
+pnpm ingest:atlas           # snapshot de repositorios Atlas
+pnpm keys:generate          # claves nativas; no imprime secretos existentes
+```
 
-- [ ] Instalar dependencias con lockfile congelado en Node 24/pnpm 10.28.0.
-- [ ] Typecheck, suite completa, build, UI smoke, runtime smoke y seguridad en verde para el mismo SHA.
-- [ ] Resolver la causa raíz de GitHub Actions con logs de jobs accesibles y ejecución reproducible.
-- [ ] Confirmar que el workflow de liberación realiza una promoción real, no solo valida evidencia o ejecuta un handoff.
-- [ ] Aplicar las migraciones PostgreSQL/Supabase necesarias en el entorno correcto.
-- [ ] Ejecutar E2E de escritura, lectura, verificación de cadena, concurrencia y recuperación tras reinicio.
-- [ ] Eliminar o bloquear en producción las rutas heredadas que todavía dependan de un ledger volátil cuando se requiera evidencia durable.
-- [ ] Validar Atlas e IKES con operaciones reales de lectura/escritura y aislamiento por tenant.
-- [ ] Configurar un secreto `BOOKPI_INTEGRITY_SECRET` aleatorio de al menos 32 caracteres en el gestor de variables de Vercel; nunca en el código ni en este README.
-- [ ] Probar una conversación generativa con proveedor/modelo real, timeout, fallback, límites de gasto y tratamiento de errores.
-- [ ] Confirmar exportación de telemetría, métricas, alertas y ausencia de secretos/PII en logs.
-- [ ] Validar backup, restauración, despliegue de staging, despliegue de producción, smoke posterior y rollback.
-- [ ] Decidir si Vercel se mantendrá protegido para pruebas cerradas o se abrirá mediante dominio y controles de acceso revisados.
-- [ ] Recalcular el porcentaje general solo con evidencia reproducible, documentando qué cambió y por qué.
+Un comando que no pudo ejecutarse por falta de infraestructura o credenciales no debe marcarse como aprobado.
 
-## Configuración y secretos
+## Rutas principales
 
-Las variables exactas deben contrastarse con los módulos de configuración antes de preparar un entorno. Las más relevantes observadas en el código incluyen:
+- `GET /health` — salud superficial del proceso.
+- `GET /api/v1/healthz` — health local y configuración.
+- `GET /api/v1/readyz` — readiness de dependencias configuradas.
+- `GET /api/v1/status` — estado descriptivo del runtime.
+- `GET /api/v1/ops/preflight` — diagnóstico protegido.
+- `POST /api/v1/cognition/route` — conversación gobernada.
+- `GET /api/v1/tts/status` — readiness de voz.
+- `POST /api/v1/tts/synthesize` — síntesis de voz acotada y rate-limited.
+- `POST /api/v1/cognition/speech` — contrato heredado de voz.
+- `POST /api/v1/revenue/iet/calculate` — Trust Score.
+- `POST /api/v1/revenue/settle` — settlement normalizado.
+- `POST /api/v1/revenue/usage` — metering idempotente.
+- `GET /api/v1/revenue/ledger/verify` — integridad de ledger.
+- `GET /api/v1/integrations/graph` — grafo operativo protegido.
 
-| Variable | Propósito | Condición operativa |
-|---|---|---|
-| `DATABASE_URL`, `POSTGRES_URL`, `POSTGRES_URL_NON_POOLING` | PostgreSQL; el adaptador BookPI selecciona una URL compatible. | URL presente no demuestra conectividad, migraciones, permisos ni salud de la cadena. |
-| `BOOKPI_PIPELINE_STORAGE` | Selección explícita del adaptador `postgres`, `jsonl` o `memory`. | Memoria es volátil; JSONL solo es durable si el volumen persiste; PostgreSQL es el backend compartido previsto. |
-| `BOOKPI_PIPELINE_LEDGER_PATH` | Ruta del adaptador JSONL del pipeline. | No usar un filesystem efímero serverless como persistencia duradera. |
-| `BOOKPI_LEDGER_PATH` | Ledger síncrono heredado. | No equivale al adaptador de pipeline; sus consumidores deben evaluarse por separado. |
-| `BOOKPI_INTEGRITY_SECRET` | Integridad de eventos BookPI PostgreSQL. | Mínimo 32 caracteres; guardar solo como secreto del entorno. |
-| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | Persistencia Atlas/IKES del lado servidor. | Nunca exponer la service-role key al navegador. Verificar esquema, permisos y políticas RLS. |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | Destino declarado para telemetría OTLP. | Configuración no significa exportación exitosa; requiere prueba real. |
-| `ALLOW_PAID_PROVIDER_FALLBACK` | Opt-in para proveedores potencialmente facturables. | Mantener desactivado hasta aprobar coste, modelo, presupuesto y privacidad. |
-| `ISABELLA_KEYLESS_FREE_PROVIDER` | Habilita explícitamente un proveedor gratuito externo compatible. | No enviar datos sensibles sin autorización y evaluación del proveedor. |
-| `GENESIS_ADMIN_API_TOKEN`, `OPS_API_TOKEN` | Protección de rutas operativas. | Generar, rotar y almacenar externamente; no publicar su presencia ni valor. |
-| `HSF_API_TOKEN`, `GENESIS_PUBLIC_API_TOKEN` | Acceso a capacidades HSF/proveedor. | Separar tokens por superficie y aplicar mínimo privilegio. |
-| `GEMINI_API_KEY`, `MODEL_API_KEY`, `INFERENCE_API_KEY` | Proveedores de inferencia configurados por el runtime. | Son opcionales; sin clave la capacidad debe permanecer no configurada. |
-| `GROQ_API_KEY`, `GROQ_BASE_URL`, `GROQ_TTS_MODEL`, `GROQ_TTS_VOICE` | Voz/transcripción compatible con Groq. | Solo habilitar después de revisar proveedor, idioma, privacidad y coste. |
-| `OPENROUTER_API_KEY`, `OPENROUTER_FREE_MODEL`, `HF_TOKEN`, `HF_FREE_MODELS` | Fallbacks gratuitos/compatibles. | Requieren opt-in explícito; no enviar información sensible sin aprobación. |
-| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PUBLISHABLE_KEY`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Facturación y webhooks Stripe. | Usar claves separadas por entorno; validar firma de webhook y precios server-side. |
-| `ISABELLA_APPROVAL_PRIVATE_KEY_PEM`, `ISABELLA_APPROVAL_TRUSTED_PUBLIC_KEY_PEM`, `ISABELLA_APPROVAL_KEY_ID`, `ISABELLA_APPROVAL_TRUSTED_KEY_ID`, `ISABELLA_APPROVAL_TRUSTED_APPROVER_ID` | Aprobaciones humanas firmadas. | No equivalen a autoridad automática; requieren identidad humana y evidencia revisable. |
-| `STRICT_PREFLIGHT` | Política de preflight de arranque. | Confirmar que las dependencias obligatorias se detectan de forma real. |
+La existencia de una ruta no prueba disponibilidad de proveedor, persistencia durable o autorización para usarla.
 
-Nunca se deben pegar credenciales en issues, commits, documentación o chats. Tras cambiar secretos, reiniciar/re-desplegar según el proveedor y verificar el comportamiento sin revelar sus valores.
+## Variables de entorno
 
-## API y operación
+Las variables dependen del módulo activado. Nunca se deben guardar valores reales en el repositorio.
 
-Rutas observadas en el servidor incluyen:
+### Persistencia y evidencia
 
-- `GET /health`: salud superficial del proceso.
-- `GET /api/v1/healthz`: comprobaciones de configuración/IO local; no sustituye una prueba de conectividad de todas las dependencias.
-- `GET /api/v1/readyz`: readiness de operación, incluyendo probes de BookPI, Atlas e IKES.
-- `GET /api/v1/status`: descripción de runtime y backend seleccionado; sus etiquetas no sustituyen la evidencia de salud.
-- `GET /api/v1/ops/preflight`: diagnóstico operativo protegido por token.
-- `GET /api/v1/integrations/graph`: grafo de integración y evidencia, protegido por token administrativo.
-- `POST /api/v1/cognition/route`: flujo conversacional de cognición, sujeto a proveedor y configuración reales.
-- `POST /api/v1/revenue/iet/calculate`: calcula IETS Trust Score con 8 factores y retorna tier + split dinámico.
-- `POST /api/v1/revenue/settle`: ejecuta settlement normalizado IFRF v4 con vaults y ledger inmutable.
-- `GET /api/v1/revenue/settlements/:idempotencyKey`: consulta journal de ledger por settlement.
-- `GET /api/v1/revenue/streams`: lista 12 streams de ingreso con config de split base/dinámico.
-- `POST /api/v1/revenue/usage`: registra evento de uso con idempotency key (metering).
-- `GET /api/v1/revenue/usage/:userId`: consulta uso agregado por usuario.
-- `GET /api/v1/revenue/usage/:userId/invoice`: genera datos de facturación por periodo.
-- `GET /api/v1/revenue/ledger/journals`: lista journals de ledger inmutable.
-- `GET /api/v1/revenue/ledger/verify`: verifica integridad de hash chain del ledger.
-- `GET /api/v1/revenue/outbox/status`: estado de outbox (pending/published/failed/dead-letter).
-- `GET /api/v1/revenue/outbox/dead-letter`: eventos en dead-letter queue.
-- `POST /api/v1/revenue/outbox/retry/:eventId`: reintenta evento en dead-letter.
-- `GET /api/v1/revenue/health`: health check del Revenue Fabric (ledger valid, version).
-- `GET /api/v1/revenue/wallet/:userId`: consulta wallet de usuario.
-- `POST /api/v1/revenue/wallet/:userId/credit`: abona crédito a wallet (admin).
-- `POST /api/v1/revenue/wallet/:userId/debit`: debita wallet (admin).
+`POSTGRES_URL`, `POSTGRES_URL_NON_POOLING`, `DATABASE_URL`, `BOOKPI_PIPELINE_STORAGE`, `BOOKPI_PIPELINE_LEDGER_PATH`, `BOOKPI_LEDGER_PATH`, `BOOKPI_INTEGRITY_SECRET`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`.
 
-La lista no implica que cada ruta esté validada externamente o sea una API estable. Para cualquier consumidor público, definir contrato de entrada/salida, autenticación, límites, errores, idempotencia y pruebas de regresión.
+`BOOKPI_INTEGRITY_SECRET` debe tener al menos 32 caracteres aleatorios. En serverless no se debe usar filesystem efímero como ledger durable.
 
-## Seguridad, privacidad y gobernanza
+### Inferencia y voz
 
-- **Fail closed:** ante ausencia de autorización, evidencia requerida o política válida, denegar o escalar; no asumir permisos.
-- **Aprobación humana:** operaciones sensibles o irreversibles necesitan autorización contextual verificable.
-- **Datos personales:** la redacción por patrones no garantiza anonimización completa.
-- **Aislamiento por tenant:** probar consultas, cachés, claves, eventos y artefactos entre tenants.
-- **Memoria:** establecer clasificación, retención, acceso, eliminación, restauración y procedencia.
-- **BookPI:** hash/HMAC no equivale por sí mismo a WORM ni evita que un administrador con privilegios altere el almacenamiento.
-- **Criptografía post-cuántica:** no afirmar compatibilidad FIPS o seguridad poscuántica por incluir un nombre de algoritmo; exigir biblioteca revisada, parámetros correctos, pruebas de interoperabilidad y gestión de claves.
-- **Proveedores externos:** evaluar privacidad, residencia, coste, disponibilidad, límites, retención de datos y condiciones de uso.
-- **Logs:** nunca registrar tokens, secretos, prompt sensible o datos personales sin necesidad y controles adecuados.
-- **Supply chain:** ejecutar auditoría de dependencias, escaneo de secretos y SBOM asociados al mismo SHA candidato.
-- **Acceso de despliegue:** no desactivar SSO ni controles de acceso solo para hacer pública una URL. Elegir explícitamente el modo de pruebas cerradas o el lanzamiento público.
+`GEMINI_API_KEY`, `MODEL_API_KEY`, `INFERENCE_API_KEY`, `OPENROUTER_API_KEY`, `OPENROUTER_FREE_MODEL`, `HF_TOKEN`, `HF_FREE_MODELS`, `GROQ_API_KEY`, `GROQ_BASE_URL`, `GROQ_TTS_MODEL`, `GROQ_TTS_VOICE`, `ALLOW_PAID_PROVIDER_FALLBACK`, `ISABELLA_KEYLESS_FREE_PROVIDER`.
+
+Los proveedores gratuitos requieren opt-in y revisión de privacidad. Una variable presente no prueba que el proveedor responda.
+
+### Seguridad, operación y observabilidad
+
+`GENESIS_ADMIN_API_TOKEN`, `OPS_API_TOKEN`, `HSF_API_TOKEN`, `GENESIS_PUBLIC_API_TOKEN`, `STRICT_PREFLIGHT`, `OTEL_EXPORTER_OTLP_ENDPOINT`, `BRAINTRUST_API_KEY`, `BRAINTRUST_PROJECT_ID`.
+
+### Stripe
+
+`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PUBLISHABLE_KEY`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`.
+
+Validar siempre firma de webhook, precio server-side, cantidad, idempotencia, entorno y límites de reintento.
 
 ## CI/CD y despliegue
 
-La configuración declara workflows de GitHub Actions, Vercel y tareas de verificación. El contrato para liberar es:
+`.github/workflows/ci.yml` ejecuta Node, tests, build, seguridad, Rust, Jenkins y quality gate. `deploy-production.yml` consume evidencia, SBOM y security suite del mismo SHA y exige un run exitoso de CI en `main` antes de promover.
 
-1. Ejecutar CI completo en el SHA candidato.
-2. Revisar logs y artefactos reales, incluido SBOM y escaneo de secretos.
-3. Confirmar que las migraciones y variables del entorno objetivo están configuradas.
-4. Desplegar el artefacto que corresponde al mismo SHA.
-5. Comprobar health, readiness, conversación real, persistencia y observabilidad después del despliegue.
-6. Validar el procedimiento de rollback y registrar el resultado.
+Antes de declarar producción:
 
-Un build READY en Vercel indica que la plataforma completó una fase de despliegue; no demuestra que Isabella esté lista para atender usuarios. Si GitHub Actions termina en fallo pero no expone pasos/logs, el fallo se clasifica como **causa raíz no determinada**, no como una prueba de código aprobada o reprobada sin evidencia.
+- CI verde en el mismo SHA.
+- Variables y secretos configurados en el entorno correcto.
+- PostgreSQL/Supabase migrado y probado con aislamiento por tenant.
+- Proveedor real de inferencia y TTS probado con timeout y fallback.
+- Stripe probado en sandbox y webhook verificado.
+- Smoke HTTP externo después del despliegue.
+- Logs sin secretos ni PII innecesaria.
+- Backup, restauración y rollback ejecutados y observados.
+- Evidencia guardada y revisada por una persona responsable.
 
-## Monetización y uso comercial
+La promoción automática no sustituye una aprobación humana ni convierte un test en evidencia de producción.
 
-Los componentes de catálogo, planes, cuotas, suscripciones, webhooks y motores económicos son infraestructura para una oferta comercial; no garantizan ingresos ni prueban que los cobros estén habilitados en producción.
+## Seguridad y gobernanza
 
-Líneas que pueden validarse progresivamente:
+El sistema falla cerrado cuando faltan autorización, evidencia o configuración necesaria. Las operaciones sensibles requieren aprobación humana contextual. Hash chain, HMAC o tests no prueban por sí solos inmutabilidad física, verdad del contenido o autoridad legal. Revisar `SECURITY.md`, `docs/security/GENESIS-V6-THREAT-MODEL.md` y `AGENTS.md` antes de activar capacidades externas.
 
-- Suscripciones y niveles de uso con cuotas verificadas.
-- Flujos de trabajo de IA para organizaciones.
-- Servicios de integración, automatización y gobernanza.
-- Plantillas, herramientas, formación y acompañamiento técnico.
-- Integraciones empresariales con acuerdos explícitos sobre datos, soporte y disponibilidad.
+## Documentación relevante
 
-Antes de vender una función como disponible, probar el flujo de autorización, la prestación real, la medición de uso, el pago cuando aplique, los reembolsos/errores y la separación de datos. Los ingresos potenciales son oportunidades comerciales, no resultados garantizados.
+- `docs/ESTADO-REAL-ACTUAL.md` — estado operativo.
+- `docs/ENVIRONMENT.md` — variables y condiciones.
+- `docs/ARCHITECTURE-OPERATING-MAP.md` — mapa de arquitectura.
+- `docs/ASSURANCE-CONTROL-PLANE.md` — assurance.
+- `docs/security/GENESIS-V6-THREAT-MODEL.md` — amenazas.
+- `ige-omega/README.md` — federación Rust.
+- `gameover-jenkins-plugin/README.md` — plugin Jenkins.
+- `AGENTS.md` — constitución operativa del repositorio.
 
-## Posicionamiento y comparación
+## Limitaciones declaradas
 
-**Categoría principal:** plataforma de orquestación y gobernanza de IA.
+Este README no declara que Isabella esté al 100% en producción. La madurez de software puede ser alta mientras la operación siga bloqueada por credenciales, proveedores, migraciones, permisos, observabilidad o rollback no demostrado. Las implementaciones generadas automáticamente permanecen en estado `draft` hasta revisión humana y evidencia reproducible.
 
-Referencias por segmento, sin afirmar superioridad:
+## Licencia
 
-| Segmento | Referencias | Qué comparar |
-|---|---|---|
-| Orquestación de aplicaciones LLM | LangChain/LangGraph, LlamaIndex, Vercel AI SDK | Herramientas, flujo, integraciones, control y facilidad de desarrollo. |
-| Plataformas/modelos de IA | OpenAI, Google Gemini, Anthropic Claude | Calidad, herramientas, latencia, coste, disponibilidad y experiencia. Isabella no debe presentarse como modelo base equivalente. |
-| Observabilidad/evaluación | LangSmith, Arize Phoenix, Weights & Biases Weave | Trazas, evaluación, depuración y evidencia. |
-| Políticas y seguridad | OPA, Cedar, controles de identidad cloud | Garantías de autorización, expresividad, auditoría e integración. |
-| Infraestructura | Kubernetes y plataformas cloud gestionadas | Despliegue, escalado, resiliencia y recuperación. |
-
-La integración de gobernanza, memoria, evidencia y operación es la hipótesis de diferenciación de Isabella. Su eficacia y posición de mercado deben demostrarse mediante adopción, benchmarks comparables, auditorías independientes y métricas reproducibles.
-
-## Licencias y contribución
-
-Verifica los archivos de licencia del repositorio y el alcance de cada licencia antes de redistribuir código, documentación, marcas o activos de terceros. No se debe inferir licencia de un texto histórico del README.
-
-Para contribuir:
-
-1. Crear una rama de trabajo.
-2. Implementar cambios pequeños con pruebas de regresión.
-3. Ejecutar los gates disponibles localmente.
-4. Adjuntar evidencia de los comandos ejecutados y el SHA.
-5. Abrir un PR y exigir CI verde antes de integrar cambios sensibles.
-
-## Referencias operativas
-
-- [Auditoría de preparación para producción](docs/audits/PRODUCTION-READINESS-AUDIT-2026-10-18.md)
-- [Runbook de cierre de bloqueos de producción](docs/ops/PRODUCTION-READINESS-RUNBOOK.md)
-- [Presentación pública del proyecto](docs/ISABELLA-PRESENTACION-PUBLICA-2026-10.md)
-- [Mapa y consolidación de documentación](docs/README.md)
-- [Repositorio GitHub](https://github.com/OsoPanda1/ISABELLA-VERSION-TERMINUS-V6)
-- [Acciones CI/CD](https://github.com/OsoPanda1/ISABELLA-VERSION-TERMINUS-V6/actions)
-
----
-
-**Declaración final de estado:** Isabella mantiene un avance global de implementación estimado del **78%** al SHA **30f5dac**. El pipeline CI/CD completo está en verde: `pnpm typecheck` ✓ → `pnpm test` (1659/1659) ✓ → `pnpm run build` ✓ → `security:suite` (14/14) ✓ → `ui-smoke` ✓ → `runtime-smoke` ✓. Se ha implementado **Isabella Sovereign Revenue Fabric v4** con 12 streams de ingreso, IETS Trust Score (8 factores, 5 tiers), IFRF v4 (vaults Emergency/Innovation/Treasury), ledger inmutable de doble entrada con hash chain, metering service, outbox/inbox pattern, migraciones PostgreSQL y 188 rutas API registradas. El sistema continúa en preproducción hasta que: (1) validación E2E de persistencia durable en entorno de staging, (2) smoke de producción con proveedores reales y claves de producción, (3) despliegue/rollback demostrado en producción real. Esta declaración debe actualizarse únicamente con evidencia nueva y reproducible al SHA correspondiente.
-
-
-
-
+Consultar `LICENSE` y `CITATION.cff`.
