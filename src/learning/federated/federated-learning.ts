@@ -149,8 +149,8 @@ export interface FederatedClient {
   readonly endpoint: string;
   readonly publicKey: string;
   readonly capabilities: ClientCapabilities;
-  readonly status: "active" | "inactive" | "training" | "error";
-  readonly lastSeen: number;
+  status: "active" | "inactive" | "training" | "error";
+  lastSeen: number;
   readonly metadata: Record<string, unknown>;
 }
 

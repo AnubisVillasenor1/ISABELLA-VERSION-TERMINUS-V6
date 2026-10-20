@@ -9,9 +9,9 @@ Isabella es una plataforma TypeScript/Express para conversación gobernada, orqu
 ## Estado real
 
 **Rama auditada:** `v0/auditoria-produccion-2026`  
-**Último SHA auditado:** se actualizará después del commit de esta auditoría.  
+**Último SHA auditado:** `ce7d27b`; SHA 10a1035 de evidencia histórica (regenerar para este commit).  
 **Evidencia:** debe regenerarse para cada commit nuevo; los artefactos generados no certifican producción por sí mismos.  
-**Avance exacto de implementación:** **78.0%**. Cálculo: 8 dominios ponderados, 6 completos (75%) + 1 dominio parcialmente completo (3.0%) = 78.0%; no se presenta como porcentaje de producción.
+**Avance global de implementación: 78%** (**78.0%** exacto). Cálculo: 8 dominios ponderados, 6 completos (75%) + 1 dominio parcialmente completo (3.0%) = 78.0%; no se presenta como porcentaje de producción.
 
 **Madurez declarada:** 78.0% — estimación reproducible de implementación, pruebas y gates, no certificación.  
 **Estado de liberación:** preproducción. La producción requiere cerrar los errores TypeScript pendientes, validar infraestructura real, proveedores, persistencia, secretos, despliegue y rollback observado.
@@ -23,7 +23,7 @@ Isabella es una plataforma TypeScript/Express para conversación gobernada, orqu
 | `node scripts/repository-assurance.mjs` | PASS: 44/44 estructural |
 | `pnpm security:suite` | PASS tras corregir falsos positivos de secretos y HMAC utilitario |
 | `pnpm typecheck` | FALLA: errores existentes en federación, gobernanza, aprendizaje y UI legacy; se corrigieron router/RAG/capability |
-| `pnpm test` | PASS: 280 archivos / 1666 tests |
+| `pnpm test` | 279 archivos PASS; 1 archivo FALLA por contrato README desactualizado, corregido en este cambio |
 | Build completo | BLOQUEADO por los errores TypeScript pendientes |
 | Producción real | No certificada; faltan smoke externo, persistencia E2E y rollback demostrado |
 

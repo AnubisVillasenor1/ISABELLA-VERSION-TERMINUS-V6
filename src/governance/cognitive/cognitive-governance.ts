@@ -540,8 +540,9 @@ export class QualityGatesEngine extends EventEmitter {
     }
 
     // Calculate overall score
-    const totalWeight = checkResults.reduce((sum, r) => sum + 
-      gate.checks.find(c => c.id === r.checkId)?.weight || 1, 0);
+    const totalWeight = checkResults.reduce((sum, r) => sum + (
+      gate.checks.find(c => c.id === r.checkId)?.weight ?? 1
+    ), 0);
     const weightedScore = checkResults.reduce((sum, r) => {
       const check = gate.checks.find(c => c.id === r.checkId);
       return sum + r.score * (check?.weight || 1);
@@ -707,7 +708,8 @@ export class EvidenceValidator extends EventEmitter {
     if (filter.type) results = results.filter(e => e.type === filter.type);
     if (filter.classification) results = results.filter(e => e.metadata.classification === filter.classification);
     if (filter.source) results = results.filter(e => e.provenance.source === filter.source);
-    if (filter.since) results = results.filter(e => e.provenance.createdAt >= filter.since);
+    const since = filter.since;
+    if (since !== undefined) results = results.filter(e => e.provenance.createdAt >= since);
     
     results.sort((a, b) => b.provenance.createdAt - a.provenance.createdAt);
     
