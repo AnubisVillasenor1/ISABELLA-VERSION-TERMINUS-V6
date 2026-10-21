@@ -543,32 +543,6 @@ export function registerRevenueFabricRoutes(deps: RevenueFabricDeps): void {
   });
 
   // ============================================================
-  // Revenue Streams Configuration
-  // ============================================================
-
-  app.get("/api/v1/revenue/streams", (req, res) => {
-    if (!authorizeProviderRoute(req, res)) return;
-    if (!enforceRateLimit(req, res, rateLimiter, "streams-list")) return;
-
-    const streams = [
-      { stream: "SUBSCRIPTION", name: "Suscripciones Isabella", model: "recurring", baseSplit: { user: 0.0, platform: 1.0 }, dynamicSplit: false },
-      { stream: "ISA_API", name: "ISA API Pay-per-token", model: "transactional", baseSplit: { user: 0.7, platform: 0.3 }, dynamicSplit: true },
-      { stream: "SKILL_MARKETPLACE", name: "Marketplace de Skills", model: "marketplace", baseSplit: { user: 0.7, platform: 0.3 }, dynamicSplit: true },
-      { stream: "AGENT_MARKETPLACE", name: "Marketplace de Agentes", model: "marketplace", baseSplit: { user: 0.7, platform: 0.3 }, dynamicSplit: true },
-      { stream: "AGENT_HOSTING", name: "Hosting de Agentes", model: "recurring", baseSplit: { user: 0.0, platform: 1.0 }, dynamicSplit: false },
-      { stream: "AI_CLOUD", name: "Sovereign AI Cloud", model: "consumption", baseSplit: { user: 0.0, platform: 1.0 }, dynamicSplit: false },
-      { stream: "AGENT_REVENUE_SHARING", name: "Revenue Sharing de Agentes", model: "recurring", baseSplit: { user: 0.7, platform: 0.3 }, dynamicSplit: true },
-      { stream: "HYPERAUTOMATION", name: "Hyperautomation", model: "b2b", baseSplit: { user: 0.75, platform: 0.25 }, dynamicSplit: true },
-      { stream: "WHITE_LABEL", name: "White Label", model: "enterprise", baseSplit: { user: 0.0, platform: 1.0 }, dynamicSplit: false },
-      { stream: "CERTIFICATION", name: "Certificaciones", model: "education", baseSplit: { user: 0.0, platform: 1.0 }, dynamicSplit: false },
-      { stream: "DATA_VAULT", name: "Data Vault", model: "data", baseSplit: { user: 0.5, platform: 0.5 }, dynamicSplit: true },
-      { stream: "ECOSYSTEM_TREASURY", name: "Ecosystem Treasury", model: "strategic", baseSplit: { user: 0.0, platform: 1.0 }, dynamicSplit: false },
-    ];
-
-    res.json({ success: true, streams });
-  });
-
-  // ============================================================
   // Outbox / Inbox Status
   // ============================================================
 
