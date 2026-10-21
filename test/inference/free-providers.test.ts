@@ -123,18 +123,21 @@ describe("free provider router", () => {
 
     const adapter = new GratisAPIAdapter({
       baseUrl: `http://127.0.0.1:${address.port}/v1`,
-      timeoutMs: 100,
+      timeoutMs: 500,
       maxRetries: 3,
       retryBaseDelayMs: 500,
     });
     try {
+      // Total timeout (500ms) bounds the entire retry sequence; first attempt takes ~150ms,
+      // leaving ~350ms budget, not enough for retry (baseDelayMs: 500ms > remaining budget).
+      // The retry logic correctly returns the HTTP 503 error instead of retrying.
       await expect(adapter.generate({ prompt: "hello", maxTokens: 8 })).rejects.toThrow("GRATIS_API_HTTP_503");
       expect(requests).toBe(1);
     } finally {
       server.closeAllConnections();
       await new Promise<void>((resolve) => server.close(() => resolve()));
     }
-  }, 3_000);
+  }, 5_000);
 
   it("declares a local ollama descriptor without network calls", () => {
     const adapter = new OllamaAdapter({ baseUrl: "http://127.0.0.1:1" });

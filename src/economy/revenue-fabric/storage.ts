@@ -4,7 +4,7 @@
  * Persistent storage for ledger, settlements, wallets, usage events
  */
 
-import { createPool, Pool, PoolConfig } from "pg";
+import { Pool, type PoolConfig } from "pg";
 import type { LedgerJournal } from "./immutable-ledger";
 import type { SettlementResult } from "./normalized-settlement";
 import type { UsageEvent, AggregatedUsage } from "./metering-service";
@@ -19,7 +19,7 @@ export class RevenueFabricStorage {
   private pool: Pool;
 
   constructor(config: RevenueFabricStorageConfig) {
-    this.pool = createPool(config.poolConfig);
+    this.pool = new Pool(config.poolConfig);
     this.initializeSchema().catch(console.error);
   }
 
