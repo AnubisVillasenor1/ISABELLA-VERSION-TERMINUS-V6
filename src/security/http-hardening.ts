@@ -1,35 +1,101 @@
 /**
- * Endurecimiento HTTP puro y testeable (state: draft | engine-generated).
+ * Endurecimiento HTTP puro y testeable (state: engine-generated).
  *
- * - securityHeadersFor: cabeceras defensivas por ruta (HSTS en producción, CSP estricta para la API JSON).
+ * - securityHeadersFor: cabeceras defensivas por ruta (HSTS en producción, CSP estricta con nonces).
  * - classifyHttpError: errores de Express → respuesta JSON segura (sin stack ni detalles internos).
  * - AuthFailureThrottle: freno de fuerza bruta sobre tokens de administración (bloquea ANTES de comparar).
  * - parseTrustProxy: valor seguro para `trust proxy` (saltos numéricos; nunca `true` por accidente).
+ * - generateCSPNonce: genera nonce criptográfico para CSP.
+ * - buildCSPWithNonce: construye CSP con nonce para scripts/estilos inline permitidos.
  */
+
+import { randomBytes } from "node:crypto";
 
 export interface HeaderSet {
   readonly [name: string]: string;
+}
+
+export interface CSPNonce {
+  readonly nonce: string;
+  readonly headerValue: string;
+}
+
+export function generateCSPNonce(): CSPNonce {
+  const nonce = randomBytes(16).toString("base64");
+  return {
+    nonce,
+    headerValue: `'nonce-${nonce}'`,
+  };
+}
+
+export function buildCSPWithNonce(nonce: string, isApiPath: boolean): string {
+  const nonceValue = `'nonce-${nonce}'`;
+  
+  if (isApiPath) {
+    return [
+      "default-src 'none'",
+      `script-src ${nonceValue} 'strict-dynamic'`,
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: https:",
+      "font-src 'self'",
+      "connect-src 'self'",
+      "frame-ancestors 'none'",
+      "base-uri 'none'",
+      "form-action 'none'",
+      "object-src 'none'",
+    ].join("; ");
+  }
+  
+  return [
+    "default-src 'self'",
+    `script-src ${nonceValue} 'strict-dynamic'`,
+    `style-src 'self' 'unsafe-inline' ${nonceValue}`,
+    "img-src 'self' data: https:",
+    "font-src 'self'",
+    "connect-src 'self'",
+    "frame-ancestors 'none'",
+    "base-uri 'none'",
+    "form-action 'self'",
+    "object-src 'none'",
+  ].join("; ");
 }
 
 export function isApiPath(path: string): boolean {
   return path === "/api" || path.startsWith("/api/");
 }
 
-export function securityHeadersFor(path: string, env: { NODE_ENV?: string | undefined }): HeaderSet {
+export function securityHeadersFor(path: string, env: { NODE_ENV?: string }, cspNonce?: string): HeaderSet {
   const headers: Record<string, string> = {
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",
     "Referrer-Policy": "strict-origin-when-cross-origin",
-    "Permissions-Policy": "camera=(), microphone=(self)",
+    "Permissions-Policy": "camera=(), microphone=(self), geolocation=()",
     "Cross-Origin-Opener-Policy": "same-origin",
+    "Cross-Origin-Resource-Policy": "same-origin",
+    "Cross-Origin-Embedder-Policy": "require-corp",
+    "X-Permitted-Cross-Domain-Policies": "none",
   };
-  if (env.NODE_ENV === "production") headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains";
-  if (isApiPath(path)) {
-    // La API solo devuelve JSON: ningún recurso activo debe poder cargarse desde una respuesta de API.
-    headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
-    headers["Cache-Control"] = "no-store";
+  
+  if (env.NODE_ENV === "production") {
+    headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload";
   }
+  
+  if (isApiPath(path)) {
+    headers["Content-Security-Policy"] = cspNonce 
+      ? buildCSPWithNonce(cspNonce, true)
+      : "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
+    headers["Cache-Control"] = "no-store, no-cache, must-revalidate, proxy-revalidate";
+    headers["Pragma"] = "no-cache";
+    headers["Expires"] = "0";
+  } else if (cspNonce) {
+    headers["Content-Security-Policy"] = buildCSPWithNonce(cspNonce, false);
+  }
+  
   return headers;
+}
+
+export interface HeaderSet {
+  readonly [name: string]: string;
 }
 
 export interface SafeHttpError {
@@ -106,15 +172,124 @@ export class AuthFailureThrottle {
       if (s.blockedUntil <= now && now - s.windowStart >= this.windowMs) this.states.delete(k);
       if (this.states.size <= this.maxKeys) return;
     }
-    // Presión máxima: descarta los más antiguos que NO estén bloqueados para no liberar atacantes ya frenados.
     for (const [k, s] of this.states) {
       if (this.states.size <= this.maxKeys) return;
       if (s.blockedUntil <= now) this.states.delete(k);
     }
-    // Último recurso (todas las claves bloqueadas): descarta las más antiguas; la memoria nunca crece sin cota.
     for (const k of this.states.keys()) {
       if (this.states.size <= this.maxKeys) return;
       this.states.delete(k);
     }
   }
 }
+
+/**
+ * AuthZ Matrix Test Helper - verifica matriz de autorización ruta → rol/actor
+ */
+export interface AuthZRule {
+  readonly path: string;
+  readonly method: string;
+  readonly requiredRoles: readonly string[];
+  readonly requiredScopes: readonly string[];
+  readonly allowAnonymous: boolean;
+}
+
+export interface AuthZTestResult {
+  readonly path: string;
+  readonly method: string;
+  readonly passed: boolean;
+  readonly expectedRoles: readonly string[];
+  readonly actualRoles: readonly string[];
+  readonly error?: string;
+}
+
+export class AuthZMatrixValidator {
+  private readonly rules: AuthZRule[] = [];
+
+  addRule(rule: AuthZRule): void {
+    this.rules.push(rule);
+  }
+
+  async testMatrix(testFn: (rule: AuthZRule) => Promise<{ authorized: boolean; roles: readonly string[] }>): Promise<AuthZTestResult[]> {
+    const results: AuthZTestResult[] = [];
+    
+    for (const rule of this.rules) {
+      try {
+        const { authorized, roles } = await testFn(rule);
+        const passed = rule.requiredRoles.every(r => roles.includes(r)) && 
+                       (!rule.allowAnonymous || authorized);
+        
+        results.push({
+          path: rule.path,
+          method: rule.method,
+          passed,
+          expectedRoles: rule.requiredRoles,
+          actualRoles: roles,
+          error: passed ? undefined : `Expected roles: ${rule.requiredRoles.join(", ")}, got: ${roles.join(", ")}`,
+        });
+      } catch (error) {
+        results.push({
+          path: rule.path,
+          method: rule.method,
+          passed: false,
+          expectedRoles: rule.requiredRoles,
+          actualRoles: [],
+          error: error instanceof Error ? error.message : "TEST_ERROR",
+        });
+      }
+    }
+    
+    return results;
+  }
+}
+
+export const defaultAuthZMatrix = new AuthZMatrixValidator();
+
+// Pre-populate with critical routes
+defaultAuthZMatrix.addRule({
+  path: "/api/v1/revenue/settle",
+  method: "POST",
+  requiredRoles: ["admin"],
+  requiredScopes: ["revenue:write"],
+  allowAnonymous: false,
+});
+
+defaultAuthZMatrix.addRule({
+  path: "/api/v1/revenue/wallet/:userId/credit",
+  method: "POST",
+  requiredRoles: ["admin"],
+  requiredScopes: ["revenue:write"],
+  allowAnonymous: false,
+});
+
+defaultAuthZMatrix.addRule({
+  path: "/api/v1/revenue/wallet/:userId",
+  method: "GET",
+  requiredRoles: ["user"],
+  requiredScopes: ["revenue:read"],
+  allowAnonymous: false,
+});
+
+defaultAuthZMatrix.addRule({
+  path: "/api/v1/revenue/usage/:userId",
+  method: "GET",
+  requiredRoles: ["user"],
+  requiredScopes: ["revenue:read"],
+  allowAnonymous: false,
+});
+
+defaultAuthZMatrix.addRule({
+  path: "/api/v1/billing/checkout",
+  method: "POST",
+  requiredRoles: [],
+  requiredScopes: [],
+  allowAnonymous: true,
+});
+
+defaultAuthZMatrix.addRule({
+  path: "/api/v1/cognitive/request",
+  method: "POST",
+  requiredRoles: ["user"],
+  requiredScopes: ["cognitive:execute"],
+  allowAnonymous: false,
+});

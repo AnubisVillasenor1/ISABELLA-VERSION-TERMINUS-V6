@@ -507,14 +507,14 @@ export function registerRevenueFabricRoutes(deps: RevenueFabricDeps): void {
       }
 
       const userId = getUserIdFromReq(req);
-      const successUrl = body.successUrl ?? `${req.get("origin")}/billing/success`;
-      const cancelUrl = body.cancelUrl ?? `${req.get("origin")}/billing/cancel`;
+      const finalSuccessUrl = successUrl ?? `${req.get("origin")}/billing/success`;
+      const finalCancelUrl = cancelUrl ?? `${req.get("origin")}/billing/cancel`;
 
       const { sessionId, url } = await storage.createCheckoutSession(
         getUserIdFromReq(req),
         body.planCode,
-        successUrl,
-        cancelUrl
+        finalSuccessUrl,
+        finalCancelUrl
       );
 
       res.json({ success: true, sessionId, url, publishableKey: process.env.STRIPE_PUBLISHABLE_KEY });

@@ -6,8 +6,8 @@ describe("securityHeadersFor", () => {
   it("API paths get strict CSP and no-store; non-API paths do not", () => {
     const api = securityHeadersFor("/api/v1/status", {});
     expect(api["Content-Security-Policy"]).toContain("default-src 'none'");
-    expect(api["Cache-Control"]).toBe("no-store");
-    expect(securityHeadersFor("/api", {})["Cache-Control"]).toBe("no-store");
+    expect(api["Cache-Control"]).toContain("no-store");
+    expect(securityHeadersFor("/api", {})["Cache-Control"]).toContain("no-store");
     expect(securityHeadersFor("/apiary", {})["Cache-Control"]).toBeUndefined();
     expect(securityHeadersFor("/", {})["Content-Security-Policy"]).toBeUndefined();
   });
