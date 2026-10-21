@@ -332,18 +332,19 @@ export class SecretScanner {
               shortDescription: { text: `Detects ${p.type}` },
               defaultConfiguration: { level: p.severity === "critical" ? "error" : p.severity === "high" ? "error" : "warning" },
             })),
-          results: result.matches.map(m => ({
-            ruleId: m.type,
-            level: m.severity === "critical" || m.severity === "high" ? "error" : "warning",
-            message: { text: `${m.type}: ${m.value}` },
-            locations: [{
-              physicalLocation: {
-                artifactLocation: { uri: m.file },
-                region: { startLine: m.line },
-              },
-            }],
-          }),
-        }],
+          },
+        },
+        results: result.matches.map(m => ({
+          ruleId: m.type,
+          level: m.severity === "critical" || m.severity === "high" ? "error" : "warning",
+          message: { text: `${m.type}: ${m.value}` },
+          locations: [{
+            physicalLocation: {
+              artifactLocation: { uri: m.file },
+              region: { startLine: m.line },
+            },
+          }],
+        })),
       }],
     };
     
