@@ -9,8 +9,5 @@ export default defineConfig({
       NODE_ENV: "test",
     },
     include: ["test/**/*.test.ts"],
-    coverage: {
-      include: ["src/**/*.ts"],
-    },
   },
 });

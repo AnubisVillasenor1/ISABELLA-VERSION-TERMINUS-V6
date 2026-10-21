@@ -37,7 +37,7 @@
     "verify:production": "tsx scripts/verify-production.ts"
   },
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
+    "@eslint/js": "^9.20.1",
     "@types/express": "^5.0.6",
     "@types/node": "^22.10.2",
     "@types/pg": "^8.23.1",
@@ -48,7 +48,7 @@
     "prettier": "^3.5.1",
     "typescript": "^5.7.2",
     "typescript-eslint": "^8.72.0",
-    "vitest": "^5.0.3"
+    "vitest": "^3.2.7"
   },
   "dependencies": {
     "@ai-sdk/gateway": "^4.0.110",
@@ -65,5 +65,5 @@
     "ws": "^8.22.0",
     "zod": "^3.25.76"
   },
-  "packageManager": "pnpm@10.28.0"
+  "packageManager": "pnpm@10.28.0+sha512.05df71d1421f21399e053fde567cea34d446fa02c76571441bfc1c7956e98e363088982d940465fd34480d4d90a0668bc12362f8aa88000a64e83d0b0e47be48"
 }

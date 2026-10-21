@@ -556,6 +556,7 @@ export class RevenueFabricStorage {
     provider: string;
     externalId: string;
     periodEnd: Date;
+    subscriptionStatus?: string;
   }): Promise<void> {
     const client = await this.pool.connect();
     try {
@@ -571,7 +572,7 @@ export class RevenueFabricStorage {
            subscription_current_period_end = EXCLUDED.subscription_current_period_end,
            last_verified_at = NOW(),
            updated_at = NOW()`,
-        [userId, canEarn, tier, subscriptionData?.subscription_status || "free", 
+        [userId, canEarn, tier, subscriptionData?.subscriptionStatus || "free", 
          subscriptionData?.provider || null, subscriptionData?.externalId || null, 
          subscriptionData?.periodEnd || null]
       );
@@ -683,20 +684,6 @@ export class RevenueFabricStorage {
     }
   }
 
-  // ==================== Contribution Points ====================
-  async getTotalContributionPoints(userId: string): Promise<number> {
-    const client = await this.pool.connect();
-    try {
-      const result = await client.query(
-        `SELECT COALESCE(SUM(points), 0) as total FROM contribution_points WHERE user_id = $1 AND verified = true`,
-        [userId]
-      );
-      return Number(result.rows[0]?.total || 0);
-    } finally {
-      client.release();
-    }
-  }
-
   // ==================== Stripe Checkout (D3) ====================
   async createCheckoutSession(
     userId: string,
@@ -727,7 +714,11 @@ export class RevenueFabricStorage {
       await client.query("BEGIN");
       
       if (event.type === "checkout.session.completed") {
-        const session = event.data.object;
+        const session = event.data.object as { 
+          metadata?: { userId?: string; planCode?: string }; 
+          customer?: string;
+          id?: string;
+        };
         const userId = session.metadata?.userId;
         const planCode = session.metadata?.planCode;
         
@@ -735,13 +726,13 @@ export class RevenueFabricStorage {
           // Update subscription status
           await this.setEarnEligibility(userId, true, "PROFESSIONAL", {
             provider: "stripe",
-            externalId: session.customer as string,
+            externalId: session.customer ?? "",
             periodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
           });
           
           await client.query(
             `UPDATE stripe_checkout_sessions SET status = 'completed', completed_at = NOW() WHERE session_id = $1`,
-            [session.id]
+            [session.id ?? ""]
           );
         }
       }
@@ -835,57 +826,6 @@ export class RevenueFabricStorage {
         [eventId, consumerName]
       );
       return result.rows.length > 0;
-    } finally {
-      client.release();
-    }
-  }
-
-  // ==================== Eligibility ====================
-  async getEarnEligibility(userId: string): Promise<{ canEarn: boolean; tier: string; subscriptionStatus: string } | null> {
-    const client = await this.pool.connect();
-    try {
-      const result = await client.query(
-        `SELECT can_earn, tier, subscription_status FROM wallet_eligibility WHERE user_id = $1`,
-        [userId]
-      );
-      if (result.rows.length === 0) return { canEarn: false, tier: "STARTER", subscriptionStatus: "free" };
-      const row = result.rows[0];
-      return { canEarn: row.can_earn, tier: row.tier, subscriptionStatus: row.subscription_status };
-    } finally {
-      client.release();
-    }
-  }
-
-  async setEarnEligibility(
-    userId: string,
-    canEarn: boolean,
-    tier: string,
-    subscriptionData?: { provider: string; externalId: string; periodEnd: Date }
-  ): Promise<void> {
-    const client = await this.pool.connect();
-    try {
-      await client.query(
-        `INSERT INTO wallet_eligibility (user_id, can_earn, tier, subscription_status, subscription_provider, subscription_external_id, subscription_current_period_end)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
-         ON CONFLICT (user_id) DO UPDATE SET
-           can_earn = EXCLUDED.can_earn,
-           tier = EXCLUDED.tier,
-           subscription_status = EXCLUDED.subscription_status,
-           subscription_provider = EXCLUDED.subscription_provider,
-           subscription_external_id = EXCLUDED.subscription_external_id,
-           subscription_current_period_end = EXCLUDED.subscription_current_period_end,
-           last_verified_at = NOW(),
-           updated_at = NOW()`,
-        [
-          userId,
-          canEarn,
-          tier,
-          subscriptionData?.subscription_status || "free",
-          subscriptionData?.provider || null,
-          subscriptionData?.externalId || null,
-          subscriptionData?.periodEnd || null,
-        ]
-      );
     } finally {
       client.release();
     }
