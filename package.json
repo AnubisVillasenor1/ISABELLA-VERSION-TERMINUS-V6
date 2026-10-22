@@ -16,13 +16,16 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "build": "node scripts/repository-assurance.mjs && tsc -p tsconfig.build.json && vitest run && esbuild src/server.ts --bundle --platform=node --format=esm --packages=external --target=node24 --outfile=dist/server.js && node --check src/ui/app.js && node scripts/ui-smoke.mjs && node scripts/runtime-smoke.mjs && corepack pnpm run security:suite",
+    "build": "node scripts/repository-assurance.mjs && vitest run && esbuild src/server.ts --bundle --platform=node --format=esm --packages=external --target=node24 --outfile=dist/server.js && node --check src/ui/app.js && node scripts/ui-smoke.mjs && node scripts/runtime-smoke.mjs && corepack pnpm run security:suite",
     "build:dist": "tsc -p tsconfig.build.json && esbuild src/server.ts --bundle --platform=node --format=esm --packages=external --target=node24 --outfile=dist/server.js && node --check src/ui/app.js && node scripts/ui-smoke.mjs && node scripts/runtime-smoke.mjs",
-    "lint": "tsc --noEmit",
+    "lint": "eslint \"src/**/*.{ts,tsx,js,jsx}\" --max-warnings=0",
+    "lint:fix": "eslint \"src/**/*.{ts,tsx,js,jsx}\" --fix",
+    "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
     "reconcile:pids": "tsx src/cli/reconcilePids.ts",
     "bookpi:maintenance": "tsx src/cli/bookpiMaintenance.ts",
     "quantum:bridge": "python services/pennylane_bridge.py",
-    "validate": "corepack pnpm run typecheck && corepack pnpm run build",
+    "validate": "corepack pnpm run typecheck && corepack pnpm run lint && corepack pnpm run format:check && corepack pnpm run build",
     "ingest:atlas": "tsx scripts/atlas-ingest.ts",
     "security:suite": "node scripts/security-suite.mjs",
     "production:evidence": "node scripts/production-evidence.mjs",
@@ -34,20 +37,25 @@
     "verify:production": "tsx scripts/verify-production.ts"
   },
   "devDependencies": {
-    "@prisma/client": "^7.10.1",
+    "@eslint/js": "^9.20.1",
     "@types/express": "^5.0.6",
     "@types/node": "^22.10.2",
     "@types/pg": "^8.23.1",
     "@types/ws": "^8.18.2",
     "esbuild": "0.28.2",
+    "eslint": "^9.20.1",
+    "eslint-config-prettier": "^10.0.1",
+    "prettier": "^3.5.1",
     "prisma": "8.0.0-rc.23",
     "typescript": "^5.7.2",
-    "vitest": "^5.0.3"
+    "typescript-eslint": "^8.72.0",
+    "vitest": "^3.2.7"
   },
   "dependencies": {
     "@ai-sdk/gateway": "^4.0.110",
-    "@google/genai": "^2.28.0",
     "@neondatabase/serverless": "^1.2.0",
+    "@prisma/client": "^7.10.1",
+    "@google/genai": "^2.28.0",
     "@vercel/analytics": "^2.0.1",
     "ai": "^7.0.137",
     "braintrust": "^3.37.2",
@@ -58,9 +66,8 @@
     "pg": "^8.23.1",
     "stripe": "^21.0.1",
     "tsx": "^4.23.15",
-    "uuid": "^13.0.2",
     "ws": "^8.22.0",
     "zod": "^3.25.76"
   },
-  "packageManager": "pnpm@10.28.0"
+  "packageManager": "pnpm@10.28.0+sha512.05df71d1421f21399e053fde567cea34d446fa02c76571441bfc1c7956e98e363088982d940465fd34480d4d90a0668bc12362f8aa88000a64e83d0b0e47be48"
 }

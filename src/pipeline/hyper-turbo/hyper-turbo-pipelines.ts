@@ -479,13 +479,14 @@ export class ColdPathExecutor extends EventEmitter {
 
   private async executePipeline<T>(
     pipelineId: string,
-    requests: BatchedRequest[]
-  ): Promise<PipelineResult[]> {
+    requests: BatchedRequest<T>[]
+  ): Promise<PipelineResult<T>[]> {
     const firstRequest = requests[0];
     const stages = firstRequest.stages;
     const startTime = Date.now();
     const completedStages: PipelineStage[] = [];
     const checkpoints: Checkpoint[] = [];
+    let finalStageResults: StageResult[] = [];
 
     // Execute stages
     let batchData = requests.map(r => r.input);
@@ -493,10 +494,11 @@ export class ColdPathExecutor extends EventEmitter {
     for (const stage of stages) {
       // Process entire batch through stage
       const stageResults = await Promise.all(
-        batchData.map((data, i) => 
-          this.executor.execute(stage.handler, data, requests[i].context, stage)
+        batchData.map((data, i) =>
+          this.executor.execute(stage.handler, data, requests[i]?.context ?? requests[0].context, stage)
         )
       );
+      finalStageResults = stageResults;
 
       // Check for failures
       for (let i = 0; i < stageResults.length; i++) {
@@ -532,7 +534,7 @@ export class ColdPathExecutor extends EventEmitter {
 
     const latency = Date.now() - startTime;
 
-    return stageResults.map((result, i) => ({
+    return finalStageResults.map((result) => ({
       success: true,
       data: result.data,
       latencyMs: latency,

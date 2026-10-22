@@ -38,9 +38,9 @@ export interface Identity {
   readonly type: "user" | "service" | "device" | "agent";
   readonly attributes: Record<string, unknown>;
   readonly credentials: Credential[];
-  readonly trustLevel: TrustLevel;
+  trustLevel: TrustLevel;
   readonly createdAt: number;
-  readonly lastVerified: number;
+  lastVerified: number;
   readonly metadata: Record<string, unknown>;
 }
 
@@ -51,7 +51,7 @@ export interface Credential {
   readonly secretHash?: string;
   readonly metadata: Record<string, unknown>;
   readonly enrolledAt: number;
-  readonly lastUsed?: number;
+  lastUsed?: number;
   readonly revoked: boolean;
 }
 
@@ -61,10 +61,10 @@ export interface Device {
   readonly platform: string;
   readonly hardwareFingerprint: string;
   readonly attestation: DeviceAttestation;
-  readonly trustScore: number;
-  readonly status: "trusted" | "untrusted" | "quarantined" | "revoked";
+  trustScore: number;
+  status: "trusted" | "untrusted" | "quarantined" | "revoked";
   readonly enrolledAt: number;
-  readonly lastSeen: number;
+  lastSeen: number;
   readonly metadata: Record<string, unknown>;
 }
 

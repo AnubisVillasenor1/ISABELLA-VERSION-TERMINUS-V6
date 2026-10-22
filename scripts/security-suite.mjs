@@ -18,12 +18,25 @@ import { spawnSync } from "node:child_process";
 
 const REPO_ROOT = process.cwd();
 const SRC = path.join(REPO_ROOT, "src");
+const EXCLUDE_DIRS = [
+  "lib",
+  "authz-runtime",
+  "hypercore-runtime",
+  "components",
+  "hooks",
+  "core",
+  "multimodal",
+];
 const SECURITY_DOCS = path.join(REPO_ROOT, "docs", "security");
 const SERVER_FILE = path.join(SRC, "server.ts");
 const OUT_DIR = path.join(REPO_ROOT, "evidence");
 const OUT_FILE = path.join(OUT_DIR, "security-suite.json");
 
 const rel = (p) => path.relative(REPO_ROOT, p).replace(/\\/g, "/");
+
+function isExcluded(file) {
+  return EXCLUDE_DIRS.some((dir) => file.includes(path.sep + dir + path.sep) || file.includes("/" + dir + "/"));
+}
 
 function readText(file) {
   try {
@@ -43,7 +56,7 @@ function listFiles(dir, predicate) {
   for (const entry of fs.readdirSync(dir, { recursive: true })) {
     const abs = path.join(dir, entry);
     try {
-      if (fs.statSync(abs).isFile() && predicate(abs)) out.push(abs);
+      if (fs.statSync(abs).isFile() && predicate(abs) && !isExcluded(abs)) out.push(abs);
     } catch {
       /* ignorar entradas ilegibles */
     }

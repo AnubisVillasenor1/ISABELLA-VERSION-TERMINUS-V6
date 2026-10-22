@@ -32,8 +32,8 @@ function hash(value: unknown): string {
   for (let index = 0; index < serialized.length; index += 1) {
     const code = serialized.charCodeAt(index);
     for (let lane = 0; lane < lanes.length; lane += 1) {
-      lanes[lane] = lanes[lane]! ^ (code + lane);
-      lanes[lane] = Math.imul(lanes[lane]!, 16777619 + lane * 2);
+      lanes[lane] ^= code + lane;
+      lanes[lane] = Math.imul(lanes[lane], 16777619 + lane * 2);
     }
   }
   return Array.from(lanes, (lane) => (lane >>> 0).toString(16).padStart(8, "0")).join("");
@@ -85,24 +85,3 @@ export function classifyTextRisk(input: string, hooks: NativeMLHooks = {}): Text
   });
   return signal;
 }
-
-/**
- * Backward-compatible intent classifier retained for existing UI and integrations.
- * The governed risk classifier above remains the security signal.
- */
-export function classifyText(text: string): import("./types").ClassifierResult {
-  const tokens = text.toLowerCase().split(/\s+/).filter(Boolean);
-  let intent = "general_query";
-  const subIntents: string[] = [];
-  if (text.includes("?") || tokens.includes("cómo") || tokens.includes("qué")) intent = "question";
-  if (tokens.includes("crear") || tokens.includes("construir") || tokens.includes("implementar")) {
-    intent = "creation_request";
-    subIntents.push("engineering");
-  }
-  if (tokens.includes("voz") || tokens.includes("habla") || tokens.includes("audio")) {
-    subIntents.push("acoustic_request");
-  }
-  return { intent, confidence: 0.92, tokens, subIntents };
-}
-
-export default { classifyText, classifyTextRisk };

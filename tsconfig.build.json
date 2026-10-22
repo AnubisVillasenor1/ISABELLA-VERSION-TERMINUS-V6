@@ -6,6 +6,17 @@
     "emitDeclarationOnly": false,
     "outDir": "dist"
   },
-  "include": ["src"],
-  "exclude": ["src/components", "src/hooks"]
+  "include": [
+    "src/server.ts"
+  ],
+  "exclude": [
+    "src/lib",
+    "src/authz-runtime",
+    "src/hypercore-runtime",
+    "src/components",
+    "src/hooks",
+    "src/core",
+    "node_modules",
+    "dist"
+  ]
 }

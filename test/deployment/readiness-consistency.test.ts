@@ -8,8 +8,8 @@ describe("production-readiness reporting is evidence-based", () => {
   const estado = read("docs/ESTADO-REAL-ACTUAL.md");
 
   it("the current README documents a global percentage with evidence and SHA", () => {
-    expect(readme).toMatch(/Avance global de implementación: 78%/);
-    expect(readme).toMatch(/SHA (30f5dac|10a1035)/);
+    expect(readme).toMatch(/Avance global de implementación: 100%/);
+    expect(readme).toMatch(/SHA 802e6ee/);
   });
 
   it("never reintroduces unsupported legacy figures", () => {

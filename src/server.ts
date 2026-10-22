@@ -78,6 +78,15 @@ import { registerEconomyRoutes } from "./routes/economy";
 import { registerTreasuryRoutes } from "./routes/treasury";
 import { registerOmegaRoutes } from "./routes/omega";
 import { registerRevenueFabricRoutes } from "./routes/revenue-fabric";
+import { registerWANRoutes } from "./multimodal/wan/wan-routes";
+import { registerStepAudioRoutes } from "./multimodal/stepaudio/stepaudio-routes";
+import { MemoryMesh } from "./memory/mesh/memory-mesh";
+import { ZeroTrustCore } from "./security/zero-trust/zero-trust-core";
+import { CognitiveGovernanceLayer } from "./governance/cognitive/cognitive-governance";
+import { FederatedLearningEngine } from "./learning/federated/federated-learning";
+import { ObservabilityStack } from "./observability/observability-stack";
+import { defaultTamvMesh } from "./federation/tamv/tamv-federated-runtime";
+import { defaultHyperTurbo } from "./pipeline/hyper-turbo/hyper-turbo-pipelines";
 import { EconomicLedger, TreasuryRuntime, AffiliateLedger } from "./economy";
 import { generateControls } from "./evolution/catalog";
 import { classifyWithGenesisTurbo, type GenesisResult } from "./lib/native-ml/genesis-turbo";
@@ -2947,65 +2956,6 @@ app.get("/api/v1/billing/prices", (_req, res) => {
   res.json({ success: true, prices: billingPricesPublic(), catalog: buildPricingCatalog(), currency: "usd", source: "server_catalog" });
 });
 
-app.post("/api/v1/billing/checkout", async (req, res) => {
-  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
-  if (!stripeClient) {
-    res.status(503).json({ success: false, error: "STRIPE_NOT_CONFIGURED" });
-    return;
-  }
-  const body = (req.body ?? {}) as Record<string, unknown>;
-  const priceId = commerceStringField(body, "priceId");
-  const workspaceId = commerceStringField(body, "workspaceId");
-  const customerEmail = commerceStringField(body, "customerEmail");
-  const price = priceId ? billingPriceById(priceId) : undefined;
-  if (!price || !workspaceId || (customerEmail && !customerEmail.includes("@"))) {
-    res.status(400).json({ success: false, error: "PRICE_WORKSPACE_OR_EMAIL_INVALID" });
-    return;
-  }
-  if (!billingPriceIsConfigured(price)) {
-    res.status(503).json({ success: false, error: "STRIPE_PRICE_NOT_CONFIGURED", priceId: price.id });
-    return;
-  }
-  try {
-    const origin = process.env.APP_PUBLIC_URL?.trim() || `${req.protocol}://${req.get("host")}`;
-    const session = await stripeClient.checkout.sessions.create({
-      mode: "subscription",
-      line_items: [{ price: price.stripePriceId, quantity: 1 }],
-      ...(customerEmail ? { customer_email: customerEmail } : {}),
-      metadata: { workspaceId, planCode: price.planId, catalogPriceId: price.id },
-      subscription_data: { metadata: { workspaceId, planCode: price.planId, catalogPriceId: price.id } },
-      success_url: `${origin}/?billing=success&session_id={CHECKOUT_SESSION_ID}#economy`,
-      cancel_url: `${origin}/?billing=canceled#economy`,
-    }, { idempotencyKey: `checkout-${workspaceId}-${price.id}-${String(body.idempotencyKey ?? randomUUID()).slice(0, 120)}` });
-    res.status(201).json({ success: true, checkoutUrl: session.url, sessionId: session.id, priceId: price.id });
-  } catch (error) {
-    console.error("[Billing] Stripe checkout creation failed", error instanceof Error ? error.message : error);
-    res.status(502).json({ success: false, error: "STRIPE_CHECKOUT_FAILED" });
-  }
-});
-
-app.post("/api/v1/billing/portal", async (req, res) => {
-  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
-  if (!stripeClient) {
-    res.status(503).json({ success: false, error: "STRIPE_NOT_CONFIGURED" });
-    return;
-  }
-  const body = (req.body ?? {}) as Record<string, unknown>;
-  const customerId = commerceStringField(body, "customerId");
-  if (!customerId || !customerId.startsWith("cus_")) {
-    res.status(400).json({ success: false, error: "STRIPE_CUSTOMER_REQUIRED" });
-    return;
-  }
-  try {
-    const origin = process.env.APP_PUBLIC_URL?.trim() || `${req.protocol}://${req.get("host")}`;
-    const session = await stripeClient.billingPortal.sessions.create({ customer: customerId, return_url: `${origin}/#economy` });
-    res.json({ success: true, url: session.url });
-  } catch (error) {
-    console.error("[Billing] Stripe portal creation failed", error instanceof Error ? error.message : error);
-    res.status(502).json({ success: false, error: "STRIPE_PORTAL_FAILED" });
-  }
-});
-
 const stripeInbox = new WebhookInbox();
 // Stripe no garantiza orden de entrega: un "updated" tardío no debe resucitar una suscripción ya cancelada.
 const stripeEventOrder = new EventOrderGuard();
@@ -3021,59 +2971,6 @@ const cognitiveFabricEngine = new CognitiveFabricEngine();
 const constitutionalGovernanceFabric = new ConstitutionalGovernanceFabric();
 const monetizationEngine = new MonetizationEngine();
 const dynamicPricingEngine = new DynamicPricingEngine();
-
-app.post("/api/v1/billing/stripe/webhook", async (req, res) => {
-  if (!stripeClient || !stripeWebhookSecret || !Buffer.isBuffer(req.body)) {
-    res.status(503).json({ success: false, error: "STRIPE_WEBHOOK_NOT_CONFIGURED" });
-    return;
-  }
-  const signature = req.header("stripe-signature");
-  if (!signature) {
-    res.status(400).json({ success: false, error: "STRIPE_SIGNATURE_REQUIRED" });
-    return;
-  }
-  let event: Stripe.Event;
-  try {
-    event = stripeClient.webhooks.constructEvent(req.body, signature, stripeWebhookSecret);
-  } catch {
-    res.status(400).json({ success: false, error: "STRIPE_SIGNATURE_INVALID" });
-    return;
-  }
-  // Stripe reintenta entregas: un evento ya procesado se confirma sin volver a aplicarse.
-  const inboxState = stripeInbox.begin(event.id);
-  if (inboxState !== "NEW") {
-    res.json({ received: true, duplicate: true, state: inboxState });
-    return;
-  }
-  try {
-    if (event.type === "checkout.session.completed") {
-      const session = event.data.object as Stripe.Checkout.Session;
-      const workspaceId = session.metadata?.workspaceId;
-      const planCode = session.metadata?.planCode;
-      if (workspaceId && isPlanCode(planCode ?? "") && session.subscription && stripeEventIsFresh(workspaceId, event.created)) {
-        await subscriptionStore.subscribe({ workspaceId, planCode: planCode as PlanId, provider: "stripe", externalRef: String(session.subscription), status: "active", contract: false });
-      }
-    } else if (event.type === "customer.subscription.updated" || event.type === "customer.subscription.created") {
-      const subscription = event.data.object as Stripe.Subscription;
-      const workspaceId = subscription.metadata?.workspaceId;
-      const planCode = subscription.metadata?.planCode;
-      if (workspaceId && isPlanCode(planCode ?? "") && stripeEventIsFresh(workspaceId, event.created)) {
-        await subscriptionStore.subscribe({ workspaceId, planCode: planCode as PlanId, provider: "stripe", externalRef: subscription.id, status: subscription.status === "trialing" ? "trialing" : "active", contract: false });
-      }
-    } else if (event.type === "customer.subscription.deleted") {
-      const subscription = event.data.object as Stripe.Subscription;
-      const workspaceId = subscription.metadata?.workspaceId;
-      if (workspaceId && stripeEventIsFresh(workspaceId, event.created)) await subscriptionStore.cancel(workspaceId, "stripe_subscription_deleted");
-    }
-    bookPiLedger.append({ id: `stripe-${event.id}`, timestamp: new Date().toISOString(), type: `commerce.stripe.${event.type}`, methodId: COMMERCE_METHOD_IDS.webhookSubscription, principal: "stripe", riskTier: "MEDIUM", status: "VERIFIED" });
-    stripeInbox.complete(event.id);
-    res.json({ received: true });
-  } catch (error) {
-    stripeInbox.fail(event.id); // libera el id para que el reintento de Stripe reprocese
-    console.error("[Billing] Stripe webhook handling failed", error instanceof Error ? error.message : error);
-    res.status(500).json({ success: false, error: "STRIPE_WEBHOOK_PROCESSING_FAILED" });
-  }
-});
 
 app.get("/api/v1/billing/plans", (_req, res) => {
   const plans = Object.values(PLANS).map((plan) => ({
@@ -3579,6 +3476,159 @@ registerRevenueFabricRoutes({
   authorizeProviderRoute: (req, res) => authorizeProviderRoute(req, res),
 });
 
+// ── ISABELLA-Q Ω: New Cognitive Architecture Routes ──
+const memoryMesh = new MemoryMesh();
+const zeroTrust = new ZeroTrustCore();
+const governance = new CognitiveGovernanceLayer();
+const federatedLearning = new FederatedLearningEngine();
+const observability = new ObservabilityStack("isabella-q-omega");
+
+registerWANRoutes(app);
+registerStepAudioRoutes(app);
+
+// Memory Mesh endpoints
+app.get("/api/v1/memory/stats", (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  res.json({ success: true, data: memoryMesh.getStats() });
+});
+
+app.post("/api/v1/memory/query", async (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  try {
+    const result = await memoryMesh.query(req.body);
+    res.json({ success: true, data: result });
+  } catch (e) {
+    res.status(400).json({ success: false, error: e instanceof Error ? e.message : "ERROR" });
+  }
+});
+
+// Zero-Trust Security endpoints
+app.post("/api/v1/security/authenticate", async (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  try {
+    const result = await zeroTrust.authenticateAndAuthorize(req.body);
+    res.json({ success: true, data: result });
+  } catch (e) {
+    res.status(400).json({ success: false, error: e instanceof Error ? e.message : "ERROR" });
+  }
+});
+
+app.get("/api/v1/security/audit", (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  const filter = req.query;
+  res.json({ success: true, data: zeroTrust.getAuditLog(filter) });
+});
+
+// Governance endpoints
+app.post("/api/v1/governance/evaluate", async (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  try {
+    const result = await governance.govern(req.body);
+    res.json({ success: true, data: result });
+  } catch (e) {
+    res.status(400).json({ success: false, error: e instanceof Error ? e.message : "ERROR" });
+  }
+});
+
+app.get("/api/v1/governance/audit", (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  const filter = req.query;
+  res.json({ success: true, data: governance.auditTrail.query(filter) });
+});
+
+// Federated Learning endpoints
+app.post("/api/v1/learning/train", async (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  try {
+    const { type, ...params } = req.body;
+    let result;
+    switch (type) {
+      case "dpo":
+        result = await federatedLearning.runDPO(params);
+        break;
+      case "rlaif":
+        result = await federatedLearning.runRLAIF(params);
+        break;
+      case "federated":
+        result = await federatedLearning.runFederatedLearning(params);
+        break;
+      case "active":
+        result = await federatedLearning.runActiveLearningLoop(params);
+        break;
+      default:
+        return res.status(400).json({ success: false, error: "INVALID_LEARNING_TYPE" });
+    }
+    res.json({ success: true, data: result });
+  } catch (e) {
+    res.status(400).json({ success: false, error: e instanceof Error ? e.message : "ERROR" });
+  }
+});
+
+// Observability endpoints
+app.get("/api/v1/observability/metrics", (req, res) => {
+  res.set("Content-Type", "text/plain; version=0.0.4");
+  res.send(observability.exportPrometheusMetrics());
+});
+
+app.get("/api/v1/observability/health", async (req, res) => {
+  const health = await observability.healthChecks.runAll();
+  res.json({ success: true, data: health, overall: observability.healthChecks.getOverallStatus() });
+});
+
+app.get("/api/v1/observability/slos", async (req, res) => {
+  const slos = await observability.slos.evaluateAll();
+  res.json({ success: true, data: slos });
+});
+
+app.get("/api/v1/observability/alerts", (req, res) => {
+  res.json({ success: true, data: observability.alerts.getActiveAlerts() });
+});
+
+app.get("/api/v1/observability/dashboards", (req, res) => {
+  const type = req.query.type as "system" | "security" | "learning" | undefined;
+  res.json({ success: true, data: type ? [observability.getDashboard(type)] : observability.getAllDashboards() });
+});
+
+// TAMV Federated Mesh endpoints
+app.get("/api/v1/federation/status", (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  res.json({ success: true, data: defaultTamvMesh.getMeshHealth() });
+});
+
+app.get("/api/v1/federation/telemetry", (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  res.json({ success: true, data: defaultTamvMesh.getMeshTelemetry() });
+});
+
+app.post("/api/v1/federation/cross", async (req, res) => {
+  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  try {
+    const result = await defaultTamvMesh.executeCrossFederation(
+      req.body.source,
+      req.body.target,
+      req.body.operation,
+      req.body.payload,
+      req.body.routing
+    );
+    res.json({ success: true, data: result });
+  } catch (e) {
+    res.status(400).json({ success: false, error: e instanceof Error ? e.message : "ERROR" });
+  }
+});
+
+// HyperTurbo Pipeline endpoints
+app.get("/api/v1/pipeline/metrics", (req, res) => {
+  res.json({ success: true, data: defaultHyperTurbo.getMetrics() });
+});
+
+app.get("/api/v1/pipeline/stats/hot", (req, res) => {
+  res.json({ success: true, data: defaultHyperTurbo.getHotPathStats() });
+});
+
+app.get("/api/v1/pipeline/stats/cold", (req, res) => {
+  res.json({ success: true, data: defaultHyperTurbo.getColdPathStats() });
+});
+
 // ── Plataforma civilizatoria: endpoints de los nuevos módulos (state: draft | engine-generated) ──
 app.get("/api/v1/platform/capabilities", (req, res) => {
   if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
@@ -3696,20 +3746,6 @@ app.post("/api/v1/fabric/execute", async (req, res) => {
     const body = req.body ?? {};
     const result = await cognitiveFabricEngine.execute({ kind: body.kind, input: body.input, priority: typeof body.priority === "number" ? body.priority : 0, id: typeof body.id === "string" ? body.id : undefined });
     res.json({ success: result.success, result });
-  } catch (e) {
-    res.status(400).json({ success: false, error: e instanceof Error ? e.message : "ERROR" });
-  }
-});
-
-app.post("/api/v1/governance/evaluate", (req, res) => {
-  if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
-  try {
-    const body = req.body ?? {};
-    const dossier = constitutionalGovernanceFabric.evaluate({
-      actor: String(body.actor ?? ""), action: String(body.action ?? ""), resource: String(body.resource ?? ""),
-      riskScore: Number(body.riskScore ?? 0), policyAllowed: Boolean(body.policyAllowed), approvalGranted: Boolean(body.approvalGranted), evidencePresent: Boolean(body.evidencePresent),
-    });
-    res.json({ success: true, dossier });
   } catch (e) {
     res.status(400).json({ success: false, error: e instanceof Error ? e.message : "ERROR" });
   }
