@@ -19,7 +19,7 @@ function below1000(n: number, apocope: boolean): string {
   if (h > 0) parts.push(HUNDREDS[h] ?? "");
   if (rest > 0) {
     if (rest < 30) {
-      let w = UNITS[rest] ?? "";
+      let w: string = UNITS[rest] ?? "";
       if (apocope && rest === 1) w = "un";
       else if (apocope && rest === 21) w = "veintiún";
       parts.push(w);

@@ -90,7 +90,7 @@ export interface RetryPolicy {
 
 export interface PipelineContext {
   readonly requestId: string;
-  readonly path: PipelinePath;
+  path: PipelinePath;
   readonly mode: ExecutionMode;
   readonly startTime: number;
   readonly stageData: Map<PipelineStage, unknown>;
@@ -387,7 +387,7 @@ interface SpeculativeResult {
 export class ColdPathExecutor extends EventEmitter {
   private executor: StageExecutor;
   private config: ColdPathConfig;
-  private batchQueue: BatchedRequest[] = [];
+  private batchQueue: BatchedRequest<any>[] = [];
   private processing = false;
   private checkpoints: Map<string, Checkpoint[]> = new Map();
 
@@ -458,7 +458,7 @@ export class ColdPathExecutor extends EventEmitter {
     this.processing = false;
   }
 
-  private async processBatch<T>(batch: BatchedRequest[]): Promise<PipelineResult[]> {
+  private async processBatch(batch: BatchedRequest<any>[]): Promise<PipelineResult<any>[]> {
     // Group by pipeline for efficiency
     const byPipeline = new Map<string, BatchedRequest[]>();
     for (const req of batch) {
@@ -470,7 +470,7 @@ export class ColdPathExecutor extends EventEmitter {
     const results: PipelineResult[] = [];
 
     for (const [pipelineId, requests] of byPipeline) {
-      const pipelineResults = await this.executePipeline(pipelineId, requests);
+      const pipelineResults = await this.executePipeline<any>(pipelineId, requests as BatchedRequest<any>[]);
       results.push(...pipelineResults);
     }
 
@@ -504,13 +504,21 @@ export class ColdPathExecutor extends EventEmitter {
       for (let i = 0; i < stageResults.length; i++) {
         if (!stageResults[i].success) {
           // Return error for this request
-          return requests.map((_, idx) => idx === i ? stageResults[idx] : { 
+          return requests.map((_, idx) => idx === i ? {
+            success: false,
+            error: stageResults[idx].error || `BATCH_STAGE_FAILED: ${stage.name}`,
+            latencyMs: Date.now() - startTime,
+            path: "cold" as PipelinePath,
+            stagesCompleted: completedStages,
+            checkpoints,
+            metadata: {},
+          } : {
             success: false, 
             error: `BATCH_STAGE_FAILED: ${stage.name}`, 
             latencyMs: Date.now() - startTime,
-            path: "cold",
-            stagesCompleted: [],
-            checkpoints: [],
+            path: "cold" as PipelinePath,
+            stagesCompleted: completedStages,
+            checkpoints,
             metadata: {},
           });
         }
@@ -536,7 +544,7 @@ export class ColdPathExecutor extends EventEmitter {
 
     return finalStageResults.map((result) => ({
       success: true,
-      data: result.data,
+      data: result.data as T,
       latencyMs: latency,
       path: "cold" as PipelinePath,
       stagesCompleted: completedStages,

@@ -60,7 +60,7 @@ export interface Span {
   readonly kind: SpanKind;
   readonly startTime: number;
   readonly endTime?: number;
-  readonly status: SpanStatus;
+  status: SpanStatus;
   readonly attributes: Record<string, unknown>;
   readonly events: SpanEvent[];
   readonly links: SpanLink[];

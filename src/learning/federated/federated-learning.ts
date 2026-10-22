@@ -321,7 +321,9 @@ export class LoRAManager extends EventEmitter {
 
   mergeAdapter(adapterId: string, targetModelId: string, alpha?: number): ModelParameters {
     const adapter = this.adapters.get(adapterId);
-    const baseModel = this.baseModels.get(targetModelId || adapter?.baseModelId);
+    const modelId = targetModelId || adapter?.baseModelId;
+    if (!modelId) throw new Error("BASE_MODEL_ID_REQUIRED");
+    const baseModel = this.baseModels.get(modelId);
     
     if (!adapter || !baseModel) {
       throw new Error("ADAPTER_OR_BASE_MODEL_NOT_FOUND");

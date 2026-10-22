@@ -78,7 +78,7 @@ export interface StepAudioQueryResponse {
 
 export interface StepAudioError {
   readonly message: string;
-  readonly type: string;
+  type: string;
 }
 
 export interface StepAudioGenerateOptions {
@@ -446,7 +446,7 @@ export class StepAudioClient extends EventEmitter {
 }
 
 export class StepAudioError extends Error {
-  public readonly type: string;
+  public type: string;
   public readonly statusCode: number;
 
   constructor(message: string, type: string, statusCode: number = 500) {
