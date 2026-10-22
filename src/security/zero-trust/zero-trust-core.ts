@@ -777,7 +777,7 @@ export class RiskEngine extends EventEmitter {
       factors.push({
         type: "session_risk",
         weight: 0.15,
-        score: 1 - context.session.trustLevel === "critical" ? 1 : 0.5,
+        score: context.session.trustLevel === "critical" ? 0 : 0.5,
         evidence: { sessionId: context.session.id, factorsVerified: context.session.factorsVerified.length },
       });
     }
@@ -795,7 +795,7 @@ export class RiskEngine extends EventEmitter {
       type: "network_location",
       weight: 0.15,
       score: this.calculateNetworkRisk(context),
-      evidence: context.session?.context || {},
+      evidence: { ...(context.session?.context ?? {}) },
     });
     
     // Factor 6: Threat intelligence

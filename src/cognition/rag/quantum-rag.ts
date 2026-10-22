@@ -295,9 +295,11 @@ export class VectorSearchEngine {
     let normB = 0;
     
     for (let i = 0; i < a.length; i++) {
-      dot += a[i] * b[i];
-      normA += a[i] * a[i];
-      normB += b[i] * b[i];
+      const ai = a[i] ?? 0;
+      const bi = b[i] ?? 0;
+      dot += ai * bi;
+      normA += ai * ai;
+      normB += bi * bi;
     }
     
     if (normA === 0 || normB === 0) return 0;
@@ -453,7 +455,7 @@ export class GraphSearchEngine {
         if (entity) {
           results.push({
             entity,
-            relationship: current.path[current.path.length - 1],
+            relationship: current.path[current.path.length - 1]!, 
             depth: current.depth,
           });
         }
@@ -631,7 +633,7 @@ export class QuantumReadyRAG extends EventEmitter {
     super();
     this.config = { ...DEFAULT_CONFIG, ...config };
     this.lexicalEngine = new BM25SearchEngine();
-    this.vectorEngine = new VectorSearchEngine(this.config.embeddingDimensions || 768);
+    this.vectorEngine = new VectorSearchEngine(768);
     this.graphEngine = new GraphSearchEngine();
     this.reranker = new CrossEncoderReranker(this.config.crossEncoderModel);
     this.synthesizer = new EvidenceSynthesizer(this.config.synthesisModel);
@@ -722,7 +724,11 @@ export class QuantumReadyRAG extends EventEmitter {
     // Re-rank with cross-encoder
     let finalDocuments = fusedDocuments;
     if (config.enableCrossEncoder && fusedDocuments.length > 1) {
-      const reranked = await this.reranker.rerank(request.query, fusedDocuments, config.rerankTopK);
+      const reranked = await this.reranker.rerank(
+        request.query,
+        fusedDocuments.map((document) => ({ document, score: document.score ?? 0 })),
+        config.rerankTopK
+      );
       finalDocuments = reranked.map(r => ({ ...r.document, score: r.rerankScore }));
     }
     
@@ -756,7 +762,7 @@ export class QuantumReadyRAG extends EventEmitter {
       };
     }
     
-    const queryTimeMs = Date.now() - Date.now(); // placeholder
+    const queryTimeMs = Date.now() - startTime;
     
     return {
       documents: finalDocuments,
@@ -777,7 +783,7 @@ export class QuantumReadyRAG extends EventEmitter {
     for (const result of stageResults) {
       for (const doc of result.documents) {
         const existing = docScores.get(doc.id) || { doc, scores: [] };
-        existing.scores.push(doc.score);
+        existing.scores.push(doc.score ?? 0);
         docScores.set(doc.id, existing);
       }
     }

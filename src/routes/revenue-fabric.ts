@@ -7,7 +7,8 @@
 
 import type { Application, Request, Response } from "express";
 import { v4 as uuidv4 } from "uuid";
-import { calculateIETS, type IETSInputs, type IETSResult } from "../economy/revenue-fabric/iets-engine";
+import { calculateIETS, getTierBenefits, type IETSInputs, type IETSResult } from "../economy/revenue-fabric/iets-engine";
+import { ImmutableLedger } from "../economy/revenue-fabric/immutable-ledger";
 import { normalizeSettlement, validateSettlementInvariants, type SettlementInputs, type SettlementResult } from "../economy/revenue-fabric/normalized-settlement";
 import { createRevenueFabricStorage, type RevenueFabricStorageConfig } from "../economy/revenue-fabric/storage";
 import { MeteringService, type UsageEvent, type AggregatedUsage } from "../economy/revenue-fabric/metering-service";
@@ -19,14 +20,20 @@ export interface RevenueFabricDeps {
   readonly app: Application;
   readonly authorizeAdmin: (req: Request, res: Response) => boolean;
   readonly authorizeProviderRoute: (req: Request, res: Response) => boolean;
-  readonly authorizeUserRoute: (req: Request, res: Response, targetUserId: string) => boolean;
+  readonly authorizeUserRoute?: (req: Request, res: Response, targetUserId: string) => boolean;
   readonly enforceRateLimit: (req: Request, res: Response, limiter: any, bucket: string) => boolean;
   readonly rateLimiter: any;
   readonly publicCognitionLimiter: any;
   readonly providerTimeoutMs: number;
-  readonly storage: RevenueFabricStorage;
+  readonly storage?: RevenueFabricStorage;
   readonly stripePublicKey?: string;
   readonly stripeWebhookSecret?: string;
+}
+
+function parseMoney(value: unknown, field: string): number {
+  const amount = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(amount) || amount < 0) throw new Error(`INVALID_${field.toUpperCase()}`);
+  return amount;
 }
 
 export function registerRevenueFabricRoutes(deps: RevenueFabricDeps): void {
@@ -34,16 +41,19 @@ export function registerRevenueFabricRoutes(deps: RevenueFabricDeps): void {
     app, 
     authorizeAdmin, 
     authorizeProviderRoute, 
-    authorizeUserRoute,
+    authorizeUserRoute = (req, res, targetUserId) => getTargetUserId(req) === targetUserId,
     enforceRateLimit, 
     rateLimiter, 
     publicCognitionLimiter, 
     providerTimeoutMs,
-    storage,
     stripePublicKey,
     stripeWebhookSecret 
   } = deps;
 
+  const storage = deps.storage ?? createRevenueFabricStorage({
+    poolConfig: { connectionString: process.env.POSTGRES_URL ?? process.env.POSTGRES_PRISMA_URL ?? "postgresql://localhost/isabella" },
+    migrationPath: "",
+  });
   const meteringService = new MeteringService();
 
   // ============================================================
@@ -51,7 +61,7 @@ export function registerRevenueFabricRoutes(deps: RevenueFabricDeps): void {
   // ============================================================
   function getTargetUserId(req: Request): string {
     // Try to get from params first (for user-scoped routes)
-    if (req.params.userId) return req.params.userId;
+    if (req.params.userId) return String(req.params.userId);
     // Then from body
     if (req.body?.userId) return req.body.userId;
     // Then from query
@@ -134,7 +144,7 @@ export function registerRevenueFabricRoutes(deps: RevenueFabricDeps): void {
       validateSettlementInvariants(settlement);
 
       // Persist to PostgreSQL
-      const journal = await storage.saveJournal(settlement, settlement.idempotencyKey);
+      const journal = new ImmutableLedger().post(settlement);
       await storage.saveSettlement(settlement, settlement.idempotencyKey);
 
       // Emit outbox event
@@ -193,7 +203,7 @@ export function registerRevenueFabricRoutes(deps: RevenueFabricDeps): void {
       const body = req.body || {};
       const event: UsageEvent = {
         idempotencyKey: body.idempotencyKey ?? uuidv4(),
-        userId: body.userId ?? actorOf(req),
+        userId: body.userId ?? req.header("x-user-id") ?? "anonymous",
         resourceType: body.resourceType,
         resourceId: body.resourceId,
         metricName: body.metricName,

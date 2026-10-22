@@ -94,10 +94,6 @@ export function securityHeadersFor(path: string, env: { NODE_ENV?: string }, csp
   return headers;
 }
 
-export interface HeaderSet {
-  readonly [name: string]: string;
-}
-
 export interface SafeHttpError {
   readonly status: number;
   readonly body: { readonly success: false; readonly error: string };

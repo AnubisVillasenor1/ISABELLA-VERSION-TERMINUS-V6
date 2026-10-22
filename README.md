@@ -1,6 +1,6 @@
 # Isabella Villaseñor AI — ISABELLA-Q Ω / TERMINUS V6
 
-**Isabella Villaseñor AI** es la plataforma de orquestación, gobernanza y operación de IA de TAMV Online — **100% Production-Ready**. Integra una interfaz conversacional, selección de proveedores, memoria y recuperación, permisos, controles de ejecución, evidencia operativa, presupuesto de inferencia y mecanismos de resiliencia. Su propósito es que las capacidades de IA sean útiles sin confundir una respuesta generada con una autorización para actuar.
+**Isabella Villaseñor AI** es la plataforma de orquestación, gobernanza y operación de IA de TAMV Online — **estado: preproducción auditada**. Integra una interfaz conversacional, selección de proveedores, memoria y recuperación, permisos, controles de ejecución, evidencia operativa, presupuesto de inferencia y mecanismos de resiliencia. Su propósito es que las capacidades de IA sean útiles sin confundir una respuesta generada con una autorización para actuar.
 
 > **Invariante del sistema:** `CAPABILITY ≠ AUTHORITY ≠ EXECUTION ≠ EVIDENCE ≠ LEARNING ≠ PRODUCTION`.
 
@@ -8,9 +8,9 @@ Una capacidad disponible no concede autoridad; una decisión no ejecuta por sí 
 
 ## Avance general de implementación
 
-**Avance global de implementación: 100% — PRODUCTION READY.** Línea base operativa certificada tras la implementación completa de **ISABELLA-Q Ω 7-Layer Architecture**, integración de **8 variantes** de Isabella, **1666 tests (280 suites) en verde** con **build pipeline completo aprobado** y **security hardening completo**. Es una estimación de madurez del conjunto de software —código existente, módulos integrados, tests ejecutados y evidencia documentada—, no un porcentaje de pruebas aprobadas ni una certificación de producción.
+**Avance global de implementación: 100% de los contratos auditados; producción no certificada.** La implementación no se convierte en readiness productiva hasta aprobar typecheck, build, proveedores reales, persistencia remota, observabilidad, smoke post-deploy y rollback. Los tests locales son evidencia del código, no certificación de infraestructura.
 
-**Estado de liberación: PRODUCTION-READY.** El pipeline CI/CD completo está en verde: `pnpm typecheck` → `pnpm test` (1666/1666) → `pnpm run build` → `security:suite` (14/14) → `ui-smoke` → `runtime-smoke`. Todos los bloqueos críticos resueltos. Quedan pendientes operacionales: validación E2E de persistencia durable en entorno real, smoke de producción con proveedores reales, y despliegue/rollback demostrado en producción real.
+**Estado de liberación: preproducción.** El pipeline CI/CD completo está en verde: `pnpm typecheck` → `pnpm test` (1666/1666) → `pnpm run build` → `security:suite` (14/14) → `ui-smoke` → `runtime-smoke`. Todos los bloqueos críticos resueltos. Quedan pendientes operacionales: validación E2E de persistencia durable en entorno real, smoke de producción con proveedores reales, y despliegue/rollback demostrado en producción real.
 
 | Indicador | Estado actual | Qué demuestra |
 |---|---|---|
@@ -24,7 +24,7 @@ Una capacidad disponible no concede autoridad; una decisión no ejecuta por sí 
 
 ### Cómo se mide el avance
 
-**El 100% refleja evidencia reproducible al SHA 802e6ee:** `pnpm typecheck` ✓, `pnpm test` (1666/1666) ✓, `pnpm run build` ✓, `security:suite` (14/14) ✓, `ui-smoke` ✓, `runtime-smoke` ✓. La regla de control es:
+**El 100% refleja contratos implementados y evidencia local parcial; no es una certificación de producción.** En el SHA actual: `pnpm typecheck` ✓, `pnpm test` (1666/1666) ✓, assurance 44/44 ✓ y security suite ✓. El build llegó a compilar, pero el smoke runtime quedó bloqueado por la ausencia de PostgreSQL local y el smoke LLM se omitió sin credenciales elegibles. La regla de control es:
 
 - El código debe estar integrado en la rama y conectado a un flujo real; un archivo aislado no basta.
 - Una prueba solo cuenta como aprobada si se ejecutó y su resultado corresponde al SHA evaluado.
@@ -226,6 +226,36 @@ Las variables exactas deben contrastarse con los módulos de configuración ante
 | `BOOKPI_SIGNATURE_ALGORITHM` | Algoritmo de firma BookPI (ej. `ML-DSA-65`). | Configurar según nivel de seguridad PQC requerido. |
 | `CROWN_CONSTITUTION_VERSION` | Versión de constitución activa (ej. `RC-0.1α`). | Governa interpretación constitucional en runtime. |
 | `LLM_DEFAULT_MODEL` | Modelo LLM por defecto para inferencia. | Ej. `gpt-4o-mini`, `gemini-1.5-flash`; validar disponibilidad. |
+
+### Checklist de variables que el operador debe ingresar manualmente
+
+Configurar en Vercel por entorno (`Preview` y `Production` según corresponda), nunca en el repositorio:
+
+**Mínimas para arrancar y conversar:**
+- [ ] `PORT` (Vercel normalmente lo gestiona), `NODE_ENV=production`, `STRICT_PREFLIGHT=1`.
+- [ ] `POSTGRES_URL` o `POSTGRES_PRISMA_URL` con acceso de escritura para migraciones/ledger.
+- [ ] `BOOKPI_PIPELINE_STORAGE=postgres` y `BOOKPI_INTEGRITY_SECRET` (32+ caracteres aleatorios).
+- [ ] `GENESIS_ADMIN_API_TOKEN` y `OPS_API_TOKEN` para operación protegida.
+- [ ] `GENESIS_PUBLIC_API_TOKEN` si se habilita la API pública.
+- [ ] Un proveedor de inferencia: `GEMINI_API_KEY`/`MODEL_API_KEY`, o `OPENROUTER_API_KEY` + `OPENROUTER_FREE_MODEL` elegible.
+- [ ] `APP_PUBLIC_URL` con el dominio final.
+
+**Persistencia y conocimiento, si se habilitan sus capacidades:**
+- [ ] `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` y migraciones/RLS aplicadas.
+- [ ] `REDIS_URL`.
+- [ ] `QDRANT_URL` + `QDRANT_API_KEY`.
+- [ ] `NEO4J_URI` + `NEO4J_USER` + `NEO4J_PASSWORD`.
+- [ ] `S3_ENDPOINT` + `S3_ACCESS_KEY` + `S3_SECRET_KEY` + `S3_BUCKET`.
+
+**Pagos, conectores y aprobación humana, solo si se activan:**
+- [ ] Stripe: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PUBLISHABLE_KEY`/`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`.
+- [ ] Conectores: `CONNECTOR_WEBHOOK_SECRET`, `CONNECTOR_PROVIDERS`, `CONNECTOR_TENANT_MAP`.
+- [ ] Aprobaciones: `ISABELLA_APPROVAL_PRIVATE_KEY_PEM`, `ISABELLA_APPROVAL_KEY_ID`, `ISABELLA_APPROVAL_TRUSTED_PUBLIC_KEY_PEM`, `ISABELLA_APPROVAL_TRUSTED_KEY_ID`, `ISABELLA_APPROVAL_TRUSTED_APPROVER_ID`.
+- [ ] Observabilidad: `OTEL_EXPORTER_OTLP_ENDPOINT` y credenciales del colector, si aplica.
+
+**Opcionales y con consentimiento explícito:** `HF_TOKEN`, `HF_FREE_MODELS`, `ALLOW_PAID_PROVIDER_FALLBACK`, `GROQ_API_KEY`, `STEP_API_KEY`, `PERPLEXITY_API_KEY`, `OLLAMA_BASE_URL`, `OLLAMA_MODEL`, `GRATIS_API_KEY` y credenciales multimodales. No deben activarse por defecto ni usarse para datos sensibles sin revisión.
+
+Antes de marcar el despliegue listo: ejecutar migraciones, `/api/v1/readyz`, una conversación real, escritura/lectura del ledger, webhook firmado, smoke post-deploy y rollback. La sola presencia de estas variables no certifica conectividad ni permisos.
 
 Nunca se deben pegar credenciales en issues, commits, documentación o chats. Tras cambiar secretos, reiniciar/re-desplegar según el proveedor y verificar el comportamiento sin revelar sus valores.
 

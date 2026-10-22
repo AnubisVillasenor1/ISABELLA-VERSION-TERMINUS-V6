@@ -297,13 +297,14 @@ export class ExpertRegistry extends EventEmitter {
  * HyperRouter MoE - Intelligent Expert Router
  * Uses multi-factor scoring for optimal expert selection
  */
-export class HyperRouterMoE {
+export class HyperRouterMoE extends EventEmitter {
   private registry: ExpertRegistry;
   private config: MoEConfig;
   private routingHistory: Array<{ context: RoutingContext; decision: RoutingDecision; timestamp: number }> = [];
   private maxHistorySize: number = 10000;
 
   constructor(registry: ExpertRegistry, config: Partial<MoEConfig> = {}) {
+    super();
     this.registry = registry;
     this.config = { ...DEFAULT_CONFIG, ...config };
   }
@@ -334,6 +335,7 @@ export class HyperRouterMoE {
     scored.sort((a, b) => b.totalScore - a.totalScore);
     
     const best = scored[0];
+    if (!best) throw new Error("NO_SCORED_EXPERTS");
     const confidence = this.calculateConfidence(best, scored[1]);
     
     if (confidence < this.config.minConfidenceThreshold) {
@@ -376,13 +378,15 @@ export class HyperRouterMoE {
     candidates = candidates.filter(e => this.canAccessTier(context.userTier, e.tier));
     
     // Filter by max latency
-    if (context.maxLatencyMs) {
-      candidates = candidates.filter(e => e.latencyMs <= context.maxLatencyMs);
+    const maxLatencyMs = context.maxLatencyMs;
+    if (maxLatencyMs !== undefined) {
+      candidates = candidates.filter(e => e.latencyMs <= maxLatencyMs);
     }
     
     // Filter by max cost
-    if (context.maxCost) {
-      candidates = candidates.filter(e => e.costPerToken <= context.maxCost);
+    const maxCost = context.maxCost;
+    if (maxCost !== undefined) {
+      candidates = candidates.filter(e => e.costPerToken <= maxCost);
     }
     
     // Exclude specific experts

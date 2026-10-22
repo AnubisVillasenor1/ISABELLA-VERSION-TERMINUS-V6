@@ -1,5 +1,5 @@
 import { Prisma, PrismaClient } from "../../generated/prisma";
-import type {
+import {
   AccountingAccount,
   AccountingJournalEntry,
   AccountingLedgerLine,

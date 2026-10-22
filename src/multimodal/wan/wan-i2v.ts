@@ -171,10 +171,10 @@ export class WANClient extends EventEmitter {
       } else {
         // Assume base64
         const buffer = Buffer.from(file, "base64");
-        formData.append("files", new Blob([buffer]), filename);
+        formData.append("files", new Blob([new Uint8Array(buffer)]), filename);
       }
     } else {
-      formData.append("files", new Blob([file]), filename);
+      formData.append("files", new Blob([new Uint8Array(file)]), filename);
     }
 
     const response = await fetch(`${this.config.spaceUrl}${ENDPOINTS.upload}`, {
