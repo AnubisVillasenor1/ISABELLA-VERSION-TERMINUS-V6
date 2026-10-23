@@ -1,4 +1,6 @@
-import { PostgresMultimodelAdapter, getPostgresMultimodelAdapter } from '../database/PostgresMultimodelAdapter';
+import { createHash } from 'node:crypto';
+import { getPostgresMultimodelAdapter } from '../database/PostgresMultimodelAdapter';
+import type { PostgresMultimodelAdapter } from '../database/PostgresMultimodelAdapter';
 
 export interface HyperRouterConfig {
   semanticCacheThreshold: number;
@@ -45,7 +47,7 @@ export interface GenerationRequest {
   prompt: string;
   maxTokens?: number;
   temperature?: number;
-  context?: any;
+  context?: unknown;
   forceModel?: string;
   bypassCache?: boolean;
 }
@@ -151,7 +153,7 @@ class OllamaEmbeddingGenerator implements EmbeddingGenerator {
 
   private simpleHashEmbedding(text: string): number[] {
     // Embedding determinístico simple para desarrollo/testing
-    const hash = require('crypto').createHash('sha256').update(text).digest();
+    const hash = createHash('sha256').update(text).digest();
     const embedding = new Array(1024).fill(0);
     for (let i = 0; i < hash.length; i++) {
       embedding[i % 1024] += hash[i] / 255;
@@ -463,7 +465,7 @@ export class HyperRouterMoE {
   }
 
   private hashPrompt(prompt: string): string {
-    return require('crypto').createHash('sha256').update(prompt).digest('hex');
+    return createHash('sha256').update(prompt).digest('hex');
   }
 
   private async getSystemResources(): Promise<{ cpuPercent: number; ramPercent: number }> {
@@ -472,7 +474,13 @@ export class HyperRouterMoE {
     return { cpuPercent: 45, ramPercent: 55 };
   }
 
-  async getHealth(): Promise<any> {
+  async getHealth(): Promise<{
+    status: 'healthy' | 'degraded';
+    database: unknown;
+    resources: { cpuPercent: number; ramPercent: number };
+    models: { local: number; fallback: number };
+    config: { cacheThreshold: number; complexityThresholds: HyperRouterConfig['complexityThresholds'] };
+  }> {
     const dbHealth = await this.db.healthCheck();
     const resources = await this.getSystemResources();
     return {
