@@ -14,6 +14,7 @@ import { createRevenueFabricStorage, type RevenueFabricStorageConfig } from "../
 import { MeteringService, type UsageEvent, type AggregatedUsage } from "../economy/revenue-fabric/metering-service";
 import { outbox, REVENUE_EVENTS } from "../economy/revenue-fabric/outbox-inbox";
 import type { IETSTier, RevenueStream } from "../economy/revenue-fabric/types";
+import type { PlanId, SubscriptionStatus } from "../commerce/types";
 import type { RevenueFabricStorage } from "../economy/revenue-fabric/storage";
 
 export interface RevenueFabricDeps {
@@ -28,6 +29,7 @@ export interface RevenueFabricDeps {
   readonly storage?: RevenueFabricStorage;
   readonly stripePublicKey?: string;
   readonly stripeWebhookSecret?: string;
+  readonly resolveCreatorEligibility?: (workspaceId: string) => Promise<{ plan: PlanId; status: SubscriptionStatus } | null>;
 }
 
 function parseMoney(value: unknown, field: string): number {
@@ -122,6 +124,24 @@ export function registerRevenueFabricRoutes(deps: RevenueFabricDeps): void {
 
     try {
       const body = req.body || {};
+      const stream = body.stream as RevenueStream;
+      const creatorId = typeof body.creatorId === "string" ? body.creatorId.trim() : "";
+      const creatorWorkspaceId = typeof body.creatorWorkspaceId === "string" ? body.creatorWorkspaceId.trim() : "";
+      const creatorStreams = new Set<RevenueStream>([
+        "ISA_API", "SKILL_MARKETPLACE", "AGENT_MARKETPLACE",
+        "AGENT_REVENUE_SHARING", "HYPERAUTOMATION", "DATA_VAULT",
+      ]);
+      let creatorEligibility: { plan: PlanId; status: SubscriptionStatus } | null = null;
+      if (creatorStreams.has(stream)) {
+        if (!creatorId || !creatorWorkspaceId) {
+          return res.status(400).json({ success: false, error: "CREATOR_ID_AND_WORKSPACE_REQUIRED" });
+        }
+        if (!deps.resolveCreatorEligibility) {
+          return res.status(503).json({ success: false, error: "CREATOR_ELIGIBILITY_SOURCE_UNAVAILABLE" });
+        }
+        creatorEligibility = await deps.resolveCreatorEligibility(creatorWorkspaceId);
+      }
+
       const settlementInputs: SettlementInputs = {
         grossAmount: parseMoney(body.grossAmount, "grossAmount"),
         directCost: parseMoney(body.directCost, "directCost"),
@@ -137,7 +157,14 @@ export function registerRevenueFabricRoutes(deps: RevenueFabricDeps): void {
           age: body.ietsInputs?.age ?? 0,
           compliance: body.ietsInputs?.compliance ?? 0,
         },
-        stream: body.stream,
+        stream,
+        creatorId: creatorId || undefined,
+        creatorWorkspaceId: creatorWorkspaceId || undefined,
+        creatorPlan: creatorEligibility?.plan ?? "free",
+        creatorSubscriptionStatus: creatorEligibility?.status ?? "canceled",
+        consentEvidenceRef: body.consentEvidenceRef,
+        dataLicenceEvidenceRef: body.dataLicenceEvidenceRef,
+        dataVaultCreatorRateBps: body.dataVaultCreatorRateBps,
         currency: body.currency ?? "USD",
         idempotencyKey: body.idempotencyKey ?? uuidv4(),
         externalPaymentId: body.externalPaymentId,
