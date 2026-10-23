@@ -9,7 +9,7 @@
 import { Router, Request, Response } from "express";
 import { StepAudioTool, StepAudioGenerateOptions } from "./stepaudio-music";
 
-const router = Router();
+const router: Router = Router();
 
 // Initialize StepAudio tool
 const stepAudioTool = new StepAudioTool({

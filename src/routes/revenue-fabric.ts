@@ -51,7 +51,11 @@ export function registerRevenueFabricRoutes(deps: RevenueFabricDeps): void {
   } = deps;
 
   const storage = deps.storage ?? createRevenueFabricStorage({
-    poolConfig: { connectionString: process.env.POSTGRES_URL ?? process.env.POSTGRES_PRISMA_URL ?? "postgresql://localhost/isabella" },
+    poolConfig: {
+      connectionString: process.env.DATABASE_URL
+        ?? process.env.POSTGRES_URL
+        ?? process.env.POSTGRES_PRISMA_URL,
+    },
     migrationPath: "",
   });
   const meteringService = new MeteringService();

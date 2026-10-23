@@ -17,12 +17,12 @@ COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile --prod
 
 # Stage 3: Builder
-FROM base AS builder
+FROM base AS build
 WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY . .
-RUN pnpm run build
+RUN pnpm run build:dist
 
 # Stage 4: Production
 FROM node:24-alpine AS production
@@ -31,23 +31,26 @@ RUN apk add --no-cache \
     curl \
     dumb-init \
     tini \
-    && addgroup -g 1000 -S isabella \
-    && adduser -u 1000 -S isabella -G isabella
+    && addgroup -g 10001 -S isabella \
+    && adduser -u 10001 -S isabella -G isabella
 
 WORKDIR /app
 
 # Copy production dependencies
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/scripts ./scripts
-COPY --from=builder /app/config ./config
+COPY --from=build /app/dist ./dist
+COPY --from=build /app/package.json ./package.json
+COPY --from=build /app/scripts ./scripts
+COPY --from=build /app/config ./config
+COPY --from=build /app/src/ui ./src/ui
+COPY --from=build /app/src/styles ./src/styles
+COPY --from=build /app/src/assets ./src/assets
 
 # Create required directories
 RUN mkdir -p /app/logs /app/data /app/uploads && \
     chown -R isabella:isabella /app
 
-USER isabella
+USER 10001
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
@@ -63,4 +66,4 @@ EXPOSE 8080
 
 # Entry point with dumb-init for proper signal handling
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["node", "dist/server.js"]
+CMD ["dist/server.js"]

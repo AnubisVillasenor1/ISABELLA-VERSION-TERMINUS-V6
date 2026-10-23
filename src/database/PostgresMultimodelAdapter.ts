@@ -131,7 +131,7 @@ export class PostgresMultimodelAdapter {
     const propsStr = JSON.stringify(properties).replace(/"/g, '\\"');
     const cypher = `CREATE (n:${label} ${propsStr}) RETURN id(n) as id`;
     const res = await this.queryGraph<{ id: string }>(cypher);
-    return res[0]?.id || '';
+    return res[0]?.a?.id ?? res[0]?.a ?? '';
   }
 
   async addGraphEdge(sourceId: string, targetId: string, relationType: string, properties: Record<string, any> = {}): Promise<void> {
@@ -248,30 +248,6 @@ export class PostgresMultimodelAdapter {
   async archiveMessage(queueName: string, msgId: number): Promise<boolean> {
     const res = await this.pool.query('SELECT pgmq.archive($1, $2)', [queueName, msgId]);
     return res.rows[0].pgmq_archive === 1;
-  }
-
-  // ============================================================================
-  // 5B. LOCKS CONSULTIVOS TRANSMISIONALES
-  // ============================================================================
-
-  async acquireLock(key: number, timeoutMs = 5000): Promise<{ acquired: boolean }> {
-    const res = await this.pool.query('SELECT pg_try_advisory_lock($1) AS locked', [key]);
-    return { acquired: res.rows[0].locked };
-  }
-
-  async releaseLock(key: number): Promise<{ acquired: boolean }> {
-    const res = await this.pool.query('SELECT pg_advisory_unlock($1) AS unlocked', [key]);
-    return { acquired: res.rows[0].unlocked };
-  }
-
-  async withLock<T>(key: number, fn: () => Promise<T>, timeoutMs = 30000): Promise<T> {
-    const lock = await this.acquireLock(key);
-    if (!lock.acquired) throw new Error(`Could not acquire lock ${key}`);
-    try {
-      return await fn();
-    } finally {
-      await this.releaseLock(key);
-    }
   }
 
   // ============================================================================

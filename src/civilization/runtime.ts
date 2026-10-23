@@ -22,7 +22,8 @@ import type { TrafficBand, TrafficLightInput, TrafficLightVerdict } from "../gov
 import type { CompanionSafetyVerdict } from "../companion/safety";
 import type { VigiaVerdict } from "../security/vigia";
 import type { KnowledgeClaim } from "../memory/ikes";
-import { GENESIS_EXPERTS, type ExpertPlan } from "../cognition/experts";
+import { GENESIS_EXPERTS } from "../cognition/experts";
+import type { ExpertPlan } from "../cognition/experts";
 import type { DecisionExplanation } from "../cognition/explainability";
 import type { HardeningResult } from "../sanitization/hardening";
 import { layerSummary, type CivilizationLayerStatus } from "./layers";

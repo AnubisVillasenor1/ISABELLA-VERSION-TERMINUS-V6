@@ -104,7 +104,7 @@ services:
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
-      - isabella-core
+      - app
     environment:
       ACME_AGREE: "true"
 
@@ -120,7 +120,7 @@ services:
       - ./config/otel-collector.yaml:/etc/otelcol-contrib/config.yaml:ro
     command: ["--config=/etc/otelcol-contrib/config.yaml"]
 
-  isabella-core:
+  app:
     build:
       context: .
       dockerfile: Dockerfile
@@ -140,10 +140,15 @@ services:
       VICTORIA_METRICS_URL: http://victoriametrics:8428
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel:4318
       CROWDSEC_LAPI_URL: http://crowdsec:8080
+      BOOKPI_LEDGER_PATH: /app/data/bookpi-ledger.jsonl
+    user: "10001:10001"
+    security_opt:
+      - no-new-privileges:true
     volumes:
       - ./src:/app/src:ro
       - ./package.json:/app/package.json:ro
       - ./pnpm-lock.yaml:/app/pnpm-lock.yaml:ro
+      - bookpi-data:/app/data
     deploy:
       resources:
         limits:
@@ -165,6 +170,7 @@ volumes:
   crowdsec_data:
   caddy_data:
   caddy_config:
+  bookpi-data:
 
 secrets:
   db_password:

@@ -1,5 +1,6 @@
 export * from "./types";
 export * from "./engine";
+export * from "./sovereign-core";
 export * from "./text-classifier";
 export * from "./genesis-turbo";
 export * from "./teacher-convergence";

@@ -633,7 +633,7 @@ export class UIStateManager extends EventEmitter {
     
     const subs = this.subscribers.get(key) || new Set();
     for (const sub of subs) {
-      sub.callback(value, oldValue);
+      sub(value, oldValue);
     }
     
     this.emit("state:changed", { key, value, oldValue });
