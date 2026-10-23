@@ -19,6 +19,7 @@ export const MIN_USER_SHARE_BPS = 5000;
 export const USER_SHARE_BPS = 7500;
 export const MAX_USER_SHARE_BPS = 8000;
 export const BPS_DENOMINATOR = 10000;
+export const REVENUE_SHARE_POLICY_VERSION = "revenue-share-v5.0.0" as const;
 
 export type CreatorShareTier = "STARTER" | "PROFESSIONAL" | "ADVANCED" | "ELITE" | "SOVEREIGN";
 export type CreatorShareStream = "standard" | "hyperautomation";
@@ -89,6 +90,7 @@ export interface ShareLine {
 }
 
 export interface RevenueShareResult {
+  readonly policyVersion: typeof REVENUE_SHARE_POLICY_VERSION;
   readonly netCents: number;
   readonly userPoolCents: number;
   readonly platformCents: number;
@@ -169,5 +171,5 @@ export function computeRevenueShare(input: RevenueShareInput): RevenueShareResul
     }))
     .sort((a, b) => (a.userId < b.userId ? -1 : 1));
 
-  return { netCents: net, userPoolCents: userPool, platformCents: platform, unallocatedCents: unallocated, lines };
+  return { policyVersion: REVENUE_SHARE_POLICY_VERSION, netCents: net, userPoolCents: userPool, platformCents: platform, unallocatedCents: unallocated, lines };
 }
