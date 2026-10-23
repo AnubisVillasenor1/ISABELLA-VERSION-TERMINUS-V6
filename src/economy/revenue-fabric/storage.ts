@@ -5,7 +5,7 @@
  */
 
 import { Pool, type PoolConfig } from "pg";
-import type { LedgerJournal } from "./immutable-ledger";
+import { ImmutableLedger, type LedgerJournal } from "./immutable-ledger";
 import type { SettlementResult } from "./normalized-settlement";
 import type { UsageEvent, AggregatedUsage } from "./metering-service";
 import type { Wallet } from "./types";
@@ -348,14 +348,13 @@ export class RevenueFabricStorage {
   }
 
   async verifyChain(): Promise<boolean> {
-    const journals = await this.getAllJournals();
-    let expectedHash = "GENESIS";
-    for (const journal of journals.sort((a, b) => a.occurredAt.localeCompare(b.occurredAt))) {
-      if (journal.previousHash !== expectedHash) return false;
-      // Recompute hash...
-      expectedHash = journal.entryHash;
+    try {
+      const restored = new ImmutableLedger();
+      restored.restore(await this.getAllJournals());
+      return restored.verifyChain();
+    } catch {
+      return false;
     }
-    return true;
   }
 
   // ==================== Settlements ====================
