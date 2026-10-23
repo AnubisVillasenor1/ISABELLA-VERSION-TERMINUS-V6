@@ -73,7 +73,7 @@ export class PostgresSubscriptionPersistence implements SubscriptionPersistence 
 
   async list(): Promise<readonly SubscriptionRecord[]> {
     const result = await this.pool.query<SubscriptionRow>(
-      `SELECT workspace_id, plan_code, status, provider, external_ref, current_period_end, updated_at, created_at
+      `SELECT workspace_id, plan_code, status, provider, external_ref, provider_customer_id, current_period_end, updated_at, created_at
        FROM commerce_subscriptions ORDER BY updated_at DESC`,
     );
     return Object.freeze(result.rows.map(mapRow));
