@@ -8,6 +8,7 @@ type SubscriptionRow = {
   status: SubscriptionStatus;
   provider: string;
   external_ref: string | null;
+  provider_customer_id: string | null;
   current_period_end: Date | string | null;
   updated_at: Date | string;
   created_at: Date | string;
@@ -29,6 +30,7 @@ function mapRow(row: SubscriptionRow): SubscriptionRecord {
     status: row.status,
     provider: row.provider,
     externalRef: row.external_ref ?? undefined,
+    providerCustomerId: row.provider_customer_id ?? undefined,
     currentPeriodEnd: asIso(row.current_period_end),
     createdAt,
     updatedAt,
@@ -44,7 +46,7 @@ export class PostgresSubscriptionPersistence implements SubscriptionPersistence 
 
   async get(workspaceId: string): Promise<SubscriptionRecord | null> {
     const result = await this.pool.query<SubscriptionRow>(
-      `SELECT workspace_id, plan_code, status, provider, external_ref, current_period_end, updated_at, created_at
+      `SELECT workspace_id, plan_code, status, provider, external_ref, provider_customer_id, current_period_end, updated_at, created_at
        FROM commerce_subscriptions WHERE workspace_id = $1 LIMIT 1`,
       [workspaceId],
     );
@@ -54,17 +56,18 @@ export class PostgresSubscriptionPersistence implements SubscriptionPersistence 
   async save(record: SubscriptionRecord): Promise<void> {
     await this.pool.query(
       `INSERT INTO commerce_subscriptions
-       (workspace_id, plan_code, status, provider, external_ref, current_period_end, updated_at, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       (workspace_id, plan_code, status, provider, external_ref, provider_customer_id, current_period_end, updated_at, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        ON CONFLICT (workspace_id) DO UPDATE SET
          plan_code = EXCLUDED.plan_code,
          status = EXCLUDED.status,
          provider = EXCLUDED.provider,
          external_ref = EXCLUDED.external_ref,
+         provider_customer_id = COALESCE(EXCLUDED.provider_customer_id, commerce_subscriptions.provider_customer_id),
          current_period_end = EXCLUDED.current_period_end,
          updated_at = EXCLUDED.updated_at`,
       [record.workspaceId, record.planCode, record.status, record.provider, record.externalRef ?? null,
-        record.currentPeriodEnd ?? null, record.updatedAt, record.createdAt],
+        record.providerCustomerId ?? null, record.currentPeriodEnd ?? null, record.updatedAt, record.createdAt],
     );
   }
 
