@@ -17,7 +17,10 @@ export type LedgerAccount =
   | "INNOVATION_VAULT"
   | "TREASURY_VAULT"
   | "CREATOR_WALLET"
-  | "PLATFORM_REVENUE";
+  | "PLATFORM_REVENUE"
+  | "PHOENIX_FUND"
+  | "INFRASTRUCTURE_REVENUE"
+  | "DAO_TREASURY";
 
 export type LedgerDirection = "DEBIT" | "CREDIT";
 
@@ -199,7 +202,9 @@ export class ImmutableLedger {
       { account: "INNOVATION_VAULT", direction: "CREDIT", amount: toMinorUnits(s.innovationAmount), memo: "Reserva de innovación (centavos)" },
       { account: "TREASURY_VAULT", direction: "CREDIT", amount: toMinorUnits(s.treasuryAmount), memo: "Reserva de tesorería (centavos)" },
       { account: "CREATOR_WALLET", direction: "CREDIT", amount: toMinorUnits(s.userShare), memo: "Participación del creador (centavos)" },
-      { account: "PLATFORM_REVENUE", direction: "CREDIT", amount: toMinorUnits(s.platformShare), memo: "Participación de la plataforma (centavos)" },
+      { account: "PHOENIX_FUND", direction: "CREDIT", amount: toMinorUnits(s.platformPhoenixFund), memo: "20% de la parte de plataforma · Fondo Fénix (centavos)" },
+      { account: "INFRASTRUCTURE_REVENUE", direction: "CREDIT", amount: toMinorUnits(s.platformInfrastructure), memo: "30% de la parte de plataforma · Infraestructura (centavos)" },
+      { account: "DAO_TREASURY", direction: "CREDIT", amount: toMinorUnits(s.platformDao), memo: "50% de la parte de plataforma · DAO (centavos)" },
     ].filter((posting) => posting.amount > 0);
   }
 }
