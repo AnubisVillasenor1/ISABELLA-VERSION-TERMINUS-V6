@@ -10,6 +10,53 @@ import type { SettlementResult } from "./normalized-settlement";
 import type { UsageEvent, AggregatedUsage } from "./metering-service";
 import type { Wallet } from "./types";
 
+function toMinorUnits(amount: number): number {
+  if (!Number.isFinite(amount) || amount < 0) throw new Error("SETTLEMENT_AMOUNT_INVALID");
+  const minor = Math.round((amount + Number.EPSILON) * 100);
+  if (!Number.isSafeInteger(minor) || Math.abs(minor / 100 - amount) > 0.000001) {
+    throw new Error("SETTLEMENT_AMOUNT_MUST_HAVE_MAX_TWO_DECIMALS");
+  }
+  return minor;
+}
+
+function fromStoredAmount(value: unknown, amountUnit: unknown): number {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) throw new Error("SETTLEMENT_STORAGE_AMOUNT_INVALID");
+  return amountUnit === "minor_v2" ? numeric / 100 : numeric;
+}
+
+function sameSettlementPayload(row: Record<string, unknown>, settlement: SettlementResult): boolean {
+  const amountUnit = row.amount_unit === "minor_v2" ? "minor_v2" : "legacy_major";
+  const moneyFields = [
+    ["gross_amount", settlement.grossAmount],
+    ["direct_cost", settlement.directCost],
+    ["tax_amount", settlement.taxAmount],
+    ["gateway_fee", settlement.gatewayFee],
+    ["operating_income", settlement.operatingIncome],
+    ["emergency_amount", settlement.emergencyAmount],
+    ["innovation_amount", settlement.innovationAmount],
+    ["treasury_amount", settlement.treasuryAmount],
+    ["distributable_pool", settlement.distributablePool],
+    ["user_share", settlement.userShare],
+    ["platform_share", settlement.platformShare],
+  ] as const;
+  if (moneyFields.some(([field, expected]) => Math.abs(fromStoredAmount(row[field], amountUnit) - expected) > 0.005)) return false;
+  const rateFields = [
+    ["user_rate", settlement.userRate],
+    ["platform_rate", settlement.platformRate],
+    ["iets_score", settlement.ietsScore],
+  ] as const;
+  if (rateFields.some(([field, expected]) => Math.abs(Number(row[field]) - expected) > 0.0001)) return false;
+  return row.idempotency_key === settlement.idempotencyKey
+    && row.stream === settlement.stream
+    && row.currency === settlement.currency
+    && row.creator_id === (settlement.creatorId ?? null)
+    && Boolean(row.creator_eligible) === settlement.creatorEligible
+    && row.iets_tier === settlement.ietsTier
+    && row.policy_version === settlement.policyVersion
+    && (row.external_payment_id ?? null) === (settlement.externalPaymentId ?? null);
+}
+
 export interface RevenueFabricStorageConfig {
   readonly poolConfig: PoolConfig;
   readonly migrationPath: string;
@@ -69,6 +116,7 @@ export class RevenueFabricStorage {
           platform_share BIGINT NOT NULL,
           creator_id VARCHAR(255),
           creator_eligible BOOLEAN NOT NULL DEFAULT FALSE,
+          amount_unit TEXT NOT NULL DEFAULT 'minor_v2',
           iets_score NUMERIC(10,4) NOT NULL,
           iets_tier VARCHAR(16) NOT NULL,
           policy_version VARCHAR(64) NOT NULL,
@@ -79,6 +127,7 @@ export class RevenueFabricStorage {
         );
         ALTER TABLE revenue_settlements ADD COLUMN IF NOT EXISTS creator_id VARCHAR(255);
         ALTER TABLE revenue_settlements ADD COLUMN IF NOT EXISTS creator_eligible BOOLEAN NOT NULL DEFAULT FALSE;
+        ALTER TABLE revenue_settlements ADD COLUMN IF NOT EXISTS amount_unit TEXT NOT NULL DEFAULT 'legacy_major';
         CREATE INDEX IF NOT EXISTS idx_settlement_stream ON revenue_settlements(stream);
         CREATE INDEX IF NOT EXISTS idx_settlement_occurred ON revenue_settlements(occurred_at);
 
