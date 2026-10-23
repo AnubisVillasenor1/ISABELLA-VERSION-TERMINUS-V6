@@ -30,6 +30,28 @@ export function verifyWebhookSignature(
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
+export function verifyStripeWebhookSignature(
+  rawBody: string,
+  signature: string | undefined,
+  secret: string,
+  options: { toleranceSeconds?: number; now?: () => number } = {},
+): boolean {
+  if (!rawBody || !signature || !secret) return false;
+  const fields = signature.split(",").map((part) => part.trim().split("=", 2));
+  const timestamp = fields.find(([key]) => key === "t")?.[1];
+  const signatures = fields.filter(([key]) => key === "v1").map(([, value]) => value);
+  if (!timestamp || !/^\d{1,12}$/.test(timestamp) || signatures.length === 0) return false;
+  const timestampSeconds = Number(timestamp);
+  const nowSeconds = options.now ? options.now() : Math.floor(Date.now() / 1000);
+  if (!Number.isSafeInteger(timestampSeconds) || Math.abs(nowSeconds - timestampSeconds) > (options.toleranceSeconds ?? 300)) return false;
+  const expected = createHmac("sha256", secret).update(timestamp + "." + rawBody, "utf8").digest();
+  return signatures.some((candidate) => {
+    if (!/^[0-9a-fA-F]{64}$/.test(candidate)) return false;
+    const supplied = Buffer.from(candidate, "hex");
+    return supplied.length === expected.length && timingSafeEqual(supplied, expected);
+  });
+}
+
 export function normalizeWebhookEvent(input: WebhookInput): NormalizedWebhookEvent {
   if (!input.externalEventId || input.externalEventId.length > 256) {
     throw new Error("INVALID_EXTERNAL_EVENT_ID");
