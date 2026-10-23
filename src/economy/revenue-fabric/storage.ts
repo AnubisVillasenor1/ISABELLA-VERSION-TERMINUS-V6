@@ -39,6 +39,9 @@ function sameSettlementPayload(row: Record<string, unknown>, settlement: Settlem
     ["distributable_pool", settlement.distributablePool],
     ["user_share", settlement.userShare],
     ["platform_share", settlement.platformShare],
+    ["platform_phoenix_fund", settlement.platformPhoenixFund],
+    ["platform_infrastructure", settlement.platformInfrastructure],
+    ["platform_dao", settlement.platformDao],
   ] as const;
   if (moneyFields.some(([field, expected]) => Math.abs(fromStoredAmount(row[field], amountUnit) - expected) > 0.005)) return false;
   const rateFields = [
@@ -115,6 +118,9 @@ export class RevenueFabricStorage {
           platform_rate NUMERIC(5,4) NOT NULL,
           user_share BIGINT NOT NULL,
           platform_share BIGINT NOT NULL,
+          platform_phoenix_fund BIGINT NOT NULL DEFAULT 0,
+          platform_infrastructure BIGINT NOT NULL DEFAULT 0,
+          platform_dao BIGINT NOT NULL DEFAULT 0,
           creator_id VARCHAR(255),
           creator_eligible BOOLEAN NOT NULL DEFAULT FALSE,
           creator_eligibility_reason TEXT NOT NULL DEFAULT 'unknown',
@@ -127,6 +133,9 @@ export class RevenueFabricStorage {
           journal_id UUID REFERENCES revenue_ledger_journals(journal_id),
           created_at TIMESTAMPTZ DEFAULT NOW()
         );
+        ALTER TABLE revenue_settlements ADD COLUMN IF NOT EXISTS platform_phoenix_fund BIGINT NOT NULL DEFAULT 0;
+        ALTER TABLE revenue_settlements ADD COLUMN IF NOT EXISTS platform_infrastructure BIGINT NOT NULL DEFAULT 0;
+        ALTER TABLE revenue_settlements ADD COLUMN IF NOT EXISTS platform_dao BIGINT NOT NULL DEFAULT 0;
         ALTER TABLE revenue_settlements ADD COLUMN IF NOT EXISTS creator_id VARCHAR(255);
         ALTER TABLE revenue_settlements ADD COLUMN IF NOT EXISTS creator_eligible BOOLEAN NOT NULL DEFAULT FALSE;
         ALTER TABLE revenue_settlements ADD COLUMN IF NOT EXISTS creator_eligibility_reason TEXT NOT NULL DEFAULT 'legacy_unknown';
@@ -433,9 +442,9 @@ export class RevenueFabricStorage {
         \`INSERT INTO revenue_settlements
          (idempotency_key, stream, currency, gross_amount, direct_cost, tax_amount, gateway_fee,
           operating_income, emergency_amount, innovation_amount, treasury_amount, distributable_pool,
-          user_rate, platform_rate, user_share, platform_share, creator_id, creator_eligible, creator_eligibility_reason, amount_unit,
+          user_rate, platform_rate, user_share, platform_share, platform_phoenix_fund, platform_infrastructure, platform_dao, creator_id, creator_eligible, creator_eligibility_reason, amount_unit,
           iets_score, iets_tier, policy_version, occurred_at, external_payment_id, journal_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26)\`,
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29)\`,
         [
           settlement.idempotencyKey, settlement.stream, settlement.currency,
           toMinorUnits(settlement.grossAmount), toMinorUnits(settlement.directCost),
@@ -444,6 +453,7 @@ export class RevenueFabricStorage {
           toMinorUnits(settlement.innovationAmount), toMinorUnits(settlement.treasuryAmount),
           toMinorUnits(settlement.distributablePool), settlement.userRate, settlement.platformRate,
           toMinorUnits(settlement.userShare), toMinorUnits(settlement.platformShare),
+          toMinorUnits(settlement.platformPhoenixFund), toMinorUnits(settlement.platformInfrastructure), toMinorUnits(settlement.platformDao),
           settlement.creatorId ?? null, settlement.creatorEligible, settlement.creatorEligibilityReason, "minor_v2",
           settlement.ietsScore, settlement.ietsTier, settlement.policyVersion, settlement.occurredAt,
           settlement.externalPaymentId ?? null, journalId,
@@ -500,6 +510,9 @@ export class RevenueFabricStorage {
         platformRate: Number(row.platform_rate),
         userShare: fromStoredAmount(row.user_share, amountUnit),
         platformShare: fromStoredAmount(row.platform_share, amountUnit),
+        platformPhoenixFund: fromStoredAmount(row.platform_phoenix_fund, amountUnit),
+        platformInfrastructure: fromStoredAmount(row.platform_infrastructure, amountUnit),
+        platformDao: fromStoredAmount(row.platform_dao, amountUnit),
         creatorId: row.creator_id ?? undefined,
         creatorEligible: Boolean(row.creator_eligible),
         creatorEligibilityReason: row.creator_eligibility_reason ?? "legacy_unknown",
