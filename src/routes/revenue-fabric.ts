@@ -668,8 +668,13 @@ export function registerRevenueFabricRoutes(deps: RevenueFabricDeps): void {
     res.json({
       success: true,
       service: "revenue-fabric",
-      version: "4.0.0",
+      version: "5.0.0",
       ledgerValid: await storage.verifyChain(),
+      durableDatabaseConfigured: Boolean(process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRES_PRISMA_URL),
+      subscriptionPersistenceConfigured: Boolean(process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRES_PRISMA_URL),
+      stripeCheckoutConfigured: Boolean(process.env.STRIPE_SECRET_KEY && process.env.ISABELLA_PUBLIC_URL),
+      stripeWebhookConfigured: Boolean(stripeWebhookSecret),
+      supabaseAuthConfigured: Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY),
       timestamp: new Date().toISOString(),
     });
   });
