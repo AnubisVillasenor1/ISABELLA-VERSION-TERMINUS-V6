@@ -1,4 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
+import { canEarn, MAX_USER_SHARE_BPS, MIN_USER_SHARE_BPS, USER_SHARE_BPS } from "../commerce/revenue-share";
+import type { PlanId, SubscriptionStatus } from "../commerce/types";
 
 /**
  * Isabella Sovereign Revenue Fabric v4 — deterministic domain core.
@@ -63,6 +65,9 @@ export interface SettlementInput {
   readonly taxAmount: string;
   readonly gatewayFee: string;
   readonly creatorId?: string;
+  /** Verified server-side plan and subscription state; never trust browser-supplied values. */
+  readonly creatorPlan?: PlanId;
+  readonly creatorSubscriptionStatus?: SubscriptionStatus;
   readonly ietsComponents?: IETSComponents;
   /** Required when gatewayFee is non-zero; must refer to actual PSP settlement evidence. */
   readonly pspSettlementRef?: string;
@@ -130,19 +135,19 @@ const IETS_WEIGHTS: Readonly<Record<keyof IETSComponents, number>> = Object.free
 });
 
 const TIER_CREATOR_RATES: Readonly<Record<IETSTier, number>> = Object.freeze({
-  STARTER: 5000,
+  STARTER: MIN_USER_SHARE_BPS,
   PROFESSIONAL: 6000,
   ADVANCED: 7000,
-  ELITE: 8000,
-  SOVEREIGN: 9000,
+  ELITE: MAX_USER_SHARE_BPS,
+  SOVEREIGN: MAX_USER_SHARE_BPS,
 });
 
 const HYPERAUTOMATION_CREATOR_RATES: Readonly<Record<IETSTier, number>> = Object.freeze({
-  STARTER: 8500,
-  PROFESSIONAL: 8200,
-  ADVANCED: 8000,
-  ELITE: 7800,
-  SOVEREIGN: 7500,
+  STARTER: MIN_USER_SHARE_BPS,
+  PROFESSIONAL: 6000,
+  ADVANCED: 7000,
+  ELITE: USER_SHARE_BPS,
+  SOVEREIGN: MAX_USER_SHARE_BPS,
 });
 
 const DYNAMIC_STREAMS = new Set<RevenueStream>([
@@ -268,6 +273,8 @@ export class IsabellaSovereignRevenueFabric {
       taxMinor: amounts.tax.toString(),
       gatewayFeeMinor: amounts.gatewayFee.toString(),
       creatorId: input.creatorId ?? null,
+      creatorPlan: input.creatorPlan ?? null,
+      creatorSubscriptionStatus: input.creatorSubscriptionStatus ?? null,
       ietsComponents: input.ietsComponents ?? null,
       pspSettlementRef: input.pspSettlementRef ?? null,
       taxEvidenceRef: input.taxEvidenceRef ?? null,
@@ -380,21 +387,40 @@ export class IsabellaSovereignRevenueFabric {
     if (input.revenueStream === "DATA_VAULT") {
       assertNonBlank(input.consentEvidenceRef ?? "", "consent_evidence_ref", 512);
       assertNonBlank(input.dataLicenceEvidenceRef ?? "", "data_licence_evidence_ref", 512);
-      validateRate(input.dataVaultCreatorRateBps ?? -1, "data_vault_creator");
+      const creatorRate = input.dataVaultCreatorRateBps ?? -1;
+      validateRate(creatorRate, "data_vault_creator");
+      if (creatorRate < MIN_USER_SHARE_BPS || creatorRate > MAX_USER_SHARE_BPS) {
+        throw new RangeError("REVENUE_CREATOR_RATE_OUT_OF_POLICY");
+      }
     }
     if (DYNAMIC_STREAMS.has(input.revenueStream) && !input.ietsComponents) {
       throw new RangeError("REVENUE_IETS_REQUIRED_FOR_DYNAMIC_STREAM");
     }
     if (input.ietsComponents) IsabellaEconomicTrustScore.calculate(input.ietsComponents);
-    if (input.revenueStream === "ISA_API" || input.revenueStream === "DATA_VAULT" ||
-        (DYNAMIC_STREAMS.has(input.revenueStream) && this.rateFor(input.revenueStream, input.ietsComponents ? IsabellaEconomicTrustScore.calculate(input.ietsComponents) : null) > 0)) {
+    const creatorRevenueStream = input.revenueStream === "ISA_API" || input.revenueStream === "DATA_VAULT" || DYNAMIC_STREAMS.has(input.revenueStream);
+    if (creatorRevenueStream) {
       assertNonBlank(input.creatorId ?? "", "creator_id", 256);
+      if (!input.creatorPlan || !input.creatorSubscriptionStatus) {
+        throw new Error("REVENUE_CREATOR_ELIGIBILITY_REQUIRED");
+      }
     }
   }
 
   private resolveCreatorRate(input: SettlementInput, iets: IETSResult | null): number {
-    if (input.revenueStream === "DATA_VAULT") return input.dataVaultCreatorRateBps as number;
-    return this.rateFor(input.revenueStream, iets);
+    if (input.revenueStream === "SUBSCRIPTION" || input.revenueStream === "AGENT_HOSTING" ||
+        input.revenueStream === "AI_CLOUD" || input.revenueStream === "WHITE_LABEL" ||
+        input.revenueStream === "CERTIFICATION" || input.revenueStream === "ECOSYSTEM_TREASURY") return 0;
+
+    if (!input.creatorPlan || !input.creatorSubscriptionStatus ||
+        !canEarn(input.creatorPlan, input.creatorSubscriptionStatus).eligible) return 0;
+
+    const rate = input.revenueStream === "DATA_VAULT"
+      ? input.dataVaultCreatorRateBps as number
+      : this.rateFor(input.revenueStream, iets);
+    if (rate < MIN_USER_SHARE_BPS || rate > MAX_USER_SHARE_BPS) {
+      throw new RangeError("REVENUE_CREATOR_RATE_OUT_OF_POLICY");
+    }
+    return rate;
   }
 
   private rateFor(stream: RevenueStream, iets: IETSResult | null): number {
