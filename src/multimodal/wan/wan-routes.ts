@@ -9,7 +9,7 @@
 import { Router, Request, Response } from "express";
 import { WANTool, WANImageInput, WANGenerateParams } from "./wan-i2v";
 
-const router = Router();
+const router: Router = Router();
 
 // Initialize WAN tool
 const wanTool = new WANTool({
