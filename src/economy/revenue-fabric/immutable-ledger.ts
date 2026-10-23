@@ -198,7 +198,6 @@ export class ImmutableLedger {
       { account: "EMERGENCY_VAULT", direction: "CREDIT", amount: toMinorUnits(s.emergencyAmount), memo: "Reserva de emergencia (centavos)" },
       { account: "INNOVATION_VAULT", direction: "CREDIT", amount: toMinorUnits(s.innovationAmount), memo: "Reserva de innovación (centavos)" },
       { account: "TREASURY_VAULT", direction: "CREDIT", amount: toMinorUnits(s.treasuryAmount), memo: "Reserva de tesorería (centavos)" },
-      { account: "GROSS_REVENUE", direction: "DEBIT", amount: toMinorUnits(s.distributablePool), memo: "Pool distribuible (centavos)" },
       { account: "CREATOR_WALLET", direction: "CREDIT", amount: toMinorUnits(s.userShare), memo: "Participación del creador (centavos)" },
       { account: "PLATFORM_REVENUE", direction: "CREDIT", amount: toMinorUnits(s.platformShare), memo: "Participación de la plataforma (centavos)" },
     ].filter((posting) => posting.amount > 0);
