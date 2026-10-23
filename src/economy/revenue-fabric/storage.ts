@@ -898,6 +898,10 @@ export class RevenueFabricStorage {
     } else {
       const priceId = process.env["STRIPE_PRICE_" + planCode.toUpperCase()];
       if (!priceId || !/^price_[A-Za-z0-9]+$/.test(priceId)) throw new Error("STRIPE_PRICE_ID_NOT_CONFIGURED:" + planCode);
+      const price = await stripe.prices.retrieve(priceId);
+      if (!price.active || price.currency !== "usd" || price.recurring?.interval !== "month" || price.unit_amount == null) {
+        throw new Error("STRIPE_PRICE_POLICY_MISMATCH:" + planCode);
+      }
       sessionParams.line_items = [{ price: priceId, quantity: 1 }];
     }
 
