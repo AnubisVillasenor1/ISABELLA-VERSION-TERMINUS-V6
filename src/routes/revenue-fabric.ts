@@ -187,11 +187,13 @@ export function registerRevenueFabricRoutes(deps: RevenueFabricDeps): void {
       }
       if (!journal || !persisted) throw new Error("SETTLEMENT_PERSISTENCE_RETRY_EXHAUSTED");
 
-      // Emit only after the durable transaction commits.
-      outbox.append("Settlement", settlement.idempotencyKey, REVENUE_EVENTS.SETTLEMENT_POSTED, {
-        settlement,
-        journal,
-      });
+      // Emit only after a new durable transaction commits; retries are idempotent.
+      if (!persisted.idempotent) {
+        outbox.append("Settlement", settlement.idempotencyKey, REVENUE_EVENTS.SETTLEMENT_POSTED, {
+          settlement,
+          journal,
+        });
+      }
 
       res.json({ success: true, settlement, journal, idempotent: persisted.idempotent });
     } catch (err) {
