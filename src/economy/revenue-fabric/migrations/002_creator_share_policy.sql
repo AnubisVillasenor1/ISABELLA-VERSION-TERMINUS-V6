@@ -1,6 +1,9 @@
 -- Revenue Fabric policy v5: creator attribution and integer minor-unit storage.
 -- Existing rows are preserved as legacy_major; new rows are written as minor_v2.
 ALTER TABLE revenue_settlements
+  ADD COLUMN IF NOT EXISTS platform_phoenix_fund BIGINT NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS platform_infrastructure BIGINT NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS platform_dao BIGINT NOT NULL DEFAULT 0,
   ADD COLUMN IF NOT EXISTS creator_id VARCHAR(255),
   ADD COLUMN IF NOT EXISTS creator_eligible BOOLEAN NOT NULL DEFAULT FALSE,
   ADD COLUMN IF NOT EXISTS creator_eligibility_reason TEXT NOT NULL DEFAULT 'legacy_unknown',
@@ -15,3 +18,7 @@ COMMENT ON COLUMN revenue_settlements.creator_id IS
 
 COMMENT ON COLUMN revenue_settlements.creator_eligibility_reason IS
   'Machine-readable reason for creator share eligibility or denial; historical rows may be legacy_unknown.';
+
+COMMENT ON COLUMN revenue_settlements.platform_phoenix_fund IS '20% of the platform share, recorded in integer minor units.';
+COMMENT ON COLUMN revenue_settlements.platform_infrastructure IS '30% of the platform share, recorded in integer minor units.';
+COMMENT ON COLUMN revenue_settlements.platform_dao IS 'Remaining 50% of the platform share, adjusted by integer-cent rounding.';
