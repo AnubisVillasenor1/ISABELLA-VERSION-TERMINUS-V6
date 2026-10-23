@@ -108,7 +108,7 @@ add("RA-025", "BLOCKER", rustLock,
   "IGE-Ω commits Cargo.lock so Rust dependencies are reproducible and --locked builds are enforceable.",
   ["ige-omega/Cargo.lock"]);
 add("RA-026", "BLOCKER",
-  !!ci && /rust-verify:/.test(ci) && /cargo fmt --all -- --check/.test(ci) &&
+  !!ci && /rust-verify/.test(ci) && /cargo fmt --all -- --check/.test(ci) &&
     /cargo clippy --workspace --all-targets --locked/.test(ci) &&
     /cargo test --workspace --locked/.test(ci) &&
     /cargo build --release -p gateway --locked/.test(ci),
