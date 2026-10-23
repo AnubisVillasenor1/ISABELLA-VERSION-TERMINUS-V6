@@ -52,6 +52,7 @@ function sameSettlementPayload(row: Record<string, unknown>, settlement: Settlem
     && row.currency === settlement.currency
     && row.creator_id === (settlement.creatorId ?? null)
     && Boolean(row.creator_eligible) === settlement.creatorEligible
+    && row.creator_eligibility_reason === settlement.creatorEligibilityReason
     && row.iets_tier === settlement.ietsTier
     && row.policy_version === settlement.policyVersion
     && (row.external_payment_id ?? null) === (settlement.externalPaymentId ?? null);
@@ -116,6 +117,7 @@ export class RevenueFabricStorage {
           platform_share BIGINT NOT NULL,
           creator_id VARCHAR(255),
           creator_eligible BOOLEAN NOT NULL DEFAULT FALSE,
+          creator_eligibility_reason TEXT NOT NULL DEFAULT 'unknown',
           amount_unit TEXT NOT NULL DEFAULT 'minor_v2',
           iets_score NUMERIC(10,4) NOT NULL,
           iets_tier VARCHAR(16) NOT NULL,
@@ -127,6 +129,7 @@ export class RevenueFabricStorage {
         );
         ALTER TABLE revenue_settlements ADD COLUMN IF NOT EXISTS creator_id VARCHAR(255);
         ALTER TABLE revenue_settlements ADD COLUMN IF NOT EXISTS creator_eligible BOOLEAN NOT NULL DEFAULT FALSE;
+        ALTER TABLE revenue_settlements ADD COLUMN IF NOT EXISTS creator_eligibility_reason TEXT NOT NULL DEFAULT 'legacy_unknown';
         ALTER TABLE revenue_settlements ADD COLUMN IF NOT EXISTS amount_unit TEXT NOT NULL DEFAULT 'legacy_major';
         CREATE INDEX IF NOT EXISTS idx_settlement_stream ON revenue_settlements(stream);
         CREATE INDEX IF NOT EXISTS idx_settlement_occurred ON revenue_settlements(occurred_at);
@@ -430,9 +433,9 @@ export class RevenueFabricStorage {
         \`INSERT INTO revenue_settlements
          (idempotency_key, stream, currency, gross_amount, direct_cost, tax_amount, gateway_fee,
           operating_income, emergency_amount, innovation_amount, treasury_amount, distributable_pool,
-          user_rate, platform_rate, user_share, platform_share, creator_id, creator_eligible, amount_unit,
+          user_rate, platform_rate, user_share, platform_share, creator_id, creator_eligible, creator_eligibility_reason, amount_unit,
           iets_score, iets_tier, policy_version, occurred_at, external_payment_id, journal_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)\`,
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26)\`,
         [
           settlement.idempotencyKey, settlement.stream, settlement.currency,
           toMinorUnits(settlement.grossAmount), toMinorUnits(settlement.directCost),
@@ -441,7 +444,7 @@ export class RevenueFabricStorage {
           toMinorUnits(settlement.innovationAmount), toMinorUnits(settlement.treasuryAmount),
           toMinorUnits(settlement.distributablePool), settlement.userRate, settlement.platformRate,
           toMinorUnits(settlement.userShare), toMinorUnits(settlement.platformShare),
-          settlement.creatorId ?? null, settlement.creatorEligible, "minor_v2",
+          settlement.creatorId ?? null, settlement.creatorEligible, settlement.creatorEligibilityReason, "minor_v2",
           settlement.ietsScore, settlement.ietsTier, settlement.policyVersion, settlement.occurredAt,
           settlement.externalPaymentId ?? null, journalId,
         ],
@@ -499,6 +502,7 @@ export class RevenueFabricStorage {
         platformShare: fromStoredAmount(row.platform_share, amountUnit),
         creatorId: row.creator_id ?? undefined,
         creatorEligible: Boolean(row.creator_eligible),
+        creatorEligibilityReason: row.creator_eligibility_reason ?? "legacy_unknown",
         ietsScore: Number(row.iets_score),
         ietsTier: row.iets_tier,
         policyVersion: row.policy_version,
