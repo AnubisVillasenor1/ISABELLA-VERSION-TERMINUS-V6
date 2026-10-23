@@ -911,6 +911,35 @@ export class RevenueFabricStorage {
     }
   }
 
+  async createBillingPortalSession(userId: string, returnUrl: string): Promise<{ url: string }> {
+    const stripeSecret = process.env.STRIPE_SECRET_KEY;
+    const publicUrl = process.env.ISABELLA_PUBLIC_URL;
+    if (!stripeSecret || !publicUrl) throw new Error("STRIPE_BILLING_PORTAL_NOT_CONFIGURED");
+    const base = new URL(publicUrl);
+    const returnTarget = new URL(returnUrl);
+    if (returnTarget.origin !== base.origin) throw new Error("BILLING_PORTAL_RETURN_ORIGIN_INVALID");
+
+    const client = await this.pool.connect();
+    let customerId: string | undefined;
+    try {
+      const result = await client.query(
+        \`SELECT provider_customer_id FROM commerce_subscriptions
+         WHERE workspace_id = $1 AND provider_customer_id IS NOT NULL
+         ORDER BY updated_at DESC LIMIT 1\`,
+        [userId],
+      );
+      customerId = result.rows[0]?.provider_customer_id;
+    } finally {
+      client.release();
+    }
+    if (!customerId) throw new Error("BILLING_PORTAL_CUSTOMER_NOT_FOUND");
+
+    const stripe = new Stripe(stripeSecret);
+    const session = await stripe.billingPortal.sessions.create({ customer: customerId, return_url: returnTarget.toString() });
+    if (!session.url) throw new Error("STRIPE_BILLING_PORTAL_URL_MISSING");
+    return { url: session.url };
+  }
+
   async handleStripeWebhook(event: {
     id: string;
     created: number;
