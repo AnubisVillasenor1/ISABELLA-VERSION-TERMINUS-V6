@@ -1105,6 +1105,56 @@ export class RevenueFabricStorage {
     }
   }
 
+  async getOutboxStats(): Promise<{ pending: number; published: number; failed: number; deadLetter: number }> {
+    const result = await this.pool.query(
+      \`SELECT
+         COUNT(*) FILTER (WHERE status = 'PENDING')::int AS pending,
+         COUNT(*) FILTER (WHERE status = 'PUBLISHED')::int AS published,
+         COUNT(*) FILTER (WHERE status = 'FAILED')::int AS failed,
+         COUNT(*) FILTER (WHERE status = 'FAILED' AND attempts >= 5)::int AS dead_letter
+       FROM outbox_events\`,
+    );
+    const row = result.rows[0] ?? {};
+    return {
+      pending: Number(row.pending ?? 0),
+      published: Number(row.published ?? 0),
+      failed: Number(row.failed ?? 0),
+      deadLetter: Number(row.dead_letter ?? 0),
+    };
+  }
+
+  async getDeadLetterOutboxEvents(limit = 100): Promise<Array<{
+    id: string; eventId: string; eventType: string; payload: unknown; attempts: number; lastError: string | null;
+  }>> {
+    const result = await this.pool.query(
+      \`SELECT id, event_id, event_type, payload, attempts, last_error
+       FROM outbox_events
+       WHERE status = 'FAILED' AND attempts >= 5
+       ORDER BY created_at DESC
+       LIMIT $1\`,
+      [Math.max(1, Math.min(100, Math.floor(limit)))],
+    );
+    return result.rows.map((row) => ({
+      id: row.id,
+      eventId: row.event_id,
+      eventType: row.event_type,
+      payload: row.payload,
+      attempts: Number(row.attempts),
+      lastError: row.last_error ?? null,
+    }));
+  }
+
+  async retryDeadLetterOutboxEvent(eventId: string): Promise<boolean> {
+    const result = await this.pool.query(
+      \`UPDATE outbox_events
+       SET status = 'PENDING', attempts = 0, last_error = NULL, updated_at = NOW()
+       WHERE id = $1 AND status = 'FAILED' AND attempts >= 5
+       RETURNING id\`,
+      [eventId],
+    );
+    return result.rowCount === 1;
+  }
+
   async markOutboxPublished(eventId: string): Promise<void> {
     const client = await this.pool.connect();
     try {
