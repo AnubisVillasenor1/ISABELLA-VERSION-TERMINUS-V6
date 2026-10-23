@@ -1,5 +1,7 @@
 export async function resolveSupabaseUserId(request: { headers: { authorization?: string | string[] } }): Promise<string | null> {
-  const token = request.headers.authorization?.replace(/^Bearer\s+/i, "").trim();
+  const rawAuthorization = request.headers.authorization;
+  const authorization = Array.isArray(rawAuthorization) ? rawAuthorization[0] : rawAuthorization;
+  const token = authorization?.replace(/^Bearer\s+/i, "").trim();
   const supabaseUrl = process.env.SUPABASE_URL;
   const anonKey = process.env.SUPABASE_ANON_KEY;
   if (!token || !supabaseUrl || !anonKey) return null;
