@@ -174,17 +174,33 @@ export function registerRevenueFabricRoutes(deps: RevenueFabricDeps): void {
       const settlement = normalizeSettlement(settlementInputs);
       validateSettlementInvariants(settlement);
 
-      // Persist to PostgreSQL
-      const journal = new ImmutableLedger().post(settlement);
-      await storage.saveSettlement(settlement, settlement.idempotencyKey);
+      // Rebuild the ledger head from PostgreSQL for each request. The durable
+      // transaction atomically inserts the journal and settlement and checks the
+      // current head under an advisory lock; concurrent writers are retried.
+      let journal: ReturnType<ImmutableLedger["post"]> | undefined;
+      let persisted: { idempotent: boolean } | undefined;
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        const ledger = new ImmutableLedger();
+        ledger.restore(await storage.getAllJournals());
+        journal = ledger.post(settlement);
+        try {
+          persisted = await storage.saveSettlementWithJournal(settlement, journal);
+          break;
+        } catch (error) {
+          const code = error instanceof Error ? error.message : "";
+          if (code === "LEDGER_CHAIN_HEAD_CHANGED_RETRY" && attempt < 2) continue;
+          throw error;
+        }
+      }
+      if (!journal || !persisted) throw new Error("SETTLEMENT_PERSISTENCE_RETRY_EXHAUSTED");
 
-      // Emit outbox event
+      // Emit only after the durable transaction commits.
       outbox.append("Settlement", settlement.idempotencyKey, REVENUE_EVENTS.SETTLEMENT_POSTED, {
         settlement,
         journal,
       });
 
-      res.json({ success: true, settlement, journal });
+      res.json({ success: true, settlement, journal, idempotent: persisted.idempotent });
     } catch (err) {
       res.status(400).json({ success: false, error: err instanceof Error ? err.message : "SETTLEMENT_FAILED" });
     }
