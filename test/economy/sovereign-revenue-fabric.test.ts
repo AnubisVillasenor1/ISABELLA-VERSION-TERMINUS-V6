@@ -33,12 +33,12 @@ const eliteSettlement: SettlementInput = {
   taxEvidenceRef: "tax-determination-001",
 };
 
-describe("Isabella Sovereign Revenue Fabric v4", () => {
+describe("Isabella Sovereign Revenue Fabric v5", () => {
   it("calculates the weighted IETS score and tier deterministically", () => {
     expect(IsabellaEconomicTrustScore.calculate(components(70))).toMatchObject({
       score: 70,
       tier: "ELITE",
-      policyVersion: "iets-v4.0.0",
+      policyVersion: "iets-v5.0.0",
     });
     expect(() => IsabellaEconomicTrustScore.calculate({ ...components(50), compliance: 101 })).toThrow();
     expect(() => IsabellaEconomicTrustScore.calculate({ ...components(50), referrals: 1.5 })).toThrow();
