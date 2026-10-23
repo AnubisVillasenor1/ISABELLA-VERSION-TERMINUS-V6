@@ -56,7 +56,7 @@ describe("Isabella Sovereign Revenue Fabric v5", () => {
     expect(result.platformShare).toBe("1464.70");
     expect(result.platformPhoenixFund).toBe("292.94");
     expect(result.platformInfrastructure).toBe("439.41");
-    expect(result.platformDao).toBe("877.35");
+    expect(result.platformDao).toBe("732.35");
     expect(Number(result.platformPhoenixFund) + Number(result.platformInfrastructure) + Number(result.platformDao)).toBe(Number(result.platformShare));
     expect(result.creatorRateBps + result.platformRateBps).toBe(10_000);
     expect(result.journal.debitTotalMinor).toBe("1000000");
