@@ -6,7 +6,7 @@
 
 import type { RevenueStream, IETSTier } from "./types";
 import { calculateIETS, type IETSInputs, type IETSResult } from "./iets-engine";
-import { canEarn, creatorShareBpsForTier, MAX_USER_SHARE_BPS, MIN_USER_SHARE_BPS, USER_SHARE_BPS } from "../../commerce/revenue-share";
+import { canEarn, creatorShareBpsForTier, MAX_USER_SHARE_BPS, MIN_USER_SHARE_BPS, splitPlatformRevenue, USER_SHARE_BPS } from "../../commerce/revenue-share";
 import type { PlanId, SubscriptionStatus } from "../../commerce/types";
 
 export type SettlementPolicy = {
@@ -67,6 +67,9 @@ export type SettlementResult = {
   readonly platformRate: number;
   readonly userShare: number;
   readonly platformShare: number;
+  readonly platformPhoenixFund: number;
+  readonly platformInfrastructure: number;
+  readonly platformDao: number;
   readonly ietsScore: number;
   readonly ietsTier: IETSTier;
   readonly policyVersion: string;
@@ -160,6 +163,7 @@ export function normalizeSettlement(inputs: SettlementInputs): SettlementResult 
 
   const userShare = round2(distributablePool * userRate);
   const platformShare = round2(distributablePool - userShare);
+  const platformAllocation = splitPlatformRevenue(toMinorUnits(platformShare));
 
   return {
     idempotencyKey: inputs.idempotencyKey,
@@ -178,6 +182,9 @@ export function normalizeSettlement(inputs: SettlementInputs): SettlementResult 
     platformRate,
     userShare,
     platformShare,
+    platformPhoenixFund: platformAllocation.phoenixFundCents / 100,
+    platformInfrastructure: platformAllocation.infrastructureCents / 100,
+    platformDao: platformAllocation.daoCents / 100,
     ietsScore: iets.score,
     ietsTier: tier,
     policyVersion: policy.version,
