@@ -1,10 +1,10 @@
 /**
  * state: engine-generated
- * COMMERCE — reparto de ingresos 70 % usuarios / 30 % plataforma.
+ * COMMERCE — política única de reparto de ingresos: creador 50–80 %, plataforma 50–20 %.
  *
  * Reglas (dueño del producto):
  *  1. Pool = ingreso neto confirmado (bruto − reembolsos − comisión del procesador − impuestos).
- *  2. 70 % para usuarios elegibles; 30 % plataforma. Todo en centavos enteros; el redondeo va a la plataforma.
+ *  2. Por defecto 75 % para usuarios elegibles y 25 % plataforma. La política admite 50–80 % para el creador; todo en centavos enteros y el remanente de redondeo queda en plataforma.
  *  3. Elegible = plan de pago (premium/vip/enterprise) con suscripción `active` (no `trialing`, no impago).
  *     Los usuarios `free` NO tienen derecho a monetización, generen la actividad que generen.
  *  4. El pool de usuarios se prorratea por puntos de contribución (método del mayor residuo, determinista).
@@ -15,7 +15,9 @@
 
 import type { PlanId, SubscriptionStatus } from "./types";
 
-export const USER_SHARE_BPS = 7000;
+export const MIN_USER_SHARE_BPS = 5000;
+export const USER_SHARE_BPS = 7500;
+export const MAX_USER_SHARE_BPS = 8000;
 export const BPS_DENOMINATOR = 10000;
 
 const PAID_PLANS: ReadonlySet<PlanId> = new Set<PlanId>(["premium", "vip", "enterprise"]);
@@ -48,7 +50,7 @@ export interface RevenueShareInput {
   readonly processorFeesCents?: number;
   readonly taxesCents?: number;
   readonly participants: readonly ShareParticipant[];
-  /** Porción de usuarios en puntos base (por defecto 7000 = 70 %). */
+  /** Porción de usuarios en puntos base; solo se permite de 5000 (50 %) a 8000 (80 %), por defecto 7500 (75 %). */
   readonly userShareBps?: number;
 }
 
@@ -83,8 +85,8 @@ export function computeRevenueShare(input: RevenueShareInput): RevenueShareResul
   assertCents("refundsCents", refunds);
   assertCents("processorFeesCents", fees);
   assertCents("taxesCents", taxes);
-  if (!Number.isInteger(bps) || bps < 0 || bps > BPS_DENOMINATOR) {
-    throw new Error("REVENUE_SHARE: userShareBps fuera de rango 0..10000.");
+  if (!Number.isInteger(bps) || bps < MIN_USER_SHARE_BPS || bps > MAX_USER_SHARE_BPS) {
+    throw new Error("REVENUE_SHARE: userShareBps fuera de rango 5000..8000.");
   }
   const net = input.grossCents - refunds - fees - taxes;
   if (net < 0) throw new Error("REVENUE_SHARE: deducciones superan el ingreso bruto.");
