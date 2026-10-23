@@ -21,6 +21,11 @@ describe("normalized settlement creator policy", () => {
     const result = normalizeSettlement({ ...base, stream: "ISA_API" });
     expect(result.userRate).toBe(0.75);
     expect(result.platformRate).toBe(0.25);
+    expect(result.platformShare).toBe(24.25);
+    expect(result.platformPhoenixFund).toBe(4.85);
+    expect(result.platformInfrastructure).toBe(7.27);
+    expect(result.platformDao).toBe(12.13);
+    expect(result.platformPhoenixFund + result.platformInfrastructure + result.platformDao).toBe(result.platformShare);
     expect(result.creatorEligible).toBe(true);
     expect(result.creatorId).toBe("creator-001");
     expect(() => validateSettlementInvariants(result)).not.toThrow();
