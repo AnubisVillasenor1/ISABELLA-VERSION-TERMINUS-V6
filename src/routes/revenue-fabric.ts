@@ -297,7 +297,7 @@ export function registerRevenueFabricRoutes(deps: RevenueFabricDeps): void {
     const targetUserId = req.params.userId;
     
     if (!authorizeProviderRoute(req, res)) {
-      if (!authorizeUserRoute(req, res, req.params.userId)) return;
+      if (!(await authorizeUserRoute(req, res, req.params.userId))) return;
     }
     
     if (!enforceRateLimit(req, res, rateLimiter, "usage-invoice")) return;
@@ -345,7 +345,7 @@ export function registerRevenueFabricRoutes(deps: RevenueFabricDeps): void {
     const targetUserId = req.params.userId;
     
     if (!authorizeProviderRoute(req, res)) {
-      if (!authorizeUserRoute(req, res, req.params.userId)) return;
+      if (!(await authorizeUserRoute(req, res, req.params.userId))) return;
     }
     
     if (!enforceRateLimit(req, res, rateLimiter, "wallet-get")) return;
