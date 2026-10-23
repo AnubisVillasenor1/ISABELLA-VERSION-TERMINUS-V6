@@ -69,6 +69,7 @@ export interface RevenueFabricStorageConfig {
 
 export class RevenueFabricStorage {
   private pool: Pool;
+  private schemaReady: Promise<void> = Promise.resolve();
 
   constructor(config: RevenueFabricStorageConfig) {
     this.pool = new Pool({
@@ -76,10 +77,15 @@ export class RevenueFabricStorage {
       allowExitOnIdle: true,
     });
     if (config.poolConfig.connectionString && process.env.RUNTIME_SMOKE !== "1") {
-      this.initializeSchema().catch((error: unknown) => {
+      this.schemaReady = this.initializeSchema();
+      void this.schemaReady.catch((error: unknown) => {
         console.error("[RevenueFabricStorage] schema initialization failed", error);
       });
     }
+  }
+
+  async ready(): Promise<void> {
+    await this.schemaReady;
   }
 
   private async initializeSchema(): Promise<void> {
