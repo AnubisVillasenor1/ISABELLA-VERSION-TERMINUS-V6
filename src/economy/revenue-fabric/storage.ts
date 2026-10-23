@@ -1077,7 +1077,8 @@ export class RevenueFabricStorage {
     aggregateType: string,
     aggregateId: string,
     eventType: string,
-    payload: unknown
+    payload: unknown,
+    eventId?: string,
   ): Promise<void> {
     const client = await this.pool.connect();
     try {
@@ -1085,7 +1086,7 @@ export class RevenueFabricStorage {
         `INSERT INTO outbox_events (aggregate_type, aggregate_id, event_type, event_id, payload)
          VALUES ($1, $2, $3, $4, $5)
          ON CONFLICT (event_id) DO NOTHING`,
-        [aggregateType, aggregateId, eventType, crypto.randomUUID(), JSON.stringify(payload)]
+        [aggregateType, aggregateId, eventType, eventId ?? crypto.randomUUID(), JSON.stringify(payload)]
       );
     } finally {
       client.release();
