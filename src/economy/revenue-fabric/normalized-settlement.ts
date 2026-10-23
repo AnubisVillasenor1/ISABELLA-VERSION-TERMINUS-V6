@@ -6,6 +6,8 @@
 
 import type { RevenueStream, IETSTier } from "./types";
 import { calculateIETS, type IETSInputs, type IETSResult } from "./iets-engine";
+import { canEarn, creatorShareBpsForTier, MAX_USER_SHARE_BPS, MIN_USER_SHARE_BPS, USER_SHARE_BPS } from "../../commerce/revenue-share";
+import type { PlanId, SubscriptionStatus } from "../../commerce/types";
 
 export type SettlementPolicy = {
   readonly version: string;
@@ -33,6 +35,13 @@ export type SettlementInputs = {
   readonly idempotencyKey: string;
   readonly externalPaymentId?: string;
   readonly occurredAt?: string;
+  readonly creatorId?: string;
+  readonly creatorWorkspaceId?: string;
+  readonly creatorPlan?: PlanId;
+  readonly creatorSubscriptionStatus?: SubscriptionStatus;
+  readonly consentEvidenceRef?: string;
+  readonly dataLicenceEvidenceRef?: string;
+  readonly dataVaultCreatorRateBps?: number;
 };
 
 export type SettlementResult = {
@@ -57,6 +66,8 @@ export type SettlementResult = {
   readonly policyVersion: string;
   readonly occurredAt: string;
   readonly externalPaymentId?: string;
+  readonly creatorId?: string;
+  readonly creatorEligible: boolean;
 };
 
 function round2(value: number): number {
@@ -88,7 +99,35 @@ export function normalizeSettlement(inputs: SettlementInputs): SettlementResult 
   const distributablePool = round2(effectiveOperatingIncome - emergency - innovation - treasury);
 
   const iets = calculateIETS(inputs.ietsInputs);
-  const { userRate, platformRate, tier } = iets;
+  const creatorStreams = new Set<RevenueStream>([
+    "ISA_API", "SKILL_MARKETPLACE", "AGENT_MARKETPLACE",
+    "AGENT_REVENUE_SHARING", "HYPERAUTOMATION", "DATA_VAULT",
+  ]);
+  const creatorStream = creatorStreams.has(inputs.stream);
+  const creatorEligible = creatorStream
+    && Boolean(inputs.creatorId)
+    && Boolean(inputs.creatorPlan && inputs.creatorSubscriptionStatus
+      && canEarn(inputs.creatorPlan, inputs.creatorSubscriptionStatus).eligible);
+
+  if (inputs.stream === "DATA_VAULT") {
+    if (!inputs.consentEvidenceRef?.trim() || !inputs.dataLicenceEvidenceRef?.trim()) {
+      throw new Error("SETTLEMENT_DATA_VAULT_EVIDENCE_REQUIRED");
+    }
+    const explicitRate = inputs.dataVaultCreatorRateBps ?? -1;
+    if (!Number.isInteger(explicitRate) || explicitRate < MIN_USER_SHARE_BPS || explicitRate > MAX_USER_SHARE_BPS) {
+      throw new Error("SETTLEMENT_DATA_VAULT_CREATOR_RATE_OUT_OF_POLICY");
+    }
+  }
+
+  let creatorRateBps = 0;
+  if (creatorEligible) {
+    if (inputs.stream === "ISA_API") creatorRateBps = USER_SHARE_BPS;
+    else if (inputs.stream === "DATA_VAULT") creatorRateBps = inputs.dataVaultCreatorRateBps as number;
+    else creatorRateBps = creatorShareBpsForTier(iets.tier, inputs.stream === "HYPERAUTOMATION" ? "hyperautomation" : "standard");
+  }
+  const userRate = creatorRateBps / 10_000;
+  const platformRate = 1 - userRate;
+  const { tier } = iets;
 
   const userShare = round2(distributablePool * userRate);
   const platformShare = round2(distributablePool - userShare);
@@ -115,6 +154,8 @@ export function normalizeSettlement(inputs: SettlementInputs): SettlementResult 
     policyVersion: policy.version,
     occurredAt: inputs.occurredAt || new Date().toISOString(),
     externalPaymentId: inputs.externalPaymentId,
+    creatorId: creatorEligible ? inputs.creatorId : undefined,
+    creatorEligible,
   };
 }
 
