@@ -452,47 +452,11 @@ export class RevenueFabricStorage {
   }
 
   async saveSettlement(settlement: SettlementResult, journalId: string): Promise<void> {
-    const client = await this.pool.connect();
-    try {
-      await client.query(
-        `INSERT INTO revenue_settlements 
-         (idempotency_key, stream, currency, gross_amount, direct_cost, tax_amount, gateway_fee,
-          operating_income, emergency_amount, innovation_amount, treasury_amount, distributable_pool,
-          user_rate, platform_rate, user_share, platform_share, creator_id, creator_eligible, iets_score, iets_tier,
-          policy_version, occurred_at, external_payment_id, journal_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
-         ON CONFLICT (idempotency_key) DO UPDATE SET
-          journal_id = EXCLUDED.journal_id`,
-        [
-          settlement.idempotencyKey,
-          settlement.stream,
-          settlement.currency,
-          settlement.grossAmount,
-          settlement.directCost,
-          settlement.taxAmount,
-          settlement.gatewayFee,
-          settlement.operatingIncome,
-          settlement.emergencyAmount,
-          settlement.innovationAmount,
-          settlement.treasuryAmount,
-          settlement.distributablePool,
-          settlement.userRate,
-          settlement.platformRate,
-          settlement.userShare,
-          settlement.platformShare,
-          settlement.creatorId || null,
-          settlement.creatorEligible,
-          settlement.ietsScore,
-          settlement.ietsTier,
-          settlement.policyVersion,
-          settlement.occurredAt,
-          settlement.externalPaymentId || null,
-          settlement.idempotencyKey, // journalId = idempotencyKey for now
-        ]
-      );
-    } finally {
-      client.release();
+    const journal = await this.getJournal(settlement.idempotencyKey);
+    if (!journal || journal.journalId !== journalId) {
+      throw new Error("SETTLEMENT_JOURNAL_MUST_BE_PERSISTED_WITH_MATCHING_ID");
     }
+    await this.saveSettlementWithJournal(settlement, journal);
   }
 
   async getSettlement(idempotencyKey: string): Promise<SettlementResult | null> {
