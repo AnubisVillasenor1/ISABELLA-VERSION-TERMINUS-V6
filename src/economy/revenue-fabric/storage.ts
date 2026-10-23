@@ -876,15 +876,25 @@ export class RevenueFabricStorage {
       const referenceCents = Number.isSafeInteger(referenceRaw) && referenceRaw >= 100 && referenceRaw <= 100_000_000 ? referenceRaw : 2000;
       const markupBps = Number.isSafeInteger(markupRaw) && markupRaw >= 0 && markupRaw <= 100_000 ? markupRaw : 2500;
       const monthlyCents = Math.min(100_000_000, Math.ceil(referenceCents * (10_000 + markupBps) / 10_000));
-      sessionParams.line_items = [{
-        price_data: {
-          currency: "usd",
-          unit_amount: monthlyCents,
-          recurring: { interval: "month" },
-          product_data: { name: productName, description: "Acceso mensual al ecosistema Isabella" },
-        },
-        quantity: 1,
-      }];
+      const configuredPremiumPrice = process.env.STRIPE_PRICE_PREMIUM;
+      if (configuredPremiumPrice) {
+        if (!/^price_[A-Za-z0-9]+$/.test(configuredPremiumPrice)) throw new Error("STRIPE_PRICE_ID_INVALID:premium");
+        const price = await stripe.prices.retrieve(configuredPremiumPrice);
+        if (!price.active || price.currency !== "usd" || price.unit_amount !== monthlyCents || price.recurring?.interval !== "month") {
+          throw new Error("STRIPE_PRICE_POLICY_MISMATCH:premium");
+        }
+        sessionParams.line_items = [{ price: configuredPremiumPrice, quantity: 1 }];
+      } else {
+        sessionParams.line_items = [{
+          price_data: {
+            currency: "usd",
+            unit_amount: monthlyCents,
+            recurring: { interval: "month" },
+            product_data: { name: productName, description: "Acceso mensual al ecosistema Isabella" },
+          },
+          quantity: 1,
+        }];
+      }
     } else {
       const priceId = process.env["STRIPE_PRICE_" + planCode.toUpperCase()];
       if (!priceId || !/^price_[A-Za-z0-9]+$/.test(priceId)) throw new Error("STRIPE_PRICE_ID_NOT_CONFIGURED:" + planCode);
