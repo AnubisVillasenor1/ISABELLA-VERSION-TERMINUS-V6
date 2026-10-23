@@ -74,6 +74,7 @@ export type SettlementResult = {
   readonly externalPaymentId?: string;
   readonly creatorId?: string;
   readonly creatorEligible: boolean;
+  readonly creatorEligibilityReason: string;
 };
 
 function round2(value: number): number {
@@ -127,10 +128,15 @@ export function normalizeSettlement(inputs: SettlementInputs): SettlementResult 
     "AGENT_REVENUE_SHARING", "HYPERAUTOMATION", "DATA_VAULT",
   ]);
   const creatorStream = creatorStreams.has(inputs.stream);
-  const creatorEligible = creatorStream
-    && Boolean(inputs.creatorId)
-    && Boolean(inputs.creatorPlan && inputs.creatorSubscriptionStatus
-      && canEarn(inputs.creatorPlan, inputs.creatorSubscriptionStatus).eligible);
+  const eligibility = inputs.creatorPlan && inputs.creatorSubscriptionStatus
+    ? canEarn(inputs.creatorPlan, inputs.creatorSubscriptionStatus)
+    : null;
+  const creatorEligible = creatorStream && Boolean(inputs.creatorId) && eligibility?.eligible === true;
+  const creatorEligibilityReason = !creatorStream ? "PLATFORM_ONLY_STREAM"
+    : !inputs.creatorId ? "CREATOR_ID_MISSING"
+    : !eligibility ? "SUBSCRIPTION_STATE_MISSING"
+    : eligibility.eligible ? "ELIGIBLE"
+    : eligibility.reason.toUpperCase();
 
   if (inputs.stream === "DATA_VAULT") {
     if (!inputs.consentEvidenceRef?.trim() || !inputs.dataLicenceEvidenceRef?.trim()) {
@@ -179,6 +185,7 @@ export function normalizeSettlement(inputs: SettlementInputs): SettlementResult 
     externalPaymentId: inputs.externalPaymentId,
     creatorId: creatorEligible ? inputs.creatorId : undefined,
     creatorEligible,
+    creatorEligibilityReason,
   };
 }
 
