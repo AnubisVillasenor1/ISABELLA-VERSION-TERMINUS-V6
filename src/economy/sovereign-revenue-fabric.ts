@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { canEarn, MAX_USER_SHARE_BPS, MIN_USER_SHARE_BPS, USER_SHARE_BPS } from "../commerce/revenue-share";
+import { canEarn, creatorShareBpsForTier, MAX_USER_SHARE_BPS, MIN_USER_SHARE_BPS } from "../commerce/revenue-share";
 import type { PlanId, SubscriptionStatus } from "../commerce/types";
 
 /**
@@ -132,22 +132,6 @@ const IETS_WEIGHTS: Readonly<Record<keyof IETSComponents, number>> = Object.free
   reputation: 1500,
   age: 500,
   compliance: 500,
-});
-
-const TIER_CREATOR_RATES: Readonly<Record<IETSTier, number>> = Object.freeze({
-  STARTER: MIN_USER_SHARE_BPS,
-  PROFESSIONAL: 6000,
-  ADVANCED: 7000,
-  ELITE: MAX_USER_SHARE_BPS,
-  SOVEREIGN: MAX_USER_SHARE_BPS,
-});
-
-const HYPERAUTOMATION_CREATOR_RATES: Readonly<Record<IETSTier, number>> = Object.freeze({
-  STARTER: MIN_USER_SHARE_BPS,
-  PROFESSIONAL: 6000,
-  ADVANCED: 7000,
-  ELITE: USER_SHARE_BPS,
-  SOVEREIGN: MAX_USER_SHARE_BPS,
 });
 
 const DYNAMIC_STREAMS = new Set<RevenueStream>([
@@ -430,10 +414,10 @@ export class IsabellaSovereignRevenueFabric {
       case "AGENT_MARKETPLACE":
       case "AGENT_REVENUE_SHARING":
         if (!iets) throw new Error("REVENUE_IETS_REQUIRED_FOR_DYNAMIC_STREAM");
-        return TIER_CREATOR_RATES[iets.tier];
+        return creatorShareBpsForTier(iets.tier);
       case "HYPERAUTOMATION":
         if (!iets) throw new Error("REVENUE_IETS_REQUIRED_FOR_DYNAMIC_STREAM");
-        return HYPERAUTOMATION_CREATOR_RATES[iets.tier];
+        return creatorShareBpsForTier(iets.tier, "hyperautomation");
       case "DATA_VAULT": return 0; // Overridden by the explicit, consent-bound rate.
       default: return 0;
     }
