@@ -5,10 +5,15 @@ CREATE TABLE IF NOT EXISTS commerce_subscriptions (
   status VARCHAR(32) NOT NULL CHECK (status IN ('trialing','active','past_due','canceled','suspended')),
   provider VARCHAR(64) NOT NULL,
   external_ref VARCHAR(255) NOT NULL,
+  provider_customer_id VARCHAR(255),
   current_period_end TIMESTAMPTZ,
+  provider_event_created BIGINT NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE commerce_subscriptions ADD COLUMN IF NOT EXISTS provider_customer_id VARCHAR(255);
+ALTER TABLE commerce_subscriptions ADD COLUMN IF NOT EXISTS provider_event_created BIGINT NOT NULL DEFAULT 0;
 
 CREATE INDEX IF NOT EXISTS idx_commerce_subscriptions_status
   ON commerce_subscriptions(status, current_period_end);
