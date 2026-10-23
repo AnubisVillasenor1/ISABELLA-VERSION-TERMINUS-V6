@@ -47,8 +47,18 @@ function sha256(data: string): string {
   return createHash("sha256").update(data).digest("hex");
 }
 
+function toMinorUnits(amount: number): number {
+  if (!Number.isFinite(amount) || amount < 0) throw new Error("LEDGER_AMOUNT_INVALID");
+  const minor = Math.round((amount + Number.EPSILON) * 100);
+  if (!Number.isSafeInteger(minor) || Math.abs(minor / 100 - amount) > 0.000001) {
+    throw new Error("LEDGER_AMOUNT_MUST_HAVE_MAX_TWO_DECIMALS");
+  }
+  return minor;
+}
+
 export class ImmutableLedger {
   private journals: Map<string, LedgerJournal> = new Map();
+  private fingerprints: Map<string, string> = new Map();
   private previousHash: string = "GENESIS";
 
   post(
@@ -56,12 +66,32 @@ export class ImmutableLedger {
     opts: { settlementId?: string; occurredAt?: string } = {}
   ): LedgerJournal {
     const idempotencyKey = settlement.idempotencyKey;
-
-    if (this.journals.has(idempotencyKey)) {
-      return this.journals.get(idempotencyKey)!;
-    }
-
     const postings = this.buildPostings(settlement);
+    const fingerprint = sha256(stableStringify({
+      idempotencyKey, stream: settlement.stream, currency: settlement.currency,
+      grossAmount: settlement.grossAmount, directCost: settlement.directCost,
+      taxAmount: settlement.taxAmount, gatewayFee: settlement.gatewayFee,
+      userShare: settlement.userShare, platformShare: settlement.platformShare,
+      creatorId: settlement.creatorId ?? null, creatorEligible: settlement.creatorEligible,
+      policyVersion: settlement.policyVersion, externalPaymentId: settlement.externalPaymentId ?? null,
+    }));
+    const prior = this.journals.get(idempotencyKey);
+    if (prior) {
+      const knownFingerprint = this.fingerprints.get(idempotencyKey);
+      if (knownFingerprint && knownFingerprint !== fingerprint) {
+        throw new Error("LEDGER_IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_PAYLOAD");
+      }
+      const priorPayload = stableStringify({
+        idempotencyKey,
+        postings: postings.map(p => ({ ...p, amount: p.amount.toString() })),
+        previousHash: prior.previousHash,
+        occurredAt: prior.occurredAt,
+      });
+      if (sha256(priorPayload) !== prior.entryHash) {
+        throw new Error("LEDGER_IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_PAYLOAD");
+      }
+      return prior;
+    }
 
     const debits = postings.filter(p => p.direction === "DEBIT").reduce((s, p) => s + p.amount, 0);
     const credits = postings.filter(p => p.direction === "CREDIT").reduce((s, p) => s + p.amount, 0);
@@ -94,9 +124,34 @@ export class ImmutableLedger {
     };
 
     this.journals.set(idempotencyKey, journal);
+    this.fingerprints.set(idempotencyKey, fingerprint);
     this.previousHash = entryHash;
 
     return journal;
+  }
+
+  restore(journals: readonly LedgerJournal[]): void {
+    if (this.journals.size > 0) throw new Error("LEDGER_RESTORE_REQUIRES_EMPTY_INSTANCE");
+    const pending = new Map(journals.map((journal) => [journal.idempotencyKey, journal]));
+    let expectedPreviousHash = "GENESIS";
+    while (pending.size > 0) {
+      const next = [...pending.values()].find((journal) => journal.previousHash === expectedPreviousHash);
+      if (!next) throw new Error("LEDGER_RESTORE_CHAIN_DISCONNECTED");
+      const payload = stableStringify({
+        idempotencyKey: next.idempotencyKey,
+        postings: next.postings.map((posting) => ({ ...posting, amount: posting.amount.toString() })),
+        previousHash: next.previousHash,
+        occurredAt: next.occurredAt,
+      });
+      if (sha256(payload) !== next.entryHash) throw new Error("LEDGER_RESTORE_HASH_MISMATCH");
+      const debits = next.postings.filter((posting) => posting.direction === "DEBIT").reduce((sum, posting) => sum + posting.amount, 0);
+      const credits = next.postings.filter((posting) => posting.direction === "CREDIT").reduce((sum, posting) => sum + posting.amount, 0);
+      if (!Number.isSafeInteger(debits) || debits !== credits) throw new Error("LEDGER_RESTORE_UNBALANCED_JOURNAL");
+      this.journals.set(next.idempotencyKey, next);
+      pending.delete(next.idempotencyKey);
+      expectedPreviousHash = next.entryHash;
+    }
+    this.previousHash = expectedPreviousHash;
   }
 
   getJournal(idempotencyKey: string): LedgerJournal | undefined {
@@ -109,9 +164,7 @@ export class ImmutableLedger {
 
   verifyChain(): boolean {
     let expectedHash = "GENESIS";
-    for (const journal of Array.from(this.journals.values()).sort((a, b) =>
-      a.occurredAt.localeCompare(b.occurredAt)
-    )) {
+    for (const journal of Array.from(this.journals.values())) {
       if (journal.previousHash !== expectedHash) {
         return false;
       }
@@ -132,22 +185,22 @@ export class ImmutableLedger {
 
   private buildPostings(s: SettlementResult): LedgerPosting[] {
     return [
-      { account: "GATEWAY_CLEARING", direction: "DEBIT", amount: s.grossAmount, memo: "Ingreso bruto confirmado" },
-      { account: "GROSS_REVENUE", direction: "CREDIT", amount: s.grossAmount, memo: "Reconocimiento de ingreso bruto" },
-      { account: "GROSS_REVENUE", direction: "DEBIT", amount: s.directCost, memo: "Coste directo atribuible" },
-      { account: "DIRECT_COST", direction: "CREDIT", amount: s.directCost, memo: "Consumo de infraestructura o terceros" },
-      { account: "GROSS_REVENUE", direction: "DEBIT", amount: s.taxAmount, memo: "Impuesto retenido" },
-      { account: "TAX_PAYABLE", direction: "CREDIT", amount: s.taxAmount, memo: "Pasivo fiscal" },
-      { account: "GROSS_REVENUE", direction: "DEBIT", amount: s.gatewayFee, memo: "Comisión real de pasarela" },
-      { account: "GATEWAY_FEES", direction: "CREDIT", amount: s.gatewayFee, memo: "Gasto de pasarela" },
-      { account: "GROSS_REVENUE", direction: "DEBIT", amount: s.operatingIncome, memo: "Ingreso operativo" },
-      { account: "EMERGENCY_VAULT", direction: "CREDIT", amount: s.emergencyAmount, memo: "Reserva de emergencia" },
-      { account: "INNOVATION_VAULT", direction: "CREDIT", amount: s.innovationAmount, memo: "Reserva de innovación" },
-      { account: "TREASURY_VAULT", direction: "CREDIT", amount: s.treasuryAmount, memo: "Reserva de tesorería" },
-      { account: "GROSS_REVENUE", direction: "DEBIT", amount: s.distributablePool, memo: "Pool distribuible" },
-      { account: "CREATOR_WALLET", direction: "CREDIT", amount: s.userShare, memo: "Participación del creador" },
-      { account: "PLATFORM_REVENUE", direction: "CREDIT", amount: s.platformShare, memo: "Participación de la plataforma" },
-    ];
+      { account: "GATEWAY_CLEARING", direction: "DEBIT", amount: toMinorUnits(s.grossAmount), memo: "Ingreso bruto confirmado (centavos)" },
+      { account: "GROSS_REVENUE", direction: "CREDIT", amount: toMinorUnits(s.grossAmount), memo: "Reconocimiento de ingreso bruto (centavos)" },
+      { account: "GROSS_REVENUE", direction: "DEBIT", amount: toMinorUnits(s.directCost), memo: "Coste directo atribuible (centavos)" },
+      { account: "DIRECT_COST", direction: "CREDIT", amount: toMinorUnits(s.directCost), memo: "Consumo de infraestructura o terceros (centavos)" },
+      { account: "GROSS_REVENUE", direction: "DEBIT", amount: toMinorUnits(s.taxAmount), memo: "Impuesto retenido (centavos)" },
+      { account: "TAX_PAYABLE", direction: "CREDIT", amount: toMinorUnits(s.taxAmount), memo: "Pasivo fiscal (centavos)" },
+      { account: "GROSS_REVENUE", direction: "DEBIT", amount: toMinorUnits(s.gatewayFee), memo: "Comisión real de pasarela (centavos)" },
+      { account: "GATEWAY_FEES", direction: "CREDIT", amount: toMinorUnits(s.gatewayFee), memo: "Gasto de pasarela (centavos)" },
+      { account: "GROSS_REVENUE", direction: "DEBIT", amount: toMinorUnits(s.operatingIncome), memo: "Ingreso operativo (centavos)" },
+      { account: "EMERGENCY_VAULT", direction: "CREDIT", amount: toMinorUnits(s.emergencyAmount), memo: "Reserva de emergencia (centavos)" },
+      { account: "INNOVATION_VAULT", direction: "CREDIT", amount: toMinorUnits(s.innovationAmount), memo: "Reserva de innovación (centavos)" },
+      { account: "TREASURY_VAULT", direction: "CREDIT", amount: toMinorUnits(s.treasuryAmount), memo: "Reserva de tesorería (centavos)" },
+      { account: "GROSS_REVENUE", direction: "DEBIT", amount: toMinorUnits(s.distributablePool), memo: "Pool distribuible (centavos)" },
+      { account: "CREATOR_WALLET", direction: "CREDIT", amount: toMinorUnits(s.userShare), memo: "Participación del creador (centavos)" },
+      { account: "PLATFORM_REVENUE", direction: "CREDIT", amount: toMinorUnits(s.platformShare), memo: "Participación de la plataforma (centavos)" },
+    ].filter((posting) => posting.amount > 0);
   }
 }
 
