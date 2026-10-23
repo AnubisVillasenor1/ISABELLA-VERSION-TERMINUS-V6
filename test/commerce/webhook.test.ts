@@ -5,6 +5,7 @@ import {
   idempotencyKey,
   normalizeWebhookEvent,
   processWebhookEvent,
+  verifyStripeWebhookSignature,
   verifyWebhookSignature,
 } from "../../src/commerce/webhook";
 
