@@ -3481,6 +3481,7 @@ registerRevenueFabricRoutes({
   authorizeAdmin: (req, res) => authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN"),
   authorizeProviderRoute: (req, res) => authorizeProviderRoute(req, res),
   resolveCreatorEligibility: async (workspaceId) => {
+    if (!subscriptionPersistencePool) return null;
     const subscription = await subscriptionStore.get(workspaceId);
     if (!subscription) return null;
     const end = subscription.currentPeriodEnd ? Date.parse(subscription.currentPeriodEnd) : Number.NaN;
