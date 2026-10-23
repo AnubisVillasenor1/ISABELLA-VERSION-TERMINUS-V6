@@ -13,18 +13,18 @@ describe("canEarn", () => {
   });
 });
 
-describe("computeRevenueShare 70/30", () => {
-  it("splits net 70/30 and excludes free users entirely", () => {
+describe("computeRevenueShare 75/25", () => {
+  it("splits net 75/25 and excludes free users entirely", () => {
     const r = computeRevenueShare({
       grossCents: 100_000, refundsCents: 5_000, processorFeesCents: 3_000, taxesCents: 2_000,
       participants: [P("a", "premium", "active", 3), P("b", "vip", "active", 1), P("c", "free", "active", 999)],
     });
     expect(r.netCents).toBe(90_000);
-    expect(r.userPoolCents).toBe(63_000);
-    expect(r.platformCents).toBe(27_000);
+    expect(r.userPoolCents).toBe(67_500);
+    expect(r.platformCents).toBe(22_500);
     const by = Object.fromEntries(r.lines.map((l) => [l.userId, l]));
-    expect(by.a?.amountCents).toBe(47_250);
-    expect(by.b?.amountCents).toBe(15_750);
+    expect(by.a?.amountCents).toBe(50_625);
+    expect(by.b?.amountCents).toBe(16_875);
     expect(by.c).toEqual({ userId: "c", amountCents: 0, eligible: false, reason: "free_plan" });
   });
 
@@ -36,13 +36,13 @@ describe("computeRevenueShare 70/30", () => {
       });
       const sum = r.lines.reduce((s, l) => s + l.amountCents, 0);
       expect(sum + r.platformCents + r.unallocatedCents).toBe(r.netCents);
-      expect(r.platformCents).toBeGreaterThanOrEqual(Math.floor((r.netCents * 3000) / 10000));
+      expect(r.platformCents).toBeGreaterThanOrEqual(Math.floor((r.netCents * 2000) / 10000));
     }
   });
 
   it("keeps the user pool with the platform when nobody is eligible", () => {
     const r = computeRevenueShare({ grossCents: 10_000, participants: [P("f", "free", "active", 5), P("t", "premium", "trialing", 5)] });
-    expect(r.unallocatedCents).toBe(7_000);
+    expect(r.unallocatedCents).toBe(7_500);
     expect(r.lines.every((l) => l.amountCents === 0)).toBe(true);
   });
 
@@ -58,6 +58,9 @@ describe("computeRevenueShare 70/30", () => {
     expect(() => computeRevenueShare({ grossCents: 100, refundsCents: 200, participants: [] })).toThrow(/superan/);
     expect(() => computeRevenueShare({ grossCents: 100, participants: [P("a", "vip", "active", 1), P("a", "vip", "active", 1)] })).toThrow(/duplicado/);
     expect(() => computeRevenueShare({ grossCents: 100, participants: [P("a", "vip", "active", -1)] })).toThrow();
-    expect(() => computeRevenueShare({ grossCents: 100, userShareBps: 10_001, participants: [] })).toThrow();
+    expect(() => computeRevenueShare({ grossCents: 100, userShareBps: 4_999, participants: [] })).toThrow();
+    expect(() => computeRevenueShare({ grossCents: 100, userShareBps: 8_001, participants: [] })).toThrow();
+    expect(computeRevenueShare({ grossCents: 100, userShareBps: 5_000, participants: [P('u', 'premium', 'active', 1)] }).userPoolCents).toBe(50);
+    expect(computeRevenueShare({ grossCents: 100, userShareBps: 8_000, participants: [P('u', 'premium', 'active', 1)] }).userPoolCents).toBe(80);
   });
 });
