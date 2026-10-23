@@ -568,7 +568,7 @@ export function registerRevenueFabricRoutes(deps: RevenueFabricDeps): void {
       if (!publicUrl) return res.status(503).json({ success: false, error: "ISABELLA_PUBLIC_URL_NOT_CONFIGURED" });
 
       const base = new URL(publicUrl);
-      const finalSuccessUrl = new URL("/billing/success?session_id={CHECKOUT_SESSION_ID}", base).toString();
+      const finalSuccessUrl = new URL("/billing/success", base).toString() + "?session_id={CHECKOUT_SESSION_ID}";
       const finalCancelUrl = new URL("/billing/cancel", base).toString();
       const { sessionId, url } = await storage.createCheckoutSession(userId, planCode, finalSuccessUrl, finalCancelUrl);
       res.json({ success: true, sessionId, url, publishableKey: process.env.STRIPE_PUBLISHABLE_KEY });
