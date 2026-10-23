@@ -1147,7 +1147,7 @@ export class RevenueFabricStorage {
   async retryDeadLetterOutboxEvent(eventId: string): Promise<boolean> {
     const result = await this.pool.query(
       \`UPDATE outbox_events
-       SET status = 'PENDING', attempts = 0, last_error = NULL, updated_at = NOW()
+       SET status = 'PENDING', attempts = 0, last_error = NULL
        WHERE id = $1 AND status = 'FAILED' AND attempts >= 5
        RETURNING id\`,
       [eventId],
