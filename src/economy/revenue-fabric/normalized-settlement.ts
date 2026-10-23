@@ -84,6 +84,14 @@ function round2(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
+function toMinorUnits(amount: number): number {
+  const minor = Math.round((amount + Number.EPSILON) * 100);
+  if (!Number.isSafeInteger(minor) || minor < 0 || Math.abs(minor / 100 - amount) > 0.000001) {
+    throw new Error("SETTLEMENT_MINOR_UNITS_INVALID");
+  }
+  return minor;
+}
+
 export function normalizeSettlement(inputs: SettlementInputs): SettlementResult {
   if (!inputs || typeof inputs !== "object") throw new Error("SETTLEMENT_INPUT_REQUIRED");
   const policy = inputs.policy || DEFAULT_POLICY;
