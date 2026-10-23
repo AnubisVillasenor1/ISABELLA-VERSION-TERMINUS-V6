@@ -67,6 +67,8 @@ export class RevenueFabricStorage {
           platform_rate NUMERIC(5,4) NOT NULL,
           user_share BIGINT NOT NULL,
           platform_share BIGINT NOT NULL,
+          creator_id VARCHAR(255),
+          creator_eligible BOOLEAN NOT NULL DEFAULT FALSE,
           iets_score NUMERIC(10,4) NOT NULL,
           iets_tier VARCHAR(16) NOT NULL,
           policy_version VARCHAR(64) NOT NULL,
@@ -75,6 +77,8 @@ export class RevenueFabricStorage {
           journal_id UUID REFERENCES revenue_ledger_journals(journal_id),
           created_at TIMESTAMPTZ DEFAULT NOW()
         );
+        ALTER TABLE revenue_settlements ADD COLUMN IF NOT EXISTS creator_id VARCHAR(255);
+        ALTER TABLE revenue_settlements ADD COLUMN IF NOT EXISTS creator_eligible BOOLEAN NOT NULL DEFAULT FALSE;
         CREATE INDEX IF NOT EXISTS idx_settlement_stream ON revenue_settlements(stream);
         CREATE INDEX IF NOT EXISTS idx_settlement_occurred ON revenue_settlements(occurred_at);
 
@@ -313,9 +317,9 @@ export class RevenueFabricStorage {
         `INSERT INTO revenue_settlements 
          (idempotency_key, stream, currency, gross_amount, direct_cost, tax_amount, gateway_fee,
           operating_income, emergency_amount, innovation_amount, treasury_amount, distributable_pool,
-          user_rate, platform_rate, user_share, platform_share, iets_score, iets_tier,
+          user_rate, platform_rate, user_share, platform_share, creator_id, creator_eligible, iets_score, iets_tier,
           policy_version, occurred_at, external_payment_id, journal_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
          ON CONFLICT (idempotency_key) DO UPDATE SET
           journal_id = EXCLUDED.journal_id`,
         [
@@ -335,6 +339,8 @@ export class RevenueFabricStorage {
           settlement.platformRate,
           settlement.userShare,
           settlement.platformShare,
+          settlement.creatorId || null,
+          settlement.creatorEligible,
           settlement.ietsScore,
           settlement.ietsTier,
           settlement.policyVersion,
@@ -374,6 +380,8 @@ export class RevenueFabricStorage {
         platformRate: Number(row.platform_rate),
         userShare: Number(row.user_share),
         platformShare: Number(row.platform_share),
+        creatorId: row.creator_id ?? undefined,
+        creatorEligible: Boolean(row.creator_eligible),
         ietsScore: Number(row.iets_score),
         ietsTier: row.iets_tier,
         policyVersion: row.policy_version,
