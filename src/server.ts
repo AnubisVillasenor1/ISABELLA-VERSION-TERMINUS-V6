@@ -61,6 +61,7 @@ import { createReinaRuntime, type ReinaRequest } from "./reina";
 import { SubscriptionStore, UsageMeter, billingPriceById, billingPricesPublic, billingPriceIsConfigured, checkFeature, checkQuota, planEntitlements, PLANS, type PlanId, type QuotaKey, type SubscriptionRecord } from "./commerce";
 import { Pool } from "pg";
 import { PostgresSubscriptionPersistence } from "./commerce/postgres-subscriptions";
+import { resolveSupabaseUserId } from "./commerce/supabase-auth";
 import { GAMEOVER_CONSTITUTION, passportAuthority, uagpGateway, type UagpRequestInput } from "./gameover";
 import { registerHyperCoreRoutes } from "./routes/hypercore";
 import { registerOpenAiCompatibleRoutes } from "./routes/openai";
@@ -3480,6 +3481,8 @@ registerRevenueFabricRoutes({
   providerTimeoutMs: Math.max(30_000, 30_000),
   authorizeAdmin: (req, res) => authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN"),
   authorizeProviderRoute: (req, res) => authorizeProviderRoute(req, res),
+  resolveAuthenticatedUserId: (req) => resolveSupabaseUserId(req),
+  stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
   resolveCreatorEligibility: async (workspaceId) => {
     if (!subscriptionPersistencePool) return null;
     const subscription = await subscriptionStore.get(workspaceId);
