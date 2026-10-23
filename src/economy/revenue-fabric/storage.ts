@@ -242,6 +242,7 @@ export class RevenueFabricStorage {
           verified_at TIMESTAMPTZ,
           created_at TIMESTAMPTZ DEFAULT NOW()
         );
+        ALTER TABLE wallet_eligibility ADD COLUMN IF NOT EXISTS provider_event_created BIGINT NOT NULL DEFAULT 0;
         CREATE INDEX IF NOT EXISTS idx_contrib_user ON contribution_points(user_id);
         CREATE INDEX IF NOT EXISTS idx_contrib_source ON contribution_points(source);
         CREATE INDEX IF NOT EXISTS idx_contrib_created ON contribution_points(created_at);
