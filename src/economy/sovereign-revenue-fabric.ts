@@ -114,6 +114,9 @@ export interface RevenueSettlement {
   readonly distributablePool: string;
   readonly creatorRateBps: number;
   readonly platformRateBps: number;
+  readonly creatorId?: string;
+  readonly creatorEligible: boolean;
+  readonly creatorEligibilityReason: string;
   readonly creatorShare: string;
   readonly platformShare: string;
   readonly iets: IETSResult | null;
@@ -140,6 +143,10 @@ const DYNAMIC_STREAMS = new Set<RevenueStream>([
   "AGENT_REVENUE_SHARING",
   "HYPERAUTOMATION",
 ]);
+
+function creatorStreamFor(stream: RevenueStream): boolean {
+  return stream === "ISA_API" || stream === "DATA_VAULT" || DYNAMIC_STREAMS.has(stream);
+}
 
 const REVENUE_STREAMS = new Set<RevenueStream>([
   "SUBSCRIPTION", "ISA_API", "SKILL_MARKETPLACE", "AGENT_MARKETPLACE",
@@ -282,6 +289,15 @@ export class IsabellaSovereignRevenueFabric {
     const iets = input.ietsComponents ? IsabellaEconomicTrustScore.calculate(input.ietsComponents) : null;
     const creatorRateBps = this.resolveCreatorRate(input, iets);
     const platformRateBps = 10_000 - creatorRateBps;
+    const eligibility = input.creatorPlan && input.creatorSubscriptionStatus
+      ? canEarn(input.creatorPlan, input.creatorSubscriptionStatus)
+      : null;
+    const creatorEligible = creatorRateBps > 0 && eligibility?.eligible === true;
+    const creatorEligibilityReason = !creatorStreamFor(input.revenueStream)
+      ? "PLATFORM_ONLY_STREAM"
+      : !eligibility ? "CREATOR_ELIGIBILITY_CONTEXT_MISSING"
+      : eligibility.eligible ? "ELIGIBLE"
+      : eligibility.reason.toUpperCase();
     const creatorShareMinor = roundedRatio(distributableMinor, creatorRateBps);
     const platformShareMinor = distributableMinor - creatorShareMinor;
 
@@ -336,6 +352,9 @@ export class IsabellaSovereignRevenueFabric {
       distributablePool: formatMinor(distributableMinor),
       creatorRateBps,
       platformRateBps,
+      creatorId: creatorEligible ? input.creatorId : undefined,
+      creatorEligible,
+      creatorEligibilityReason,
       creatorShare: formatMinor(creatorShareMinor),
       platformShare: formatMinor(platformShareMinor),
       iets,
