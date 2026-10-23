@@ -282,7 +282,7 @@ export function registerRevenueFabricRoutes(deps: RevenueFabricDeps): void {
     
     // Authorization: admin/provider can query any user, user can only query self
     if (!authorizeProviderRoute(req, res)) {
-      if (!authorizeUserRoute(req, res, req.params.userId)) return;
+      if (!(await authorizeUserRoute(req, res, req.params.userId))) return;
     }
     
     if (!enforceRateLimit(req, res, rateLimiter, "usage-get")) return;
@@ -598,7 +598,8 @@ export function registerRevenueFabricRoutes(deps: RevenueFabricDeps): void {
 
   app.post("/api/v1/billing/stripe/webhook", async (req, res) => {
     const signature = req.get("stripe-signature");
-    const rawBody = (req as Request & { rawBody?: string }).rawBody;
+    const rawBody = (req as Request & { rawBody?: string }).rawBody
+      ?? (Buffer.isBuffer(req.body) ? req.body.toString("utf8") : undefined);
     if (!signature) return res.status(400).json({ success: false, error: "MISSING_SIGNATURE" });
     if (!rawBody) return res.status(400).json({ success: false, error: "RAW_BODY_UNAVAILABLE" });
     if (!stripeWebhookSecret) return res.status(503).json({ success: false, error: "STRIPE_WEBHOOK_SECRET_NOT_CONFIGURED" });
