@@ -16,6 +16,7 @@ export interface SubscriptionRecord {
   readonly status: SubscriptionStatus;
   readonly provider: string;
   readonly externalRef?: string;
+  readonly providerCustomerId?: string;
   readonly currentPeriodEnd?: string;
   readonly updatedAt: string;
   readonly createdAt: string;
