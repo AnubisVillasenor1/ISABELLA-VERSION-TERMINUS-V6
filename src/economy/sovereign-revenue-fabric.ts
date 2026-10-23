@@ -1,7 +1,9 @@
 import { createHash, randomUUID } from "node:crypto";
+import { canEarn, creatorShareBpsForTier, MAX_USER_SHARE_BPS, MIN_USER_SHARE_BPS, splitPlatformRevenue } from "../commerce/revenue-share";
+import type { PlanId, SubscriptionStatus } from "../commerce/types";
 
 /**
- * Isabella Sovereign Revenue Fabric v4 — deterministic domain core.
+ * Isabella Sovereign Revenue Fabric v5 — canonical 50–80 creator policy with paid-active gating.
  *
  * Monetary inputs are decimal strings and are converted to integer minor units.
  * This module is an in-process prototype: its hash chain and idempotency registry
@@ -10,7 +12,7 @@ import { createHash, randomUUID } from "node:crypto";
  * not independently verified by this module. No funds are transferred.
  */
 
-export const REVENUE_FABRIC_VERSION = "isabella-revenue-fabric-v4.0.0" as const;
+export const REVENUE_FABRIC_VERSION = "isabella-revenue-fabric-v5.0.0" as const;
 
 export type RevenueStream =
   | "SUBSCRIPTION"
@@ -63,6 +65,9 @@ export interface SettlementInput {
   readonly taxAmount: string;
   readonly gatewayFee: string;
   readonly creatorId?: string;
+  /** Verified server-side plan and subscription state; never trust browser-supplied values. */
+  readonly creatorPlan?: PlanId;
+  readonly creatorSubscriptionStatus?: SubscriptionStatus;
   readonly ietsComponents?: IETSComponents;
   /** Required when gatewayFee is non-zero; must refer to actual PSP settlement evidence. */
   readonly pspSettlementRef?: string;
@@ -109,6 +114,9 @@ export interface RevenueSettlement {
   readonly distributablePool: string;
   readonly creatorRateBps: number;
   readonly platformRateBps: number;
+  readonly creatorId?: string;
+  readonly creatorEligible: boolean;
+  readonly creatorEligibilityReason: string;
   readonly creatorShare: string;
   readonly platformShare: string;
   readonly iets: IETSResult | null;
@@ -117,7 +125,7 @@ export interface RevenueSettlement {
   readonly fundsMoved: false;
 }
 
-const IETS_POLICY_VERSION = "iets-v4.0.0";
+const IETS_POLICY_VERSION = "iets-v5.0.0";
 const IETS_WEIGHTS: Readonly<Record<keyof IETSComponents, number>> = Object.freeze({
   referrals: 1500,
   revenue: 2500,
@@ -129,28 +137,16 @@ const IETS_WEIGHTS: Readonly<Record<keyof IETSComponents, number>> = Object.free
   compliance: 500,
 });
 
-const TIER_CREATOR_RATES: Readonly<Record<IETSTier, number>> = Object.freeze({
-  STARTER: 5000,
-  PROFESSIONAL: 6000,
-  ADVANCED: 7000,
-  ELITE: 8000,
-  SOVEREIGN: 9000,
-});
-
-const HYPERAUTOMATION_CREATOR_RATES: Readonly<Record<IETSTier, number>> = Object.freeze({
-  STARTER: 8500,
-  PROFESSIONAL: 8200,
-  ADVANCED: 8000,
-  ELITE: 7800,
-  SOVEREIGN: 7500,
-});
-
 const DYNAMIC_STREAMS = new Set<RevenueStream>([
   "SKILL_MARKETPLACE",
   "AGENT_MARKETPLACE",
   "AGENT_REVENUE_SHARING",
   "HYPERAUTOMATION",
 ]);
+
+function creatorStreamFor(stream: RevenueStream): boolean {
+  return stream === "ISA_API" || stream === "DATA_VAULT" || DYNAMIC_STREAMS.has(stream);
+}
 
 const REVENUE_STREAMS = new Set<RevenueStream>([
   "SUBSCRIPTION", "ISA_API", "SKILL_MARKETPLACE", "AGENT_MARKETPLACE",
@@ -268,6 +264,8 @@ export class IsabellaSovereignRevenueFabric {
       taxMinor: amounts.tax.toString(),
       gatewayFeeMinor: amounts.gatewayFee.toString(),
       creatorId: input.creatorId ?? null,
+      creatorPlan: input.creatorPlan ?? null,
+      creatorSubscriptionStatus: input.creatorSubscriptionStatus ?? null,
       ietsComponents: input.ietsComponents ?? null,
       pspSettlementRef: input.pspSettlementRef ?? null,
       taxEvidenceRef: input.taxEvidenceRef ?? null,
@@ -291,11 +289,26 @@ export class IsabellaSovereignRevenueFabric {
     const iets = input.ietsComponents ? IsabellaEconomicTrustScore.calculate(input.ietsComponents) : null;
     const creatorRateBps = this.resolveCreatorRate(input, iets);
     const platformRateBps = 10_000 - creatorRateBps;
+    const eligibility = input.creatorPlan && input.creatorSubscriptionStatus
+      ? canEarn(input.creatorPlan, input.creatorSubscriptionStatus)
+      : null;
+    const creatorEligible = creatorRateBps > 0 && eligibility?.eligible === true;
+    const creatorEligibilityReason = !creatorStreamFor(input.revenueStream)
+      ? "PLATFORM_ONLY_STREAM"
+      : !eligibility ? "CREATOR_ELIGIBILITY_CONTEXT_MISSING"
+      : eligibility.eligible ? "ELIGIBLE"
+      : eligibility.reason.toUpperCase();
     const creatorShareMinor = roundedRatio(distributableMinor, creatorRateBps);
     const platformShareMinor = distributableMinor - creatorShareMinor;
+    const platformShareCents = Number(platformShareMinor);
+    if (!Number.isSafeInteger(platformShareCents)) throw new RangeError("REVENUE_PLATFORM_SHARE_OUT_OF_SAFE_RANGE");
+    const platformAllocation = splitPlatformRevenue(platformShareCents);
+    const phoenixMinor = BigInt(platformAllocation.phoenixFundCents);
+    const infrastructureMinor = BigInt(platformAllocation.infrastructureCents);
+    const daoMinor = BigInt(platformAllocation.daoCents);
 
     const allocationTotal = amounts.directCost + amounts.tax + amounts.gatewayFee +
-      emergencyMinor + innovationMinor + treasuryMinor + creatorShareMinor + platformShareMinor;
+      emergencyMinor + innovationMinor + treasuryMinor + creatorShareMinor + phoenixMinor + infrastructureMinor + daoMinor;
     if (allocationTotal !== amounts.gross) throw new Error("REVENUE_ALLOCATION_INVARIANT_FAILED");
 
     const postings: LedgerPosting[] = [
@@ -307,7 +320,9 @@ export class IsabellaSovereignRevenueFabric {
       this.posting("INNOVATION_VAULT", "CREDIT", innovationMinor, input.currency, "Innovation reserve"),
       this.posting("TREASURY_VAULT", "CREDIT", treasuryMinor, input.currency, "Treasury reserve"),
       this.posting("CREATOR_PAYABLE", "CREDIT", creatorShareMinor, input.currency, "Creator/provider share"),
-      this.posting("PLATFORM_ALLOCATION", "CREDIT", platformShareMinor, input.currency, "Platform allocation"),
+      this.posting("PHOENIX_FUND", "CREDIT", phoenixMinor, input.currency, "20% of platform share"),
+      this.posting("INFRASTRUCTURE_REVENUE", "CREDIT", infrastructureMinor, input.currency, "30% of platform share"),
+      this.posting("DAO_TREASURY", "CREDIT", daoMinor, input.currency, "Remaining 50% of platform share"),
     ].filter((posting) => BigInt(posting.amountMinor) > ZERO);
 
     const debitTotal = postings.filter((p) => p.direction === "DEBIT").reduce((n, p) => n + BigInt(p.amountMinor), ZERO);
@@ -345,6 +360,9 @@ export class IsabellaSovereignRevenueFabric {
       distributablePool: formatMinor(distributableMinor),
       creatorRateBps,
       platformRateBps,
+      creatorId: creatorEligible ? input.creatorId : undefined,
+      creatorEligible,
+      creatorEligibilityReason,
       creatorShare: formatMinor(creatorShareMinor),
       platformShare: formatMinor(platformShareMinor),
       iets,
@@ -380,21 +398,40 @@ export class IsabellaSovereignRevenueFabric {
     if (input.revenueStream === "DATA_VAULT") {
       assertNonBlank(input.consentEvidenceRef ?? "", "consent_evidence_ref", 512);
       assertNonBlank(input.dataLicenceEvidenceRef ?? "", "data_licence_evidence_ref", 512);
-      validateRate(input.dataVaultCreatorRateBps ?? -1, "data_vault_creator");
+      const creatorRate = input.dataVaultCreatorRateBps ?? -1;
+      validateRate(creatorRate, "data_vault_creator");
+      if (creatorRate < MIN_USER_SHARE_BPS || creatorRate > MAX_USER_SHARE_BPS) {
+        throw new RangeError("REVENUE_CREATOR_RATE_OUT_OF_POLICY");
+      }
     }
     if (DYNAMIC_STREAMS.has(input.revenueStream) && !input.ietsComponents) {
       throw new RangeError("REVENUE_IETS_REQUIRED_FOR_DYNAMIC_STREAM");
     }
     if (input.ietsComponents) IsabellaEconomicTrustScore.calculate(input.ietsComponents);
-    if (input.revenueStream === "ISA_API" || input.revenueStream === "DATA_VAULT" ||
-        (DYNAMIC_STREAMS.has(input.revenueStream) && this.rateFor(input.revenueStream, input.ietsComponents ? IsabellaEconomicTrustScore.calculate(input.ietsComponents) : null) > 0)) {
+    const creatorRevenueStream = input.revenueStream === "ISA_API" || input.revenueStream === "DATA_VAULT" || DYNAMIC_STREAMS.has(input.revenueStream);
+    if (creatorRevenueStream) {
       assertNonBlank(input.creatorId ?? "", "creator_id", 256);
+      if (!input.creatorPlan || !input.creatorSubscriptionStatus) {
+        throw new Error("REVENUE_CREATOR_ELIGIBILITY_REQUIRED");
+      }
     }
   }
 
   private resolveCreatorRate(input: SettlementInput, iets: IETSResult | null): number {
-    if (input.revenueStream === "DATA_VAULT") return input.dataVaultCreatorRateBps as number;
-    return this.rateFor(input.revenueStream, iets);
+    if (input.revenueStream === "SUBSCRIPTION" || input.revenueStream === "AGENT_HOSTING" ||
+        input.revenueStream === "AI_CLOUD" || input.revenueStream === "WHITE_LABEL" ||
+        input.revenueStream === "CERTIFICATION" || input.revenueStream === "ECOSYSTEM_TREASURY") return 0;
+
+    if (!input.creatorPlan || !input.creatorSubscriptionStatus ||
+        !canEarn(input.creatorPlan, input.creatorSubscriptionStatus).eligible) return 0;
+
+    const rate = input.revenueStream === "DATA_VAULT"
+      ? input.dataVaultCreatorRateBps as number
+      : this.rateFor(input.revenueStream, iets);
+    if (rate < MIN_USER_SHARE_BPS || rate > MAX_USER_SHARE_BPS) {
+      throw new RangeError("REVENUE_CREATOR_RATE_OUT_OF_POLICY");
+    }
+    return rate;
   }
 
   private rateFor(stream: RevenueStream, iets: IETSResult | null): number {
@@ -404,10 +441,10 @@ export class IsabellaSovereignRevenueFabric {
       case "AGENT_MARKETPLACE":
       case "AGENT_REVENUE_SHARING":
         if (!iets) throw new Error("REVENUE_IETS_REQUIRED_FOR_DYNAMIC_STREAM");
-        return TIER_CREATOR_RATES[iets.tier];
+        return creatorShareBpsForTier(iets.tier);
       case "HYPERAUTOMATION":
         if (!iets) throw new Error("REVENUE_IETS_REQUIRED_FOR_DYNAMIC_STREAM");
-        return HYPERAUTOMATION_CREATOR_RATES[iets.tier];
+        return creatorShareBpsForTier(iets.tier, "hyperautomation");
       case "DATA_VAULT": return 0; // Overridden by the explicit, consent-bound rate.
       default: return 0;
     }

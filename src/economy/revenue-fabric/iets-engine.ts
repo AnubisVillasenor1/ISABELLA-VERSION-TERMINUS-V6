@@ -1,10 +1,11 @@
 /**
- * Isabella Economic Trust Score (IETS) Engine v4
+ * Isabella Economic Trust Score (IETS) Engine v5
  * state: engine-generated
  * Replaces fixed 5-referral requirement with dynamic multi-factor economic trust scoring.
  */
 
 import type { RevenueStream } from "./types";
+import { creatorShareBpsForTier } from "../../commerce/revenue-share";
 
 export const IETS_WEIGHTS = {
   referrals: 0.15,
@@ -45,14 +46,6 @@ const TIER_THRESHOLDS: Record<IETSTier, { min: number; max: number }> = {
   ADVANCED: { min: 41, max: 60 },
   ELITE: { min: 61, max: 80 },
   SOVEREIGN: { min: 81, max: 100 },
-};
-
-const TIER_RATES: Record<IETSTier, { user: number; platform: number }> = {
-  STARTER: { user: 0.50, platform: 0.50 },
-  PROFESSIONAL: { user: 0.60, platform: 0.40 },
-  ADVANCED: { user: 0.70, platform: 0.30 },
-  ELITE: { user: 0.80, platform: 0.20 },
-  SOVEREIGN: { user: 0.90, platform: 0.10 },
 };
 
 function clamp(value: number, min: number, max: number): number {
@@ -96,7 +89,8 @@ export function calculateIETS(inputs: IETSInputs): IETSResult {
     }
   }
 
-  const { user: userRate, platform: platformRate } = TIER_RATES[tier];
+  const userRate = creatorShareBpsForTier(tier) / 10_000;
+  const platformRate = 1 - userRate;
 
   return {
     score: finalScore,

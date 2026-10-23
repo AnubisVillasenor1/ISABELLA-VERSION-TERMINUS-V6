@@ -14,13 +14,16 @@ import { createRevenueFabricStorage, type RevenueFabricStorageConfig } from "../
 import { MeteringService, type UsageEvent, type AggregatedUsage } from "../economy/revenue-fabric/metering-service";
 import { outbox, REVENUE_EVENTS } from "../economy/revenue-fabric/outbox-inbox";
 import type { IETSTier, RevenueStream } from "../economy/revenue-fabric/types";
+import type { PlanId, SubscriptionStatus } from "../commerce/types";
+import { verifyStripeWebhookSignature } from "../commerce/webhook";
 import type { RevenueFabricStorage } from "../economy/revenue-fabric/storage";
 
 export interface RevenueFabricDeps {
   readonly app: Application;
   readonly authorizeAdmin: (req: Request, res: Response) => boolean;
   readonly authorizeProviderRoute: (req: Request, res: Response) => boolean;
-  readonly authorizeUserRoute?: (req: Request, res: Response, targetUserId: string) => boolean;
+  readonly authorizeUserRoute?: (req: Request, res: Response, targetUserId: string) => boolean | Promise<boolean>;
+  readonly resolveAuthenticatedUserId?: (req: Request) => Promise<string | null>;
   readonly enforceRateLimit: (req: Request, res: Response, limiter: any, bucket: string) => boolean;
   readonly rateLimiter: any;
   readonly publicCognitionLimiter: any;
@@ -28,6 +31,7 @@ export interface RevenueFabricDeps {
   readonly storage?: RevenueFabricStorage;
   readonly stripePublicKey?: string;
   readonly stripeWebhookSecret?: string;
+  readonly resolveCreatorEligibility?: (workspaceId: string) => Promise<{ plan: PlanId; status: SubscriptionStatus } | null>;
 }
 
 function parseMoney(value: unknown, field: string): number {
@@ -41,13 +45,17 @@ export function registerRevenueFabricRoutes(deps: RevenueFabricDeps): void {
     app, 
     authorizeAdmin, 
     authorizeProviderRoute, 
-    authorizeUserRoute = (req, res, targetUserId) => getTargetUserId(req) === targetUserId,
+    authorizeUserRoute = async (req, _res, targetUserId) => {
+      const actorId = deps.resolveAuthenticatedUserId ? await deps.resolveAuthenticatedUserId(req) : null;
+      return actorId === targetUserId;
+    },
     enforceRateLimit, 
     rateLimiter, 
     publicCognitionLimiter, 
     providerTimeoutMs,
     stripePublicKey,
-    stripeWebhookSecret 
+    stripeWebhookSecret,
+    resolveAuthenticatedUserId,
   } = deps;
 
   const storage = deps.storage ?? createRevenueFabricStorage({
@@ -60,20 +68,7 @@ export function registerRevenueFabricRoutes(deps: RevenueFabricDeps): void {
   });
   const meteringService = new MeteringService();
 
-  // ============================================================
-  // Helper: Get user ID from request (for user-scoped endpoints)
-  // ============================================================
-  function getTargetUserId(req: Request): string {
-    // Try to get from params first (for user-scoped routes)
-    if (req.params.userId) return String(req.params.userId);
-    // Then from body
-    if (req.body?.userId) return req.body.userId;
-    // Then from query
-    if (req.query.userId) return String(req.query.userId);
-    // Fallback to actor
-    return getUserIdFromReq(req);
-  }
-
+  // User-scoped access defaults to deny until the host injects verified identity.
   function getUserIdFromReq(req: Request): string {
     const sessionId = req.get("x-session-id");
     if (sessionId) return `session:${sessionId}`;
@@ -122,6 +117,24 @@ export function registerRevenueFabricRoutes(deps: RevenueFabricDeps): void {
 
     try {
       const body = req.body || {};
+      const stream = body.stream as RevenueStream;
+      const creatorId = typeof body.creatorId === "string" ? body.creatorId.trim() : "";
+      const creatorWorkspaceId = typeof body.creatorWorkspaceId === "string" ? body.creatorWorkspaceId.trim() : "";
+      const creatorStreams = new Set<RevenueStream>([
+        "ISA_API", "SKILL_MARKETPLACE", "AGENT_MARKETPLACE",
+        "AGENT_REVENUE_SHARING", "HYPERAUTOMATION", "DATA_VAULT",
+      ]);
+      let creatorEligibility: { plan: PlanId; status: SubscriptionStatus } | null = null;
+      if (creatorStreams.has(stream)) {
+        if (!creatorId || !creatorWorkspaceId) {
+          return res.status(400).json({ success: false, error: "CREATOR_ID_AND_WORKSPACE_REQUIRED" });
+        }
+        if (!deps.resolveCreatorEligibility) {
+          return res.status(503).json({ success: false, error: "CREATOR_ELIGIBILITY_SOURCE_UNAVAILABLE" });
+        }
+        creatorEligibility = await deps.resolveCreatorEligibility(creatorWorkspaceId);
+      }
+
       const settlementInputs: SettlementInputs = {
         grossAmount: parseMoney(body.grossAmount, "grossAmount"),
         directCost: parseMoney(body.directCost, "directCost"),
@@ -137,7 +150,14 @@ export function registerRevenueFabricRoutes(deps: RevenueFabricDeps): void {
           age: body.ietsInputs?.age ?? 0,
           compliance: body.ietsInputs?.compliance ?? 0,
         },
-        stream: body.stream,
+        stream,
+        creatorId: creatorId || undefined,
+        creatorWorkspaceId: creatorWorkspaceId || undefined,
+        creatorPlan: creatorEligibility?.plan ?? "free",
+        creatorSubscriptionStatus: creatorEligibility?.status ?? "canceled",
+        consentEvidenceRef: body.consentEvidenceRef,
+        dataLicenceEvidenceRef: body.dataLicenceEvidenceRef,
+        dataVaultCreatorRateBps: body.dataVaultCreatorRateBps,
         currency: body.currency ?? "USD",
         idempotencyKey: body.idempotencyKey ?? uuidv4(),
         externalPaymentId: body.externalPaymentId,
@@ -147,19 +167,43 @@ export function registerRevenueFabricRoutes(deps: RevenueFabricDeps): void {
       const settlement = normalizeSettlement(settlementInputs);
       validateSettlementInvariants(settlement);
 
-      // Persist to PostgreSQL
-      const journal = new ImmutableLedger().post(settlement);
-      await storage.saveSettlement(settlement, settlement.idempotencyKey);
+      // Rebuild the ledger head from PostgreSQL for each request. The durable
+      // transaction atomically inserts the journal and settlement and checks the
+      // current head under an advisory lock; concurrent writers are retried.
+      let journal: ReturnType<ImmutableLedger["post"]> | undefined;
+      let persisted: { idempotent: boolean } | undefined;
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        const ledger = new ImmutableLedger();
+        ledger.restore(await storage.getAllJournals());
+        journal = ledger.post(settlement);
+        try {
+          persisted = await storage.saveSettlementWithJournal(settlement, journal);
+          break;
+        } catch (error) {
+          const code = error instanceof Error ? error.message : "";
+          if (code === "LEDGER_CHAIN_HEAD_CHANGED_RETRY" && attempt < 2) continue;
+          throw error;
+        }
+      }
+      if (!journal || !persisted) throw new Error("SETTLEMENT_PERSISTENCE_RETRY_EXHAUSTED");
 
-      // Emit outbox event
-      outbox.append("Settlement", settlement.idempotencyKey, REVENUE_EVENTS.SETTLEMENT_POSTED, {
-        settlement,
-        journal,
-      });
+      // Emit only after a new durable transaction commits; retries are idempotent.
+      if (!persisted.idempotent) {
+        outbox.append("Settlement", settlement.idempotencyKey, REVENUE_EVENTS.SETTLEMENT_POSTED, {
+          settlement,
+          journal,
+        });
+      }
 
-      res.json({ success: true, settlement, journal });
+      res.json({ success: true, settlement, journal, idempotent: persisted.idempotent });
     } catch (err) {
-      res.status(400).json({ success: false, error: err instanceof Error ? err.message : "SETTLEMENT_FAILED" });
+      const error = err instanceof Error ? err.message : "SETTLEMENT_FAILED";
+      const status = error.includes("IDEMPOTENCY_KEY_REUSED") ? 409
+        : error.includes("CHAIN_HEAD_CHANGED") ? 409
+        : error.includes("CHAIN_MULTIPLE_HEADS") || error.includes("CHAIN_DISCONNECTED") || error.includes("HASH_MISMATCH") ? 503
+        : error.includes("PERSISTENCE") ? 503
+        : 400;
+      res.status(status).json({ success: false, error, retryable: status === 409 || status >= 500 });
     }
   });
 
@@ -222,10 +266,11 @@ export function registerRevenueFabricRoutes(deps: RevenueFabricDeps): void {
         return res.status(400).json({ success: false, error: result.reason });
       }
 
-      // Persist to PostgreSQL
-      storage.recordUsageEvent(event).catch(console.error);
+      // Persist usage and its durable outbox event before acknowledging the request.
+      await storage.recordUsageEvent(event);
+      await storage.appendOutboxEvent("UsageEvent", event.idempotencyKey, REVENUE_EVENTS.USAGE_RECORDED, event, event.idempotencyKey);
 
-      // Emit outbox event
+      // Emit the in-process notification only after durable persistence.
       outbox.append("UsageEvent", event.idempotencyKey, REVENUE_EVENTS.USAGE_RECORDED, event);
 
       res.json({ success: true, ...result });
@@ -240,7 +285,7 @@ export function registerRevenueFabricRoutes(deps: RevenueFabricDeps): void {
     
     // Authorization: admin/provider can query any user, user can only query self
     if (!authorizeProviderRoute(req, res)) {
-      if (!authorizeUserRoute(req, res, req.params.userId)) return;
+      if (!(await authorizeUserRoute(req, res, req.params.userId))) return;
     }
     
     if (!enforceRateLimit(req, res, rateLimiter, "usage-get")) return;
@@ -255,7 +300,7 @@ export function registerRevenueFabricRoutes(deps: RevenueFabricDeps): void {
     const targetUserId = req.params.userId;
     
     if (!authorizeProviderRoute(req, res)) {
-      if (!authorizeUserRoute(req, res, req.params.userId)) return;
+      if (!(await authorizeUserRoute(req, res, req.params.userId))) return;
     }
     
     if (!enforceRateLimit(req, res, rateLimiter, "usage-invoice")) return;
@@ -303,7 +348,7 @@ export function registerRevenueFabricRoutes(deps: RevenueFabricDeps): void {
     const targetUserId = req.params.userId;
     
     if (!authorizeProviderRoute(req, res)) {
-      if (!authorizeUserRoute(req, res, req.params.userId)) return;
+      if (!(await authorizeUserRoute(req, res, req.params.userId))) return;
     }
     
     if (!enforceRateLimit(req, res, rateLimiter, "wallet-get")) return;
@@ -514,45 +559,75 @@ export function registerRevenueFabricRoutes(deps: RevenueFabricDeps): void {
 
     try {
       const body = req.body || {};
-      const { planCode, successUrl, cancelUrl } = body;
-      
-      if (!planCode) {
-        return res.status(400).json({ success: false, error: "PLAN_CODE_REQUIRED" });
-      }
+      const planCode = typeof body.planCode === "string" ? body.planCode : "";
+      if (!planCode) return res.status(400).json({ success: false, error: "PLAN_CODE_REQUIRED" });
 
-      const userId = getUserIdFromReq(req);
-      const finalSuccessUrl = successUrl ?? `${req.get("origin")}/billing/success`;
-      const finalCancelUrl = cancelUrl ?? `${req.get("origin")}/billing/cancel`;
+      const userId = resolveAuthenticatedUserId ? await resolveAuthenticatedUserId(req) : null;
+      if (!userId) return res.status(401).json({ success: false, error: "AUTHENTICATED_USER_REQUIRED" });
+      const publicUrl = process.env.ISABELLA_PUBLIC_URL;
+      if (!publicUrl) return res.status(503).json({ success: false, error: "ISABELLA_PUBLIC_URL_NOT_CONFIGURED" });
 
-      const { sessionId, url } = await storage.createCheckoutSession(
-        getUserIdFromReq(req),
-        body.planCode,
-        finalSuccessUrl,
-        finalCancelUrl
-      );
-
+      const base = new URL(publicUrl);
+      const finalSuccessUrl = new URL("/billing/success", base).toString() + "?session_id={CHECKOUT_SESSION_ID}";
+      const finalCancelUrl = new URL("/billing/cancel", base).toString();
+      const { sessionId, url } = await storage.createCheckoutSession(userId, planCode, finalSuccessUrl, finalCancelUrl);
       res.json({ success: true, sessionId, url, publishableKey: process.env.STRIPE_PUBLISHABLE_KEY });
     } catch (err) {
-      res.status(400).json({ success: false, error: err instanceof Error ? err.message : "CHECKOUT_FAILED" });
+      const error = err instanceof Error ? err.message : "CHECKOUT_FAILED";
+      const status = error.includes("NOT_CONFIGURED") ? 503 : error.includes("AUTHENTICATED_USER") ? 401 : 400;
+      res.status(status).json({ success: false, error });
     }
   });
 
   app.post("/api/v1/billing/portal", async (req, res) => {
     if (!enforceRateLimit(req, res, rateLimiter, "billing-portal")) return;
-    // Would create Stripe billing portal session
-    res.json({ success: true, url: "https://billing.stripe.com/portal" });
+    try {
+      const userId = resolveAuthenticatedUserId ? await resolveAuthenticatedUserId(req) : null;
+      if (!userId) return res.status(401).json({ success: false, error: "AUTHENTICATED_USER_REQUIRED" });
+      const publicUrl = process.env.ISABELLA_PUBLIC_URL;
+      if (!publicUrl) return res.status(503).json({ success: false, error: "ISABELLA_PUBLIC_URL_NOT_CONFIGURED" });
+      const returnUrl = new URL("/billing", publicUrl).toString();
+      const portal = await storage.createBillingPortalSession(userId, returnUrl);
+      res.json({ success: true, url: portal.url });
+    } catch (err) {
+      const error = err instanceof Error ? err.message : "BILLING_PORTAL_FAILED";
+      const status = error.includes("NOT_CONFIGURED") ? 503
+        : error.includes("CUSTOMER_NOT_FOUND") ? 404
+        : error.includes("ORIGIN_INVALID") ? 400
+        : 502;
+      res.status(status).json({ success: false, error });
+    }
   });
 
   app.post("/api/v1/billing/stripe/webhook", async (req, res) => {
-    const sig = req.get("stripe-signature");
-    if (!sig) return res.status(400).json({ success: false, error: "MISSING_SIGNATURE" });
+    const signature = req.get("stripe-signature");
+    const rawBody = (req as Request & { rawBody?: string }).rawBody
+      ?? (Buffer.isBuffer(req.body) ? req.body.toString("utf8") : undefined);
+    if (!signature) return res.status(400).json({ success: false, error: "MISSING_SIGNATURE" });
+    if (!rawBody) return res.status(400).json({ success: false, error: "RAW_BODY_UNAVAILABLE" });
+    if (!stripeWebhookSecret) return res.status(503).json({ success: false, error: "STRIPE_WEBHOOK_SECRET_NOT_CONFIGURED" });
+    if (!verifyStripeWebhookSignature(rawBody, signature, stripeWebhookSecret)) {
+      return res.status(401).json({ success: false, error: "INVALID_STRIPE_SIGNATURE" });
+    }
 
     try {
-      // In real impl, would verify signature with stripeWebhookSecret
-      await storage.handleStripeWebhook(req.body);
-      res.json({ success: true, received: true });
+      const event = JSON.parse(rawBody) as {
+        id?: string; created?: number; type?: string; data?: { object?: Record<string, unknown> };
+      };
+      if (!event.id || !event.type || !event.data?.object || typeof event.created !== "number") {
+        return res.status(400).json({ success: false, error: "STRIPE_EVENT_SHAPE_INVALID" });
+      }
+      const result = await storage.handleStripeWebhook({
+        id: event.id,
+        created: event.created,
+        type: event.type,
+        data: { object: event.data.object },
+      });
+      res.json({ success: true, received: true, ...result });
     } catch (err) {
-      res.status(400).json({ success: false, error: err instanceof Error ? err.message : "WEBHOOK_FAILED" });
+      const error = err instanceof Error ? err.message : "WEBHOOK_FAILED";
+      const status = error.includes("METADATA_INVALID") ? 400 : 503;
+      res.status(status).json({ success: false, error, retryable: status >= 500 });
     }
   });
 
@@ -564,15 +639,15 @@ export function registerRevenueFabricRoutes(deps: RevenueFabricDeps): void {
     if (!authorizeAdmin(req, res)) return;
     if (!enforceRateLimit(req, res, rateLimiter, "outbox-status")) return;
 
-    // Would query outbox_events table
-    res.json({ success: true, pending: 0, published: 0, failed: 0, deadLetter: 0 });
+    const stats = await storage.getOutboxStats();
+    res.json({ success: true, ...stats });
   });
 
   app.get("/api/v1/revenue/outbox/dead-letter", async (req, res) => {
     if (!authorizeAdmin(req, res)) return;
     if (!enforceRateLimit(req, res, rateLimiter, "outbox-dlq")) return;
 
-    const deadLetter = outbox.getDeadLetterEvents();
+    const deadLetter = await storage.getDeadLetterOutboxEvents();
     res.json({ success: true, events: deadLetter });
   });
 
@@ -581,7 +656,7 @@ export function registerRevenueFabricRoutes(deps: RevenueFabricDeps): void {
     if (!enforceRateLimit(req, res, rateLimiter, "outbox-retry")) return;
 
     const { eventId } = req.params;
-    const retried = outbox.retryDeadLetter(eventId);
+    const retried = await storage.retryDeadLetterOutboxEvent(eventId);
     res.json({ success: retried, message: retried ? "Event requeued for processing" : "Event not found or not in dead letter" });
   });
 
@@ -589,12 +664,25 @@ export function registerRevenueFabricRoutes(deps: RevenueFabricDeps): void {
   // Health / Readiness
   // ============================================================
 
-  app.get("/api/v1/revenue/health", async (req, res) => {
-    res.json({
-      success: true,
+  app.get("/api/v1/revenue/health", async (_req, res) => {
+    const durableDatabaseConfigured = Boolean(process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRES_PRISMA_URL);
+    const ledgerValid = durableDatabaseConfigured ? await storage.verifyChain().catch(() => false) : false;
+    const stripeCheckoutConfigured = Boolean(process.env.STRIPE_SECRET_KEY && process.env.ISABELLA_PUBLIC_URL);
+    const stripeWebhookConfigured = Boolean(stripeWebhookSecret);
+    const supabaseAuthConfigured = Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY);
+    const ready = durableDatabaseConfigured && ledgerValid;
+    res.status(ready ? 200 : 503).json({
+      success: ready,
+      status: ready ? "ready" : "degraded",
       service: "revenue-fabric",
-      version: "4.0.0",
-      ledgerValid: await storage.verifyChain(),
+      version: "5.0.0",
+      ledgerValid,
+      durableDatabaseConfigured,
+      subscriptionPersistenceConfigured: durableDatabaseConfigured,
+      stripeCheckoutConfigured,
+      stripeWebhookConfigured,
+      supabaseAuthConfigured,
+      creatorPayoutsEnabled: false,
       timestamp: new Date().toISOString(),
     });
   });

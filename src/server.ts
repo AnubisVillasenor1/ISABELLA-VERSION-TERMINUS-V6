@@ -59,6 +59,9 @@ import { DynamicPricingEngine } from "./economy/dynamic-pricing";
 import { generatePerplexityNarrative, resolvePerplexityGenerationConfig } from "./inference/perplexity-router";
 import { createReinaRuntime, type ReinaRequest } from "./reina";
 import { SubscriptionStore, UsageMeter, billingPriceById, billingPricesPublic, billingPriceIsConfigured, checkFeature, checkQuota, planEntitlements, PLANS, type PlanId, type QuotaKey, type SubscriptionRecord } from "./commerce";
+import { Pool } from "pg";
+import { PostgresSubscriptionPersistence } from "./commerce/postgres-subscriptions";
+import { resolveSupabaseUserId } from "./commerce/supabase-auth";
 import { GAMEOVER_CONSTITUTION, passportAuthority, uagpGateway, type UagpRequestInput } from "./gameover";
 import { registerHyperCoreRoutes } from "./routes/hypercore";
 import { registerOpenAiCompatibleRoutes } from "./routes/openai";
@@ -120,7 +123,11 @@ app.use((req, res, next) => {
 });
 const latencyRegistry = new LatencyRegistry(100, 512);
 const metricsRegistry = new MetricsRegistry();
-const subscriptionStore = new SubscriptionStore();
+const subscriptionDatabaseUrl = process.env.DATABASE_URL ?? process.env.POSTGRES_URL ?? process.env.POSTGRES_PRISMA_URL;
+const subscriptionPersistencePool = subscriptionDatabaseUrl ? new Pool({ connectionString: subscriptionDatabaseUrl, max: 5, connectionTimeoutMillis: 3_000, idleTimeoutMillis: 30_000 }) : undefined;
+const subscriptionStore = new SubscriptionStore({
+  persistence: subscriptionPersistencePool ? new PostgresSubscriptionPersistence(subscriptionPersistencePool) : undefined,
+});
 const usageMeter = new UsageMeter();
 const atlasHealthCache = new TtlSingleFlight<{ healthy: boolean; reason: string }>(1_000);
 const ikesHealthCache = new TtlSingleFlight<{ healthy: boolean; backend: string; reason: string; pending: boolean }>(1_000);
@@ -3474,6 +3481,19 @@ registerRevenueFabricRoutes({
   providerTimeoutMs: Math.max(30_000, 30_000),
   authorizeAdmin: (req, res) => authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN"),
   authorizeProviderRoute: (req, res) => authorizeProviderRoute(req, res),
+  resolveAuthenticatedUserId: (req) => resolveSupabaseUserId(req),
+  stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+  resolveCreatorEligibility: async (workspaceId) => {
+    if (!subscriptionPersistencePool) return null;
+    const subscription = await subscriptionStore.get(workspaceId);
+    if (!subscription) return null;
+    const end = subscription.currentPeriodEnd ? Date.parse(subscription.currentPeriodEnd) : Number.NaN;
+    const unexpired = Number.isFinite(end) && end > Date.now();
+    return {
+      plan: subscription.planCode,
+      status: unexpired ? subscription.status : "canceled",
+    };
+  },
 });
 
 // ── ISABELLA-Q Ω: New Cognitive Architecture Routes ──
