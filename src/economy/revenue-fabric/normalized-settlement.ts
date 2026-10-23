@@ -1,5 +1,5 @@
 /**
- * Normalized Settlement Engine - IFRF v4
+ * Normalized Settlement Engine - IFRF v5
  * state: engine-generated
  * Sovereign Revenue Fabric: Normalized financial model with vaults and dynamic splitting.
  */
@@ -17,7 +17,7 @@ export type SettlementPolicy = {
 };
 
 export const DEFAULT_POLICY: SettlementPolicy = {
-  version: "isabella-ifrf-v4.0.0",
+  version: "isabella-ifrf-v5.0.0",
   emergencyRate: 0.01,
   innovationRate: 0.01,
   treasuryRate: 0.01,
