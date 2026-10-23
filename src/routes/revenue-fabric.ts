@@ -43,7 +43,7 @@ export function registerRevenueFabricRoutes(deps: RevenueFabricDeps): void {
     app, 
     authorizeAdmin, 
     authorizeProviderRoute, 
-    authorizeUserRoute = (req, res, targetUserId) => getTargetUserId(req) === targetUserId,
+    authorizeUserRoute = (_req, _res, _targetUserId) => false,
     enforceRateLimit, 
     rateLimiter, 
     publicCognitionLimiter, 
@@ -62,20 +62,7 @@ export function registerRevenueFabricRoutes(deps: RevenueFabricDeps): void {
   });
   const meteringService = new MeteringService();
 
-  // ============================================================
-  // Helper: Get user ID from request (for user-scoped endpoints)
-  // ============================================================
-  function getTargetUserId(req: Request): string {
-    // Try to get from params first (for user-scoped routes)
-    if (req.params.userId) return String(req.params.userId);
-    // Then from body
-    if (req.body?.userId) return req.body.userId;
-    // Then from query
-    if (req.query.userId) return String(req.query.userId);
-    // Fallback to actor
-    return getUserIdFromReq(req);
-  }
-
+  // User-scoped access defaults to deny until the host injects verified identity.
   function getUserIdFromReq(req: Request): string {
     const sessionId = req.get("x-session-id");
     if (sessionId) return `session:${sessionId}`;
