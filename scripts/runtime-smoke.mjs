@@ -3,6 +3,7 @@ import { createServer } from "node:http";
 
 // Prevent the application from opening a production listener while this smoke test imports it.
 process.env.VERCEL = "1";
+process.env.RUNTIME_SMOKE = "1";
 const { default: app } = await import("../dist/server.js");
 assert.equal(typeof app, "function", "Express app must be exported as a request handler");
 
@@ -348,4 +349,5 @@ try {
   }
 } finally {
   await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+  process.exit(0);
 }

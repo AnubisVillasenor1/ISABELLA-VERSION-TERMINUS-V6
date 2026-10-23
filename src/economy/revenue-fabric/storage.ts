@@ -19,8 +19,15 @@ export class RevenueFabricStorage {
   private pool: Pool;
 
   constructor(config: RevenueFabricStorageConfig) {
-    this.pool = new Pool(config.poolConfig);
-    this.initializeSchema().catch(console.error);
+    this.pool = new Pool({
+      ...config.poolConfig,
+      allowExitOnIdle: true,
+    });
+    if (config.poolConfig.connectionString && process.env.RUNTIME_SMOKE !== "1") {
+      this.initializeSchema().catch((error: unknown) => {
+        console.error("[RevenueFabricStorage] schema initialization failed", error);
+      });
+    }
   }
 
   private async initializeSchema(): Promise<void> {
