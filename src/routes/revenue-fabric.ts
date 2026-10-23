@@ -664,17 +664,25 @@ export function registerRevenueFabricRoutes(deps: RevenueFabricDeps): void {
   // Health / Readiness
   // ============================================================
 
-  app.get("/api/v1/revenue/health", async (req, res) => {
-    res.json({
-      success: true,
+  app.get("/api/v1/revenue/health", async (_req, res) => {
+    const durableDatabaseConfigured = Boolean(process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRES_PRISMA_URL);
+    const ledgerValid = durableDatabaseConfigured ? await storage.verifyChain().catch(() => false) : false;
+    const stripeCheckoutConfigured = Boolean(process.env.STRIPE_SECRET_KEY && process.env.ISABELLA_PUBLIC_URL);
+    const stripeWebhookConfigured = Boolean(stripeWebhookSecret);
+    const supabaseAuthConfigured = Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY);
+    const ready = durableDatabaseConfigured && ledgerValid;
+    res.status(ready ? 200 : 503).json({
+      success: ready,
+      status: ready ? "ready" : "degraded",
       service: "revenue-fabric",
       version: "5.0.0",
-      ledgerValid: await storage.verifyChain(),
-      durableDatabaseConfigured: Boolean(process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRES_PRISMA_URL),
-      subscriptionPersistenceConfigured: Boolean(process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRES_PRISMA_URL),
-      stripeCheckoutConfigured: Boolean(process.env.STRIPE_SECRET_KEY && process.env.ISABELLA_PUBLIC_URL),
-      stripeWebhookConfigured: Boolean(stripeWebhookSecret),
-      supabaseAuthConfigured: Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY),
+      ledgerValid,
+      durableDatabaseConfigured,
+      subscriptionPersistenceConfigured: durableDatabaseConfigured,
+      stripeCheckoutConfigured,
+      stripeWebhookConfigured,
+      supabaseAuthConfigured,
+      creatorPayoutsEnabled: false,
       timestamp: new Date().toISOString(),
     });
   });
