@@ -5,6 +5,7 @@
  */
 
 import { Pool, type PoolConfig } from "pg";
+import Stripe from "stripe";
 import { ImmutableLedger, type LedgerJournal } from "./immutable-ledger";
 import type { SettlementResult } from "./normalized-settlement";
 import type { UsageEvent, AggregatedUsage } from "./metering-service";
@@ -840,17 +841,69 @@ export class RevenueFabricStorage {
     successUrl: string,
     cancelUrl: string
   ): Promise<{ sessionId: string; url: string }> {
-    // In real impl, would call Stripe API
-    const sessionId = `cs_${crypto.randomUUID().replace(/-/g, '')}`;
-    
+    const stripeSecret = process.env.STRIPE_SECRET_KEY;
+    const publicUrl = process.env.ISABELLA_PUBLIC_URL;
+    if (!stripeSecret || !publicUrl) throw new Error("STRIPE_CHECKOUT_NOT_CONFIGURED");
+    if (!userId || userId.length > 255) throw new Error("CHECKOUT_USER_ID_INVALID");
+    if (!["premium", "vip", "enterprise"].includes(planCode)) throw new Error("CHECKOUT_PLAN_NOT_PURCHASABLE");
+
+    const base = new URL(publicUrl);
+    const success = new URL(successUrl);
+    const cancel = new URL(cancelUrl);
+    if ((base.protocol !== "https:" && base.hostname !== "localhost" && base.hostname !== "127.0.0.1")
+      || success.origin !== base.origin || cancel.origin !== base.origin) {
+      throw new Error("CHECKOUT_REDIRECT_ORIGIN_INVALID");
+    }
+
+    const stripe = new Stripe(stripeSecret);
+    const productName = planCode === "premium" ? "Isabella Premium" : planCode === "vip" ? "Isabella VIP" : "Isabella Enterprise";
+    const sessionParams: Stripe.Checkout.SessionCreateParams = {
+      mode: "subscription",
+      success_url: success.toString(),
+      cancel_url: cancel.toString(),
+      client_reference_id: userId,
+      allow_promotion_codes: true,
+      metadata: { userId, planCode },
+      subscription_data: { metadata: { userId, planCode } },
+      line_items: [],
+    };
+
+    if (planCode === "premium") {
+      const referenceRaw = Number(process.env.ISABELLA_REFERENCE_AI_PRICE_CENTS ?? 2000);
+      const markupRaw = Number(process.env.ISABELLA_PRICE_MARKUP_BPS ?? 2500);
+      const referenceCents = Number.isSafeInteger(referenceRaw) && referenceRaw >= 100 && referenceRaw <= 100_000_000 ? referenceRaw : 2000;
+      const markupBps = Number.isSafeInteger(markupRaw) && markupRaw >= 0 && markupRaw <= 100_000 ? markupRaw : 2500;
+      const monthlyCents = Math.min(100_000_000, Math.ceil(referenceCents * (10_000 + markupBps) / 10_000));
+      sessionParams.line_items = [{
+        price_data: {
+          currency: "usd",
+          unit_amount: monthlyCents,
+          recurring: { interval: "month" },
+          product_data: { name: productName, description: "Acceso mensual al ecosistema Isabella" },
+        },
+        quantity: 1,
+      }];
+    } else {
+      const priceId = process.env["STRIPE_PRICE_" + planCode.toUpperCase()];
+      if (!priceId || !/^price_[A-Za-z0-9]+$/.test(priceId)) throw new Error("STRIPE_PRICE_ID_NOT_CONFIGURED:" + planCode);
+      sessionParams.line_items = [{ price: priceId, quantity: 1 }];
+    }
+
+    const minuteBucket = Math.floor(Date.now() / 60_000);
+    const session = await stripe.checkout.sessions.create(sessionParams, {
+      idempotencyKey: "isabella-checkout-" + userId + "-" + planCode + "-" + minuteBucket,
+    });
+    if (!session.url) throw new Error("STRIPE_CHECKOUT_URL_MISSING");
+
     const client = await this.pool.connect();
     try {
       await client.query(
-        `INSERT INTO stripe_checkout_sessions (session_id, user_id, plan_code, status, metadata)
-         VALUES ($1, $2, $3, 'pending', $4)`,
-        [sessionId, userId, "plan", JSON.stringify({ planCode })]
+        \`INSERT INTO stripe_checkout_sessions (session_id, user_id, plan_code, status, metadata)
+         VALUES ($1, $2, $3, 'pending', $4)
+         ON CONFLICT (session_id) DO NOTHING\`,
+        [session.id, userId, planCode, JSON.stringify({ userId, planCode, stripeMode: "subscription" })],
       );
-      return { sessionId, url: `https://checkout.stripe.com/pay/${sessionId}` };
+      return { sessionId: session.id, url: session.url };
     } finally {
       client.release();
     }
