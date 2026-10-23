@@ -1,19 +1,8 @@
-/**
- * Isabella HyperCore Ω² + HyperPredict Ω — barrel (state: draft | engine-generated).
- *
- * Public surface of the cognitive hyperacceleration runtime. HyperCore PREDICTS,
- * COMPRESSES, ROUTES, SPECULATES, VERIFIES and AUDITS; it never executes a
- * governed side effect and never authorizes (CROWN authorizes; BookPI remembers).
- *
- * Barrel note: `canonicalJson`, `sha256Hex` and `softmax` alias out because
- * bookpi/crypto and cognition/moe already export homonyms with different
- * implementations; `HYPERCORE_MODES` was renamed at source to
- * `HYPERCORE_OMEGA_MODES` to avoid clashing with the V5 constant.
- */
 import { randomUUID } from "node:crypto";
 import { bookPiLedger, type BookPiEventInput } from "../bookpi/ledger";
 import { createHyperCore, createBookPiAuditor, type HyperCore } from "./hypercore";
 import { createHyperPredict, type HyperPredictAuditEvent, type HyperPredictEngine } from "./hyperpredict";
+import { createHyperCoreTurboOptimizer, hyperCoreTurbo } from "./turbo-optimizer";
 
 export {
   canonicalJson as hyperCoreCanonicalJson,
@@ -34,14 +23,11 @@ export * from "./veritas-omega";
 export * from "./cee";
 export * from "./hyperpredict";
 export * from "./hypercore";
+export * from "./turbo-optimizer";
 
 const HYPERPREDICT_AUDIT_METHOD_ID =
   "TINA.YUN.HYPERPREDICT.predict_intent.v1.0.0.MEDIUM.INSTITUTIONAL";
 
-/**
- * Route HyperPredict decisions into the append-only BookPI ledger. Decisions are
- * recorded as evidence, never as authority: BookPI remembers, CROWN authorizes.
- */
 export function createHyperPredictAuditSink(
   append: (input: BookPiEventInput) => void = (input) => {
     bookPiLedger.append(input);
@@ -60,8 +46,12 @@ export function createHyperPredictAuditSink(
   };
 }
 
-/** Process-wide HyperPredict engine wired to BookPI evidence. */
 export const hyperPredict: HyperPredictEngine = createHyperPredict({ audit: createHyperPredictAuditSink() });
-
-/** Process-wide HyperCore orchestrator wired to the BookPI auditor. */
 export const hyperCore: HyperCore = createHyperCore({ auditor: createBookPiAuditor() });
+export const hyperCoreTurboRuntime = createHyperCoreTurboOptimizer(60000, 512);
+export const hyperCoreTurboState = {
+  snapshot: () => hyperCoreTurbo.snapshot(),
+  warm: <T>(key: string, factory: () => T) => hyperCoreTurbo.resolve(key, factory),
+  reset: () => hyperCoreTurbo.purge(),
+  runtime: hyperCoreTurbo,
+};
