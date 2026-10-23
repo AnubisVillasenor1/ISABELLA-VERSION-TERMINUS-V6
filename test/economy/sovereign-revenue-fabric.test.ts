@@ -26,6 +26,8 @@ const eliteSettlement: SettlementInput = {
   taxAmount: "1600.00",
   gatewayFee: "350.00",
   creatorId: "creator-001",
+  creatorPlan: "premium",
+  creatorSubscriptionStatus: "active",
   ietsComponents: components(70),
   pspSettlementRef: "psp-settlement-001",
   taxEvidenceRef: "tax-determination-001",
@@ -59,15 +61,15 @@ describe("Isabella Sovereign Revenue Fabric v4", () => {
     expect(fabric.verifyLedgerIntegrity().valid).toBe(true);
   });
 
-  it("applies the 70/30 ISA API split and keeps platform-only streams at 100%", () => {
+  it("applies the 75/25 ISA API split and keeps platform-only streams at 100%", () => {
     const fabric = new IsabellaSovereignRevenueFabric();
     const api = fabric.settle({
       ...eliteSettlement,
       idempotencyKey: "api-001",
       revenueStream: "ISA_API",
     });
-    expect(api.creatorRateBps).toBe(7000);
-    expect(api.platformRateBps).toBe(3000);
+    expect(api.creatorRateBps).toBe(7500);
+    expect(api.platformRateBps).toBe(2500);
 
     const subscription = fabric.settle({
       idempotencyKey: "subscription-001",
@@ -81,6 +83,33 @@ describe("Isabella Sovereign Revenue Fabric v4", () => {
     expect(subscription.creatorRateBps).toBe(0);
     expect(subscription.platformShare).toBe(subscription.distributablePool);
     expect(fabric.verifyLedgerIntegrity()).toMatchObject({ valid: true, journalCount: 2 });
+  });
+
+  it("blocks creator revenue for free, trialing and past-due accounts", () => {
+    const fabric = new IsabellaSovereignRevenueFabric();
+    const ineligible = fabric.settle({
+      ...eliteSettlement,
+      idempotencyKey: "free-creator-001",
+      creatorPlan: "free",
+      creatorSubscriptionStatus: "active",
+    });
+    expect(ineligible.creatorRateBps).toBe(0);
+    expect(ineligible.creatorShare).toBe("0.00");
+    expect(ineligible.platformShare).toBe(ineligible.distributablePool);
+
+    const trialing = fabric.settle({
+      ...eliteSettlement,
+      idempotencyKey: "trial-creator-001",
+      creatorSubscriptionStatus: "trialing",
+    });
+    expect(trialing.creatorRateBps).toBe(0);
+    expect(trialing.creatorShare).toBe("0.00");
+
+    expect(() => fabric.settle({
+      ...eliteSettlement,
+      idempotencyKey: "missing-eligibility-001",
+      creatorSubscriptionStatus: undefined,
+    })).toThrow("REVENUE_CREATOR_ELIGIBILITY_REQUIRED");
   });
 
   it("is idempotent for equal payloads and rejects key reuse with different amounts", () => {
@@ -128,6 +157,8 @@ describe("Isabella Sovereign Revenue Fabric v4", () => {
       taxAmount: "0.00",
       gatewayFee: "0.00",
       creatorId: "dataset-owner",
+      creatorPlan: "premium",
+      creatorSubscriptionStatus: "active",
       dataVaultCreatorRateBps: 5000,
       consentEvidenceRef: "consent-record-1",
       dataLicenceEvidenceRef: "licence-record-1",
