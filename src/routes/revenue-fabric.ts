@@ -15,13 +15,15 @@ import { MeteringService, type UsageEvent, type AggregatedUsage } from "../econo
 import { outbox, REVENUE_EVENTS } from "../economy/revenue-fabric/outbox-inbox";
 import type { IETSTier, RevenueStream } from "../economy/revenue-fabric/types";
 import type { PlanId, SubscriptionStatus } from "../commerce/types";
+import { verifyStripeWebhookSignature } from "../commerce/webhook";
 import type { RevenueFabricStorage } from "../economy/revenue-fabric/storage";
 
 export interface RevenueFabricDeps {
   readonly app: Application;
   readonly authorizeAdmin: (req: Request, res: Response) => boolean;
   readonly authorizeProviderRoute: (req: Request, res: Response) => boolean;
-  readonly authorizeUserRoute?: (req: Request, res: Response, targetUserId: string) => boolean;
+  readonly authorizeUserRoute?: (req: Request, res: Response, targetUserId: string) => boolean | Promise<boolean>;
+  readonly resolveAuthenticatedUserId?: (req: Request) => Promise<string | null>;
   readonly enforceRateLimit: (req: Request, res: Response, limiter: any, bucket: string) => boolean;
   readonly rateLimiter: any;
   readonly publicCognitionLimiter: any;
@@ -43,13 +45,17 @@ export function registerRevenueFabricRoutes(deps: RevenueFabricDeps): void {
     app, 
     authorizeAdmin, 
     authorizeProviderRoute, 
-    authorizeUserRoute = (_req, _res, _targetUserId) => false,
+    authorizeUserRoute = async (req, _res, targetUserId) => {
+      const actorId = deps.resolveAuthenticatedUserId ? await deps.resolveAuthenticatedUserId(req) : null;
+      return actorId === targetUserId;
+    },
     enforceRateLimit, 
     rateLimiter, 
     publicCognitionLimiter, 
     providerTimeoutMs,
     stripePublicKey,
-    stripeWebhookSecret 
+    stripeWebhookSecret,
+    resolveAuthenticatedUserId,
   } = deps;
 
   const storage = deps.storage ?? createRevenueFabricStorage({
@@ -550,45 +556,74 @@ export function registerRevenueFabricRoutes(deps: RevenueFabricDeps): void {
 
     try {
       const body = req.body || {};
-      const { planCode, successUrl, cancelUrl } = body;
-      
-      if (!planCode) {
-        return res.status(400).json({ success: false, error: "PLAN_CODE_REQUIRED" });
-      }
+      const planCode = typeof body.planCode === "string" ? body.planCode : "";
+      if (!planCode) return res.status(400).json({ success: false, error: "PLAN_CODE_REQUIRED" });
 
-      const userId = getUserIdFromReq(req);
-      const finalSuccessUrl = successUrl ?? `${req.get("origin")}/billing/success`;
-      const finalCancelUrl = cancelUrl ?? `${req.get("origin")}/billing/cancel`;
+      const userId = resolveAuthenticatedUserId ? await resolveAuthenticatedUserId(req) : null;
+      if (!userId) return res.status(401).json({ success: false, error: "AUTHENTICATED_USER_REQUIRED" });
+      const publicUrl = process.env.ISABELLA_PUBLIC_URL;
+      if (!publicUrl) return res.status(503).json({ success: false, error: "ISABELLA_PUBLIC_URL_NOT_CONFIGURED" });
 
-      const { sessionId, url } = await storage.createCheckoutSession(
-        getUserIdFromReq(req),
-        body.planCode,
-        finalSuccessUrl,
-        finalCancelUrl
-      );
-
+      const base = new URL(publicUrl);
+      const finalSuccessUrl = new URL("/billing/success?session_id={CHECKOUT_SESSION_ID}", base).toString();
+      const finalCancelUrl = new URL("/billing/cancel", base).toString();
+      const { sessionId, url } = await storage.createCheckoutSession(userId, planCode, finalSuccessUrl, finalCancelUrl);
       res.json({ success: true, sessionId, url, publishableKey: process.env.STRIPE_PUBLISHABLE_KEY });
     } catch (err) {
-      res.status(400).json({ success: false, error: err instanceof Error ? err.message : "CHECKOUT_FAILED" });
+      const error = err instanceof Error ? err.message : "CHECKOUT_FAILED";
+      const status = error.includes("NOT_CONFIGURED") ? 503 : error.includes("AUTHENTICATED_USER") ? 401 : 400;
+      res.status(status).json({ success: false, error });
     }
   });
 
   app.post("/api/v1/billing/portal", async (req, res) => {
     if (!enforceRateLimit(req, res, rateLimiter, "billing-portal")) return;
-    // Would create Stripe billing portal session
-    res.json({ success: true, url: "https://billing.stripe.com/portal" });
+    try {
+      const userId = resolveAuthenticatedUserId ? await resolveAuthenticatedUserId(req) : null;
+      if (!userId) return res.status(401).json({ success: false, error: "AUTHENTICATED_USER_REQUIRED" });
+      const publicUrl = process.env.ISABELLA_PUBLIC_URL;
+      if (!publicUrl) return res.status(503).json({ success: false, error: "ISABELLA_PUBLIC_URL_NOT_CONFIGURED" });
+      const returnUrl = new URL("/billing", publicUrl).toString();
+      const portal = await storage.createBillingPortalSession(userId, returnUrl);
+      res.json({ success: true, url: portal.url });
+    } catch (err) {
+      const error = err instanceof Error ? err.message : "BILLING_PORTAL_FAILED";
+      const status = error.includes("NOT_CONFIGURED") ? 503
+        : error.includes("CUSTOMER_NOT_FOUND") ? 404
+        : error.includes("ORIGIN_INVALID") ? 400
+        : 502;
+      res.status(status).json({ success: false, error });
+    }
   });
 
   app.post("/api/v1/billing/stripe/webhook", async (req, res) => {
-    const sig = req.get("stripe-signature");
-    if (!sig) return res.status(400).json({ success: false, error: "MISSING_SIGNATURE" });
+    const signature = req.get("stripe-signature");
+    const rawBody = (req as Request & { rawBody?: string }).rawBody;
+    if (!signature) return res.status(400).json({ success: false, error: "MISSING_SIGNATURE" });
+    if (!rawBody) return res.status(400).json({ success: false, error: "RAW_BODY_UNAVAILABLE" });
+    if (!stripeWebhookSecret) return res.status(503).json({ success: false, error: "STRIPE_WEBHOOK_SECRET_NOT_CONFIGURED" });
+    if (!verifyStripeWebhookSignature(rawBody, signature, stripeWebhookSecret)) {
+      return res.status(401).json({ success: false, error: "INVALID_STRIPE_SIGNATURE" });
+    }
 
     try {
-      // In real impl, would verify signature with stripeWebhookSecret
-      await storage.handleStripeWebhook(req.body);
-      res.json({ success: true, received: true });
+      const event = JSON.parse(rawBody) as {
+        id?: string; created?: number; type?: string; data?: { object?: Record<string, unknown> };
+      };
+      if (!event.id || !event.type || !event.data?.object || typeof event.created !== "number") {
+        return res.status(400).json({ success: false, error: "STRIPE_EVENT_SHAPE_INVALID" });
+      }
+      const result = await storage.handleStripeWebhook({
+        id: event.id,
+        created: event.created,
+        type: event.type,
+        data: { object: event.data.object },
+      });
+      res.json({ success: true, received: true, ...result });
     } catch (err) {
-      res.status(400).json({ success: false, error: err instanceof Error ? err.message : "WEBHOOK_FAILED" });
+      const error = err instanceof Error ? err.message : "WEBHOOK_FAILED";
+      const status = error.includes("METADATA_INVALID") ? 400 : 503;
+      res.status(status).json({ success: false, error, retryable: status >= 500 });
     }
   });
 
