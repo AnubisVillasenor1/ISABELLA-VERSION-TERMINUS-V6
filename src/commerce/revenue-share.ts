@@ -20,6 +20,33 @@ export const USER_SHARE_BPS = 7500;
 export const MAX_USER_SHARE_BPS = 8000;
 export const BPS_DENOMINATOR = 10000;
 
+export type CreatorShareTier = "STARTER" | "PROFESSIONAL" | "ADVANCED" | "ELITE" | "SOVEREIGN";
+export type CreatorShareStream = "standard" | "hyperautomation";
+
+const CREATOR_TIER_BPS: Readonly<Record<CreatorShareTier, number>> = Object.freeze({
+  STARTER: 5000,
+  PROFESSIONAL: 6000,
+  ADVANCED: 7000,
+  ELITE: 8000,
+  SOVEREIGN: 8000,
+});
+
+const HYPERAUTOMATION_TIER_BPS: Readonly<Record<CreatorShareTier, number>> = Object.freeze({
+  STARTER: 5000,
+  PROFESSIONAL: 6000,
+  ADVANCED: 7000,
+  ELITE: 7500,
+  SOVEREIGN: 8000,
+});
+
+export function creatorShareBpsForTier(tier: CreatorShareTier, stream: CreatorShareStream = "standard"): number {
+  const rate = stream === "hyperautomation" ? HYPERAUTOMATION_TIER_BPS[tier] : CREATOR_TIER_BPS[tier];
+  if (!Number.isInteger(rate) || rate < MIN_USER_SHARE_BPS || rate > MAX_USER_SHARE_BPS) {
+    throw new Error("REVENUE_SHARE: creator tier rate outside 50–80% policy.");
+  }
+  return rate;
+}
+
 const PAID_PLANS: ReadonlySet<PlanId> = new Set<PlanId>(["premium", "vip", "enterprise"]);
 
 export type IneligibleReason = "free_plan" | "subscription_not_active" | "no_contribution";
