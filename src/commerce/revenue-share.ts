@@ -40,6 +40,20 @@ const HYPERAUTOMATION_TIER_BPS: Readonly<Record<CreatorShareTier, number>> = Obj
   SOVEREIGN: 8000,
 });
 
+export interface PlatformRevenueAllocation {
+  readonly phoenixFundCents: number;
+  readonly infrastructureCents: number;
+  readonly daoCents: number;
+}
+
+export function splitPlatformRevenue(platformCents: number): PlatformRevenueAllocation {
+  assertCents("platformCents", platformCents);
+  const phoenixFundCents = Number((BigInt(platformCents) * 2000n) / BigInt(BPS_DENOMINATOR));
+  const infrastructureCents = Number((BigInt(platformCents) * 3000n) / BigInt(BPS_DENOMINATOR));
+  const daoCents = platformCents - phoenixFundCents - infrastructureCents;
+  return Object.freeze({ phoenixFundCents, infrastructureCents, daoCents });
+}
+
 export function creatorShareBpsForTier(tier: CreatorShareTier, stream: CreatorShareStream = "standard"): number {
   const rate = stream === "hyperautomation" ? HYPERAUTOMATION_TIER_BPS[tier] : CREATOR_TIER_BPS[tier];
   if (!Number.isInteger(rate) || rate < MIN_USER_SHARE_BPS || rate > MAX_USER_SHARE_BPS) {
@@ -162,6 +176,7 @@ export function computeRevenueShare(input: RevenueShareInput): RevenueShareResul
 
   const unallocated = userPool - distributed;
   const platform = net - userPool;
+  const platformAllocation = splitPlatformRevenue(platform);
   const lines: ShareLine[] = decided
     .map((d) => ({
       userId: d.p.userId,
@@ -171,5 +186,5 @@ export function computeRevenueShare(input: RevenueShareInput): RevenueShareResul
     }))
     .sort((a, b) => (a.userId < b.userId ? -1 : 1));
 
-  return { policyVersion: REVENUE_SHARE_POLICY_VERSION, netCents: net, userPoolCents: userPool, platformCents: platform, unallocatedCents: unallocated, lines };
+  return { policyVersion: REVENUE_SHARE_POLICY_VERSION, netCents: net, userPoolCents: userPool, platformCents: platform, ...platformAllocation, unallocatedCents: unallocated, lines };
 }
