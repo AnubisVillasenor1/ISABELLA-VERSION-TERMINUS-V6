@@ -3,7 +3,7 @@ import { canEarn, creatorShareBpsForTier, MAX_USER_SHARE_BPS, MIN_USER_SHARE_BPS
 import type { PlanId, SubscriptionStatus } from "../commerce/types";
 
 /**
- * Isabella Sovereign Revenue Fabric v4 — deterministic domain core.
+ * Isabella Sovereign Revenue Fabric v5 — canonical 50–80 creator policy with paid-active gating.
  *
  * Monetary inputs are decimal strings and are converted to integer minor units.
  * This module is an in-process prototype: its hash chain and idempotency registry
@@ -12,7 +12,7 @@ import type { PlanId, SubscriptionStatus } from "../commerce/types";
  * not independently verified by this module. No funds are transferred.
  */
 
-export const REVENUE_FABRIC_VERSION = "isabella-revenue-fabric-v4.0.0" as const;
+export const REVENUE_FABRIC_VERSION = "isabella-revenue-fabric-v5.0.0" as const;
 
 export type RevenueStream =
   | "SUBSCRIPTION"
@@ -122,7 +122,7 @@ export interface RevenueSettlement {
   readonly fundsMoved: false;
 }
 
-const IETS_POLICY_VERSION = "iets-v4.0.0";
+const IETS_POLICY_VERSION = "iets-v5.0.0";
 const IETS_WEIGHTS: Readonly<Record<keyof IETSComponents, number>> = Object.freeze({
   referrals: 1500,
   revenue: 2500,
