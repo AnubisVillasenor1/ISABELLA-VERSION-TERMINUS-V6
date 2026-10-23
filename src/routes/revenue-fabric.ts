@@ -636,15 +636,15 @@ export function registerRevenueFabricRoutes(deps: RevenueFabricDeps): void {
     if (!authorizeAdmin(req, res)) return;
     if (!enforceRateLimit(req, res, rateLimiter, "outbox-status")) return;
 
-    // Would query outbox_events table
-    res.json({ success: true, pending: 0, published: 0, failed: 0, deadLetter: 0 });
+    const stats = await storage.getOutboxStats();
+    res.json({ success: true, ...stats });
   });
 
   app.get("/api/v1/revenue/outbox/dead-letter", async (req, res) => {
     if (!authorizeAdmin(req, res)) return;
     if (!enforceRateLimit(req, res, rateLimiter, "outbox-dlq")) return;
 
-    const deadLetter = outbox.getDeadLetterEvents();
+    const deadLetter = await storage.getDeadLetterOutboxEvents();
     res.json({ success: true, events: deadLetter });
   });
 
@@ -653,7 +653,7 @@ export function registerRevenueFabricRoutes(deps: RevenueFabricDeps): void {
     if (!enforceRateLimit(req, res, rateLimiter, "outbox-retry")) return;
 
     const { eventId } = req.params;
-    const retried = outbox.retryDeadLetter(eventId);
+    const retried = await storage.retryDeadLetterOutboxEvent(eventId);
     res.json({ success: retried, message: retried ? "Event requeued for processing" : "Event not found or not in dead letter" });
   });
 
