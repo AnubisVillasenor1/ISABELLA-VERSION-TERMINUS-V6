@@ -3,6 +3,7 @@
 ALTER TABLE revenue_settlements
   ADD COLUMN IF NOT EXISTS creator_id VARCHAR(255),
   ADD COLUMN IF NOT EXISTS creator_eligible BOOLEAN NOT NULL DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS creator_eligibility_reason TEXT NOT NULL DEFAULT 'legacy_unknown',
   ADD COLUMN IF NOT EXISTS amount_unit TEXT NOT NULL DEFAULT 'legacy_major';
 
 COMMENT ON COLUMN revenue_settlements.amount_unit IS
@@ -11,3 +12,6 @@ COMMENT ON COLUMN revenue_settlements.creator_eligible IS
   'True only when server-resolved paid plan, active status, and creator identity were present at settlement time.';
 COMMENT ON COLUMN revenue_settlements.creator_id IS
   'Creator identity associated with an eligible share. Null for platform-only or ineligible settlements.';
+
+COMMENT ON COLUMN revenue_settlements.creator_eligibility_reason IS
+  'Machine-readable reason for creator share eligibility or denial; historical rows may be legacy_unknown.';
