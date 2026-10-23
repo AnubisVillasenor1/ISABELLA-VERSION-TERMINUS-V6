@@ -81,8 +81,15 @@ function round2(value: number): number {
 }
 
 export function normalizeSettlement(inputs: SettlementInputs): SettlementResult {
-  const policy = inputs.policy || DEFAULT_POLICY;
   if (!inputs || typeof inputs !== "object") throw new Error("SETTLEMENT_INPUT_REQUIRED");
+  const policy = inputs.policy || DEFAULT_POLICY;
+  if (!policy.version.trim() || policy.version.length > 128) throw new Error("SETTLEMENT_POLICY_VERSION_INVALID");
+  for (const rate of [policy.emergencyRate, policy.innovationRate, policy.treasuryRate]) {
+    if (!Number.isFinite(rate) || rate < 0 || rate > 1) throw new Error("SETTLEMENT_POLICY_RATE_INVALID");
+  }
+  if (policy.emergencyRate + policy.innovationRate + policy.treasuryRate > 1) {
+    throw new Error("SETTLEMENT_POLICY_RATES_EXCEED_100_PERCENT");
+  }
   if (!VALID_REVENUE_STREAMS.has(inputs.stream)) throw new Error("SETTLEMENT_STREAM_INVALID");
   if (typeof inputs.idempotencyKey !== "string" || !inputs.idempotencyKey.trim() || inputs.idempotencyKey.length > 200) {
     throw new Error("SETTLEMENT_IDEMPOTENCY_KEY_INVALID");
