@@ -24,6 +24,7 @@ export type LedgerDirection = "DEBIT" | "CREDIT";
 export type LedgerPosting = {
   readonly account: LedgerAccount;
   readonly direction: LedgerDirection;
+  /** Integer minor units (e.g. cents), never floating-point major currency. */
   readonly amount: number;
   readonly memo: string;
 };
