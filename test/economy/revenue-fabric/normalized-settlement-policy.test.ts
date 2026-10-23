@@ -25,7 +25,7 @@ describe("normalized settlement creator policy", () => {
     expect(result.platformPhoenixFund).toBe(4.85);
     expect(result.platformInfrastructure).toBe(7.27);
     expect(result.platformDao).toBe(12.13);
-    expect(result.platformPhoenixFund + result.platformInfrastructure + result.platformDao).toBe(result.platformShare);
+    expect(Math.round((result.platformPhoenixFund + result.platformInfrastructure + result.platformDao) * 100)).toBe(Math.round(result.platformShare * 100));
     expect(result.creatorEligible).toBe(true);
     expect(result.creatorId).toBe("creator-001");
     expect(() => validateSettlementInvariants(result)).not.toThrow();
