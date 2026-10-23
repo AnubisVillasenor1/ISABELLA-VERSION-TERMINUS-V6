@@ -359,6 +359,98 @@ export class RevenueFabricStorage {
   }
 
   // ==================== Settlements ====================
+  async saveSettlementWithJournal(
+    settlement: SettlementResult,
+    journal: LedgerJournal,
+  ): Promise<{ idempotent: boolean }> {
+    const client = await this.pool.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query("SELECT pg_advisory_xact_lock(hashtext($1)::bigint)", ["isabella-revenue-fabric-ledger"]);
+
+      const existing = await client.query(
+        "SELECT * FROM revenue_settlements WHERE idempotency_key = $1 FOR UPDATE",
+        [settlement.idempotencyKey],
+      );
+      if (existing.rows[0]) {
+        if (!sameSettlementPayload(existing.rows[0] as Record<string, unknown>, settlement)) {
+          throw new Error("SETTLEMENT_IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_PAYLOAD");
+        }
+        const existingJournal = await client.query(
+          "SELECT entry_hash FROM revenue_ledger_journals WHERE idempotency_key = $1",
+          [settlement.idempotencyKey],
+        );
+        if (!existingJournal.rows[0] || existingJournal.rows[0].entry_hash !== journal.entryHash) {
+          throw new Error("SETTLEMENT_JOURNAL_IDEMPOTENCY_MISMATCH");
+        }
+        await client.query("COMMIT");
+        return { idempotent: true };
+      }
+
+      const priorJournal = await client.query(
+        "SELECT journal_id, entry_hash FROM revenue_ledger_journals WHERE idempotency_key = $1 FOR UPDATE",
+        [settlement.idempotencyKey],
+      );
+      let journalId = journal.journalId;
+      if (priorJournal.rows[0]) {
+        if (priorJournal.rows[0].entry_hash !== journal.entryHash) {
+          throw new Error("LEDGER_IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_PAYLOAD");
+        }
+        journalId = priorJournal.rows[0].journal_id;
+      } else {
+        const heads = await client.query(
+          \`SELECT head.entry_hash
+           FROM revenue_ledger_journals AS head
+           WHERE NOT EXISTS (
+             SELECT 1 FROM revenue_ledger_journals AS child
+             WHERE child.previous_hash = head.entry_hash
+           )
+           LIMIT 2\`,
+        );
+        if (heads.rows.length > 1) throw new Error("LEDGER_CHAIN_MULTIPLE_HEADS_REQUIRES_RECONCILIATION");
+        const currentHead = heads.rows[0]?.entry_hash ?? "GENESIS";
+        if (journal.previousHash !== currentHead) throw new Error("LEDGER_CHAIN_HEAD_CHANGED_RETRY");
+
+        await client.query(
+          \`INSERT INTO revenue_ledger_journals
+           (journal_id, idempotency_key, settlement_id, postings, previous_hash, entry_hash, occurred_at, policy_version)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)\`,
+          [journal.journalId, journal.idempotencyKey, journal.settlementId ?? null,
+            JSON.stringify(journal.postings), journal.previousHash, journal.entryHash,
+            journal.occurredAt, journal.policyVersion],
+        );
+      }
+
+      await client.query(
+        \`INSERT INTO revenue_settlements
+         (idempotency_key, stream, currency, gross_amount, direct_cost, tax_amount, gateway_fee,
+          operating_income, emergency_amount, innovation_amount, treasury_amount, distributable_pool,
+          user_rate, platform_rate, user_share, platform_share, creator_id, creator_eligible, amount_unit,
+          iets_score, iets_tier, policy_version, occurred_at, external_payment_id, journal_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)\`,
+        [
+          settlement.idempotencyKey, settlement.stream, settlement.currency,
+          toMinorUnits(settlement.grossAmount), toMinorUnits(settlement.directCost),
+          toMinorUnits(settlement.taxAmount), toMinorUnits(settlement.gatewayFee),
+          toMinorUnits(settlement.operatingIncome), toMinorUnits(settlement.emergencyAmount),
+          toMinorUnits(settlement.innovationAmount), toMinorUnits(settlement.treasuryAmount),
+          toMinorUnits(settlement.distributablePool), settlement.userRate, settlement.platformRate,
+          toMinorUnits(settlement.userShare), toMinorUnits(settlement.platformShare),
+          settlement.creatorId ?? null, settlement.creatorEligible, "minor_v2",
+          settlement.ietsScore, settlement.ietsTier, settlement.policyVersion, settlement.occurredAt,
+          settlement.externalPaymentId ?? null, journalId,
+        ],
+      );
+      await client.query("COMMIT");
+      return { idempotent: false };
+    } catch (error) {
+      await client.query("ROLLBACK").catch(() => undefined);
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
   async saveSettlement(settlement: SettlementResult, journalId: string): Promise<void> {
     const client = await this.pool.connect();
     try {
