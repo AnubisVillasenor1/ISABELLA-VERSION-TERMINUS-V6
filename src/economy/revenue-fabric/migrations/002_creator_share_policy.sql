@@ -22,3 +22,5 @@ COMMENT ON COLUMN revenue_settlements.creator_eligibility_reason IS
 COMMENT ON COLUMN revenue_settlements.platform_phoenix_fund IS '20% of the platform share, recorded in integer minor units.';
 COMMENT ON COLUMN revenue_settlements.platform_infrastructure IS '30% of the platform share, recorded in integer minor units.';
 COMMENT ON COLUMN revenue_settlements.platform_dao IS 'Remaining 50% of the platform share, adjusted by integer-cent rounding.';
+
+ALTER TABLE wallet_eligibility ADD COLUMN IF NOT EXISTS provider_event_created BIGINT NOT NULL DEFAULT 0;
