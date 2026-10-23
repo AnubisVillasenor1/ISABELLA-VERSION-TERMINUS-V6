@@ -264,10 +264,11 @@ export function registerRevenueFabricRoutes(deps: RevenueFabricDeps): void {
         return res.status(400).json({ success: false, error: result.reason });
       }
 
-      // Persist to PostgreSQL
-      storage.recordUsageEvent(event).catch(console.error);
+      // Persist usage and its durable outbox event before acknowledging the request.
+      await storage.recordUsageEvent(event);
+      await storage.appendOutboxEvent("UsageEvent", event.idempotencyKey, REVENUE_EVENTS.USAGE_RECORDED, event, event.idempotencyKey);
 
-      // Emit outbox event
+      // Emit the in-process notification only after durable persistence.
       outbox.append("UsageEvent", event.idempotencyKey, REVENUE_EVENTS.USAGE_RECORDED, event);
 
       res.json({ success: true, ...result });
