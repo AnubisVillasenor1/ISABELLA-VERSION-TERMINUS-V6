@@ -946,7 +946,7 @@ export class RevenueFabricStorage {
     type: string;
     data: { object: Record<string, unknown> };
   }): Promise<{ duplicate: boolean; processed: boolean }> {
-    if (!event.id || event.id.length > 255 || !Number.isSafeInteger(event.created) || event.created <= 0) {
+    if (!event.id || event.id.length > 248 || !Number.isSafeInteger(event.created) || event.created <= 0) {
       throw new Error("STRIPE_EVENT_METADATA_INVALID");
     }
     const client = await this.pool.connect();
@@ -957,7 +957,7 @@ export class RevenueFabricStorage {
          VALUES ($1, 'stripe-revenue-fabric', NOW())
          ON CONFLICT (event_id) DO NOTHING
          RETURNING event_id\`,
-        [event.id],
+        ["stripe:" + event.id],
       );
       if (claimed.rowCount === 0) {
         await client.query("COMMIT");
