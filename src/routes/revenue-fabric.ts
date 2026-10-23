@@ -202,7 +202,13 @@ export function registerRevenueFabricRoutes(deps: RevenueFabricDeps): void {
 
       res.json({ success: true, settlement, journal, idempotent: persisted.idempotent });
     } catch (err) {
-      res.status(400).json({ success: false, error: err instanceof Error ? err.message : "SETTLEMENT_FAILED" });
+      const error = err instanceof Error ? err.message : "SETTLEMENT_FAILED";
+      const status = error.includes("IDEMPOTENCY_KEY_REUSED") ? 409
+        : error.includes("CHAIN_HEAD_CHANGED") ? 409
+        : error.includes("CHAIN_MULTIPLE_HEADS") || error.includes("CHAIN_DISCONNECTED") || error.includes("HASH_MISMATCH") ? 503
+        : error.includes("PERSISTENCE") ? 503
+        : 400;
+      res.status(status).json({ success: false, error, retryable: status === 409 || status >= 500 });
     }
   });
 
