@@ -164,7 +164,7 @@ class OllamaEmbeddingGenerator implements EmbeddingGenerator {
 
 export class HyperRouterMoE {
   private config: HyperRouterConfig;
-  private db: PostgresMultimodelAdapter;
+  private db!: PostgresMultimodelAdapter;
   private scorer: SimpleComplexityScorer;
   private embeddingGenerator: EmbeddingGenerator;
   private initialized: boolean = false;
