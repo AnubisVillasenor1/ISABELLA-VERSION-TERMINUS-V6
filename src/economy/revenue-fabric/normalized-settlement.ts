@@ -23,6 +23,12 @@ export const DEFAULT_POLICY: SettlementPolicy = {
   treasuryRate: 0.01,
 };
 
+const VALID_REVENUE_STREAMS = new Set<RevenueStream>([
+  "SUBSCRIPTION", "ISA_API", "SKILL_MARKETPLACE", "AGENT_MARKETPLACE",
+  "AGENT_HOSTING", "AI_CLOUD", "AGENT_REVENUE_SHARING", "HYPERAUTOMATION",
+  "WHITE_LABEL", "CERTIFICATION", "DATA_VAULT", "ECOSYSTEM_TREASURY",
+]);
+
 export type SettlementInputs = {
   readonly grossAmount: number;
   readonly directCost: number;
@@ -76,18 +82,28 @@ function round2(value: number): number {
 
 export function normalizeSettlement(inputs: SettlementInputs): SettlementResult {
   const policy = inputs.policy || DEFAULT_POLICY;
+  if (!inputs || typeof inputs !== "object") throw new Error("SETTLEMENT_INPUT_REQUIRED");
+  if (!VALID_REVENUE_STREAMS.has(inputs.stream)) throw new Error("SETTLEMENT_STREAM_INVALID");
+  if (typeof inputs.idempotencyKey !== "string" || !inputs.idempotencyKey.trim() || inputs.idempotencyKey.length > 200) {
+    throw new Error("SETTLEMENT_IDEMPOTENCY_KEY_INVALID");
+  }
+  if (typeof inputs.currency !== "string" || !/^[A-Z]{3}$/.test(inputs.currency)) {
+    throw new Error("SETTLEMENT_CURRENCY_INVALID");
+  }
+  if (inputs.occurredAt && !Number.isFinite(Date.parse(inputs.occurredAt))) throw new Error("SETTLEMENT_OCCURRED_AT_INVALID");
+  for (const [field, value] of [["grossAmount", inputs.grossAmount], ["directCost", inputs.directCost], ["taxAmount", inputs.taxAmount], ["gatewayFee", inputs.gatewayFee]] as const) {
+    if (!Number.isFinite(value) || value < 0 || Math.abs(Math.round(value * 100) / 100 - value) > 0.000001) {
+      throw new Error("SETTLEMENT_AMOUNT_INVALID:" + field);
+    }
+  }
 
   const gross = round2(inputs.grossAmount);
   const directCost = round2(inputs.directCost);
   const tax = round2(inputs.taxAmount);
   const gateway = round2(inputs.gatewayFee);
 
-  if (gross <= 0) {
-    throw new Error("SETTLEMENT: grossAmount must be positive");
-  }
-  if (directCost < 0 || tax < 0 || gateway < 0) {
-    throw new Error("SETTLEMENT: costs cannot be negative");
-  }
+  if (gross <= 0) throw new Error("SETTLEMENT_GROSS_MUST_BE_POSITIVE");
+  if (directCost + tax + gateway > gross) throw new Error("SETTLEMENT_DEDUCTIONS_EXCEED_GROSS");
 
   const operatingIncome = round2(gross - directCost - tax - gateway);
   const effectiveOperatingIncome = Math.max(0, operatingIncome);
