@@ -1,5 +1,5 @@
 /**
- * Isabella Economic Trust Score (IETS) Engine v4
+ * Isabella Economic Trust Score (IETS) Engine v5
  * state: engine-generated
  * Replaces fixed 5-referral requirement with dynamic multi-factor economic trust scoring.
  */
