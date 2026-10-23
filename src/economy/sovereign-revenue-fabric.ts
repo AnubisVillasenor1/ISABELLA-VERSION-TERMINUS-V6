@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { canEarn, creatorShareBpsForTier, MAX_USER_SHARE_BPS, MIN_USER_SHARE_BPS } from "../commerce/revenue-share";
+import { canEarn, creatorShareBpsForTier, MAX_USER_SHARE_BPS, MIN_USER_SHARE_BPS, splitPlatformRevenue } from "../commerce/revenue-share";
 import type { PlanId, SubscriptionStatus } from "../commerce/types";
 
 /**
@@ -300,9 +300,15 @@ export class IsabellaSovereignRevenueFabric {
       : eligibility.reason.toUpperCase();
     const creatorShareMinor = roundedRatio(distributableMinor, creatorRateBps);
     const platformShareMinor = distributableMinor - creatorShareMinor;
+    const platformShareCents = Number(platformShareMinor);
+    if (!Number.isSafeInteger(platformShareCents)) throw new RangeError("REVENUE_PLATFORM_SHARE_OUT_OF_SAFE_RANGE");
+    const platformAllocation = splitPlatformRevenue(platformShareCents);
+    const phoenixMinor = BigInt(platformAllocation.phoenixFundCents);
+    const infrastructureMinor = BigInt(platformAllocation.infrastructureCents);
+    const daoMinor = BigInt(platformAllocation.daoCents);
 
     const allocationTotal = amounts.directCost + amounts.tax + amounts.gatewayFee +
-      emergencyMinor + innovationMinor + treasuryMinor + creatorShareMinor + platformShareMinor;
+      emergencyMinor + innovationMinor + treasuryMinor + creatorShareMinor + phoenixMinor + infrastructureMinor + daoMinor;
     if (allocationTotal !== amounts.gross) throw new Error("REVENUE_ALLOCATION_INVARIANT_FAILED");
 
     const postings: LedgerPosting[] = [
@@ -314,7 +320,9 @@ export class IsabellaSovereignRevenueFabric {
       this.posting("INNOVATION_VAULT", "CREDIT", innovationMinor, input.currency, "Innovation reserve"),
       this.posting("TREASURY_VAULT", "CREDIT", treasuryMinor, input.currency, "Treasury reserve"),
       this.posting("CREATOR_PAYABLE", "CREDIT", creatorShareMinor, input.currency, "Creator/provider share"),
-      this.posting("PLATFORM_ALLOCATION", "CREDIT", platformShareMinor, input.currency, "Platform allocation"),
+      this.posting("PHOENIX_FUND", "CREDIT", phoenixMinor, input.currency, "20% of platform share"),
+      this.posting("INFRASTRUCTURE_REVENUE", "CREDIT", infrastructureMinor, input.currency, "30% of platform share"),
+      this.posting("DAO_TREASURY", "CREDIT", daoMinor, input.currency, "Remaining 50% of platform share"),
     ].filter((posting) => BigInt(posting.amountMinor) > ZERO);
 
     const debitTotal = postings.filter((p) => p.direction === "DEBIT").reduce((n, p) => n + BigInt(p.amountMinor), ZERO);
