@@ -382,6 +382,12 @@ export class RevenueFabricStorage {
         if (!existingJournal.rows[0] || existingJournal.rows[0].entry_hash !== journal.entryHash) {
           throw new Error("SETTLEMENT_JOURNAL_IDEMPOTENCY_MISMATCH");
         }
+        await client.query(
+          `INSERT INTO outbox_events (aggregate_type, aggregate_id, event_type, event_id, payload, status)
+           VALUES ('Settlement', $1, 'settlement.posted', $1, $2::jsonb, 'PENDING')
+           ON CONFLICT (event_id) DO NOTHING`,
+          [settlement.idempotencyKey, JSON.stringify({ settlement, journal })],
+        );
         await client.query("COMMIT");
         return { idempotent: true };
       }
@@ -439,6 +445,12 @@ export class RevenueFabricStorage {
           settlement.ietsScore, settlement.ietsTier, settlement.policyVersion, settlement.occurredAt,
           settlement.externalPaymentId ?? null, journalId,
         ],
+      );
+      await client.query(
+        `INSERT INTO outbox_events (aggregate_type, aggregate_id, event_type, event_id, payload, status)
+         VALUES ('Settlement', $1, 'settlement.posted', $1, $2::jsonb, 'PENDING')
+         ON CONFLICT (event_id) DO NOTHING`,
+        [settlement.idempotencyKey, JSON.stringify({ settlement, journal })],
       );
       await client.query("COMMIT");
       return { idempotent: false };
