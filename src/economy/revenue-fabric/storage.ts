@@ -223,6 +223,7 @@ export class RevenueFabricStorage {
           subscription_provider VARCHAR(64),
           subscription_external_id VARCHAR(255),
           subscription_current_period_end TIMESTAMPTZ,
+          provider_event_created BIGINT NOT NULL DEFAULT 0,
           last_verified_at TIMESTAMPTZ DEFAULT NOW(),
           created_at TIMESTAMPTZ DEFAULT NOW(),
           updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -909,39 +910,132 @@ export class RevenueFabricStorage {
     }
   }
 
-  async handleStripeWebhook(event: { type: string; data: { object: Record<string, unknown> } }): Promise<void> {
-    // Handle checkout.session.completed, invoice.paid, customer.subscription.updated, etc.
+  async handleStripeWebhook(event: {
+    id: string;
+    created: number;
+    type: string;
+    data: { object: Record<string, unknown> };
+  }): Promise<{ duplicate: boolean; processed: boolean }> {
+    if (!event.id || event.id.length > 255 || !Number.isSafeInteger(event.created) || event.created <= 0) {
+      throw new Error("STRIPE_EVENT_METADATA_INVALID");
+    }
     const client = await this.pool.connect();
     try {
       await client.query("BEGIN");
-      
+      const claimed = await client.query(
+        \`INSERT INTO inbox_events (event_id, consumer_name, processed_at)
+         VALUES ($1, 'stripe-revenue-fabric', NOW())
+         ON CONFLICT (event_id) DO NOTHING
+         RETURNING event_id\`,
+        [event.id],
+      );
+      if (claimed.rowCount === 0) {
+        await client.query("COMMIT");
+        return { duplicate: true, processed: false };
+      }
+
       if (event.type === "checkout.session.completed") {
-        const session = event.data.object as { 
-          metadata?: { userId?: string; planCode?: string }; 
-          customer?: string;
+        const session = event.data.object as {
           id?: string;
+          mode?: string;
+          payment_status?: string;
+          metadata?: { userId?: string; planCode?: string };
         };
-        const userId = session.metadata?.userId;
-        const planCode = session.metadata?.planCode;
-        
-        if (userId && planCode) {
-          // Update subscription status
-          await this.setEarnEligibility(userId, true, "PROFESSIONAL", {
-            provider: "stripe",
-            externalId: session.customer ?? "",
-            periodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-          });
-          
+        if (session.mode === "subscription" && (session.payment_status === "paid" || session.payment_status === "no_payment_required")) {
+          const userId = session.metadata?.userId;
+          const planCode = session.metadata?.planCode;
+          if (!userId || !["premium", "vip", "enterprise"].includes(planCode ?? "")) {
+            throw new Error("STRIPE_CHECKOUT_METADATA_INVALID");
+          }
           await client.query(
-            `UPDATE stripe_checkout_sessions SET status = 'completed', completed_at = NOW() WHERE session_id = $1`,
-            [session.id ?? ""]
+            \`UPDATE stripe_checkout_sessions
+             SET status = 'completed', completed_at = NOW(), status_detail = 'checkout_completed_waiting_for_subscription_event'
+             WHERE session_id = $1 AND user_id = $2 AND plan_code = $3\`,
+            [session.id ?? "", userId, planCode],
           );
         }
+      } else if ([
+        "customer.subscription.created",
+        "customer.subscription.updated",
+        "customer.subscription.deleted",
+      ].includes(event.type)) {
+        const subscription = event.data.object as {
+          id?: string;
+          customer?: string | { id?: string };
+          status?: string;
+          current_period_end?: number;
+          metadata?: { userId?: string; planCode?: string };
+        };
+        const userId = subscription.metadata?.userId;
+        const planCode = subscription.metadata?.planCode;
+        const subscriptionId = subscription.id;
+        if (!userId || userId.length > 255 || !subscriptionId
+          || !["premium", "vip", "enterprise"].includes(planCode ?? "")) {
+          throw new Error("STRIPE_SUBSCRIPTION_METADATA_INVALID");
+        }
+
+        const rawStatus = event.type === "customer.subscription.deleted" ? "canceled" : subscription.status;
+        const status = rawStatus === "active" ? "active"
+          : rawStatus === "trialing" ? "trialing"
+          : rawStatus === "past_due" || rawStatus === "unpaid" ? "past_due"
+          : rawStatus === "paused" ? "suspended"
+          : "canceled";
+        const periodEnd = typeof subscription.current_period_end === "number"
+          ? new Date(subscription.current_period_end * 1000)
+          : null;
+        const unexpired = periodEnd !== null && Number.isFinite(periodEnd.getTime()) && periodEnd.getTime() > Date.now();
+        const eligible = planCode !== "free" && status === "active" && unexpired;
+        const customerId = typeof subscription.customer === "string"
+          ? subscription.customer
+          : subscription.customer?.id ?? null;
+
+        await client.query(
+          \`INSERT INTO commerce_subscriptions
+           (workspace_id, plan_code, status, provider, external_ref, provider_customer_id,
+            current_period_end, provider_event_created, created_at, updated_at)
+           VALUES ($1, $2, $3, 'stripe', $4, $5, $6, $7, NOW(), NOW())
+           ON CONFLICT (workspace_id) DO UPDATE SET
+             plan_code = EXCLUDED.plan_code,
+             status = EXCLUDED.status,
+             provider = EXCLUDED.provider,
+             external_ref = EXCLUDED.external_ref,
+             provider_customer_id = EXCLUDED.provider_customer_id,
+             current_period_end = EXCLUDED.current_period_end,
+             provider_event_created = EXCLUDED.provider_event_created,
+             updated_at = NOW()
+           WHERE commerce_subscriptions.provider_event_created < EXCLUDED.provider_event_created\`,
+          [userId, planCode, status, subscriptionId, customerId, periodEnd, event.created],
+        );
+
+        await client.query(
+          \`INSERT INTO wallet_eligibility
+           (user_id, can_earn, tier, subscription_status, subscription_provider,
+            subscription_external_id, subscription_current_period_end, provider_event_created)
+           VALUES ($1, $2, 'STARTER', $3, 'stripe', $4, $5, $6)
+           ON CONFLICT (user_id) DO UPDATE SET
+             can_earn = EXCLUDED.can_earn,
+             subscription_status = EXCLUDED.subscription_status,
+             subscription_provider = EXCLUDED.subscription_provider,
+             subscription_external_id = EXCLUDED.subscription_external_id,
+             subscription_current_period_end = EXCLUDED.subscription_current_period_end,
+             provider_event_created = EXCLUDED.provider_event_created,
+             last_verified_at = NOW(),
+             updated_at = NOW()
+           WHERE wallet_eligibility.provider_event_created < EXCLUDED.provider_event_created\`,
+          [userId, eligible, status, subscriptionId, periodEnd, event.created],
+        );
       }
-      
+
+      await client.query(
+        \`INSERT INTO outbox_events (aggregate_type, aggregate_id, event_type, event_id, payload, status)
+         VALUES ('StripeEvent', $1, $2, $3, $4::jsonb, 'PENDING')
+         ON CONFLICT (event_id) DO NOTHING\`,
+        [event.id, event.type, "stripe:" + event.id, JSON.stringify(event)],
+      );
       await client.query("COMMIT");
+      return { duplicate: false, processed: true };
     } catch (error) {
-      await client.query("ROLLBACK");
+      await client.query("ROLLBACK").catch(() => undefined);
       throw error;
     } finally {
       client.release();
