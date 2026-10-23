@@ -3474,6 +3474,16 @@ registerRevenueFabricRoutes({
   providerTimeoutMs: Math.max(30_000, 30_000),
   authorizeAdmin: (req, res) => authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN"),
   authorizeProviderRoute: (req, res) => authorizeProviderRoute(req, res),
+  resolveCreatorEligibility: async (workspaceId) => {
+    const subscription = await subscriptionStore.get(workspaceId);
+    if (!subscription) return null;
+    const end = subscription.currentPeriodEnd ? Date.parse(subscription.currentPeriodEnd) : Number.NaN;
+    const unexpired = Number.isFinite(end) && end > Date.now();
+    return {
+      plan: subscription.planCode,
+      status: unexpired ? subscription.status : "canceled",
+    };
+  },
 });
 
 // ── ISABELLA-Q Ω: New Cognitive Architecture Routes ──
