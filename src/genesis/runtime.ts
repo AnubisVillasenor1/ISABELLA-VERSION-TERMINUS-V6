@@ -103,7 +103,7 @@ import type { KnowledgeClaim } from '../memory/ikes';
 import { ProtocolRegistry, PROTOCOL_CATALOG } from '../protocols';
 import { GenesisModuleRegistry } from '../modules';
 import { CANONICAL_TOOLS, DETERMINISTIC_TOOLS, PROTOCOL_TOOLS } from '../tools';
-import { CANONICAL_SKILLS, FOUNDATIONAL_SKILLS } from '../skills';
+import { CANONICAL_SKILLS, EVOLVED_SKILL_DESCRIPTORS, FOUNDATIONAL_SKILLS } from '../skills';
 import {
   assessEpistemicState,
   passesEriGate,
@@ -324,7 +324,11 @@ export class IsabellaGenesisRuntime {
       if (this.tools.list().some((t) => t.id === tool.id)) continue;
       this.tools.register(tool);
     }
-    for (const skill of [...CANONICAL_SKILLS, ...FOUNDATIONAL_SKILLS]) {
+    for (const skill of [
+      ...CANONICAL_SKILLS,
+      ...FOUNDATIONAL_SKILLS,
+      ...EVOLVED_SKILL_DESCRIPTORS,
+    ]) {
       if (this.skills.list().some((s) => s.id === skill.id)) continue;
       this.skills.register(skill);
     }

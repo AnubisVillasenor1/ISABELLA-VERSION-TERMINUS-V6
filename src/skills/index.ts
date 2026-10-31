@@ -9,6 +9,13 @@ export {
 export { CANONICAL_SKILLS } from './catalog';
 export { FOUNDATIONAL_SKILLS } from './foundational';
 export {
+  EVOLVED_SKILL_DESCRIPTORS,
+  toEvolvedSkillDescriptor,
+  evolvedMethodId,
+  EVOLVED_BRIDGE_VERSION,
+  EVOLVED_SCOPE,
+} from './evolved-bridge';
+export {
   type SkillContract,
   type SkillAuthority,
   type EvidencePolicy,
