@@ -14,6 +14,7 @@ import {
   type IsabellaSkill,
 } from '../lib/lib/skill-registry';
 import { capabilityRegistry, type CapabilityState } from '../lib/lib/capability-registry';
+import { bindingView, catalogCoherence } from '../skills/catalog-coherence';
 
 export const SKILL_CATALOG_ROUTES_VERSION = '1.0.0' as const;
 export const SKILL_CATALOG_DISCLOSURE =
@@ -48,10 +49,23 @@ interface SkillView {
   readonly skillStatus: IsabellaSkill['status'];
   readonly passesRegistryGate: boolean;
   readonly requiredScopes: readonly string[];
+  /** True solo si existe un handler canónico enlazado bajo este id. */
+  readonly handlerBound: boolean;
+  /** Id del registry ejecutable, o null si la declaración no tiene ejecución. */
+  readonly executableId: string | null;
+  /** Pseudónimo de otra entrada del catálogo: no es una capacidad adicional. */
+  readonly aliasOf: string | null;
+  /** El estado declarado está soportado por evidencia de enlace. */
+  readonly claimSupported: boolean;
+  /** Entrada del catálogo invocable; si es falsa, es declaración de subsistema. */
+  readonly invocable: boolean;
+  /** El estado declarado afirma que ya hay algo ejecutable detrás. */
+  readonly declaresExecution: boolean;
 }
 
 function toSkillView(skill: IsabellaSkill): SkillView {
   const capabilityState = capabilityRegistry.stateOf(skill.capability);
+  const binding = bindingView(skill.id);
   return {
     id: skill.id,
     name: skill.name,
@@ -64,6 +78,12 @@ function toSkillView(skill: IsabellaSkill): SkillView {
     passesRegistryGate:
       capabilityRegistry.isOperational(skill.capability) || skill.status === 'experimental',
     requiredScopes: skill.requiredScopes,
+    handlerBound: binding?.handlerBound ?? false,
+    executableId: binding?.executableId ?? null,
+    aliasOf: binding?.aliasOf ?? null,
+    claimSupported: binding?.claimSupported ?? false,
+    invocable: binding?.invocable ?? false,
+    declaresExecution: binding?.declaresExecution ?? false,
   };
 }
 
@@ -75,6 +95,15 @@ function catalogBody(): {
     passingRegistryGate: number;
     blockedByRegistryGate: number;
     capabilityStates: Record<string, CapabilityState>;
+    declared: number;
+    executable: number;
+    bound: number;
+    unbound: number;
+    aliases: number;
+    distinctCapabilities: number;
+    invocable: number;
+    invocableBound: number;
+    unsupportedClaims: readonly string[];
   };
   groups: Array<{ folder: string; items: SkillView[] }>;
 } {
@@ -88,6 +117,7 @@ function catalogBody(): {
   for (const skill of ISABELLA_SKILLS) {
     capabilityStates[skill.capability] = capabilityRegistry.stateOf(skill.capability);
   }
+  const coherence = catalogCoherence();
   return {
     version: SKILL_CATALOG_ROUTES_VERSION,
     disclosure: SKILL_CATALOG_DISCLOSURE,
@@ -96,6 +126,15 @@ function catalogBody(): {
       passingRegistryGate: passing,
       blockedByRegistryGate: views.length - passing,
       capabilityStates,
+      declared: coherence.declared,
+      executable: coherence.executable,
+      bound: coherence.bound,
+      unbound: coherence.unbound,
+      aliases: coherence.aliases,
+      distinctCapabilities: coherence.distinctCapabilities,
+      invocable: coherence.invocable,
+      invocableBound: coherence.invocableBound,
+      unsupportedClaims: coherence.unsupportedClaims,
     },
     groups,
   };

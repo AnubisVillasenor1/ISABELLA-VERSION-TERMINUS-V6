@@ -16,6 +16,14 @@ export {
   EVOLVED_SCOPE,
 } from './evolved-bridge';
 export {
+  catalogCoherence,
+  executableSkillIds,
+  normalizeSkillKey,
+  CATALOG_COHERENCE_VERSION,
+  type CatalogBinding,
+  type CatalogCoherence,
+} from './catalog-coherence';
+export {
   type SkillContract,
   type SkillAuthority,
   type EvidencePolicy,

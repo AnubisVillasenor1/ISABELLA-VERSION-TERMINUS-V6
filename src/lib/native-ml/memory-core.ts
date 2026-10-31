@@ -160,7 +160,12 @@ export class IsabellaMemoryCore {
     return this.normalize(out);
   }
 
-  /** Circular correlation — the inverse of bind (clean algebra cancels exactly). */
+  /**
+   * Circular correlation con la inversa temporal de `a`, que es lo que cancela la
+   * convolución de `bind`: en el dominio de la frecuencia multiplica por el conjugado
+   * de `a`, no por `a`. Sin la inversión el resultado es ortogonal al componente y la
+   * recuperación asociativa no devuelve nada.
+   */
   unbind(a: HyperVector, b: HyperVector): HyperVector {
     this.assertDimension(a);
     this.assertDimension(b);
