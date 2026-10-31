@@ -23,6 +23,12 @@ export interface FoundationalAttempt {
   reason?: string;
 }
 
+export type FoundationalAttempt = {
+  provider: 'ai-gateway' | 'runtime';
+  status: 'success' | 'failure' | 'skipped';
+  reason?: 'PROVIDER_TIMEOUT' | 'PROVIDER_UNAVAILABLE' | 'EMPTY_PROVIDER_RESPONSE' | 'CIRCUIT_OPEN';
+};
+
 export interface FoundationalResult {
   text: string;
   engine: 'foundational' | 'sovereign-fallback';

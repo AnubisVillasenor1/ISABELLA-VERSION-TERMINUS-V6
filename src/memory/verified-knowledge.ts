@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { MongoClient, type Collection, type Document } from 'mongodb';
 import type { EpistemicState } from './ikes';
 
 export const CONFIDENCE_LEVELS = ['E0', 'E1', 'E2', 'E3', 'E4', 'E5', 'E6'] as const;
@@ -51,9 +52,24 @@ interface SupabaseBackendConfig {
   readonly serviceRoleKey: string;
 }
 
-function supabaseConfigFromEnv(): SupabaseBackendConfig | null {
-  const url = process.env.SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+interface MongoBackendConfig {
+  readonly uri: string;
+  readonly databaseName?: string;
+}
+
+interface MongoVerifiedKnowledgeDocument extends Document {
+  readonly _id: string;
+  readonly content: string;
+  readonly source: string;
+  readonly verifiedAt: string | Date;
+  readonly confidenceLevel: ConfidenceLevel;
+}
+
+function supabaseConfigFromEnv(
+  env: Readonly<Record<string, string | undefined>>
+): SupabaseBackendConfig | null {
+  const url = env.SUPABASE_URL?.trim();
+  const serviceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY?.trim();
   if (!url || !serviceRoleKey) return null;
   return { url: url.replace(/\/+$/, ''), serviceRoleKey };
 }
@@ -66,7 +82,7 @@ export class SupabaseVerifiedKnowledgeBackend implements VerifiedKnowledgeBacken
       apikey: this.config.serviceRoleKey,
       Authorization: `Bearer ${this.config.serviceRoleKey}`,
       'Content-Type': 'application/json',
-      Prefer: 'return=representation',
+      Prefer: 'resolution=ignore-duplicates,return=minimal',
     };
   }
 
@@ -81,6 +97,7 @@ export class SupabaseVerifiedKnowledgeBackend implements VerifiedKnowledgeBacken
         verified_at: entry.verifiedAt,
         confidence_level: entry.confidenceLevel,
       }),
+      signal: AbortSignal.timeout(8_000),
     });
     if (!response.ok) {
       throw new Error(`VERIFIED_KNOWLEDGE_BACKEND_SAVE_FAILED_${response.status}`);
@@ -90,27 +107,138 @@ export class SupabaseVerifiedKnowledgeBackend implements VerifiedKnowledgeBacken
   async loadAll(): Promise<readonly VerifiedKnowledgeEntry[]> {
     const response = await fetch(
       `${this.config.url}/rest/v1/verified_knowledge?select=*&order=verified_at.desc&limit=5000`,
-      { headers: this.headers }
+      { headers: this.headers, signal: AbortSignal.timeout(8_000) }
     );
     if (!response.ok) {
       throw new Error(`VERIFIED_KNOWLEDGE_BACKEND_LOAD_FAILED_${response.status}`);
     }
-    const rows = (await response.json()) as readonly Record<string, unknown>[];
-    return rows.map((row) => ({
-      id: String(row.id ?? ''),
-      content: String(row.content ?? ''),
-      source: String(row.source ?? ''),
-      verifiedAt: String(row.verified_at ?? ''),
-      confidenceLevel: String(row.confidence_level ?? 'E0') as ConfidenceLevel,
-    }));
+    const rows: unknown = await response.json();
+    if (!Array.isArray(rows)) throw new Error('VERIFIED_KNOWLEDGE_BACKEND_RESPONSE_INVALID');
+    return rows.flatMap((value: unknown) => {
+      if (typeof value !== 'object' || value === null || Array.isArray(value)) return [];
+      const row = value as Record<string, unknown>;
+      const id = typeof row.id === 'string' ? row.id : '';
+      const content = typeof row.content === 'string' ? row.content : '';
+      const source = typeof row.source === 'string' ? row.source : '';
+      const verifiedAt = typeof row.verified_at === 'string' ? row.verified_at : '';
+      const confidenceLevel = row.confidence_level;
+      if (!id || !content || !source || !verifiedAt || !isValidConfidenceLevel(confidenceLevel))
+        return [];
+      return [{ id, content, source, verifiedAt, confidenceLevel }];
+    });
   }
 }
 
-export function createVerifiedKnowledgeBackend(): VerifiedKnowledgeBackend {
-  const config = supabaseConfigFromEnv();
-  return config
-    ? new SupabaseVerifiedKnowledgeBackend(config)
-    : new InMemoryVerifiedKnowledgeBackend();
+export class MongoVerifiedKnowledgeBackend implements VerifiedKnowledgeBackend {
+  private clientPromise: Promise<MongoClient> | null = null;
+
+  constructor(
+    private readonly config: MongoBackendConfig,
+    private readonly client: MongoClient = new MongoClient(config.uri, {
+      serverSelectionTimeoutMS: 8_000,
+      connectTimeoutMS: 8_000,
+      maxPoolSize: 5,
+    })
+  ) {}
+
+  private async collection(): Promise<Collection<MongoVerifiedKnowledgeDocument>> {
+    if (!this.clientPromise) {
+      this.clientPromise = this.client.connect().catch((error: unknown) => {
+        this.clientPromise = null;
+        throw error;
+      });
+    }
+    const client = await this.clientPromise;
+    return client
+      .db(this.config.databaseName)
+      .collection<MongoVerifiedKnowledgeDocument>('verified_knowledge');
+  }
+
+  async save(entry: VerifiedKnowledgeEntry): Promise<void> {
+    const collection = await this.collection();
+    await collection.updateOne(
+      { _id: entry.id },
+      {
+        $setOnInsert: {
+          _id: entry.id,
+          content: entry.content,
+          source: entry.source,
+          verifiedAt: entry.verifiedAt,
+          confidenceLevel: entry.confidenceLevel,
+        },
+      },
+      { upsert: true }
+    );
+  }
+
+  async loadAll(): Promise<readonly VerifiedKnowledgeEntry[]> {
+    const collection = await this.collection();
+    const documents = await collection
+      .find({})
+      .sort({ verifiedAt: -1, _id: 1 })
+      .limit(5_000)
+      .toArray();
+    return documents.flatMap((document) => {
+      const verifiedAt =
+        document.verifiedAt instanceof Date
+          ? document.verifiedAt.toISOString()
+          : document.verifiedAt;
+      if (
+        !document._id ||
+        !document.content.trim() ||
+        !document.source.trim() ||
+        !Number.isFinite(Date.parse(verifiedAt)) ||
+        !isValidConfidenceLevel(document.confidenceLevel)
+      ) {
+        return [];
+      }
+      return [
+        {
+          id: document._id,
+          content: document.content,
+          source: document.source,
+          verifiedAt,
+          confidenceLevel: document.confidenceLevel,
+        },
+      ];
+    });
+  }
+
+  async close(): Promise<void> {
+    if (!this.clientPromise) return;
+    await this.client.close();
+    this.clientPromise = null;
+  }
+}
+
+export type VerifiedKnowledgeProvider = 'mongodb' | 'supabase' | 'memory';
+
+export function createVerifiedKnowledgeBackend(
+  env: Readonly<Record<string, string | undefined>> = process.env
+): VerifiedKnowledgeBackend {
+  const provider =
+    env.ISABELLA_VERIFIED_KNOWLEDGE_BACKEND?.trim().toLowerCase() ||
+    (env.NODE_ENV === 'test' ? 'memory' : 'mongodb');
+
+  switch (provider) {
+    case 'mongodb': {
+      const uri = env.MONGODB_URI?.trim();
+      if (!uri) throw new Error('VERIFIED_KNOWLEDGE_MONGODB_URI_MISSING');
+      return new MongoVerifiedKnowledgeBackend({
+        uri,
+        databaseName: env.MONGODB_DATABASE?.trim() || undefined,
+      });
+    }
+    case 'supabase': {
+      const config = supabaseConfigFromEnv(env);
+      if (!config) throw new Error('VERIFIED_KNOWLEDGE_SUPABASE_CONFIG_MISSING');
+      return new SupabaseVerifiedKnowledgeBackend(config);
+    }
+    case 'memory':
+      return new InMemoryVerifiedKnowledgeBackend();
+    default:
+      throw new Error('VERIFIED_KNOWLEDGE_BACKEND_INVALID');
+  }
 }
 
 export function toConfidenceLevel(state: EpistemicState): ConfidenceLevel | null {

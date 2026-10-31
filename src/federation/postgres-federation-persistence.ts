@@ -115,14 +115,18 @@ export class PostgresFederationPersistence implements FederationPersistence {
   }
 
   async hydrate(): Promise<FederationFile> {
-    const connectors = await this.client.query(SELECT_CONNECTORS_SQL);
-    const inbox = await this.client.query(SELECT_INBOX_SQL, [MAX_INBOX]);
-    return {
-      connectors: connectors.rows
-        .map(toConnector)
-        .filter((row): row is ConnectorRecord => row !== null),
-      inbox: inbox.rows.map(toInbox).filter((row): row is InboxEntry => row !== null),
-    };
+    const connectorResult = await this.client.query(SELECT_CONNECTORS_SQL);
+    const inboxResult = await this.client.query(SELECT_INBOX_SQL, [MAX_INBOX]);
+    const connectors = connectorResult.rows
+      .map(toConnector)
+      .filter((row): row is ConnectorRecord => row !== null);
+    const connectorKinds = new Map(connectors.map((connector) => [connector.id, connector.kind]));
+    const inbox = inboxResult.rows
+      .map(toInbox)
+      .filter(
+        (row): row is InboxEntry => row !== null && connectorKinds.get(row.connectorId) === row.kind
+      );
+    return { connectors, inbox };
   }
 
   /** Kept for contract compatibility; the registry writes one row per operation. */

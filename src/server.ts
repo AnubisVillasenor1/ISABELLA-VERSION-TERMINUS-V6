@@ -96,6 +96,8 @@ import { verifyBearerToken } from './security/api-token';
 import { FixedWindowRateLimiter } from './security/rate-limit';
 import { createDefaultApiKeyStore } from './security/isabella-api-keys';
 import { createOptionalApiKeyAuthenticator, registerApiKeyRoutes } from './routes/api-keys';
+import { appDb } from './database/app-db';
+import { registerPersistentChatRoutes } from './routes/persistent-chat';
 import { createDefaultFederationRegistry } from './federation/connectors';
 import { registerFederationRoutes } from './routes/federation';
 import { hashSourceContent } from './memory/ikes';
@@ -1535,6 +1537,8 @@ function enforceRateLimit(
   }
   return true;
 }
+
+registerPersistentChatRoutes(app, appDb, new FixedWindowRateLimiter(90, 60_000));
 
 /**
  * HyperCore Turbo provider gate. External inference calls run behind a bounded
