@@ -193,15 +193,79 @@ corepack pnpm run build
 corepack pnpm run deploy:readiness
 ```
 
-Puertas duras del inventario y del canon: `test/deployment/route-inventory.test.ts` (las 314 rutas registradas en `src/` están congeladas; una extracción de módulo no puede perder ni renombrar un endpoint), `test/deployment/openapi-contract.test.ts` (ninguna operación documentada en `docs/api/openapi.yaml` puede ser fantasma: hoy 75 operaciones), `test/deployment/env-documentation.test.ts` y `test/deployment/readiness-consistency.test.ts`. La suite del Kaos Audio System son 8 archivos y 125 pruebas, con oráculo DFT ingenuo que valida la FFT y regresiones explícitas de los dos errores que ya se corrigieron.
+Puertas duras del inventario y del canon: `test/deployment/route-inventory.test.ts` (las 327 rutas registradas en `src/` están congeladas; una extracción de módulo no puede perder ni renombrar un endpoint, y ningún literal puede registrarse en dos módulos), `test/deployment/openapi-contract.test.ts` (ninguna operación documentada en `docs/api/openapi.yaml` puede ser fantasma: hoy 75 operaciones), `test/deployment/env-documentation.test.ts` y `test/deployment/readiness-consistency.test.ts`. La suite del Kaos Audio System son 7 archivos y 105 casos, con oráculo DFT ingenuo que valida la FFT y regresiones explícitas de los dos errores que ya se corrigieron. En total el repositorio tiene 379 archivos `*.test.ts` y 1 125 archivos `.ts` bajo `src/` (548 excluyendo la isla `src/lib/**`).
 
 El inventario se regenera con `node scripts/route-inventory.mjs`; las columnas Auth/Rate-limit/Validación son heurísticas de análisis estático, no pruebas en ejecución.
+
+## Habilidades: catálogo declarado vs. registro ejecutable
+
+`src/skills/catalog-coherence.ts` reconcilia las dos listas que antes convivían sin compararse, y es la compuerta que cierra AUD-233. Medido sobre este SHA:
+
+| Magnitud | Valor |
+|---|---|
+| Entradas declaradas en `ISABELLA_SKILLS` | 41 |
+| Ids realmente registrables | 33 (6 canónicas + 5 fundacionales + 22 evolucionadas) |
+| Invocables (llevan `skillNumber`) | 25 |
+| Invocables con handler enlazado | 22 + 3 alias = 25 |
+| Afirmaciones de ejecución sin soporte | 0 |
+| Descripciones de subsistema sin promesa de ejecución | 16 |
+
+La regla no es un texto: una entrada con `skillNumber` afirma una habilidad invocable y por eso exige handler enlazado; una entrada sin número declara la madurez de un subsistema (CROWN, ARGUS, memoria territorial, síntesis de voz, la familia `monetization/*`) y no promete ejecución. `GET /api/v1/skills` expone por cada habilidad `invocable`, `handlerBound`, `executableId`, `aliasOf` y `claimSupported`, además del resumen agregado, para que el cliente no tenga que adivinar qué hay detrás de un `status: verified`. `test/skills/catalog-coherence.test.ts` falla si aparece una afirmación sin handler.
+
+Ejecución real: `POST /api/v1/hypercore/skills/execute` (`src/routes/hypercore.ts:196`) pasa por `authorizeApiToken`, por su propia ventana de rate limit y por el `SkillRegistry`, que sólo corre una skill cuyo descriptor está enlazado. Las 22 evolucionadas se exponen en `tools/list` del puente MCP con su huella de procedencia.
+
+## Dependencias: por qué el `pnpm audit` fallaba
+
+`pnpm@10.28.0` (la versión fijada en `packageManager`) no lee el campo `pnpm` de `package.json`; lo ignora con aviso explícito:
+
+```text
+WARN  The "pnpm" field in package.json is no longer read by pnpm.
+      The following keys were ignored: "pnpm.overrides".
+```
+
+Las remediaciones del repo vivían ahí, así que en CI no se aplicaba ninguna. Ahora viven en [`pnpm-workspace.yaml`](pnpm-workspace.yaml), que sí es la fuente que pnpm 10 consulta, y cada override está acotado a la línea que reporta el aviso (`qs@>=6.7.0 <6.16.1`, `minimatch@>=10.0.0 <11.0.1`) porque un `<` sin cota superior reescribiría también los majors que esperan eslint o vitest.
+
+Además `@prisma/client` y `prisma` estaban declarados sin que ningún archivo del repo los importe (`src/` no tiene ni un `import` de `@prisma/*`, no hay `schema.prisma` ni carpeta `prisma/`). Como `drizzle-orm` los lista como peer opcional y `autoInstallPeers` está activo, esa dependencia muerta arrastraba la cadena `prisma → @prisma/composer-cli → alchemy@2.0.0-beta.83 → {@prisma/dev → @hono/node-server, @vercel/nft → glob}` al grafo de producción, que era justo la que `pnpm audit --prod` reporta. Se eliminaron ambas.
+
+Resultado medido tras regenerar `pnpm-lock.yaml` y validarlo con `pnpm install --frozen-lockfile`:
+
+```text
+$ pnpm audit --prod --audit-level=moderate
+No known vulnerabilities found        # exit 0
+```
+
+Queda un aviso `moderate` en el grafo de desarrollo (`eslint → minimatch@9`, GHSA-g3hv-75wg-m249). No bloquea el gate del CI, que es `--prod`; se dejó deliberadamente sin forzar porque subir minimatch 9 → 11 dentro de eslint es cambiar el instrumento con el que se verifica el resto. Es un elemento abierto, no resuelto.
+
+## Estado real del CI
+
+Las tres comprobaciones que dependen de GitHub Actions no han llegado a ejecutarse nunca en este repositorio por un bloqueo de facturación de la cuenta; la anotación del check-run lo dice literalmente:
+
+```text
+The job was not started because your account is locked due to a billing issue.
+```
+
+Los jobs figuran con ~2 s, `steps: []` y `runner_name` vacío, y su log responde 404 `BlobNotFound`. Ningún cambio de código puede volver verdes esas comprobaciones mientras el bloqueo exista; se reproducen localmente, paso por paso, las que sí se pueden ejecutar:
+
+| Paso del workflow | Resultado local |
+|---|---|
+| `pnpm run lint` (`--max-warnings=0`) | 0 errores, 0 avisos |
+| `pnpm run format:check` | verde tras normalizar 3 archivos con Prettier |
+| `pnpm run typecheck` | sin errores propios: los residuales son `Cannot find module` de `node_modules` obsoleto en esta máquina, y `@supabase/supabase-js`, `drizzle-orm` y `mongodb` están declarados en `package.json` y en el lockfile, que es lo que instala CI con `--frozen-lockfile` |
+| `pnpm run check:env` / `check:sops` | exit 0 |
+| `node scripts/generate-status.mjs --check` | exit 0 |
+| `pnpm run security:suite` | 14 passed, 0 failed, 0 not_applicable |
+| `pnpm audit --prod --audit-level=moderate` | 0 vulnerabilidades conocidas |
+| `vitest run` (14 archivos tocados por estos cambios) | 100 pruebas en verde |
+| Suite completa `vitest run` | 92 de 100 fallos son de esta máquina, no del repo: `node:crypto` de este runtime no ofrece `sha3-512` (`getHashes()` lo confirma) y `src/bookpi/crypto.ts` sí lo exige |
+| IGE-Ω `cargo fmt`/`clippy`/`test`/`build` | no verificable aquí: no hay `cargo` ni `rustc` instalados |
+
+El escaneo Trivy del mismo job (`severity: CRITICAL,HIGH`) queda cubierto de forma indirecta: el único `high` del grafo de producción era `@hono/node-server` dentro de la cadena de Prisma, ya eliminada.
 
 ## Avance
 
 Avance global de implementación: no publicado como porcentaje único. Mientras no exista un denominador de requisitos ponderados y reproducible, una cifra agregada sería especulación y no se presenta como hecho.
 
-Lo que sí es verificable en este SHA: typecheck sin errores, 314 rutas congeladas, 75 operaciones OpenAPI sin fantasmas, superficie TAMV montada en `src/server.ts` con autorización, rate limit, ledger y blackout, y su suite de 125 pruebas en verde. Estado documentado y limitaciones: [`docs/ESTADO-REAL-ACTUAL.md`](docs/ESTADO-REAL-ACTUAL.md).
+Lo que sí es verificable en este SHA: lint y formato en verde, 327 rutas congeladas, 75 operaciones OpenAPI sin fantasmas, la compuerta de coherencia del catálogo con 0 afirmaciones sin soporte, `security:suite` 14/14, `pnpm audit --prod` limpio y superficie TAMV montada en `src/server.ts` con autorización, rate limit, ledger y blackout. Estado documentado y limitaciones: [`docs/ESTADO-REAL-ACTUAL.md`](docs/ESTADO-REAL-ACTUAL.md).
 
 ## Despliegue en Vercel
 

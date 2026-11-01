@@ -128,9 +128,8 @@ function buildCoherence(): CatalogCoherence {
     aliases,
     distinctCapabilities: items.length - aliases,
     invocable: invocableItems.length,
-    invocableBound: invocableItems.filter(
-      (item) => item.handlerBound && item.aliasOf === null
-    ).length,
+    invocableBound: invocableItems.filter((item) => item.handlerBound && item.aliasOf === null)
+      .length,
     unsupportedClaims: items
       .filter((item) => !item.claimSupported)
       .map((item) => item.id)

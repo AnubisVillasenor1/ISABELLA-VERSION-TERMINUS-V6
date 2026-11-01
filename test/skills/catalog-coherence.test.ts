@@ -80,7 +80,9 @@ describe('coherencia catálogo ↔ registro ejecutable', () => {
   it('bindingView devuelve null para un id inexistente y la vista real para uno declarado', () => {
     expect(bindingView('no-existe-ninguna-skill')).toBeNull();
     const evolved = EVOLVED_SKILL_DESCRIPTORS[0];
-    const declared = ISABELLA_SKILLS.find((skill) => normalizeSkillKey(skill.id) === normalizeSkillKey(evolved.id));
+    const declared = ISABELLA_SKILLS.find(
+      (skill) => normalizeSkillKey(skill.id) === normalizeSkillKey(evolved.id)
+    );
     expect(declared).toBeDefined();
     const view = bindingView(declared!.id);
     expect(view?.handlerBound).toBe(true);
