@@ -56,9 +56,12 @@ export class MeteringService {
   }
 
   private startFlushTimer(): void {
+    // `unref()`: el flush es mantenimiento. Un temporizador ref'd impediría terminar a
+    // cualquier proceso que importe la app (el smoke de `build:dist` cuelga así).
     this.flushTimer = setInterval(() => {
       this.aggregatePendingEvents();
     }, this.config.flushIntervalMs);
+    this.flushTimer.unref();
   }
 
   stop(): void {

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   collectDependencyReadiness,
   probeBookPiLedger,
+  probeMethodIdConformance,
   type FilesystemProbe,
 } from "../../src/health/dependency-readiness";
 
@@ -21,7 +22,7 @@ describe("deep dependency readiness", () => {
     expect(report.readiness.ready).toBe(false);
     expect(report.readiness.status).not.toBe("healthy");
     expect(report.readiness.blockers).toContain("bookpi-ledger:degraded");
-    expect(report.evidence).toHaveLength(5);
+    expect(report.evidence).toHaveLength(6);
   });
 
   it("reports ready only when every dependency probe is healthy", () => {
@@ -65,5 +66,28 @@ describe("deep dependency readiness", () => {
     const report = collectDependencyReadiness({ OLLAMA_API_KEY: "configured" }, writableFilesystem);
     const inference = report.evidence.find((entry) => entry.dependency === "inference-provider");
     expect(inference?.status).toBe("healthy");
+  });
+
+  it("blocks readiness when a gated capability declares a non-canonical methodId", () => {
+    const offenders = probeMethodIdConformance([
+      "T.TOURISM.E04_TERRITORY.query.v1.0.0.LOW.TERRITORIAL",
+      "A.COGNITION.E14_COGNITIVE_SAFETY.mediate_isabella.v2.0.0.LOW.CONSTITUTIONAL",
+    ]);
+    expect(offenders.status).toBe("unavailable");
+    expect(offenders.required).toBe(true);
+    expect(offenders.detail).toContain("A.COGNITION.E14_COGNITIVE_SAFETY");
+
+    const report = collectDependencyReadiness(fullyConfigured, writableFilesystem, new Date("2026-11-01T00:00:00Z"), [
+      "A.COLLECTIVE_INTELLIGENCE.E14_COGNITIVE_SAFETY.mediate_isabella.v2.0.0.LOW.CONSTITUTIONAL",
+    ]);
+    expect(report.readiness.ready).toBe(true);
+    expect(report.readiness.blockers).toEqual([]);
+    expect(report.evidence.find((entry) => entry.dependency === "method-id-conformance")?.status).toBe("healthy");
+
+    const blocked = collectDependencyReadiness(fullyConfigured, writableFilesystem, new Date("2026-11-01T00:00:00Z"), [
+      "Q.QUANTUM.E20_EXECUTION.execute_pennylane.v1.0.0.MEDIUM.INSTITUTIONAL",
+    ]);
+    expect(blocked.readiness.ready).toBe(false);
+    expect(blocked.readiness.blockers).toContain("method-id-conformance:unavailable");
   });
 });

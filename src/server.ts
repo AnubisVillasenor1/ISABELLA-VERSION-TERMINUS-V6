@@ -76,7 +76,7 @@ import {
   transcribeAudio,
 } from './inference/speech';
 import { gateway } from '@ai-sdk/gateway';
-import { IsabellaGenesisRuntime } from './genesis/runtime';
+import { IsabellaGenesisRuntime, type GenesisRuntimeDecision } from './genesis/runtime';
 import { buildUniverseSnapshot } from './genesis/universe';
 import { assertBalancedAuthority, createPrincipal } from './identity/principal';
 import { createCapabilityGate } from './crown/capability';
@@ -143,7 +143,12 @@ import { applyProviderSubscriptionEvent } from './commerce/provider-events';
 import type { ProviderConfig, SignatureScheme, TenantMapping } from './commerce/webhook';
 import { LatencyRegistry } from './deployment/latency-metrics';
 import { TtlSingleFlight } from './deployment/ttl-single-flight';
-import { collectDependencyReadiness, probeObservability } from './health/dependency-readiness';
+import {
+  collectDependencyReadiness,
+  nodeFilesystemProbe,
+  probeMethodIdConformance,
+  probeObservability,
+} from './health/dependency-readiness';
 import { MetricsRegistry, createMetricsSnapshotHash } from './observability/metrics';
 import { SessionMemory, formatSessionContext, deriveSessionId } from './memory/session-memory';
 import {
@@ -1713,17 +1718,20 @@ runtime.skills.register({
 runtime.skills.register({
   id: 'pennylane_quantum_execution',
   version: '1.0.0',
-  methodId: 'Q.QUANTUM.E20_EXECUTION.execute_pennylane.v1.0.0.MEDIUM.INSTITUTIONAL',
+  methodId: 'A.TWINS.E20_EXECUTION.execute_pennylane.v1.0.0.MEDIUM.INSTITUTIONAL',
   riskTier: 'MEDIUM',
   requiresEvidence: false,
   handler: async (ctx) =>
     runtime.executePennyLane(ctx.input as import('./quantum').PennyLaneExecutionRequest),
 });
 
+const MEDIATION_METHOD_ID =
+  'A.COLLECTIVE_INTELLIGENCE.E14_COGNITIVE_SAFETY.mediate_isabella.v2.0.0.LOW.CONSTITUTIONAL';
+
 // Setup default Capability Gate
 const defaultGate = createCapabilityGate([
   {
-    methodId: 'A.COGNITION.E19_CAPABILITY.invoke_hsf.v1.0.0.MEDIUM.INSTITUTIONAL',
+    methodId: 'A.COLLECTIVE_INTELLIGENCE.E19_CAPABILITY.invoke_hsf.v1.0.0.MEDIUM.INSTITUTIONAL',
     owner: 'isabella-hsf',
     allowedRoles: ['operator', 'admin'],
     riskTier: 'MEDIUM',
@@ -1731,7 +1739,7 @@ const defaultGate = createCapabilityGate([
     humanApprovalRequired: false,
   },
   {
-    methodId: 'Q.QUANTUM.E20_EXECUTION.execute_pennylane.v1.0.0.MEDIUM.INSTITUTIONAL',
+    methodId: 'A.TWINS.E20_EXECUTION.execute_pennylane.v1.0.0.MEDIUM.INSTITUTIONAL',
     owner: 'isabella-quantum',
     allowedRoles: ['operator', 'admin'],
     riskTier: 'MEDIUM',
@@ -1739,7 +1747,7 @@ const defaultGate = createCapabilityGate([
     humanApprovalRequired: false,
   },
   {
-    methodId: 'A.COGNITION.E14_COGNITIVE_SAFETY.mediate_isabella.v2.0.0.LOW.CONSTITUTIONAL',
+    methodId: MEDIATION_METHOD_ID,
     owner: 'isabella-sovereign',
     allowedRoles: ['operator', 'admin', 'viewer'],
     riskTier: 'LOW',
@@ -1779,6 +1787,46 @@ const defaultGate = createCapabilityGate([
     humanApprovalRequired: true,
   },
 ]);
+
+const gateMethodIds = [...defaultGate.descriptors.keys()];
+// Una capacidad con methodId no canónico no falla al arrancar: CROWN la rechaza en cada
+// petición y queda inutilizable en silencio. Se audita aquí para exponer el defecto en el
+// despliegue y en /api/v1/healthz, no cuando un usuario tropieza con el 403.
+const gateConformance = probeMethodIdConformance(gateMethodIds);
+if (gateConformance.status !== 'healthy') console.error(`[Isabella] ${gateConformance.detail}`);
+
+/**
+ * Puerta única de mediación: CROWN + AEGIS antes de ejecutar el motor de Isabella.
+ * Toda superficie que invoque la mediación (HTTP propia o compatible OpenAI) debe pasar
+ * por aquí; una ruta que llame a `mediateIsabella` sin evaluar el governance convierte el
+ * gate en decorativo y permite escalar intención destructiva por un cable distinto.
+ */
+function evaluateMediation(input: string, principalId: string): GenesisRuntimeDecision {
+  // Un cuerpo de request jamás se auto-asigna roles privilegiados.
+  const principal = createPrincipal({ id: principalId, kind: 'machine', roles: ['operator'] });
+  assertBalancedAuthority(principal);
+  return runtime.evaluate({
+    input,
+    methodId: MEDIATION_METHOD_ID,
+    principal,
+    gate: defaultGate,
+    action: 'cognition:mediate',
+    resource: 'isabella',
+    riskTier: 'LOW',
+    inputTokens: Math.max(1, Math.ceil(input.length / 4)),
+    expectedOutputTokens: 256,
+    pressure: 0,
+    requiresTools: false,
+    requiresMemory: false,
+  });
+}
+
+/** CROWN marca "approval" como no-rechazo, pero una ejecución pública no trae aprobación humana en el request. */
+function mediationBlockedByGovernance(governance: GenesisRuntimeDecision): string | null {
+  if (governance.crown.requiresHumanApproval) return 'HUMAN_APPROVAL_REQUIRED';
+  if (!governance.admitted) return 'MEDIATION_REFUSED_BY_GENESIS';
+  return null;
+}
 
 // 12 Nodos Cognitivos Soberanos de la Red CROWN
 const CROWN_NODES = [
@@ -1893,26 +1941,93 @@ const CROWN_NODES = [
 ];
 
 /* El universo observable del mapa se construye en src/genesis/universe.ts (modulo puro y probado); aqui solo se le entregan los registros reales de este proceso. */
-const universeSources = (bookpi: { backend: string; durability: string }) => {
-  const blackout = killSwitch.status();
+interface StatusProbeFailure {
+  readonly probe: string;
+  readonly reason: string;
+}
+
+/**
+ * Cada campo de /api/v1/status se calcula aislado. Este endpoint es la vista con la que un
+ * operador diagnostica el runtime; si una sola sonda lanza, delegar el error al middleware
+ * global lo convertía en un 500 opaco que ocultaba justamente el fallo. Ahora la sonda
+ * degradada se nombra a sí misma, el resto del estado se sirve y el envelope responde 200
+ * con `diagnostics.probeFailures`.
+ */
+function statusProbe<T>(
+  probeName: string,
+  failures: StatusProbeFailure[],
+  fallback: T,
+  compute: () => T
+): T {
+  try {
+    return compute();
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    failures.push({ probe: probeName, reason: reason.slice(0, 240) });
+    console.error(`[Isabella] /api/v1/status probe '${probeName}' failed: ${reason.slice(0, 240)}`);
+    return fallback;
+  }
+}
+
+const universeSources = (
+  bookpi: { backend: string; durability: string },
+  probeFailures: StatusProbeFailure[] = []
+) => {
+  // Los registros del runtime se leen uno por uno: un puente cuántico sin bridge o un
+  // navegador de habilidades roto no puede borrarle al operador el resto del estado.
+  const blackout = statusProbe(
+    'kill-switch',
+    probeFailures,
+    { envFlag: false, halts: [] as unknown[] },
+    () => killSwitch.status()
+  );
   return buildUniverseSnapshot({
     crownNodes: CROWN_NODES,
     experts: EXPERT_REGISTRY,
-    toolRiskTiers: runtime.tools.list().map((tool) => String(tool.riskTier)),
-    capabilityDescriptors: runtime.capabilities
-      .list()
-      .map((item) => ({ id: item.id, domain: item.domain, riskTier: item.riskTier })),
+    toolRiskTiers: statusProbe('tool-risk-tiers', probeFailures, [], () =>
+      runtime.tools.list().map((tool) => String(tool.riskTier))
+    ),
+    capabilityDescriptors: statusProbe('hsf-capabilities', probeFailures, [], () =>
+      runtime.capabilities
+        .list()
+        .map((item) => ({ id: item.id, domain: item.domain, riskTier: item.riskTier }))
+    ),
     counts: {
-      skills: runtime.skills.list().length,
-      modules: runtime.modules.list().length,
-      protocols: runtime.protocols.list().length,
-      customizations: runtime.customizations.list().length,
-      memoryClaims: runtime.memory.listClaims().length,
+      skills: statusProbe('skills-count', probeFailures, -1, () => runtime.skills.list().length),
+      modules: statusProbe('modules-count', probeFailures, -1, () => runtime.modules.list().length),
+      protocols: statusProbe(
+        'protocols-count',
+        probeFailures,
+        -1,
+        () => runtime.protocols.list().length
+      ),
+      customizations: statusProbe(
+        'customizations-count',
+        probeFailures,
+        -1,
+        () => runtime.customizations.list().length
+      ),
+      memoryClaims: statusProbe(
+        'ikes-claims-count',
+        probeFailures,
+        -1,
+        () => runtime.memory.listClaims().length
+      ),
     },
-    toolEvidence: runtime.tools.diagnostics(),
+    toolEvidence: statusProbe(
+      'tool-diagnostics',
+      probeFailures,
+      { configured: false, sealedEvents: 0, sealFailures: 0, withheldResults: 0, tools: 0 },
+      () => runtime.tools.diagnostics()
+    ),
     blackout: { envFlag: blackout.envFlag, haltCount: blackout.halts.length },
     bookpi,
-    quantumDescription: runtime.quantum.describe(),
+    quantumDescription: statusProbe<unknown>(
+      'quantum-describe',
+      probeFailures,
+      { available: false, reason: 'PROBE_FAILED' },
+      () => runtime.quantum.describe()
+    ),
     ikesPersistenceConfigured: Boolean(ikesPersistence),
   });
 };
@@ -1980,7 +2095,9 @@ app.get('/api/v1/health', (_req, res) => {
 // observe process configuration and local IO, not external reachability. Answers 503
 // until every required dependency is healthy; fail-closed when evidence is missing.
 app.get('/api/v1/healthz', (_req, res) => {
-  const report = collectDependencyReadiness(process.env);
+  const report = collectDependencyReadiness(process.env, nodeFilesystemProbe, new Date(), [
+    ...defaultGate.descriptors.keys(),
+  ]);
   res.setHeader('Cache-Control', 'no-store');
   res.status(report.readiness.ready ? 200 : 503).json({
     status: report.readiness.status,
@@ -1995,20 +2112,26 @@ app.get('/api/v1/healthz', (_req, res) => {
 });
 
 app.get('/api/v1/status', (_req, res) => {
+  const probeFailures: StatusProbeFailure[] = [];
   // Report the adapter actually selected at startup, not the unrelated legacy BOOKPI_LEDGER_PATH.
-  const bookPiBackend =
+  const bookPiBackend = statusProbe('bookpi-backend', probeFailures, 'PROBE_FAILED', () =>
     pipelineBookPi.backend === 'POSTGRES'
       ? 'POSTGRES_SHARED_DURABLE'
       : pipelineBookPi.backend === 'DURABLE_JSONL_LOCAL'
         ? 'DURABLE_APPEND_ONLY_JSONL_LOCAL_SCOPE'
-        : 'VOLATILE_IN_MEMORY_HASH_CHAIN';
-  const bookPiDurability =
+        : 'VOLATILE_IN_MEMORY_HASH_CHAIN'
+  );
+  const bookPiDurability = statusProbe('bookpi-durability', probeFailures, 'PROBE_FAILED', () =>
     pipelineBookPi.backend === 'POSTGRES'
       ? 'POSTGRES_SHARED_DURABLE_NOT_WORM'
       : pipelineBookPi.backend === 'DURABLE_JSONL_LOCAL'
         ? 'LOCAL_FILE_FSYNCED_NOT_SHARED_NOT_WORM'
-        : 'PROCESS_MEMORY_NOT_DURABLE';
-  const universe = universeSources({ backend: bookPiBackend, durability: bookPiDurability });
+        : 'PROCESS_MEMORY_NOT_DURABLE'
+  );
+  const universe = universeSources(
+    { backend: bookPiBackend, durability: bookPiDurability },
+    probeFailures
+  );
   res.json({
     runtime: 'Isabella Genesis TINA',
     version: 'v40.0.0',
@@ -2033,6 +2156,11 @@ app.get('/api/v1/status', (_req, res) => {
     universe,
     invariant: 'CAPABILITY ≠ AUTHORITY ≠ EXECUTION ≠ EVIDENCE ≠ LEARNING ≠ PRODUCTION',
     trust: { litle: 'L-512.v1', evidence: 'SHA3-512', certificates: 'HMAC-SHA256' },
+    // Un estado parcial declarado es más útil que un 500: el operador ve qué sonda falló.
+    diagnostics: {
+      status: probeFailures.length === 0 ? 'complete' : 'degraded',
+      probeFailures,
+    },
   });
 });
 
@@ -3673,33 +3801,13 @@ app.post('/api/v1/isabella/mediate', (req, res) => {
     }
 
     const started = Date.now();
-    // A request body must never be allowed to self-assign privileged roles or principal identity.
-    const principal = createPrincipal({
-      id: 'service:hsf-api',
-      kind: 'machine',
-      roles: ['operator'],
-    });
-    assertBalancedAuthority(principal);
+    const governance = evaluateMediation(input, 'service:hsf-api');
+    const blockReason = mediationBlockedByGovernance(governance);
 
-    const governance = runtime.evaluate({
-      input,
-      methodId: 'A.COGNITION.E14_COGNITIVE_SAFETY.mediate_isabella.v2.0.0.LOW.CONSTITUTIONAL',
-      principal,
-      gate: defaultGate,
-      action: 'cognition:mediate',
-      resource: 'isabella',
-      riskTier: 'LOW',
-      inputTokens: Math.max(1, Math.ceil(input.length / 4)),
-      expectedOutputTokens: 256,
-      pressure: 0,
-      requiresTools: false,
-      requiresMemory: false,
-    });
-
-    if (!governance.admitted) {
+    if (blockReason) {
       res.status(403).json({
         success: false,
-        error: 'Isabella mediation denied by Genesis governance',
+        error: blockReason,
         governance,
         latencyMs: Date.now() - started,
       });
@@ -4222,7 +4330,7 @@ app.post('/api/v1/hsf/invoke', async (req, res) => {
     }
     const governance = runtime.evaluate({
       input: serialized,
-      methodId: 'A.COGNITION.E19_CAPABILITY.invoke_hsf.v1.0.0.MEDIUM.INSTITUTIONAL',
+      methodId: 'A.COLLECTIVE_INTELLIGENCE.E19_CAPABILITY.invoke_hsf.v1.0.0.MEDIUM.INSTITUTIONAL',
       principal,
       gate: defaultGate,
       action: 'hsf:invoke',
@@ -4301,7 +4409,7 @@ app.post('/api/v1/quantum/pennylane/execute', async (req, res) => {
 
     const governance = runtime.evaluate({
       input,
-      methodId: 'Q.QUANTUM.E20_EXECUTION.execute_pennylane.v1.0.0.MEDIUM.INSTITUTIONAL',
+      methodId: 'A.TWINS.E20_EXECUTION.execute_pennylane.v1.0.0.MEDIUM.INSTITUTIONAL',
       principal,
       gate: defaultGate,
       action: 'quantum:execute',
@@ -6077,6 +6185,17 @@ registerPlatformRoutes({
 registerOpenAiCompatibleRoutes({
   app,
   mediate: (input, profile) => {
+    const governance = evaluateMediation(input, 'service:openai-compatible');
+    const blockReason = mediationBlockedByGovernance(governance);
+    if (blockReason) {
+      // La superficie compatible OpenAI sigue el cable del estándar: un rechazo se
+      // devuelve como respuesta refusada con el motivo gobernantista, no como 200 libre.
+      return {
+        answer: `No puedo atender esta solicitud: la gobernanza de Genesis la bloqueó (${blockReason}).`,
+        profile,
+        safeguards: [blockReason],
+      };
+    }
     const result = runtime.mediateIsabella({ input, profile });
     return { answer: result.answer, profile: result.profile, safeguards: result.safeguards };
   },
