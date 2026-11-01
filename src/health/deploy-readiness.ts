@@ -116,7 +116,7 @@ export function runDeployReadiness(env: Env): DeployReadinessReport {
     );
   }
 
-  // Atlas / IKES: both halves or neither.
+  // Atlas / IKES are required runtime dependencies, so missing Supabase blocks release readiness.
   const sbUrl = has(env, 'SUPABASE_URL');
   const sbKey = has(env, 'SUPABASE_SERVICE_ROLE_KEY');
   if (sbUrl !== sbKey)
@@ -128,8 +128,8 @@ export function runDeployReadiness(env: Env): DeployReadinessReport {
   else if (!sbUrl)
     add(
       'DR-SUPABASE-ABSENT',
-      'WARN',
-      'Supabase is not configured: Atlas/IKES probes keep /api/v1/readyz degraded.'
+      'ERROR',
+      'Supabase is not configured: required Atlas/IKES probes keep /api/v1/readyz degraded.'
     );
 
   // Supabase user identity resolution calls /auth/v1/user with the anon/publishable key.
@@ -142,6 +142,50 @@ export function runDeployReadiness(env: Env): DeployReadinessReport {
     );
   }
 
+  const verifiedKnowledgeProvider =
+    env.ISABELLA_VERIFIED_KNOWLEDGE_BACKEND?.trim().toLowerCase() || 'mongodb';
+  if (verifiedKnowledgeProvider === 'mongodb') {
+    const mongoUri = env.MONGODB_URI?.trim() ?? '';
+    if (!mongoUri) {
+      add(
+        'DR-VERIFIED-KNOWLEDGE-MONGODB-URI-MISSING',
+        'ERROR',
+        'MongoDB is the verified-knowledge backend, but MONGODB_URI is not configured.'
+      );
+    } else {
+      const normalizedMongoUri = mongoUri.toLowerCase();
+      if (
+        !normalizedMongoUri.startsWith('mongodb://') &&
+        !normalizedMongoUri.startsWith('mongodb+srv://')
+      ) {
+        add(
+          'DR-VERIFIED-KNOWLEDGE-MONGODB-URI-INVALID',
+          'ERROR',
+          'MONGODB_URI must use mongodb:// or mongodb+srv://.'
+        );
+      }
+    }
+  } else if (verifiedKnowledgeProvider === 'supabase') {
+    if (!sbUrl || !sbKey)
+      add(
+        'DR-VERIFIED-KNOWLEDGE-SUPABASE-CONFIG-MISSING',
+        'ERROR',
+        'Supabase is the verified-knowledge backend, but its URL and server key are not both configured.'
+      );
+  } else if (verifiedKnowledgeProvider === 'memory') {
+    add(
+      'DR-VERIFIED-KNOWLEDGE-NON_DURABLE',
+      'ERROR',
+      'The in-memory verified-knowledge backend is not durable enough for production.'
+    );
+  } else {
+    add(
+      'DR-VERIFIED-KNOWLEDGE-BACKEND-UNKNOWN',
+      'ERROR',
+      'ISABELLA_VERIFIED_KNOWLEDGE_BACKEND must be mongodb or supabase in production.'
+    );
+  }
+
   // Generative inference: without a provider the chat answers from the local deterministic engine only.
   if (!PROVIDER_VARS.some((n) => has(env, n)) && !has(env, 'ISABELLA_KEYLESS_FREE_PROVIDER')) {
     add(
@@ -151,10 +195,40 @@ export function runDeployReadiness(env: Env): DeployReadinessReport {
     );
   }
 
-  // Origins: the image default is a localhost placeholder.
-  const origins = env.ALLOWED_ORIGINS?.trim() ?? '';
-  if (origins === '' || /localhost|127\.0\.0\.1/.test(origins)) {
-    add('DR-ORIGINS-LOCAL', 'WARN', 'ALLOWED_ORIGINS is empty or points at localhost.');
+  const origins = (env.ALLOWED_ORIGINS ?? '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+  const localOrWildcardOrigin = origins.some((origin) => {
+    if (origin === '*') return true;
+    try {
+      const hostname = new URL(origin).hostname.toLowerCase();
+      return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]';
+    } catch {
+      return false;
+    }
+  });
+  if (origins.length === 0 || localOrWildcardOrigin) {
+    add(
+      'DR-ORIGINS-LOCAL',
+      'ERROR',
+      'ALLOWED_ORIGINS must contain exact public HTTPS origins; empty, localhost and wildcard values are blocked.'
+    );
+  } else if (
+    origins.some((origin) => {
+      try {
+        const parsed = new URL(origin);
+        return parsed.protocol !== 'https:' || parsed.origin.toLowerCase() !== origin.toLowerCase();
+      } catch {
+        return true;
+      }
+    })
+  ) {
+    add(
+      'DR-ORIGINS-INVALID',
+      'ERROR',
+      'Every ALLOWED_ORIGINS entry must be an exact HTTPS origin without a path, query or fragment.'
+    );
   }
 
   // Serverless instances are ephemeral. Neither process memory nor local files are

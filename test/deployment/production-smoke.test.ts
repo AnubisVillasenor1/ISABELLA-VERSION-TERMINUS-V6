@@ -8,6 +8,39 @@ process.env.VERCEL = "1";
 let server: Server | undefined;
 let baseUrl = "";
 
+function smokeFetchFor(readinessStatus: 200 | 503): typeof fetch {
+  return async (input) => {
+    const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+    const path = new URL(url).pathname;
+    if (path === "/health") {
+      return new Response(JSON.stringify({ status: "healthy" }), {
+        status: 200,
+        headers: {
+          "x-content-type-options": "nosniff",
+          "x-frame-options": "DENY",
+          "referrer-policy": "strict-origin-when-cross-origin",
+        },
+      });
+    }
+    if (path === "/api/v1/health") {
+      return new Response(JSON.stringify({ inferenceMode: "local-fallback" }), { status: 200 });
+    }
+    if (path === "/api/v1/readyz") {
+      const ready = readinessStatus === 200;
+      return new Response(JSON.stringify({ success: ready, snapshot: { readiness: { ready } } }), {
+        status: readinessStatus,
+      });
+    }
+    if (path === "/api/v1/healthz") {
+      return new Response(
+        JSON.stringify({ scope: "deep-dependency-readiness", evidence: [] }),
+        { status: 503 }
+      );
+    }
+    return new Response("{}", { status: 404 });
+  };
+}
+
 beforeAll(async () => {
   const { default: app } = await import("../../src/server");
   const created = createServer(app as unknown as RequestListener);
@@ -33,9 +66,15 @@ describe("post-deployment smoke", () => {
   it(
     "verifies the runtime deployment surface end-to-end",
     async () => {
-      const result = await verifyDeployment(baseUrl);
+      const result = await verifyDeployment(baseUrl, fetch, { requireReadiness: false });
       const names = result.checks.map((check) => check.name);
-      expect(names).toEqual(["liveness", "security-headers", "public-health", "deep-readiness"]);
+      expect(names).toEqual([
+        "liveness",
+        "security-headers",
+        "public-health",
+        "dependency-readiness",
+        "deep-readiness",
+      ]);
       expect(result.ok).toBe(true);
       expect(result.baseUrl).toBe(baseUrl);
     },
@@ -51,4 +90,22 @@ describe("post-deployment smoke", () => {
     },
     30_000,
   );
+
+  it("fails the strict release gate when dependency readiness is blocked", async () => {
+    const result = await verifyDeployment("https://example.org", smokeFetchFor(503));
+    expect(result.ok).toBe(false);
+    expect(result.checks.find((check) => check.name === "dependency-readiness")).toMatchObject({
+      ok: false,
+      status: 503,
+    });
+  });
+
+  it("passes the strict release gate only when required dependencies are ready", async () => {
+    const result = await verifyDeployment("https://example.org", smokeFetchFor(200));
+    expect(result.ok).toBe(true);
+    expect(result.checks.find((check) => check.name === "dependency-readiness")).toMatchObject({
+      ok: true,
+      status: 200,
+    });
+  });
 });
