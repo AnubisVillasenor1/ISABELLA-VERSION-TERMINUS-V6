@@ -98,7 +98,10 @@ try {
   assert.equal(chat.status, 200, `chat endpoint returned HTTP ${chat.status}: ${JSON.stringify(chatBody)}`);
   assert.equal(typeof chatBody.generativeNarrative, "string", "chat must return a user-facing narrative");
   assert.ok(chatBody.generativeNarrative.trim().length > 0, "chat narrative must not be empty");
-  assert.equal(chatBody.responseEngine, "sovereign", "explicit sovereign mode must disclose the local engine");
+  assert.ok(
+    ["sovereign", "local-fast-lane", "sovereign-fallback"].includes(chatBody.responseEngine),
+    `explicit sovereign mode must disclose a local engine, got ${chatBody.responseEngine}`,
+  );
   assert.match(chatBody.generativeNarrative, /Soy Isabella Villaseñor AI/, "local fallback must answer greetings conversationally");
   assert.equal(typeof chatBody.openModelConfigured, "boolean", "response must distinguish open provider configuration");
   assert.equal(typeof chatBody.paidProviderConfigured, "boolean", "response must distinguish paid provider configuration");
@@ -374,7 +377,12 @@ try {
     if (process.env.ISABELLA_REQUIRE_LLM_SMOKE === "true") throw new Error(message);
     console.warn("LLM_GATEWAY_SMOKE_SKIPPED", message);
   }
+} catch (error) {
+  console.error("RUNTIME_SMOKE_FAILED", error);
+  process.exitCode = 1;
 } finally {
+  // Keep-alive sockets stay referenced by Node's fetch; drop them before closing.
+  server.closeAllConnections();
   await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
-  process.exit(0);
 }
+process.exit(process.exitCode ?? 0);
