@@ -20,6 +20,16 @@ export interface PreflightReport {
 type Env = Readonly<Record<string, string | undefined>>;
 
 const TOKEN_VARS = ["GENESIS_ADMIN_API_TOKEN", "OPS_API_TOKEN", "HYPERCORE_API_TOKEN", "HSF_API_TOKEN"] as const;
+const PROVIDER_KEYS = [
+  "OPENROUTER_API_KEY",
+  "GEMINI_API_KEY",
+  "GROQ_API_KEY",
+  "HF_TOKEN",
+  "HF_TOKEN_2",
+  "OLLAMA_API_KEY",
+  "LOCAL_VISION_API_KEY",
+  "AI_GATEWAY_API_KEY",
+] as const;
 const PLACEHOLDER = /^(changeme|change-me|change_me|secret|password|token|test|example|placeholder|todo|xxx+|your[-_ ]?token.*|replace.*)$/i;
 
 /** Entropía de Shannon estimada en bits totales (cota optimista: asume símbolos iid). */
@@ -65,6 +75,24 @@ export function runPreflight(env: Env): PreflightReport {
     const prior = seen.get(v);
     if (prior !== undefined) add(`PF-TOKEN-REUSED-${name}`, "ERROR", `${name} reuses the value of ${prior}; privileges are not separated.`);
     else seen.set(v, name);
+  }
+
+  const configuredProviders = PROVIDER_KEYS.filter((name) => trimmed(env, name) !== undefined);
+  if (configuredProviders.length === 0) {
+    add(
+      "PF-AI-PROVIDER-MISSING",
+      production ? "ERROR" : "WARN",
+      "No AI provider credential is configured; inference is unavailable until a provider is connected.",
+    );
+  }
+  for (const name of configuredProviders) {
+    const value = trimmed(env, name);
+    if (value !== undefined && weakSecretReason(value) !== null && name !== "OLLAMA_API_KEY") {
+      add(`PF-PROVIDER-WEAK-${name}`, production ? "ERROR" : "WARN", `${name} is weak or appears to be a placeholder.`);
+    }
+  }
+  if (trimmed(env, "LOCAL_VISION_BASE_URL") !== undefined && trimmed(env, "LOCAL_VISION_API_KEY") === undefined) {
+    add("PF-LOCAL-VISION-KEY-MISSING", production ? "ERROR" : "WARN", "LOCAL_VISION_BASE_URL is configured without LOCAL_VISION_API_KEY.");
   }
 
   const publicUrl = trimmed(env, "APP_PUBLIC_URL");

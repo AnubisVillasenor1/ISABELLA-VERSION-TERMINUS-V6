@@ -16,7 +16,7 @@ describe("weakSecretReason", () => {
 
 describe("runPreflight", () => {
   it("passes a sane production configuration", () => {
-    const r = runPreflight({ NODE_ENV: "production", GENESIS_ADMIN_API_TOKEN: rand, OPS_API_TOKEN: rand.split("").reverse().join(""), APP_PUBLIC_URL: "https://isabella.example", BOOKPI_LEDGER_PATH: "/data/l.jsonl", TRUST_PROXY: "1", PORT: "8080" });
+    const r = runPreflight({ NODE_ENV: "production", GENESIS_ADMIN_API_TOKEN: rand, OPS_API_TOKEN: rand.split("").reverse().join(""), OPENROUTER_API_KEY: rand, APP_PUBLIC_URL: "https://isabella.example", BOOKPI_LEDGER_PATH: "/data/l.jsonl", TRUST_PROXY: "1", PORT: "8080" });
     expect(r.findings).toEqual([]);
     expect(r.status).toBe("PASS");
   });
@@ -32,6 +32,12 @@ describe("runPreflight", () => {
     expect(ids).toContain("PF-STRIPE-WEBHOOK-MISSING");
     expect(ids).toContain("PF-STRIPE-TEST-KEY");
     expect(JSON.stringify(r)).not.toContain("sk_test_abc");
+  });
+  it("requires a provider credential and validates local vision pairing", () => {
+    const missing = runPreflight({ NODE_ENV: "production", GENESIS_ADMIN_API_TOKEN: rand });
+    expect(missing.findings.map((f) => f.id)).toContain("PF-AI-PROVIDER-MISSING");
+    const unpaired = runPreflight({ NODE_ENV: "production", GENESIS_ADMIN_API_TOKEN: rand, OPENROUTER_API_KEY: rand, LOCAL_VISION_BASE_URL: "https://vision.example" });
+    expect(unpaired.findings.map((f) => f.id)).toContain("PF-LOCAL-VISION-KEY-MISSING");
   });
   it("is lenient in development and warns when the kill switch is engaged", () => {
     const r = runPreflight({ ISA_KILL_SWITCH: "1" });
