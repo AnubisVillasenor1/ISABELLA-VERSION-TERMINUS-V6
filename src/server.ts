@@ -122,6 +122,8 @@ import {
   TurboGateSaturatedError,
 } from './performance/hypercore-turbo';
 import { createLocalAgent, LOCAL_AGENT_ID } from './agents/runtime';
+import { DevAgentMesh } from './agents/mesh';
+import { createPlannerAdapter, createReviewerAdapter } from './agents/mesh-adapters';
 import {
   OmegaRuntime,
   OMEGA_SAFE_BLOCKED_RESPONSE,
@@ -130,6 +132,9 @@ import {
 } from './omega-runtime';
 import { KNOWLEDGE_ENTRIES } from './agents/knowledge';
 import { registerAgentRoutes } from './routes/agents';
+import { registerDevAgentMeshRoutes } from './routes/agents-mesh';
+import { registerInfinityRoutes } from './routes/infinity';
+import { EvolutionFabric } from './infinity';
 import { registerNexusRoutes } from './routes/nexus';
 import { createNexusRuntime } from './nexus/runtime';
 import { PLATFORM_PUBLIC_SURFACE, registerPlatformRoutes } from './routes/platform';
@@ -2240,6 +2245,19 @@ const localAgent = createLocalAgent({
     });
   },
 });
+
+// ── ISABELLA CERO · Agent Mesh (state: draft | engine-generated) ─────────────
+// Política de 10 roles + dos adaptadores deterministas (planner, reviewer).
+// Coder/Tester/DevOps/Operator NO se registran: sin adaptador, `submit` devuelve
+// NO_ADAPTER en lugar de simular trabajo. La superficie HTTP solo evalúa política;
+// no ejecuta. El codificador en sandbox existe como librería probada, no cableada.
+const devAgentMesh = new DevAgentMesh({ ledger: bookPiLedger, maxConcurrency: 4 });
+devAgentMesh.register(createPlannerAdapter());
+devAgentMesh.register(createReviewerAdapter());
+
+// ISABELLA VILLASEÑOR AI™ — Master Consolidated (state: draft | engine-generated).
+// La evolución se simula EN MEMORIA; el ledger de esta fábrica no sustituye BookPI.
+const infinityEvolution = new EvolutionFabric();
 
 // Omega Runtime Ω∞: pipeline determinista en proceso (gobernanza, ruteo, plan,
 // contexto local, razonamiento, reflexión y calidad). No elige ni llama proveedores:
@@ -6145,6 +6163,33 @@ registerHyperCoreRoutes({
 registerAgentRoutes({
   app,
   agent: localAgent,
+  enforceRateLimit,
+  rateLimiter: publicCognitionLimiter,
+  isAdminAuthorized: (req) =>
+    verifyBearerToken(req.get('authorization'), process.env.GENESIS_ADMIN_API_TOKEN) ===
+    'AUTHORIZED',
+});
+
+// ── ISABELLA CERO · Agent Mesh (state: draft | engine-generated) ─────────────
+// Catálogo de roles y evaluación de política. Sin endpoint de ejecución: una
+// decisión ALLOW no autoriza ni ejecuta. La aprobación se decide aquí, no en el body.
+registerDevAgentMeshRoutes({
+  app,
+  mesh: devAgentMesh,
+  enforceRateLimit,
+  rateLimiter: publicCognitionLimiter,
+  isAdminAuthorized: (req) =>
+    verifyBearerToken(req.get('authorization'), process.env.GENESIS_ADMIN_API_TOKEN) ===
+    'AUTHORIZED',
+});
+
+// ══ ISABELLA VILLASEÑOR AI™ — Master Consolidated (state: draft | engine-generated) ══
+// Evaluación constitucional, skills nativas deterministas, Media/Build/Evolution
+// Fabric. No hay endpoint de ejecución, despliegue ni cobro. La aprobación humana
+// se decide aquí con el bearer administrativo; el cuerpo HTTP nunca la concede.
+registerInfinityRoutes({
+  app,
+  evolution: infinityEvolution,
   enforceRateLimit,
   rateLimiter: publicCognitionLimiter,
   isAdminAuthorized: (req) =>

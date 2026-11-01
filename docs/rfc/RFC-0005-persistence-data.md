@@ -118,7 +118,55 @@ servicio, ni recuperación ante fallos. Nada de esto se declara `verified` ni
   degradada, la regla fail-closed mantiene `readyz` en `503`.
 - **IKES en cold start.** El probe de readiness espera hasta 5 s la hidratación
   en curso en lugar de publicar un `pending` transitorio. Una hidratación
-  fallida se reporta como `degraded` con el código saneado
-  (`IKES_*`), no como `pending` indefinido.
+  fallida se reporta como `degraded` con el código saneado (`IKES_*`), no como
+  `pending` indefinido. Además, tras un fallo el probe reintenta la hidratación
+  cuando ha pasado un enfriamiento de 30 s, acotado por el tiempo del probe y
+  sin lanzar excepciones.
+
+### Causa raíz: el timeout de 2 s abortaba la hidratación de IKES
+
+El log de runtime mostraba en cada cold start afectado:
+
+```
+[Genesis] persistence initialization failed: This operation was aborted
+```
+
+`SupabaseIkesPersistence` usaba `requestTimeoutMs: 2_000`. Un arranque en frío
+del REST de Supabase (DNS + TLS + edge) puede superar ese umbral, el
+`AbortController` cancelaba `load()` y la memoria quedaba solo en proceso
+durante toda la vida de la instancia. El valor por defecto subió a **10 s**,
+alineado con el adaptador de Atlas, y se puede ajustar con
+`ISABELLA_IKES_REQUEST_TIMEOUT_MS` (clamp 250–30000 ms). Verificado en el
+despliegue `dpl_Fkjyu9yfpZmXYpvBAsT8uztNgBNu` (commit `f52de5a`): el primer
+probe de `/api/v1/readyz` ya reportó `ikes-memory: healthy` con backend
+`SUPABASE`, sin `pending`, y los logs no repitieron el aborto.
+
+### Causa raíz: una hidratación fallida abandonaba el almacén durable
+
+En el despliegue `dpl_Fkjyu9yfpZmXYpvBAsT8uztNgBNu` se observó:
+
+```
+[Isabella] Durable federation store unavailable; state stays process-local { message: 'Connection terminated due to connection timeout' }
+```
+
+`releaseDurableBackend()` cerraba el pool y ponía `persistence = null` ante el
+primer fallo. Un timeout transitorio de cold start dejaba claves de API o
+federación sin backend durable **hasta el siguiente cold start**, y las
+escrituras se perdían en memoria sin error. Ahora ambos almacenes:
+
+- conservan el backend y marcan la degradación visible;
+- reintentan la hidratación con retroceso exponencial (5 s, 10 s, 20 s, 40 s,
+  tope 60 s; configurable en pruebas con `hydrationRetryCooldownMs`);
+- siguen intentando escribir en la base: si está caída, `issue()` falla y
+  revierte en vez de emitir credenciales que solo existen en memoria;
+- registran `hydration recovered` con el número de intentos al recuperarse.
+
+El temporizador de reintento es `unref`, no retiene el proceso y permite que
+tráfico de solo lectura también se recupere. Commit `b30b915`. Límite honesto:
+en serverless el temporizador solo avanza mientras la instancia está activa; una
+instancia congelada se recupera con la siguiente invocación. La recuperación en
+producción está cubierta por pruebas unitarias; no se observó todavía un ciclo
+completo de fallo→recuperación en la instancia afectada.
+
 
 
