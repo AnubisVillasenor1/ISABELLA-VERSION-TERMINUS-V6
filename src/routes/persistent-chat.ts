@@ -79,7 +79,11 @@ export function registerPersistentChatRoutes(
       response.json({
         success: true,
         persistence: 'neon',
-        sessions: rows.map((row) => ({ ...row, createdAt: asIso(row.createdAt), updatedAt: asIso(row.updatedAt) })),
+        sessions: rows.map((row) => ({
+          ...row,
+          createdAt: asIso(row.createdAt),
+          updatedAt: asIso(row.updatedAt),
+        })),
       });
     } catch (error) {
       console.error('[Persistence] chat list failed', {
@@ -118,12 +122,18 @@ export function registerPersistentChatRoutes(
           position: chatMessages.position,
         })
         .from(chatMessages)
-        .where(and(eq(chatMessages.ownerKeyHash, ownerKeyHash), eq(chatMessages.sessionId, sessionId)))
+        .where(
+          and(eq(chatMessages.ownerKeyHash, ownerKeyHash), eq(chatMessages.sessionId, sessionId))
+        )
         .orderBy(asc(chatMessages.position))
         .limit(MAX_MESSAGES);
       response.json({
         success: true,
-        session: { ...session, createdAt: asIso(session.createdAt), updatedAt: asIso(session.updatedAt) },
+        session: {
+          ...session,
+          createdAt: asIso(session.createdAt),
+          updatedAt: asIso(session.updatedAt),
+        },
         messages: messages.map((message) => ({ ...message, createdAt: asIso(message.createdAt) })),
       });
     } catch (error) {
@@ -151,14 +161,24 @@ export function registerPersistentChatRoutes(
     const metadata = parseMetadata(body.metadata);
     const title = typeof body.title === 'string' ? body.title.trim().slice(0, 120) : '';
     if (!UUID_PATTERN.test(messageId)) return publicError(response, 400, 'MESSAGE_ID_INVALID');
-    if (role !== 'user' && role !== 'assistant') return publicError(response, 400, 'MESSAGE_ROLE_INVALID');
+    if (role !== 'user' && role !== 'assistant')
+      return publicError(response, 400, 'MESSAGE_ROLE_INVALID');
     if (typeof content !== 'string' || content.length > MAX_MESSAGE_CHARS) {
       return publicError(response, 413, 'MESSAGE_CONTENT_LIMIT');
     }
-    if (context !== undefined && context !== null && (typeof context !== 'string' || context.length > MAX_CONTEXT_CHARS)) {
+    if (
+      context !== undefined &&
+      context !== null &&
+      (typeof context !== 'string' || context.length > MAX_CONTEXT_CHARS)
+    ) {
       return publicError(response, 413, 'MESSAGE_CONTEXT_LIMIT');
     }
-    if (typeof position !== 'number' || !Number.isInteger(position) || position < 0 || position >= MAX_MESSAGES) {
+    if (
+      typeof position !== 'number' ||
+      !Number.isInteger(position) ||
+      position < 0 ||
+      position >= MAX_MESSAGES
+    ) {
       return publicError(response, 400, 'MESSAGE_POSITION_INVALID');
     }
     if (!metadata) return publicError(response, 413, 'MESSAGE_METADATA_LIMIT');
@@ -241,7 +261,9 @@ export function registerPersistentChatRoutes(
       await database.transaction(async (transaction) => {
         await transaction
           .delete(chatMessages)
-          .where(and(eq(chatMessages.ownerKeyHash, ownerKeyHash), eq(chatMessages.sessionId, sessionId)));
+          .where(
+            and(eq(chatMessages.ownerKeyHash, ownerKeyHash), eq(chatMessages.sessionId, sessionId))
+          );
         await transaction
           .update(chatSessions)
           .set({ title: 'Nueva conversación', updatedAt: new Date() })
@@ -267,7 +289,9 @@ export function registerPersistentChatRoutes(
       await database.transaction(async (transaction) => {
         await transaction
           .delete(chatMessages)
-          .where(and(eq(chatMessages.ownerKeyHash, ownerKeyHash), eq(chatMessages.sessionId, sessionId)));
+          .where(
+            and(eq(chatMessages.ownerKeyHash, ownerKeyHash), eq(chatMessages.sessionId, sessionId))
+          );
         await transaction
           .delete(chatSessions)
           .where(and(eq(chatSessions.ownerKeyHash, ownerKeyHash), eq(chatSessions.id, sessionId)));

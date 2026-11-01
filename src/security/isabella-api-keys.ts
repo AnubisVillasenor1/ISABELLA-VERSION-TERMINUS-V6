@@ -61,7 +61,13 @@ export interface ApiKeyStoreOptions {
   readonly persistence?: ApiKeyPersistence | null;
   readonly pepper?: string | null;
   readonly now?: () => number;
+  /** Base cooldown before retrying a failed hydration; doubles per failure (max 60 s). */
+  readonly hydrationRetryCooldownMs?: number;
 }
+
+/** Base delay before the store retries a failed hydration. */
+const DEFAULT_HYDRATION_RETRY_COOLDOWN_MS = 5_000;
+const MAX_HYDRATION_RETRY_COOLDOWN_MS = 60_000;
 
 const PREFIX = 'isa_live_';
 const TENANT_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{1,63}$/;
@@ -138,33 +144,51 @@ export class IsabellaApiKeyStore {
   private readonly pepper: string | null;
   private readonly now: () => number;
   private hydration: Promise<void> | null = null;
+  private hydrationSucceeded = false;
+  private hydrationFailures = 0;
+  private hydrationRetryAt = 0;
+  private retryTimer: ReturnType<typeof setTimeout> | null = null;
   private degradation: string | null = null;
+  private readonly hydrationRetryCooldownMs: number;
 
   constructor(options: ApiKeyStoreOptions = {}) {
     this.persistence = options.persistence ?? null;
     this.pepper = options.pepper?.trim() || null;
     this.now = options.now ?? Date.now;
+    this.hydrationRetryCooldownMs = Math.max(
+      0,
+      Math.floor(options.hydrationRetryCooldownMs ?? DEFAULT_HYDRATION_RETRY_COOLDOWN_MS)
+    );
     for (const record of this.persistence?.load() ?? []) {
       if (this.keys.size >= MAX_KEYS) break;
       if (!this.keys.has(record.id)) this.keys.set(record.id, record);
     }
   }
 
-  /** Non-null once a durable backend was abandoned; the store stays process-local. */
+  /**
+   * Non-null while the last hydration failed. Verification stays limited to
+   * in-process keys until a scheduled retry succeeds; the durable backend is
+   * kept so writes still try the database instead of silently disappearing.
+   */
   get degradationReason(): string | null {
     return this.degradation;
   }
 
   /**
-   * Async hydration for backends without a synchronous read path. Runs at most
-   * once per store and never rejects: a cold start must not crash the runtime.
+   * Async hydration for backends without a synchronous read path. A failure no
+   * longer abandons the backend: a cold-start timeout must not disable
+   * durability for the whole instance, so the store keeps writing rows directly
+   * and schedules a bounded retry with exponential backoff. Never rejects.
    */
   hydrate(): Promise<void> {
     if (this.hydration) return this.hydration;
+    if (this.hydrationSucceeded) return Promise.resolve();
     const persistence = this.persistence;
-    if (!persistence?.hydrate) {
-      this.hydration = Promise.resolve();
-      return this.hydration;
+    if (!persistence?.hydrate) return Promise.resolve();
+    // Backoff is time-based: any call after the cooldown may retry, and the
+    // scheduled timer is only a wake-up so read-only traffic also recovers.
+    if (this.hydrationFailures > 0 && Date.now() < this.hydrationRetryAt) {
+      return Promise.resolve();
     }
     this.hydration = persistence
       .hydrate()
@@ -173,21 +197,40 @@ export class IsabellaApiKeyStore {
           if (this.keys.size >= MAX_KEYS) break;
           if (!this.keys.has(record.id)) this.keys.set(record.id, record);
         }
+        this.hydrationSucceeded = true;
+        this.hydrationFailures = 0;
+        this.hydrationRetryAt = 0;
+        this.degradation = null;
       })
       .catch((error: unknown) => {
-        this.releaseDurableBackend(error);
+        this.noteHydrationFailure(error);
+      })
+      .finally(() => {
+        this.hydration = null;
       });
     return this.hydration;
   }
 
-  private releaseDurableBackend(error: unknown): void {
-    const persistence = this.persistence;
+  private noteHydrationFailure(error: unknown): void {
+    this.hydrationFailures += 1;
     this.degradation = error instanceof Error ? error.message.slice(0, 180) : 'ERROR';
-    this.persistence = null;
-    console.warn('[Isabella] Durable API key store unavailable; keys stay process-local', {
+    console.warn('[Isabella] API key hydration failed; keys stay process-local until retry', {
       message: this.degradation,
+      attempt: this.hydrationFailures,
     });
-    if (persistence?.close) persistence.close().catch(() => undefined);
+    const delayMs = Math.min(
+      MAX_HYDRATION_RETRY_COOLDOWN_MS,
+      this.hydrationRetryCooldownMs * 2 ** Math.max(0, this.hydrationFailures - 1)
+    );
+    this.hydrationRetryAt = Date.now() + delayMs;
+    // A zero cooldown means "retry on the next call"; scheduling a timer would
+    // spin against a backend that is still down.
+    if (delayMs <= 0 || this.retryTimer !== null) return;
+    this.retryTimer = setTimeout(() => {
+      this.retryTimer = null;
+      void this.hydrate();
+    }, delayMs);
+    this.retryTimer.unref?.();
   }
 
   private digest(secret: string): Buffer {

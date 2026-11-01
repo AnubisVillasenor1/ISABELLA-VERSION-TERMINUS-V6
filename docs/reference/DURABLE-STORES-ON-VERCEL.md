@@ -56,6 +56,7 @@ vercel env add BOOKPI_INTEGRITY_SECRET production
 | `DATABASE_URL` / `POSTGRES_URL` | `postgres://` o `postgresql://` | Precedencia: `DATABASE_URL`, `POSTGRES_URL`, `POSTGRES_PRISMA_URL`, `POSTGRES_URL_NON_POOLING`. |
 | `ISABELLA_API_KEY_PEPPER` | cadena estable | Debe coincidir en todas las instancias; cambiarlo invalida los digests existentes. |
 | `ISABELLA_API_KEY_LAST_USED_FLUSH_ROWS` | entero ≥ 0 | Umbral del lote de telemetría; por omisión 32; `0` deshabilita toda escritura desde `verify()`. |
+| `ISABELLA_POSTGRES_CONNECT_TIMEOUT_MS` | entero 1000–30000 | Tiempo máximo para abrir conexión; por omisión **10000**. Un valor menor que un *cold start* del pooler degrada los almacenes a memoria. |
 
 Al retirar el bloque `env` inerte de `vercel.json`, los valores que declaraba
 (`APP_PUBLIC_URL`, `PUBLIC_URL`, `ISABELLA_PUBLIC_URL`, `ALLOWED_ORIGINS`,
@@ -69,18 +70,25 @@ dar margen a la hidratación y a las escrituras por fila.
 
 1. Aprovisionar Postgres (Neon, Supabase o autoalojado) con TLS explícito
    (`?sslmode=require`).
-2. Aplicar las dos migraciones nuevas, en este orden:
-   `supabase/migrations/20261030000000_isabella_api_keys.sql` y
-   `supabase/migrations/20261030000001_isabella_federation.sql`. Habilitan RLS y revocan
-   el acceso directo: solo el rol del servidor lee o escribe.
+2. Aplicar las migraciones, en este orden:
+   `supabase/migrations/20261030000000_isabella_api_keys.sql`,
+   `supabase/migrations/20261030000001_isabella_federation.sql`,
+   `infra/db/migrations/001_create_bookpi_events.sql` y
+   `infra/db/migrations/002_bookpi_canonical_immutability.sql`. Las dos primeras
+   habilitan RLS y revocan el acceso directo: solo el rol del servidor lee o
+   escribe. Las de BookPI crean el plano durable de evidencia del pipeline y
+   fallan si se ejecutan sin la corrección de `REVOKE ALL PRIVILEGES ON SEQUENCE`.
 3. Definir las variables de la sección 3 con `vercel env add`.
 4. Ejecutar `pnpm deploy:readiness` contra el archivo de ambiente del entorno: una
    selección `postgres` sin URL utilizable bloquea
    (`DR-SERVERLESS-API_KEYS_DB_MISSING`, `DR-SERVERLESS-FEDERATION_DB_MISSING`) y un modo
    no reconocido también bloquea.
 5. Desplegar y confirmar `/api/v1/readyz` y el humo de la interfaz.
-6. Verificar la durabilidad con una prueba real: emitir una clave, forzar un *cold start*,
-   volver a verificarla; luego revocarla y comprobar que la instancia siguiente la rechaza.
+6. Verificar la durabilidad con una prueba real contra el alias de producción:
+   emitir una clave, comprobar su fila, revocarla y confirmar `401`; crear un
+   conector, comprobar su fila y eliminarlo; revisar los logs de runtime para
+   descartar `Durable API key store unavailable` y
+   `Durable federation store unavailable`.
 
 ## 5. Límites conocidos
 
@@ -97,3 +105,20 @@ dar margen a la hidratación y a las escrituras por fila.
   independientes de este cambio: el libro mayor y la durabilidad comparten la base.
 - Este documento describe el diseño en este repositorio; no demuestra comportamiento en
   producción. La verificación la hacen CI y la prueba del paso 6.
+
+## 6. Verificación observada el 2026-10-31
+
+Sobre el despliegue de producción `dpl_EVczyonXW8WsGCuK3FWw73U95FgE` (commit `3da3f71`):
+
+| Almacén | Operación | Resultado observado |
+|---|---|---|
+| API keys | crear + autenticar | `201`, fila en `public.isabella_api_keys`, `200` en `/api/v1/developer/me` |
+| API keys | revocar | `200`, `revoked_at` establecido, la misma clave responde `401` |
+| Federación | crear conector `webhook` | `201`, una fila en `public.federation_connectors` |
+| Federación | eliminar conector | `200`, `0` filas restantes |
+| BookPI pipeline | probe de readiness | `healthy`, backend `POSTGRES`, cadena verificada, `eventCount: 0` |
+
+Las filas de sonda se eliminaron. Los logs del despliegue ya no muestran
+`Durable API key store unavailable` ni `Durable federation store unavailable`.
+Antes del arreglo aparecían por el timeout de 2 s descrito en la sección 3.
+

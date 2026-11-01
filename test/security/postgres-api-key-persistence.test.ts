@@ -27,9 +27,7 @@ interface FakeClient {
 }
 
 /** In-memory stand-in for pg: no socket, no live database, no network. */
-function fakeClient(
-  handler?: (sql: string, params: unknown[]) => PostgresQueryResult
-): FakeClient {
+function fakeClient(handler?: (sql: string, params: unknown[]) => PostgresQueryResult): FakeClient {
   const fake: FakeClient = {
     client: null as unknown as PostgresQueryClient,
     calls: [],
@@ -86,8 +84,12 @@ describe('resolvePostgresUrl', () => {
   it('uses the documented variable precedence and rejects other schemes', () => {
     expect(resolvePostgresUrl({ DATABASE_URL: ' postgresql://a/b ' })).toBe('postgresql://a/b');
     expect(resolvePostgresUrl({ POSTGRES_URL: 'postgres://a/b' })).toBe('postgres://a/b');
-    expect(resolvePostgresUrl({ POSTGRES_PRISMA_URL: 'postgresql://c/d' })).toBe('postgresql://c/d');
-    expect(resolvePostgresUrl({ POSTGRES_URL_NON_POOLING: 'postgres://e/f' })).toBe('postgres://e/f');
+    expect(resolvePostgresUrl({ POSTGRES_PRISMA_URL: 'postgresql://c/d' })).toBe(
+      'postgresql://c/d'
+    );
+    expect(resolvePostgresUrl({ POSTGRES_URL_NON_POOLING: 'postgres://e/f' })).toBe(
+      'postgres://e/f'
+    );
     expect(resolvePostgresUrl({ DATABASE_URL: 'mysql://a/b' })).toBeNull();
     expect(
       resolvePostgresUrl({ DATABASE_URL: 'postgresql://a/b', POSTGRES_URL: 'postgres://z' })
@@ -220,9 +222,16 @@ describe('PostgresApiKeyPersistence', () => {
 
   it('never writes during verification when the flush budget is zero', async () => {
     const fake = fakeClient();
-    const persistence = new PostgresApiKeyPersistence({ client: fake.client, lastUsedFlushRows: 0 });
+    const persistence = new PostgresApiKeyPersistence({
+      client: fake.client,
+      lastUsedFlushRows: 0,
+    });
     const store = new IsabellaApiKeyStore({ persistence });
-    const issued = await store.issue({ tenantId: 'tenant-a', name: 'cero', scopes: ['cognition:read'] });
+    const issued = await store.issue({
+      tenantId: 'tenant-a',
+      name: 'cero',
+      scopes: ['cognition:read'],
+    });
     for (let index = 0; index < 100; index += 1) expect(store.verify(issued.secret).ok).toBe(true);
     expect(fake.calls.filter((call) => call.sql.startsWith('UPDATE'))).toHaveLength(0);
   });
@@ -275,25 +284,39 @@ describe('PostgresApiKeyPersistence', () => {
     warn.mockRestore();
   });
 
-  it('propagates a hydration failure so the store degrades and closes the client', async () => {
+  it('degrades on a hydration failure but keeps the backend for a retry', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-    let closed = false;
-    const failing: PostgresQueryClient = {
-      async query(): Promise<PostgresQueryResult> {
-        throw new Error('connection terminated');
-      },
-      async close(): Promise<void> {
-        closed = true;
-      },
-    };
+    let fail = true;
+    const fake = fakeClient(() => {
+      if (fail) throw new Error('connection terminated');
+      return { rows: [keyRow()] };
+    });
     const store = new IsabellaApiKeyStore({
-      persistence: new PostgresApiKeyPersistence({ client: failing }),
+      persistence: new PostgresApiKeyPersistence({ client: fake.client }),
+      hydrationRetryCooldownMs: 0,
     });
     await store.hydrate();
     expect(store.degradationReason).toContain('connection terminated');
-    const issued = await store.issue({ tenantId: 'tenant-a', name: 'local', scopes: ['cognition:read'] });
+    // The client stays open: writes must keep reaching the database and the
+    // next hydration must be able to recover the persisted rows.
+    expect(fake.closed).toBe(false);
+    // A write against the still-unreachable backend fails loudly instead of
+    // producing a key that only exists in process memory.
+    await expect(
+      store.issue({ tenantId: 'tenant-a', name: 'local', scopes: ['cognition:read'] })
+    ).rejects.toThrow('connection terminated');
+    expect(store.list()).toHaveLength(0);
+    fail = false;
+    await store.hydrate();
+    expect(store.degradationReason).toBeNull();
+    expect(store.list()).toHaveLength(1);
+    const issued = await store.issue({
+      tenantId: 'tenant-a',
+      name: 'local',
+      scopes: ['cognition:read'],
+    });
     expect(store.verify(issued.secret).ok).toBe(true);
-    expect(closed).toBe(true);
+    expect(store.list()).toHaveLength(2);
     warn.mockRestore();
   });
 });

@@ -1,10 +1,10 @@
-# Estado real de Isabella Genesis — actualizado 30 de octubre de 2026
+# Estado real de Isabella Genesis — actualizado 31 de octubre de 2026
 
-**Corte documental:** 30 de octubre de 2026 (consolidación del Kaos Audio System); anterior: 17 de octubre de 2026  
+**Corte documental:** 31 de octubre de 2026 (verificación de persistencia durable en producción); anterior: 30 de octubre de 2026 (Kaos Audio System); anterior: 17 de octubre de 2026  
 **Repositorio:** `OsoPanda1/ISABELLA-VERSION-TERMINUS-V6`  
 **Rama principal consultada:** `main`  
-**HEAD de main al consolidar:** `8124687`, con el árbol de trabajo de esta implementación pendiente de commit en el momento de la medición
-**HEAD de la consolidación anterior:** `94955427dc49cd4548100f7bca1d7d91dc457619`  
+**HEAD de main al consolidar:** `3da3f71`; este corte documental se commitea sobre ese SHA  
+**HEAD de la consolidación anterior:** `8124687`  
 **Clasificación:** preproducción; no certificado para producción.
 
 ## Readiness reportada y límites
@@ -23,12 +23,34 @@
 | Observabilidad y operación | 3 / 10 |
 | **Total** | **61 / 100** |
 
+> La tabla anterior es la estimación del corte del 30 de octubre de 2026. La verificación de producción del 31 de octubre (abajo) aporta evidencia nueva de persistencia, pero no se traduce automáticamente en un porcentaje: no existe todavía un denominador ponderado reproducible para recalcularlo sin especular.
+
+## Verificación de producción del 31 de octubre de 2026
+
+Medición contra el alias `https://isabella-version-terminus-v6.vercel.app` y la base
+Neon de producción, sobre el despliegue `dpl_EVczyonXW8WsGCuK3FWw73U95FgE`
+(commit `3da3f71`). Es evidencia observada, no aprobación humana.
+
+| Capacidad | Estado observado | Evidencia |
+|---|---|---|
+| Almacén durable de API keys | `tested` en producción | crear → fila en `public.isabella_api_keys`; autenticar → `200`; revocar → `revoked_at`; clave revocada → `401` |
+| Almacén durable de federación | `tested` en producción | crear conector `webhook` → fila en `public.federation_connectors`; eliminar → `0` filas |
+| BookPI pipeline durable | `healthy` | backend `POSTGRES`, cadena verificada, `eventCount: 0` |
+| IKES | `healthy` tras hidratación | el probe espera hasta 5 s la hidratación en curso; una falla se reporta como `degraded`, no como `pending` infinito |
+| Admin y firma | `healthy` | `/api/v1/ops/preflight` = `401` sin token y `200` con token; `/api/isabella/crypto/sign` firma Ed25519 |
+| Observabilidad | `degraded` | sin `OTEL_EXPORTER_OTLP_ENDPOINT`; la razón ahora se deriva del probe, no está fija |
+| Ledger BookPI legacy | `degraded` | `VOLATILE_IN_MEMORY`; consumidores síncronos, migración asíncrona pendiente |
+
+`GET /api/v1/readyz` sigue devolviendo **HTTP 503**: el ledger legacy es una
+dependencia requerida y volátil, y la observabilidad opcional degradada mantiene
+el estado global en `degraded`. No se oculta ni se reclasifica.
+
 ## Evidencia disponible y estado no demostrado
 
 - La documentación reporta un build aislado aprobado en un SHA anterior; el corte de 17 de octubre de 2026 fue documental y no ejecutó el código ni los tests (la consolidación de este corte sí los ejecutó en estación de trabajo: ver más abajo).
-- El README registra que `/api/v1/readyz` devolvió HTTP 503 en un preview evaluado previamente.
+- El README registra que `/api/v1/readyz` devolvió HTTP 503 en un preview evaluado previamente; la medición del 31 de octubre vuelve a observar 503, ahora con `bookpi-ledger` como bloqueo requerido y observabilidad opcional degradada.
 - La inferencia generativa externa no se considera verificada en producción; requiere proveedor configurado, prueba E2E y tratamiento comprobado de timeout, errores y fallback.
-- Persisten gates documentados relacionados con `BOOKPI_INTEGRITY_SECRET`, migraciones y probes de Atlas/IKES, durabilidad global de BookPI, CI observable, telemetría y despliegue/rollback reales.
+- La persistencia durable de claves de API, federación y BookPI pipeline dejó de ser una suposición: se probó contra la base de producción (ver arriba). Siguen pendientes backup/restore, comportamiento de RLS bajo el rol de servicio, migración asíncrona del ledger legacy, telemetría OTLP y despliegue/rollback reales.
 - La PR de UI/chat #23 y los cambios de documentación deben evaluarse en su propio SHA; no equivalen a una fusión ni a una liberación.
 
 ## Consolidación del Kaos Audio System (30 de octubre de 2026)
@@ -57,11 +79,14 @@ completo sigue ejecutándose en CI sobre el SHA candidato antes de considerarse 
 ## Bloqueadores prioritarios
 
 1. Ejecutar y conservar CI con pasos/logs válidos sobre el SHA candidato: typecheck, pruebas, build, seguridad y smokes.
-2. Resolver y probar configuración de persistencia: secretos del servidor, migraciones aplicadas, readiness de Atlas/IKES y durabilidad/recuperación de BookPI.
-3. Demostrar una conversación generativa E2E con proveedor autorizado; comprobar fallback sin presentar la respuesta determinista local como inferencia de modelo.
-4. Ejecutar E2E de navegador en desktop/móvil para navegación, conversación, accesibilidad y errores.
-5. Medir latencia p50/p95/p99 y consumo bajo carga reproducible; no afirmar “latencia casi cero” sin datos.
-6. Probar despliegue, monitorización, backup/restore y rollback en el entorno objetivo.
+2. Cerrar la persistencia restante: migrar el ledger legacy síncrono a un camino durable (requiere refactor asíncrono o decisión de arquitectura), aplicar/adaptar Atlas e IKES, y demostrar backup/restore. La durabilidad de API keys, federación y BookPI pipeline ya se probó en producción.
+3. Configurar `OTEL_EXPORTER_OTLP_ENDPOINT` (o backend equivalente) y verificar exportación real; sin eso `observability` sigue degradada.
+4. Resolver los dos bloqueadores de Stripe (`PF-STRIPE-WEBHOOK-MISSING`, `PF-STRIPE-TEST-KEY`) con acceso al panel y una clave de producción.
+5. Demostrar una conversación generativa E2E con proveedor autorizado; comprobar fallback sin presentar la respuesta determinista local como inferencia de modelo.
+6. Ejecutar E2E de navegador en desktop/móvil para navegación, conversación, accesibilidad y errores.
+7. Medir latencia p50/p95/p99 y consumo bajo carga reproducible; no afirmar “latencia casi cero” sin datos.
+8. Probar despliegue, monitorización, backup/restore y rollback en el entorno objetivo.
+9. Resolver las 4 vulnerabilidades moderadas reportadas por Dependabot.
 
 ## Jerarquía de documentación
 

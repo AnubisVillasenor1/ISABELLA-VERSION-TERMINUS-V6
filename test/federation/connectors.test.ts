@@ -159,9 +159,9 @@ describe('native federation connectors', () => {
 
     const connector = await registry.createConnector({ name: 'ok', kind: 'webhook' });
     backend.failNextWrite = true;
-    await expect(registry.ingest(connector, { key: { id: 'x' }, conversation: 'dos' })).rejects.toThrow(
-      'durable write rejected'
-    );
+    await expect(
+      registry.ingest(connector, { key: { id: 'x' }, conversation: 'dos' })
+    ).rejects.toThrow('durable write rejected');
     expect(registry.listInbox(10)).toHaveLength(0);
 
     backend.failNextWrite = true;
@@ -207,18 +207,53 @@ describe('native federation connectors', () => {
   });
 
   it('degrades to process-local state when hydration fails', async () => {
-    const registry = new FederationRegistry({
-      load: () => ({ connectors: [], inbox: [] }),
-      save: () => undefined,
-      hydrate: async () => {
-        throw new Error('connection refused');
+    const registry = new FederationRegistry(
+      {
+        load: () => ({ connectors: [], inbox: [] }),
+        save: () => undefined,
+        hydrate: async () => {
+          throw new Error('connection refused');
+        },
       },
-    });
+      { hydrationRetryCooldownMs: 60_000 }
+    );
     const connector = await registry.createConnector({ name: 'degraded', kind: 'webhook' });
     expect(registry.degradationReason).toContain('connection refused');
     expect(registry.getConnector(connector.id)?.name).toBe('degraded');
     await registry.ingest(connector, { key: { id: 'msg-9' }, conversation: 'sigue vivo' });
     expect(registry.listInbox(10)).toHaveLength(1);
+  });
+
+  it('retries a failed hydration and recovers the durable rows', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    let fail = true;
+    const persisted: ConnectorRecord = {
+      id: 'c-existing',
+      name: 'persistido',
+      kind: 'webhook',
+      targetUrl: null,
+      createdAt: '2026-10-01T00:00:00.000Z',
+      status: 'registered',
+    };
+    const registry = new FederationRegistry(
+      {
+        load: () => ({ connectors: [], inbox: [] }),
+        save: () => undefined,
+        hydrate: async () => {
+          if (fail) throw new Error('connection refused');
+          return { connectors: [persisted], inbox: [] };
+        },
+      },
+      { hydrationRetryCooldownMs: 0 }
+    );
+    await registry.hydrate();
+    expect(registry.degradationReason).toContain('connection refused');
+    expect(registry.listConnectors()).toHaveLength(0);
+    fail = false;
+    await registry.createConnector({ name: 'nuevo', kind: 'webhook' });
+    expect(registry.degradationReason).toBeNull();
+    expect(registry.getConnector('c-existing')?.name).toBe('persistido');
+    warn.mockRestore();
   });
 });
 

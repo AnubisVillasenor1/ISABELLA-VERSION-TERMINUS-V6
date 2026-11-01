@@ -1,7 +1,7 @@
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import * as schema from './schema';
-import { resolvePostgresUrl } from './postgres-client';
+import { resolvePostgresConnectTimeoutMs, resolvePostgresUrl } from './postgres-client';
 
 const connectionString = resolvePostgresUrl(process.env);
 
@@ -9,7 +9,7 @@ export const postgresPool = connectionString
   ? new Pool({
       connectionString,
       max: 4,
-      connectionTimeoutMillis: 2_000,
+      connectionTimeoutMillis: resolvePostgresConnectTimeoutMs(),
       idleTimeoutMillis: 10_000,
       application_name: 'isabella-genesis-runtime',
     })

@@ -1,11 +1,30 @@
 /**
  * Minimal Postgres client shared by the durable runtime stores.
  *
- * Follows the BookPI runtime adapter: pooled `pg` Pool, a small ceiling and a
- * short connection timeout so a cold start never blocks on an unreachable DB.
+ * Pooled `pg` Pool with a bounded connect timeout. The default is deliberately
+ * longer than a local connection because serverless cold starts against a
+ * pooled Postgres endpoint (Neon/Supabase) regularly need more than two
+ * seconds: a short timeout there silently downgraded durable stores to process
+ * memory. Override with ISABELLA_POSTGRES_CONNECT_TIMEOUT_MS (1000-30000 ms).
  * Callers may inject their own client (tests use an in-memory fake).
  */
 import { Pool } from 'pg';
+
+const DEFAULT_CONNECT_TIMEOUT_MS = 10_000;
+const MIN_CONNECT_TIMEOUT_MS = 1_000;
+const MAX_CONNECT_TIMEOUT_MS = 30_000;
+
+/** Resolves the effective connect timeout, clamped to a safe range. */
+export function resolvePostgresConnectTimeoutMs(explicit?: number): number {
+  const raw = process.env.ISABELLA_POSTGRES_CONNECT_TIMEOUT_MS;
+  const configured = explicit ?? (raw && raw.trim() !== '' ? Number(raw) : Number.NaN);
+  if (!Number.isFinite(configured)) return DEFAULT_CONNECT_TIMEOUT_MS;
+  return Math.min(MAX_CONNECT_TIMEOUT_MS, Math.max(MIN_CONNECT_TIMEOUT_MS, Math.floor(configured)));
+}
+
+export interface PostgresClientOptions {
+  readonly connectTimeoutMs?: number;
+}
 
 export interface PostgresQueryResult {
   readonly rows: Record<string, unknown>[];
@@ -31,13 +50,15 @@ export function resolvePostgresUrl(env: PostgresUrlEnv): string | null {
 
 export function createPostgresQueryClient(
   connectionString: string,
-  applicationName: string
+  applicationName: string,
+  options: PostgresClientOptions = {}
 ): PostgresQueryClient {
   const pool = new Pool({
     connectionString,
     max: 5,
-    connectionTimeoutMillis: 2_000,
+    connectionTimeoutMillis: resolvePostgresConnectTimeoutMs(options.connectTimeoutMs),
     idleTimeoutMillis: 10_000,
+    keepAlive: true,
     application_name: applicationName,
   });
   pool.on('error', (error) => {

@@ -1,4 +1,5 @@
 import { Pool } from 'pg';
+import { resolvePostgresConnectTimeoutMs } from '../database/postgres-client';
 import { buildBookPiEvent } from './emitter';
 import { verifyChainLink, ZERO_HASH } from './crypto';
 import { createPostgresStorage } from './storage-postgres';
@@ -50,7 +51,7 @@ export function createRuntimeBookPiStorage(
     const pool = new Pool({
       connectionString: databaseUrl,
       max: 5,
-      connectionTimeoutMillis: 2_000,
+      connectionTimeoutMillis: resolvePostgresConnectTimeoutMs(),
       idleTimeoutMillis: 10_000,
       application_name: 'isabella-terminus-bookpi',
     });

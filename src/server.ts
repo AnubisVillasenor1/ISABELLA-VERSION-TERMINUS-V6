@@ -97,6 +97,7 @@ import { FixedWindowRateLimiter } from './security/rate-limit';
 import { createDefaultApiKeyStore } from './security/isabella-api-keys';
 import { createOptionalApiKeyAuthenticator, registerApiKeyRoutes } from './routes/api-keys';
 import { appDb } from './database/app-db';
+import { resolvePostgresConnectTimeoutMs } from './database/postgres-client';
 import { registerPersistentChatRoutes } from './routes/persistent-chat';
 import { createDefaultFederationRegistry } from './federation/connectors';
 import { registerFederationRoutes } from './routes/federation';
@@ -142,7 +143,7 @@ import { applyProviderSubscriptionEvent } from './commerce/provider-events';
 import type { ProviderConfig, SignatureScheme, TenantMapping } from './commerce/webhook';
 import { LatencyRegistry } from './deployment/latency-metrics';
 import { TtlSingleFlight } from './deployment/ttl-single-flight';
-import { collectDependencyReadiness } from './health/dependency-readiness';
+import { collectDependencyReadiness, probeObservability } from './health/dependency-readiness';
 import { MetricsRegistry, createMetricsSnapshotHash } from './observability/metrics';
 import { SessionMemory, formatSessionContext, deriveSessionId } from './memory/session-memory';
 import {
@@ -297,7 +298,7 @@ const subscriptionPersistencePool = subscriptionDatabaseUrl
   ? new Pool({
       connectionString: subscriptionDatabaseUrl,
       max: 5,
-      connectionTimeoutMillis: 3_000,
+      connectionTimeoutMillis: resolvePostgresConnectTimeoutMs(),
       idleTimeoutMillis: 30_000,
     })
   : undefined;
@@ -4918,12 +4919,17 @@ async function currentOpsState() {
     : ('degraded' as const);
   const ikesProbe = await ikesHealthCache.get(async () => runtime.memory.persistenceProbe());
   const ikesStatus = ikesProbe.healthy ? ('healthy' as const) : ('degraded' as const);
+  // Observability is advisory: derive its evidence from the same configuration
+  // probe the deep-readiness path uses, so the reason is measured, not hardcoded.
+  const observabilityProbe = probeObservability(process.env);
+  const observabilityStatus =
+    observabilityProbe.status === 'healthy' ? ('healthy' as const) : ('degraded' as const);
   const dependencies = [
     { name: 'bookpi-ledger', status: legacyLedgerStatus, required: true },
     { name: 'pipeline-bookpi-storage', status: pipelineLedgerStatus, required: true },
     { name: 'atlas-persistence', status: atlasStatus, required: true },
     { name: 'ikes-memory', status: ikesStatus, required: true },
-    { name: 'observability', status: 'degraded' as const, required: false },
+    { name: 'observability', status: observabilityStatus, required: false },
   ];
   const readinessEvidence = [
     {
@@ -4953,8 +4959,9 @@ async function currentOpsState() {
     },
     {
       dependency: 'observability',
-      status: 'degraded',
-      reason: 'No live telemetry exporter probe is wired into the readiness path.',
+      status: observabilityStatus,
+      required: observabilityProbe.required,
+      reason: observabilityProbe.detail,
     },
   ];
   return { snapshot: runtime.opsSnapshot(dependencies), readinessEvidence };

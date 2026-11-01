@@ -18,9 +18,7 @@ interface FakeClient {
 }
 
 /** In-memory stand-in for pg: no socket, no live database, no network. */
-function fakeClient(
-  handler?: (sql: string, params: unknown[]) => PostgresQueryResult
-): FakeClient {
+function fakeClient(handler?: (sql: string, params: unknown[]) => PostgresQueryResult): FakeClient {
   const fake: FakeClient = {
     client: null as unknown as PostgresQueryClient,
     calls: [],
@@ -76,7 +74,9 @@ function hydrateClient(
 
 describe('createPostgresFederationPersistence', () => {
   it('declines to build a backend without a usable URL', () => {
-    expect(createPostgresFederationPersistence({ ISABELLA_FEDERATION_STORE: 'postgres' })).toBeNull();
+    expect(
+      createPostgresFederationPersistence({ ISABELLA_FEDERATION_STORE: 'postgres' })
+    ).toBeNull();
   });
 });
 
@@ -148,9 +148,13 @@ describe('PostgresFederationPersistence', () => {
     const registry = new FederationRegistry(persistence);
     const connector = await registry.createConnector({ name: 'webhook', kind: 'webhook' });
     await registry.ingest(connector, { key: { id: 'msg-2' }, conversation: 'x'.repeat(5_000) });
-    const insert = fake.calls.find((call) => call.sql.startsWith('INSERT INTO public.federation_inbox'));
+    const insert = fake.calls.find((call) =>
+      call.sql.startsWith('INSERT INTO public.federation_inbox')
+    );
     expect(String(insert?.params[5])).toHaveLength(4_000);
-    const trim = fake.calls.find((call) => call.sql.startsWith('DELETE FROM public.federation_inbox'));
+    const trim = fake.calls.find((call) =>
+      call.sql.startsWith('DELETE FROM public.federation_inbox')
+    );
     expect(trim?.params).toEqual([200]);
   });
 
@@ -197,27 +201,46 @@ describe('PostgresFederationPersistence', () => {
     expect(registry.listInbox(10)).toHaveLength(0);
   });
 
-  it('degrades the registry to process-local state when hydration fails', async () => {
+  it('degrades the registry without abandoning the backend after a hydration failure', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     let closed = false;
-    const registry = new FederationRegistry({
-      load: () => ({ connectors: [], inbox: [] }),
-      save: () => undefined,
-      hydrate: async () => {
-        throw new Error('database is unreachable');
+    let fail = true;
+    const persisted: ConnectorRecord = {
+      id: 'c-persisted',
+      name: 'existente',
+      kind: 'webhook',
+      targetUrl: null,
+      createdAt: '2026-10-01T00:00:00.000Z',
+      status: 'registered',
+    };
+    const registry = new FederationRegistry(
+      {
+        load: () => ({ connectors: [], inbox: [] }),
+        save: () => undefined,
+        hydrate: async () => {
+          if (fail) throw new Error('database is unreachable');
+          return { connectors: [persisted], inbox: [] };
+        },
+        close: async () => {
+          closed = true;
+        },
       },
-      close: async () => {
-        closed = true;
-      },
-    });
+      { hydrationRetryCooldownMs: 0 }
+    );
     await registry.hydrate();
     expect(registry.degradationReason).toContain('database is unreachable');
-    expect(closed).toBe(true);
+    // The backend stays attached so writes keep trying the database and a
+    // later hydration can recover the rows that were already persisted.
+    expect(closed).toBe(false);
     const connector: ConnectorRecord = await registry.createConnector({
       name: 'local',
       kind: 'webhook',
     });
     expect(registry.getConnector(connector.id)?.name).toBe('local');
+    fail = false;
+    await registry.hydrate();
+    expect(registry.degradationReason).toBeNull();
+    expect(registry.getConnector('c-persisted')?.name).toBe('existente');
     warn.mockRestore();
   });
 

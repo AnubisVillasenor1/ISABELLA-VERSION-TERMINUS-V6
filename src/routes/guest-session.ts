@@ -54,7 +54,10 @@ export async function resolveGuestOwner(
     if (active) {
       await database
         .update(guestSessions)
-        .set({ lastSeenAt: now, expiresAt: new Date(now.getTime() + COOKIE_MAX_AGE_SECONDS * 1_000) })
+        .set({
+          lastSeenAt: now,
+          expiresAt: new Date(now.getTime() + COOKIE_MAX_AGE_SECONDS * 1_000),
+        })
         .where(eq(guestSessions.tokenHash, tokenHash));
       return tokenHash;
     }

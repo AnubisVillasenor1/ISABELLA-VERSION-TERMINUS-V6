@@ -124,32 +124,62 @@ function safeTarget(raw: unknown): string | null {
   }
 }
 
+/** Base delay before the registry retries a failed hydration. */
+const DEFAULT_HYDRATION_RETRY_COOLDOWN_MS = 5_000;
+const MAX_HYDRATION_RETRY_COOLDOWN_MS = 60_000;
+
+export interface FederationRegistryOptions {
+  /** Base cooldown before retrying a failed hydration; doubles per failure (max 60 s). */
+  readonly hydrationRetryCooldownMs?: number;
+}
+
 export class FederationRegistry {
   private state: FederationFile;
   private persistence: FederationPersistence | null;
   private hydration: Promise<void> | null = null;
+  private hydrationSucceeded = false;
+  private hydrationFailures = 0;
+  private hydrationRetryAt = 0;
+  private retryTimer: ReturnType<typeof setTimeout> | null = null;
   private degradation: string | null = null;
+  private readonly hydrationRetryCooldownMs: number;
 
-  constructor(persistence: FederationPersistence | null = null) {
+  constructor(
+    persistence: FederationPersistence | null = null,
+    options: FederationRegistryOptions = {}
+  ) {
     this.persistence = persistence ?? null;
     this.state = this.persistence?.load() ?? { connectors: [], inbox: [] };
+    this.hydrationRetryCooldownMs = Math.max(
+      0,
+      Math.floor(options.hydrationRetryCooldownMs ?? DEFAULT_HYDRATION_RETRY_COOLDOWN_MS)
+    );
   }
 
-  /** Non-null once a durable backend was abandoned; the registry stays process-local. */
+  /**
+   * Non-null while the last hydration failed. Reads stay process-local until a
+   * scheduled retry succeeds; the durable backend is kept so writes still try
+   * the database instead of silently disappearing into memory.
+   */
   get degradationReason(): string | null {
     return this.degradation;
   }
 
   /**
-   * Async hydration for row-level backends. Runs at most once and never
-   * rejects, so an unreachable database degrades state instead of crashing.
+   * Async hydration for row-level backends. A failure no longer abandons the
+   * backend: a cold-start timeout must not disable durability for the whole
+   * instance, so the registry keeps writing rows directly and schedules a
+   * bounded retry with exponential backoff. Never rejects.
    */
   hydrate(): Promise<void> {
     if (this.hydration) return this.hydration;
+    if (this.hydrationSucceeded) return Promise.resolve();
     const persistence = this.persistence;
-    if (!persistence?.hydrate) {
-      this.hydration = Promise.resolve();
-      return this.hydration;
+    if (!persistence?.hydrate) return Promise.resolve();
+    // Backoff is time-based: any call after the cooldown may retry, and the
+    // scheduled timer is only a wake-up so read-only traffic also recovers.
+    if (this.hydrationFailures > 0 && Date.now() < this.hydrationRetryAt) {
+      return Promise.resolve();
     }
     this.hydration = persistence
       .hydrate()
@@ -167,21 +197,40 @@ export class FederationRegistry {
           .sort((a, b) => b.receivedAt.localeCompare(a.receivedAt))
           .slice(0, MAX_INBOX);
         this.state = { connectors, inbox };
+        this.hydrationSucceeded = true;
+        this.hydrationFailures = 0;
+        this.hydrationRetryAt = 0;
+        this.degradation = null;
       })
       .catch((error: unknown) => {
-        this.releaseDurableBackend(error);
+        this.noteHydrationFailure(error);
+      })
+      .finally(() => {
+        this.hydration = null;
       });
     return this.hydration;
   }
 
-  private releaseDurableBackend(error: unknown): void {
-    const persistence = this.persistence;
+  private noteHydrationFailure(error: unknown): void {
+    this.hydrationFailures += 1;
     this.degradation = error instanceof Error ? error.message.slice(0, 180) : 'ERROR';
-    this.persistence = null;
-    console.warn('[Isabella] Durable federation store unavailable; state stays process-local', {
+    console.warn('[Isabella] Federation hydration failed; state stays process-local until retry', {
       message: this.degradation,
+      attempt: this.hydrationFailures,
     });
-    if (persistence?.close) persistence.close().catch(() => undefined);
+    const delayMs = Math.min(
+      MAX_HYDRATION_RETRY_COOLDOWN_MS,
+      this.hydrationRetryCooldownMs * 2 ** Math.max(0, this.hydrationFailures - 1)
+    );
+    this.hydrationRetryAt = Date.now() + delayMs;
+    // A zero cooldown means "retry on the next call"; scheduling a timer would
+    // spin against a backend that is still down.
+    if (delayMs <= 0 || this.retryTimer !== null) return;
+    this.retryTimer = setTimeout(() => {
+      this.retryTimer = null;
+      void this.hydrate();
+    }, delayMs);
+    this.retryTimer.unref?.();
   }
 
   private persist(): void {

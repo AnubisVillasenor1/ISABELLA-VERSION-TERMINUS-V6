@@ -12,6 +12,25 @@ export interface SupabaseIkesConfig {
   pageSize?: number;
 }
 
+/**
+ * A Supabase REST cold start (TLS + DNS + edge routing) regularly exceeds two
+ * seconds. A short timeout aborted the IKES hydration request and the engine
+ * stayed process-local until the next instance. Keep the default aligned with
+ * the Atlas adapter and allow an operator override in a bounded range.
+ */
+const DEFAULT_REQUEST_TIMEOUT_MS = 10_000;
+const MIN_REQUEST_TIMEOUT_MS = 250;
+const MAX_REQUEST_TIMEOUT_MS = 30_000;
+
+export function resolveIkesRequestTimeoutMs(
+  env: Readonly<Record<string, string | undefined>> = process.env
+): number {
+  const raw = env.ISABELLA_IKES_REQUEST_TIMEOUT_MS;
+  const configured = raw && raw.trim() !== '' ? Number(raw) : Number.NaN;
+  if (!Number.isFinite(configured)) return DEFAULT_REQUEST_TIMEOUT_MS;
+  return Math.min(MAX_REQUEST_TIMEOUT_MS, Math.max(MIN_REQUEST_TIMEOUT_MS, Math.floor(configured)));
+}
+
 interface SourceRow {
   source_id: string;
   uri: string;
@@ -55,9 +74,13 @@ export class SupabaseIkesPersistence implements IKESEnginePersistencePort {
     if (!/^https:\/\//i.test(baseUrl) || !key) throw new Error('IKES_SUPABASE_CONFIG_INVALID');
     this.baseUrl = baseUrl;
     this.key = key;
-    this.timeoutMs = config.requestTimeoutMs ?? 2_000;
+    this.timeoutMs = config.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
     this.pageSize = config.pageSize ?? 500;
-    if (!Number.isInteger(this.timeoutMs) || this.timeoutMs < 250 || this.timeoutMs > 30_000) {
+    if (
+      !Number.isInteger(this.timeoutMs) ||
+      this.timeoutMs < MIN_REQUEST_TIMEOUT_MS ||
+      this.timeoutMs > MAX_REQUEST_TIMEOUT_MS
+    ) {
       throw new Error('IKES_SUPABASE_TIMEOUT_INVALID');
     }
     if (!Number.isInteger(this.pageSize) || this.pageSize < 1 || this.pageSize > 1000) {
@@ -219,5 +242,9 @@ export function createSupabaseIkesPersistence(
   const supabaseUrl = env.SUPABASE_URL?.trim();
   const serviceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY?.trim();
   if (!supabaseUrl || !serviceRoleKey) return undefined;
-  return new SupabaseIkesPersistence({ supabaseUrl, serviceRoleKey });
+  return new SupabaseIkesPersistence({
+    supabaseUrl,
+    serviceRoleKey,
+    requestTimeoutMs: resolveIkesRequestTimeoutMs(env),
+  });
 }
