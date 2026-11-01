@@ -245,6 +245,16 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Validate Caddy configuration
+        shell: bash
+        run: |
+          ADMIN_BCRYPT_HASH="$(docker run --rm caddy:2.8-alpine caddy hash-password --plaintext 'ci-validation-only')"
+          docker run --rm \
+            --mount type=bind,source="$GITHUB_WORKSPACE/config/Caddyfile",target=/etc/caddy/Caddyfile,readonly \
+            --env "ADMIN_BCRYPT_HASH=$ADMIN_BCRYPT_HASH" \
+            caddy:2.8-alpine \
+            caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+
       - name: Login to Container Registry
         uses: docker/login-action@v3
         with:
@@ -260,14 +270,14 @@ jobs:
           tags: |
             type=ref,event=branch
             type=ref,event=pr
-            type=sha,prefix=
+            type=sha,format=long,prefix=
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
           context: .
-          push: ${{ github.event_name == 'push' }}
+          push: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production') }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
@@ -287,16 +297,20 @@ jobs:
     steps:
       - name: Deploy to staging
         uses: appleboy/ssh-action@v1
+        env:
+          IMAGE_TAG: ${{ github.sha }}
         with:
           host: ${{ secrets.STAGING_HOST }}
           username: ${{ secrets.STAGING_USER }}
           key: ${{ secrets.STAGING_SSH_KEY }}
+          envs: IMAGE_TAG
           script: |
+            set -e
             cd /opt/isabella
-            docker compose pull
-            docker compose up -d --remove-orphans
-            sleep 30
-            curl -f http://localhost:8080/api/v1/health || exit 1
+            IMAGE_TAG="$IMAGE_TAG" docker compose pull app
+            IMAGE_TAG="$IMAGE_TAG" docker compose up -d --no-build --remove-orphans
+            curl --retry 30 --retry-connrefused --retry-delay 2 --max-time 5 -fsS http://localhost:8080/health >/dev/null
+            curl --max-time 10 -fsS http://localhost:8080/api/v1/readyz
 
   # ============================================================================
   # MANUAL PRODUCTION DEPLOYMENT (workflow_dispatch)
@@ -311,27 +325,27 @@ jobs:
     steps:
       - name: Manual Production Deploy
         uses: appleboy/ssh-action@v1
+        env:
+          IMAGE_TAG: ${{ github.sha }}
         with:
           host: ${{ secrets.PRODUCTION_HOST }}
           username: ${{ secrets.PRODUCTION_USER }}
           key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          envs: IMAGE_TAG
           script: |
             set -e
             cd /opt/isabella
             echo "Creating pre-deployment backup..."
             ./scripts/backup.sh full
-            echo "Pulling new images..."
-            docker compose pull
-            echo "Deploying new version..."
-            docker compose up -d --remove-orphans
-            sleep 30
-            echo "Running migrations..."
-            docker compose exec -T postgres psql -U isabella_admin -d isabella_db -f /docker-entrypoint-initdb.d/schema.sql
-            echo "Verifying deployment..."
-            sleep 10
-            curl -f http://localhost:8080/api/v1/health
-            curl -f http://localhost:8080/api/v1/readyz
-            echo "Manual deployment successful!"
+            echo "Pulling image ${IMAGE_TAG}..."
+            IMAGE_TAG="$IMAGE_TAG" docker compose pull app
+            echo "Deploying version ${IMAGE_TAG}..."
+            IMAGE_TAG="$IMAGE_TAG" docker compose up -d --no-build --remove-orphans
+            echo "Waiting for the runtime health check..."
+            curl --retry 30 --retry-connrefused --retry-delay 2 --max-time 5 -fsS http://localhost:8080/health >/dev/null
+            echo "Checking dependency readiness; migrations run in the app entrypoint..."
+            curl --max-time 10 -fsS http://localhost:8080/api/v1/readyz
+            echo "Manual deployment passed health and readiness checks."
 
   # ============================================================================
   # SECURITY RELEASE

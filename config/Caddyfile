@@ -39,29 +39,8 @@ isabella.tamv.online {
         
     }
 
-    # Rate limiting for API endpoints
-    @api {
-        path /api/*
-    }
-    rate_limit @api {
-        zone api_limit
-        key {remote}
-        events 100
-        window 1m
-    }
-
-    # Stricter rate limiting for auth endpoints
-    @auth {
-        path /api/v1/auth/*
-        path /api/v1/login
-        path /api/v1/register
-    }
-    rate_limit @auth {
-        zone auth_limit
-        key {remote}
-        events 10
-        window 1m
-    }
+    # API and authentication throttles are enforced by Express in src/server.ts;
+    # the stock Caddy image does not include the third-party rate_limit module.
 
     # WebSocket support for real-time features
     @websocket {
@@ -123,61 +102,44 @@ isabella.tamv.online {
     }
 }
 
-# Admin panel (restricted to internal network)
+# Admin panel (private networks only, plus operator authentication)
 admin.tamv.online {
-    basicauth {
-        admin {bcrypt_hash_here}
+    @external {
+        not remote_ip 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16
     }
-    
-    reverse_proxy isabella-core:8080 {
-        transport http {
-            read_timeout 60s
-            write_timeout 60s
+    route {
+        respond @external 403
+        basic_auth {
+            admin {$ADMIN_BCRYPT_HASH}
+        }
+        reverse_proxy isabella-core:8080 {
+            transport http {
+                read_timeout 60s
+                write_timeout 60s
+            }
         }
     }
-    
-    # Only allow from internal IPs
-    @internal {
-        remote_ip 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16
-    }
-    respond @internal 403
 }
 
-# Metrics endpoint (internal only)
+# Metrics endpoint (private networks only)
 metrics.tamv.online {
-    @internal {
-        remote_ip 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16
+    @external {
+        not remote_ip 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16
     }
-    respond @internal 403
-    
-    reverse_proxy victoriametrics:8428
+    route {
+        respond @external 403
+        reverse_proxy victoriametrics:8428
+    }
 }
 
-# CrowdSec dashboard (internal only)
+# CrowdSec dashboard (private networks only)
 crowdsec.tamv.online {
-    @internal {
-        remote_ip 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16
+    @external {
+        not remote_ip 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16
     }
-    respond @internal 403
-    
-    reverse_proxy crowdsec:8080
-}
-
-# Rate limit zone definitions (in global scope)
-(rate_limit_zones) {
-    zone api_limit {
-        key {remote}
-        events 100
-        window 1m
-        store memory
-    }
-    
-    zone auth_limit {
-        key {remote}
-        events 10
-        window 1m
-        store memory
+    route {
+        respond @external 403
+        reverse_proxy crowdsec:8080
     }
 }
 
-import (rate_limit_zones)

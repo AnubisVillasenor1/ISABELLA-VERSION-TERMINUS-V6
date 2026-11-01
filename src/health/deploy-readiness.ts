@@ -152,12 +152,18 @@ export function runDeployReadiness(env: Env): DeployReadinessReport {
         'ERROR',
         'MongoDB is the verified-knowledge backend, but MONGODB_URI is not configured.'
       );
-    } else if (!/^mongodb(?:\\+srv)?:\\/\\//i.test(mongoUri)) {
-      add(
-        'DR-VERIFIED-KNOWLEDGE-MONGODB-URI-INVALID',
-        'ERROR',
-        'MONGODB_URI must use mongodb:// or mongodb+srv://.'
-      );
+    } else {
+      const normalizedMongoUri = mongoUri.toLowerCase();
+      if (
+        !normalizedMongoUri.startsWith('mongodb://') &&
+        !normalizedMongoUri.startsWith('mongodb+srv://')
+      ) {
+        add(
+          'DR-VERIFIED-KNOWLEDGE-MONGODB-URI-INVALID',
+          'ERROR',
+          'MONGODB_URI must use mongodb:// or mongodb+srv://.'
+        );
+      }
     }
   } else if (verifiedKnowledgeProvider === 'supabase') {
     if (!sbUrl || !sbKey)
@@ -193,11 +199,15 @@ export function runDeployReadiness(env: Env): DeployReadinessReport {
     .split(',')
     .map((origin) => origin.trim())
     .filter(Boolean);
-  const localOrWildcardOrigin = origins.some(
-    (origin) =>
-      origin === '*' ||
-      /(?:^|\\/\\/)(?:localhost|127\\.0\\.0\\.1|\\[::1\\])(?::|\\/|$)/i.test(origin)
-  );
+  const localOrWildcardOrigin = origins.some((origin) => {
+    if (origin === '*') return true;
+    try {
+      const hostname = new URL(origin).hostname.toLowerCase();
+      return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]';
+    } catch {
+      return false;
+    }
+  });
   if (origins.length === 0 || localOrWildcardOrigin) {
     add(
       'DR-ORIGINS-LOCAL',
