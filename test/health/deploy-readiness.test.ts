@@ -9,6 +9,8 @@ const good = {
   APP_PUBLIC_URL: "https://isabella.example.org",
   BOOKPI_INTEGRITY_SECRET: strong("bookpi"),
   DATABASE_URL: "postgresql://u:p@db.example.org:5432/isabella?sslmode=require",
+  ISABELLA_VERIFIED_KNOWLEDGE_BACKEND: "mongodb",
+  MONGODB_URI: "mongodb+srv://user:password@cluster.example.org/isabella?retryWrites=true&w=majority",
   SUPABASE_URL: "https://x.supabase.co",
   SUPABASE_SERVICE_ROLE_KEY: strong("sb"),
   SUPABASE_ANON_KEY: "eyJhbGciOi-example-anon-key",
@@ -40,13 +42,13 @@ describe("deploy readiness", () => {
     expect(ids).toContain("DR-DATABASE-INVALID");
   });
 
-  it("requires Supabase URL and key together; warns when absent", () => {
+  it("requires the Atlas/IKES Supabase backend in production", () => {
     const { SUPABASE_SERVICE_ROLE_KEY: _k, ...half } = good;
     expect(runDeployReadiness(half).findings.map((f) => f.id)).toContain("DR-SUPABASE-PARTIAL");
     const { SUPABASE_URL: _u, SUPABASE_SERVICE_ROLE_KEY: _k2, ...none } = good;
     const r = runDeployReadiness(none);
     expect(r.findings.map((f) => f.id)).toContain("DR-SUPABASE-ABSENT");
-    expect(r.status).toBe("READY_WITH_WARNINGS");
+    expect(r.status).toBe("BLOCKED");
   });
 
   it("blocks when Supabase is configured but its user-authentication key is absent", () => {
@@ -55,11 +57,19 @@ describe("deploy readiness", () => {
     expect(ids).toContain("DR-SUPABASE-AUTH-KEY-MISSING");
   });
 
-  it("warns about a missing inference provider and localhost origins", () => {
+  it("warns about a missing inference provider and blocks local origins", () => {
     const { GROQ_API_KEY: _g, ...rest } = good;
-    const ids = runDeployReadiness({ ...rest, ALLOWED_ORIGINS: "http://localhost:3000" }).findings.map((f) => f.id);
+    const report = runDeployReadiness({ ...rest, ALLOWED_ORIGINS: "http://localhost:3000" });
+    const ids = report.findings.map((f) => f.id);
     expect(ids).toContain("DR-NO-INFERENCE-PROVIDER");
     expect(ids).toContain("DR-ORIGINS-LOCAL");
+    expect(report.findings.find((finding) => finding.id === "DR-ORIGINS-LOCAL")?.severity).toBe("ERROR");
+    expect(runDeployReadiness({ ...good, ALLOWED_ORIGINS: "*" }).findings.map((f) => f.id)).toContain(
+      "DR-ORIGINS-LOCAL"
+    );
+    expect(runDeployReadiness({ ...good, ALLOWED_ORIGINS: "https://example.org/path" }).findings.map((f) => f.id)).toContain(
+      "DR-ORIGINS-INVALID"
+    );
   });
 
   it("blocks Vercel production when API-key or federation state is ephemeral", () => {
@@ -151,6 +161,29 @@ describe("deploy readiness", () => {
     expect(ids).toContain("DR-SERVERLESS-FEDERATION_MODE_UNKNOWN");
     expect(JSON.stringify(r)).not.toContain("redis");
     expect(JSON.stringify(r)).not.toContain("shared");
+  });
+
+  it("requires a valid durable verified-knowledge backend", () => {
+    const { MONGODB_URI: _uri, ...withoutMongo } = good;
+    expect(runDeployReadiness(withoutMongo).findings.map((f) => f.id)).toContain(
+      "DR-VERIFIED-KNOWLEDGE-MONGODB-URI-MISSING"
+    );
+    expect(
+      runDeployReadiness({ ...good, MONGODB_URI: "postgresql://user:password@db.example.org/app" }).findings.map(
+        (f) => f.id
+      )
+    ).toContain("DR-VERIFIED-KNOWLEDGE-MONGODB-URI-INVALID");
+    expect(
+      runDeployReadiness({ ...good, ISABELLA_VERIFIED_KNOWLEDGE_BACKEND: "memory" }).findings.map((f) => f.id)
+    ).toContain("DR-VERIFIED-KNOWLEDGE-NON_DURABLE");
+    expect(
+      runDeployReadiness({
+        ...good,
+        ISABELLA_VERIFIED_KNOWLEDGE_BACKEND: "supabase",
+        SUPABASE_URL: "",
+        SUPABASE_SERVICE_ROLE_KEY: "",
+      }).findings.map((f) => f.id)
+    ).toContain("DR-VERIFIED-KNOWLEDGE-SUPABASE-CONFIG-MISSING");
   });
 
   it("never leaks secret values in findings", () => {

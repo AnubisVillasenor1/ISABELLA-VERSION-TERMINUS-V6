@@ -57,6 +57,10 @@ vercel env add BOOKPI_INTEGRITY_SECRET production
 | `ISABELLA_API_KEY_PEPPER` | cadena estable | Debe coincidir en todas las instancias; cambiarlo invalida los digests existentes. |
 | `ISABELLA_API_KEY_LAST_USED_FLUSH_ROWS` | entero ≥ 0 | Umbral del lote de telemetría; por omisión 32; `0` deshabilita toda escritura desde `verify()`. |
 | `ISABELLA_POSTGRES_CONNECT_TIMEOUT_MS` | entero 1000–30000 | Tiempo máximo para abrir conexión; por omisión **10000**. Un valor menor que un *cold start* del pooler degrada los almacenes a memoria. |
+| `ISABELLA_VERIFIED_KNOWLEDGE_BACKEND` | `mongodb` o `supabase` | En producción el backend `memory` queda bloqueado por readiness. El valor por omisión es `mongodb`. |
+| `MONGODB_URI` | `mongodb://` o `mongodb+srv://` | Requerido cuando se selecciona MongoDB para conocimiento verificado. El URI nunca se incluye en los informes. |
+| `ALLOWED_ORIGINS` | orígenes HTTPS exactos, separados por coma | Requerido para producción; sin `localhost`, rutas ni `*`. Incluye el origen público de la interfaz. |
+| `STRIPE_WEBHOOK_SECRET` | secreto de webhook | Si existe `STRIPE_SECRET_KEY`, debe estar configurado y la clave de producción no puede ser `sk_test_…`. |
 
 Al retirar el bloque `env` inerte de `vercel.json`, los valores que declaraba
 (`APP_PUBLIC_URL`, `PUBLIC_URL`, `ISABELLA_PUBLIC_URL`, `ALLOWED_ORIGINS`,

@@ -4,7 +4,6 @@
 {
     # Global options
     admin off
-    auto_https disable_redirects
     
     # Email for Let's Encrypt registration
     email admin@tamv.online
@@ -18,7 +17,7 @@ isabella.tamv.online {
     # Security headers
     header {
         # HSTS
-        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        Strict-Transport-Security "max-age=63072000"
         
         # Prevent clickjacking
         X-Frame-Options "DENY"
@@ -30,7 +29,7 @@ isabella.tamv.online {
         Referrer-Policy "strict-origin-when-cross-origin"
         
         # Content Security Policy
-        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' wss: https:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' wss: https:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
         
         # Permissions Policy
         Permissions-Policy "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()"
@@ -38,9 +37,6 @@ isabella.tamv.online {
         # Remove server header
         -Server
         
-        # Custom headers
-        X-Powered-By "Isabella Genesis Zero-OPEX v3"
-        X-Content-Type-Options "nosniff"
     }
 
     # Rate limiting for API endpoints
