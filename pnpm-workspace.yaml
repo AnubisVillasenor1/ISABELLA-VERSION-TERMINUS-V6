@@ -1,24 +1,29 @@
 # Ajustes de pnpm. Desde pnpm 10 estos ajustes SOLO se leen aquí: el bloque
 # `pnpm.overrides` de package.json es ignorado con aviso explícito
 # ("The "pnpm" field in package.json is no longer read by pnpm"), así que
-# mientras vivieron allí ninguna de estas remediaciones se aplicó.
+# mientras vivieron allí ninguna de estas remediaciones se aplicó en CI.
 #
+# `packages` declara el proyecto raíz: el repo es de un solo paquete, y un
+# workspace sin entradas dejaría a Vercel —que lee este archivo para localizar el
+# proyecto— sin ningún candidato que construir.
+packages:
+  - "."
+
 # Cada entrada apunta a la versión parcheada publicada por el aviso, no a una
-# versión "menos vieja". Range acotado: un override sin上限 reemplazaría también
-# majors antiguos que otros paquetes esperan (p. ej. qs@5), y eso rompe el grafo.
+# versión "algo más nueva". El range se acota por abajo y por arriba porque un
+# simple `<x` reescribiría también los majors que otros paquetes esperan (p. ej.
+# qs@5, o minimatch@3/9 con firma de función en vez de clase), y eso rompe el grafo.
 overrides:
   # GHSA-wc8c-qw6v-h7f6 (high), GHSA-92pp-h63x-v22m y GHSA-frvp-7c67-39w9: los tres
-  # son bypass de middleware o traversal de ruta en serveStatic. El parche común es
-  # 2.1.3; una cota inferior dejaría fuera las 1.10.x que aún trae el grafo.
+  # son bypass de middleware o traversal de ruta en serveStatic. 2.1.3 los cubre.
   "@hono/node-server@<2.1.3": 2.1.3
   # GHSA-hmf9-f7w5-6953 y familiares: hono <4.13.11.
   "hono@<4.13.11": 4.13.11
   # GHSA-6pq8-jhm2-2vcw — qs.stringify lanza TypeError no capturado (DoS) vía express.
   "qs@>=6.7.0 <6.16.1": 6.16.1
   # GHSA-g3hv-75wg-m249 — DoS por amplificación de globparts. Acotado a la línea 10.x
-  # que usa braintrust: minimatch 3/9 siguen en el grafo de dev y su forma de llamada
-  # (función, no clase) no es compatible con 11, así que un `<11.0.1` sin cotalower
-  # reescribiría también eslint y su cadena de glob.
+  # que usa braintrust; subir también el minimatch de eslint cambiaría el instrumento
+  # con el que se verifica todo lo demás.
   "minimatch@>=10.0.0 <11.0.1": 11.0.1
   "lodash@<4.18.1": 4.18.1
   "valibot@>=1.0.0 <1.4.2": 1.4.2
