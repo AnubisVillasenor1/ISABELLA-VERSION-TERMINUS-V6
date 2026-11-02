@@ -150,6 +150,27 @@
       </div>
     </section>
     <section id="chat" class="console" aria-labelledby="chat-title"><div class="console-head"><div><div class="console-overline"><span class="eyebrow">CONVERSATION WORKSPACE</span><span class="console-state">SESSION-BOUNDED</span></div><h2 id="chat-title">Habla con Isabella</h2></div><div class="console-actions"><button id="exportChat" class="subtle-action" type="button" title="Descargar esta conversación como Markdown">Exportar .md</button><button id="clearChat" class="subtle-action" type="button" title="Vaciar esta conversación y comenzar otra">Reiniciar</button><div class="modes"><button class="mode active" type="button" data-mode="text" aria-pressed="true">TEXTO</button><button class="mode" type="button" data-mode="voice" aria-pressed="false">VOZ NATIVA</button></div></div></div><div id="messages" class="messages" aria-live="polite"><article class="message isabella"><span class="avatar">IS</span><div><span class="speaker">ISABELLA · AHORA</span><p>Estoy aquí. Puedes escribirme o activar tu micrófono para hablar de forma natural.</p></div></article></div><div class="prompt-starters" aria-label="Atajos para iniciar una solicitud"><span>EMPEZAR CON</span><button type="button" data-starter="Investiga este tema con una estructura de preguntas, evidencias necesarias, posibles contradicciones y conclusiones provisionales: ">Investigar</button><button type="button" data-starter="Ayúdame a redactar un documento claro y profesional. Objetivo, audiencia, tono y resultado esperado: ">Redactar</button><button type="button" data-starter="Analiza este problema paso a paso, identifica supuestos, riesgos, alternativas y una recomendación verificable: ">Analizar</button><button type="button" data-starter="Revisa este código o diseño técnico. Busca errores, riesgos, deuda técnica y pruebas que faltan: ">Código</button><button type="button" data-starter="Crea un plan de trabajo por fases con entregables, dependencias, criterios de aceptación y riesgos: ">Planificar</button></div><div id="attachmentChip" class="attachment-chip" hidden><span aria-hidden="true">▤</span><span id="attachmentName"></span><span class="attachment-scope">CONTEXTO LOCAL</span><button id="removeAttachment" type="button" aria-label="Quitar archivo adjunto">×</button></div><form id="chatForm" class="composer"><label class="sr-only" for="prompt">Mensaje para Isabella</label><button id="attachText" class="icon-button attach-button" type="button" aria-label="Adjuntar archivo de texto" title="Adjuntar un archivo de texto, Markdown, CSV o JSON">＋</button><input id="localFile" type="file" accept=".txt,.md,.csv,.json,.log,text/plain,text/markdown,text/csv,application/json" hidden /><textarea id="prompt" rows="1" placeholder="Escribe lo que necesitas…" autocomplete="off"></textarea><button id="mic" class="icon-button" type="button" aria-label="Activar micrófono" title="Dictar mensaje">◉</button><button class="send" type="submit" aria-label="Enviar mensaje">↑</button></form><p class="disclaimer">Sesión pública protegida · No compartas credenciales ni información sensible.</p></section>
+    <section id="command" class="workspace-pane command-pane" aria-labelledby="command-title">
+      <div class="pane-label">ISABELLA COMMAND Ω∞ <span>LIVE FABRIC</span></div>
+      <div class="command-fabric-grid">
+        <div>
+          <p class="eyebrow">PLAN · GOVERNANCE · BOOKPI</p>
+          <h2 id="command-title">Convierte una intención en un plan verificable.</h2>
+          <p>El plan se crea sin ejecutar cambios. La autoridad, la aprobación humana y la ejecución permanecen separadas.</p>
+          <form id="commandPlanForm" class="command-plan-form">
+            <label for="commandPrompt">Objetivo de trabajo</label>
+            <textarea id="commandPrompt" rows="3" maxlength="12000" placeholder="Ej. Diseña una API de ingesta con procedencia y pruebas."></textarea>
+            <div class="command-plan-actions"><button class="primary" type="submit">CREAR PLAN <span>↗</span></button><span id="commandPlanStatus" role="status" aria-live="polite">Listo para planificar.</span></div>
+          </form>
+        </div>
+        <div class="command-evidence-panel" aria-label="Estado de Command Fabric">
+          <div class="command-stat"><span>FABRIC</span><strong>OPERATIONAL</strong><small>API versionada</small></div>
+          <div class="command-stat"><span>AUTHORITY</span><strong>HUMAN-GATED</strong><small>sin ejecución automática</small></div>
+          <div class="command-stat"><span>EVIDENCE</span><strong>BOOKPI</strong><small>cadena append-only</small></div>
+          <div id="commandEvents" class="command-events"><p>Cargando eventos verificables…</p></div>
+        </div>
+      </div>
+    </section>
     <section id="design" class="workspace-pane design-pane" aria-labelledby="design-title">
       <div class="pane-label">DESIGN SURFACE <span>REPLEGADO</span></div>
       <h2 id="design-title">Diseño y artefactos</h2><p>Espacio preparado para explorar documentos, interfaces y entregables junto a la conversación.</p>

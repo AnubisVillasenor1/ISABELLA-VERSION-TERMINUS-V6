@@ -1,7 +1,8 @@
 /* Command center composition: chat is the primary surface, secondary modules stay discoverable without competing for attention. */
 .stage{max-width:1480px}
 .hero,.workspace-context-bar,.workspace-modebar,.side-rail,.rail-launcher,.studio-panel,.access-section,.workspace-pane,.stage>footer,.topbar .nav-links,.topbar .command-launcher,.topbar .status,.topbar .quiet,.topbar .nav-toggle{display:none!important}
-.stage > :not(.topbar):not(#chat){display:none!important}
+.stage > :not(.topbar):not(#chat):not(#command){display:none!important}
+#command.command-pane{display:block!important}
 #chat.console{display:flex!important}
 #chat .console-overline,#chat .console-state,#chat .prompt-starters,#chat .console-actions .modes{display:none!important}
 #chat .console-head{display:flex;align-items:center;justify-content:space-between;padding-bottom:12px;border-bottom:1px solid rgba(150,180,205,.13)}
@@ -41,3 +42,20 @@ button,.subtle-action,.header-action,.send,.icon-button,.mode{border-radius:12px
 .console-head h2,.wordmark{background:linear-gradient(110deg,#f4ffff,#c9b8ff 48%,#a9f5d0);-webkit-background-clip:text;background-clip:text;color:transparent}
 @media (hover:none){.topbar:active,.console:active,.message:active,.subtle-action:active,.send:active,.icon-button:active,.mode:active{border-color:rgba(159,247,255,.7);box-shadow:0 0 32px rgba(159,247,255,.18)}}
 @media (prefers-reduced-motion:reduce){.topbar,.console,.message,.prompt,.subtle-action,.header-action,.send,.icon-button,.mode{transition:none}.topbar:hover,.console:hover,.message:hover,.subtle-action:hover,.send:hover,.icon-button:hover,.mode:hover{transform:none}}
+.command-pane{width:min(940px,100%);margin:0 auto 32px;padding:clamp(22px,3vw,38px);border-radius:28px;background:linear-gradient(135deg,rgba(255,255,255,.07),rgba(159,247,255,.035));border:1px solid var(--crystal-border);box-shadow:0 18px 55px rgba(0,0,0,.22)}
+.command-fabric-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(260px,.65fr);gap:2rem;align-items:start}
+.command-pane h2{max-width:18ch;margin:.35rem 0 .75rem;font-size:clamp(1.8rem,3vw,3.4rem);letter-spacing:-.04em}
+.command-pane p{max-width:62ch;color:var(--muted,#91a0af)}
+.command-plan-form{display:grid;gap:.75rem;max-width:680px;margin-top:1.5rem}
+.command-plan-form label{color:var(--text,#e9f0f5);font-size:.75rem;letter-spacing:.12em;text-transform:uppercase}
+.command-plan-form textarea{width:100%;resize:vertical;min-height:92px;border:1px solid rgba(167,194,208,.25);border-radius:12px;padding:1rem;color:inherit;background:rgba(5,12,19,.72);font:inherit}
+.command-plan-form textarea:focus{outline:2px solid #72e1c6;outline-offset:2px}
+.command-plan-actions{display:flex;flex-wrap:wrap;align-items:center;gap:1rem}
+.command-plan-actions [role=status]{color:#91a0af;font-size:.85rem}
+.command-evidence-panel{display:grid;gap:.8rem;padding:1rem;border:1px solid rgba(167,194,208,.18);border-radius:16px;background:linear-gradient(145deg,rgba(20,36,49,.75),rgba(7,16,24,.86))}
+.command-stat{display:grid;gap:.2rem;padding-bottom:.75rem;border-bottom:1px solid rgba(167,194,208,.12)}
+.command-stat span,.command-event span{color:#72e1c6;font-size:.68rem;letter-spacing:.14em}
+.command-stat strong{font-size:.95rem;letter-spacing:.08em}
+.command-stat small,.command-event small{color:#91a0af;font-size:.75rem}
+.command-events{display:grid;gap:.5rem;min-height:48px}.command-events p{margin:0;font-size:.8rem}.command-event{display:flex;justify-content:space-between;gap:.75rem;font-size:.78rem}
+@media (max-width:760px){.command-fabric-grid{grid-template-columns:1fr}}

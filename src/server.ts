@@ -78,6 +78,7 @@ import { registerEconomyRoutes } from "./routes/economy";
 import { registerTreasuryRoutes } from "./routes/treasury";
 import { registerOmegaRoutes } from "./routes/omega";
 import { registerRevenueFabricRoutes } from "./routes/revenue-fabric";
+import { registerCommandFabricRoutes } from "./routes/command-fabric";
 import { registerWANRoutes } from "./multimodal/wan/wan-routes";
 import { registerStepAudioRoutes } from "./multimodal/stepaudio/stepaudio-routes";
 import { MemoryMesh } from "./memory/mesh/memory-mesh";
@@ -3466,6 +3467,14 @@ registerOmegaRoutes({
 
 // ── Isabella Sovereign Revenue Fabric v4 (state: engine-generated) ─ 12 revenue streams,
 // IETS Trust Score, normalized settlement, immutable ledger, metering, outbox/inbox.
+registerCommandFabricRoutes({
+  app,
+  ledger: bookPiLedger,
+  enforceRateLimit,
+  rateLimiter: publicScanLimiter,
+  authorizeAdmin: (req, res) => authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN"),
+});
+
 registerRevenueFabricRoutes({
   app,
   enforceRateLimit,
@@ -3897,7 +3906,7 @@ app.use((error: unknown, _req: Request, res: Response, next: NextFunction) => {
 if (!process.env.VERCEL) app.listen(port, host, () => {
   console.log(`[Isabella Genesis TINA V6] Listening on http://${host}:${port}`);
   console.log(`[Isabella Genesis TINA V6] Identity: TINA esLatina · Orgullo Latinoamericano`);
-  console.log(`[Isabella Genesis TINA V6] Invariant: CAPABILITY ≠ AUTHORITY ≠ EXECUTION ≠ EVIDENCE ≠ LEARNING ≠ PRODUCTION`);
+  console.log(`[Isabella Genesis TINA V6] Invariant: CAPABILITY ≠ AUTHORITY ≠ EXECUTION ≠ EVIDENCE ��� LEARNING ≠ PRODUCTION`);
   console.log(`[Isabella Genesis TINA V6] Academic Registry: ORCID 0009-0008-5050-1539 · DOI 10.5281/zenodo.20606361`);
 });
 

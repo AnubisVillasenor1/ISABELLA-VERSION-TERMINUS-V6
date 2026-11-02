@@ -566,6 +566,51 @@ if (soundToggle) {
   });
 }
 
+/* -------------------------------------------------------- Command Fabric workspace */
+const commandPlanForm = byId('commandPlanForm');
+const commandPrompt = byId('commandPrompt');
+const commandPlanStatus = byId('commandPlanStatus');
+const commandEvents = byId('commandEvents');
+
+const renderCommandEvents = async () => {
+  if (!commandEvents) return;
+  try {
+    const response = await fetch('/api/v1/command/events?limit=5');
+    if (!response.ok) throw new Error(`events:${response.status}`);
+    const data = await response.json();
+    commandEvents.replaceChildren();
+    (data.events || []).forEach((event) => {
+      const item = document.createElement('div');
+      item.className = 'command-event';
+      item.innerHTML = `<span>${event.type}</span><small>${new Date(event.timestamp).toLocaleTimeString('es-MX')}</small>`;
+      commandEvents.append(item);
+    });
+    if (!data.events?.length) commandEvents.innerHTML = '<p>Sin eventos en esta sesión.</p>';
+  } catch {
+    commandEvents.innerHTML = '<p>La evidencia estará disponible cuando el nodo responda.</p>';
+  }
+};
+commandPlanForm?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const promptText = commandPrompt?.value.trim();
+  if (!promptText) return;
+  if (commandPlanStatus) commandPlanStatus.textContent = 'Construyendo plan…';
+  try {
+    const response = await fetch('/api/v1/command/plan', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: promptText, mode: 'sync', workspaceId: sessionId })
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'plan_failed');
+    if (commandPlanStatus) commandPlanStatus.textContent = `Plan ${data.plan.id.slice(0, 14)} creado · ejecución bloqueada hasta aprobación.`;
+    commandPrompt.value = '';
+    renderCommandEvents();
+  } catch {
+    if (commandPlanStatus) commandPlanStatus.textContent = 'No se pudo crear el plan; revisa el estado del nodo.';
+  }
+});
+renderCommandEvents();
+
 /* -------------------------------------------------------- IntersectionObserver for workspace navigation */
 const navObserver = new IntersectionObserver((entries) => {
   entries.forEach((entry) => {
