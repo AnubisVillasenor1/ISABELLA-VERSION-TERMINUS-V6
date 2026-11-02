@@ -8,7 +8,9 @@
 
 ## DIV-0001 — Gramática de la "identidad de método" (TINA / YUN)
 
-- **Estado:** abierto · **Severidad:** media · **Detectado:** 2026-10-15
+- **Estado:** arbitrado en parte (2026-11-01, ver «Arbitraje») para los literales que llegan
+  al parser; sigue **abierto** el namespace textual `TINA.YUN.*` (opción C pendiente) ·
+  **Severidad:** media · **Detectado:** 2026-10-15
 - **Especificación:**
   - AGENTS.md §5: `[TINA].[YUN].[MODULO].[FUNCION].[VERSION].[RISK_TIER].[GOVERNANCE_TIER]`.
   - `docs/spec/ISABELLA-CANON-v40-source.txt`: TINA = *Trusted Intelligence, Native & Adaptive*.
@@ -18,6 +20,9 @@
   - Último ∈ `GOVERNANCE_TIERS = [CONSTITUTIONAL, TERRITORIAL, INSTITUTIONAL, OPERATIONAL, AUTONOMOUS]`.
 
 ### Literales de method-id que `parseMethodId` rechazaría
+
+*(las «Ubicación» son las líneas de la revisión de 2026-10-15; el estado actual de cada
+literal lo decide el arbitraje de abajo.)*
 
 | # | Literal | Ubicación | Motivo del rechazo |
 |---|---|---|---|
@@ -49,6 +54,48 @@ y una gramática estricta de 7 segmentos.
 - Retirar el único uso muerto relacionado: el `import { parseMethodId }` en
   `src/server.ts` (no se invocaba; su retiro no cambia comportamiento).
 - **Sin renombres** de literales hasta que un humano arbitre entre A / B / C.
+
+### Arbitraje (2026-11-01) — opción B aplicada de forma selectiva
+
+Orden del owner en chat: *«suma dos methodId inválidos y elige una evolución tipo TINA para
+Q»*. Se arbitra **solo** sobre los literales que llegan al parser, porque son los únicos cuyo
+incumplimiento tiene un efecto de producción.
+
+**Se corrigen (3 literales, todos llave literal del gate de CROWN):**
+
+| Antes | Después | Motivo del nuevo valor |
+|---|---|---|
+| `A.COGNITION.E14_COGNITIVE_SAFETY.mediate_isabella.…` | `A.COLLECTIVE_INTELLIGENCE.E14_COGNITIVE_SAFETY.…` | `COGNITION` no es federación; la mediación soberana de Isabella es una función de inteligencia colectiva. |
+| `A.COGNITION.E19_CAPABILITY.invoke_hsf.…` | `A.COLLECTIVE_INTELLIGENCE.E19_CAPABILITY.…` | idem; el Hyper Skill Fabric es la capacidad de composición colectiva. |
+| `Q.QUANTUM.E20_EXECUTION.execute_pennylane.…` | `A.TWINS.E20_EXECUTION.…` | Ver el criterio de TINA más abajo. |
+
+**Criterio para el tipo TINA de la ejecución cuántica.** `Q` no existía en la gramática, así
+que la pregunta real era a qué tipo pertenece ejecutar un circuito PennyLane. Se descarta
+crear un octavo token (`Q`) porque la spec fija cuatro tipos y ampliarlos es la opción A,
+no arbitrada. Entre los existentes: `T` (Territorial) ataría una capacidad de cómputo a un
+nodo físico; `I` (Institucional) es gobernanza entre organismos; `N` (Normativa) es
+validación de reglas. El cálculo cuántico en este runtime se invoca sobre **gemelos**
+(estados espejo de un territorio o sistema real) y su salida describe ese gemelo, no el
+suelo ni la norma. Por eso `A` (Auto-cognitiva) con federación `TWINS`: la capacidad es un
+modo de razonar sobre el espejo, y queda dentro de la jerarquía `A.*` que ya usan
+mediación e HSF. Si el arbitraje humano prefiere anclarlo al nodo físico, el cambio es
+`T.TWINS.E20_EXECUTION…` — una sustitución literal en tres sitios (descriptor del gate,
+registro de skill y ruta HTTP) más el test de `governance-method-ids.test.ts`.
+
+**No se renombran (etiquetas de metadata que nunca llegan a `parseMethodId`):**
+`COMMERCE_METHOD_IDS` (`TINA.YUN.COMMERCE.*`), `T.TOOL.<toolId>.execute`, manifiestos de
+skill y los literales de `test/bookpi/*`. Estos valores se escriben dentro de eventos del
+ledger BookPI y forman parte del material que se hashea: renombrarlos **invalidaría la
+integridad de evidencia ya sellada** sin ganar ninguna conformidad de parser. Quedan como
+namespace textual, pendiente de la opción C (declararlo explícito en la spec).
+
+**Afirmación corregida:** la sección «Naturaleza de la divergencia» afirmaba que estos
+literales *no* se pasan por `parseMethodId`. Eso era falso desde que `callGate`/`verifyMethod`
+evalúan la mediación, el HSF y la ejecución cuántica: un literal no canónico se traducía en
+un `403` silencioso e irrecuperable para el operador. Para que ese modo de fallo no pueda
+repetirse, `/api/v1/healthz` ahora observa la conformancia de todo el registro de
+capacidades (`probeMethodIdConformance`, dependencia requerida) y `scripts/runtime-smoke.mjs`
+falla el build si alguna capacidad queda fuera del canon.
 
 ## DIV-0002 — "Cognitive Civilization Runtime (CCR-1)": 12 vs 13 capas Ω
 

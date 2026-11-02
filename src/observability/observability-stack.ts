@@ -1560,6 +1560,9 @@ export class ObservabilityStack extends EventEmitter {
   }
 
   private startCollectionLoop(): void {
+    // Los tres bucles de mantenimiento se `unref()`: quien sostiene un servidor es su
+    // listener HTTP. Con timers con ref, cualquier proceso que importe la app (el smoke de
+    // `build:dist`, un CLI, un test) queda imposible de cerrar y el build de Vercel cuelga.
     // Collect system metrics every 10 seconds. Cada lectura se toma del propio proceso:
     // rss/heap reales, límite de heap de V8 y el delta de CPU medido entre tics.
     let previousCpu = process.cpuUsage();
@@ -1571,17 +1574,17 @@ export class ObservabilityStack extends EventEmitter {
       this.metrics.gauge('process_heap_bytes', mem.heapUsed);
       this.metrics.gauge('process_max_memory_bytes', getHeapStatistics().heap_size_limit);
       this.metrics.counter('process_cpu_seconds_total', (delta.user + delta.system) / 1e6);
-    }, 10000);
+    }, 10000).unref();
 
     // Evaluate alerts every 30 seconds
     setInterval(() => {
       this.alerts.evaluate(this.metrics.getMetrics());
-    }, 30000);
+    }, 30000).unref();
 
     // Run health checks every minute
     setInterval(() => {
       this.healthChecks.runAll();
-    }, 60000);
+    }, 60000).unref();
   }
 
   // Helper methods for instrumentation

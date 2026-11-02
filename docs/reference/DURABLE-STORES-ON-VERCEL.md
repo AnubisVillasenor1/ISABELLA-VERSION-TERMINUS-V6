@@ -56,7 +56,30 @@ vercel env add BOOKPI_INTEGRITY_SECRET production
 | `DATABASE_URL` / `POSTGRES_URL` | `postgres://` o `postgresql://` | Precedencia: `DATABASE_URL`, `POSTGRES_URL`, `POSTGRES_PRISMA_URL`, `POSTGRES_URL_NON_POOLING`. |
 | `ISABELLA_API_KEY_PEPPER` | cadena estable | Debe coincidir en todas las instancias; cambiarlo invalida los digests existentes. |
 | `ISABELLA_API_KEY_LAST_USED_FLUSH_ROWS` | entero ≥ 0 | Umbral del lote de telemetría; por omisión 32; `0` deshabilita toda escritura desde `verify()`. |
-| `ISABELLA_POSTGRES_CONNECT_TIMEOUT_MS` | entero 1000–30000 | Tiempo máximo para abrir conexión; por omisión **10000**. Un valor menor que un *cold start* del pooler degrada los almacenes a memoria. |
+| `ISABELLA_POSTGRES_CONNECT_TIMEOUT_MS` | entero 1000–30000 | Tiempo máximo para abrir conexión; por omisión **10000**. Si un *cold start* del pooler lo supera, la hidratación queda degradada pero se reintenta; no se abandona el backend. |
+| `ISABELLA_VERIFIED_KNOWLEDGE_BACKEND` | `mongodb` o `supabase` | En producción el backend `memory` queda bloqueado por readiness. El valor por omisión es `mongodb`. |
+| `MONGODB_URI` | `mongodb://` o `mongodb+srv://` | Requerido cuando se selecciona MongoDB para conocimiento verificado. El URI nunca se incluye en los informes. |
+| `ALLOWED_ORIGINS` | orígenes HTTPS exactos, separados por coma | Requerido para producción; sin `localhost`, rutas ni `*`. Incluye el origen público de la interfaz. |
+| `STRIPE_WEBHOOK_SECRET` | secreto de webhook | Si existe `STRIPE_SECRET_KEY`, debe estar configurado y la clave de producción no puede ser `sk_test_…`. |
+
+### 3.1 Auto-reparación tras un timeout de hidratación
+
+Un arranque en frío puede agotar el tiempo de conexión. Antes, el primer fallo cerraba el
+pool y el almacén quedaba en memoria durante toda la vida de la instancia. Ahora:
+
+- la degradación se marca y se registra (`Federation hydration failed; state stays
+  process-local until retry` o `API key hydration failed; keys stay process-local until
+  retry`, con el intento y sin datos del proveedor);
+- la hidratación se reintenta con retroceso exponencial: 5 s, 10 s, 20 s, 40 s y tope 60 s;
+- las escrituras siguen intentando la base: si sigue caída, `issue()`/`createConnector()`
+  fallan de forma visible y revierten; no se crean credenciales que solo existan en memoria;
+- al recuperarse se registra `hydration recovered` con el número de intentos, se limpian la
+  degradación y el contador, y las filas persistidas se incorporan sin pisar el estado local;
+- el temporizador es `unref`, no retiene el proceso. En serverless solo avanza mientras la
+  instancia está activa; una instancia congelada se recupera en la siguiente invocación.
+
+Las pruebas cubren fallo, reintento con recuperación y escritura fallida. La recuperación
+completa en una instancia real de producción aún no se ha observado.
 
 Al retirar el bloque `env` inerte de `vercel.json`, los valores que declaraba
 (`APP_PUBLIC_URL`, `PUBLIC_URL`, `ISABELLA_PUBLIC_URL`, `ALLOWED_ORIGINS`,
@@ -87,8 +110,8 @@ dar margen a la hidratación y a las escrituras por fila.
 6. Verificar la durabilidad con una prueba real contra el alias de producción:
    emitir una clave, comprobar su fila, revocarla y confirmar `401`; crear un
    conector, comprobar su fila y eliminarlo; revisar los logs de runtime para
-   descartar `Durable API key store unavailable` y
-   `Durable federation store unavailable`.
+   descartar `hydration failed` o, si aparece, confirmar el `hydration recovered`
+   posterior con el número de intentos.
 
 ## 5. Límites conocidos
 
@@ -118,7 +141,10 @@ Sobre el despliegue de producción `dpl_EVczyonXW8WsGCuK3FWw73U95FgE` (commit `3
 | Federación | eliminar conector | `200`, `0` filas restantes |
 | BookPI pipeline | probe de readiness | `healthy`, backend `POSTGRES`, cadena verificada, `eventCount: 0` |
 
-Las filas de sonda se eliminaron. Los logs del despliegue ya no muestran
-`Durable API key store unavailable` ni `Durable federation store unavailable`.
-Antes del arreglo aparecían por el timeout de 2 s descrito en la sección 3.
+Las filas de sonda se eliminaron. Los logs de ese despliegue no mostraron
+degradación de los almacenes durables. Antes del arreglo aparecían por el
+timeout de conexión descrito en la sección 3. En una invocación posterior aislada
+sí se observó un `Federation hydration failed ... until retry` tras un timeout
+simultáneo de Supabase y Postgres; el nuevo camino conserva el backend y programa
+el reintento, en lugar de abandonarlo (ver sección 3.1).
 

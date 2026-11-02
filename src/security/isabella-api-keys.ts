@@ -198,8 +198,13 @@ export class IsabellaApiKeyStore {
           if (!this.keys.has(record.id)) this.keys.set(record.id, record);
         }
         this.hydrationSucceeded = true;
-        this.hydrationFailures = 0;
         this.hydrationRetryAt = 0;
+        if (this.hydrationFailures > 0) {
+          console.info('[Isabella] API key hydration recovered', {
+            attempts: this.hydrationFailures,
+          });
+        }
+        this.hydrationFailures = 0;
         this.degradation = null;
       })
       .catch((error: unknown) => {

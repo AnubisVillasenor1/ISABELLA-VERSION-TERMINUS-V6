@@ -100,6 +100,52 @@ Un rechazo 400 devuelve el motivo exacto (`TAMV_PAYLOAD_EMPTY`, `TAMV_BASE64_INV
 - Habilidades de alto impacto siempre terminan en `HUMAN_REVIEW`.
 - Catálogo gobernado de herramientas registrado en `src/tools/catalog.ts`; cada ejecución deja evidencia en BookPI antes de que su salida llegue al llamador.
 
+## Agent Mesh ISABELLA CERO (fusión 2026-11-01)
+
+La fusión con `AnubisVillasenor1/proyecto-isabella-cero` incorpora la matriz de **10 roles** del canon CERO (`planner`, `researcher`, `architect`, `coder`, `tester`, `reviewer`, `security`, `devops`, `creative`, `operator`) y su política `ALLOW / DENY / ESCALATE`. El código es original y endurecido; los documentos canónicos se conservan con SHA-256 en [`docs/canon/`](docs/canon/README.md) y el dictamen completo está en [`docs/rfc/RFC-0011-fusion-isabella-cero.md`](docs/rfc/RFC-0011-fusion-isabella-cero.md).
+
+| Componente | Qué hace de verdad | Qué no hace |
+|---|---|---|
+| **Matriz de roles** | Cada rol declara scopes, techo de riesgo y si opera solo en sandbox | No concede autoridad: un `ALLOW` no autoriza ejecución |
+| **Evaluación de política** | `DENY` por scope faltante, `ESCALATE` por riesgo o acción crítica | No lee la aprobación del cuerpo HTTP; exige bearer verificado |
+| **Orquestador** | Ejecuta solo adaptadores registrados, con concurrencia y timeout acotados | Sin adaptador devuelve `NO_ADAPTER`; no simula trabajo |
+| **Evidencia** | Sella cada decisión en BookPI (`agent.mesh.*`) | No sustituye el ledger durable ni eleva `readyz` |
+| **Sandbox** | Contención con `path.relative`, rechazo de `..`, absolutas, NUL y symlinks; SHA3-512 | No aplica parches ni escribe en producción |
+| **Planner / Reviewer** | Descomposición determinista de objetivos y revisión de hallazgos | No usan modelo, red ni shell |
+
+```text
+GET  /api/v1/agents/mesh              catálogo de roles y adaptadores
+POST /api/v1/agents/mesh/evaluate     evalúa política; no autoriza ni ejecuta
+```
+
+`executionPerformed` es siempre `false`. Coder, Tester, DevOps y Operator permanecen `SPECIFIED`: no tienen adaptador de ejecución registrado. La maqueta Next.js del repositorio de origen **no** se importó porque su chat y su editor son simulados; el detalle y la auditoría están en el RFC-0011.
+
+## Master Consolidated (fusión 2026-11-01)
+
+La fusión del documento `ISABELLA_VILLASENOR_AI_MASTER_CONSOLIDATED.docx` vive en `src/infinity/`. Registra las **14 capas Ω** y los **9 Fabrics**, evalúa la constitución `ALLOW = IDENTITY × AUTHORITY × POLICY × EVIDENCE × SAFETY`, ejecuta **10 skills nativas deterministas** y expone Media, Build y Evolution Fabric **sin ejecutar acciones externas**.
+
+| Componente | Qué hace de verdad | Qué no hace |
+|---|---|---|
+| **Arquitectura** | Registra 14 capas Ω y 9 Fabrics con módulo y evidencia; la auditoría falla si alguien declara `production` | No convierte una capa especificada en implementada |
+| **Catálogo** | 10 skills, 18 tools, 14 primitivas y 12 servicios con madurez y evidencia | No acredita las tools `mapped` ni el 20× |
+| **Constitución** | `ALLOW/DENY`, ingesta de 14 etapas, licencias y trust asesor | `ALLOW` no autoriza, no ejecuta y no sustituye CROWN |
+| **Skills** | Investigación léxica, bibliometría, legal, open science, gobernanza, prompt, multimodal, música y voz | No buscan en red, no sintetizan audio ni clonan voz |
+| **Media Fabric** | Culling, estilo, retoque, galería, cotización y agrupación de embeddings | No modifica píxeles, no detecta caras, no publica ni cobra |
+| **Build Fabric** | Plan de workspace, sandbox, preview y deploy con allowlist | No ejecuta comandos, no escribe sandbox, no despliega |
+| **Evolution Fabric** | Cápsulas, GDI, selección y A2A deterministas en memoria | No publica, no adopta, no emite créditos, no ejecuta |
+
+```text
+GET  /api/v1/infinity                         resumen y auditoría
+POST /api/v1/infinity/constitution/evaluate   evalúa; no autoriza
+POST /api/v1/infinity/skills/run              skill determinista local
+POST /api/v1/infinity/media/evaluate          media sin píxeles ni red
+POST /api/v1/infinity/build/plan              plan; no ejecuta ni despliega
+POST /api/v1/infinity/evolution/evolve        simulación en memoria
+POST /api/v1/infinity/a2a/evaluate            evalúa verbos A2A
+```
+
+La tabla de la sección 16 del canon enumera **18 tools**, aunque su resumen dice 19; el catálogo sigue la tabla y documenta la divergencia. El 20× se trata como meta por capacidad, nunca como resultado: no hay benchmark reproducible. El dictamen completo está en [`docs/rfc/RFC-0012-infinity-master-consolidated.md`](docs/rfc/RFC-0012-infinity-master-consolidated.md) y el mapa operativo en [`docs/infinity/README.md`](docs/infinity/README.md).
+
 ## Nexus — capa unificada de capacidades locales
 
 Nexus (`src/nexus/`) unifica patrones auditados de doce repositorios de referencia **sin copiar su código**. Todo es local, determinista y acotado; ninguna capacidad se declara en producción. El dictamen completo, incluidos los dos repositorios que no aportaron nada (`google/agi` es Android GPU Inspector y `w37fhy/QuantumultX` son reglas de proxy), está en [`docs/rfc/RFC-0010-nexus.md`](docs/rfc/RFC-0010-nexus.md).

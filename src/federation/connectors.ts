@@ -198,8 +198,13 @@ export class FederationRegistry {
           .slice(0, MAX_INBOX);
         this.state = { connectors, inbox };
         this.hydrationSucceeded = true;
-        this.hydrationFailures = 0;
         this.hydrationRetryAt = 0;
+        if (this.hydrationFailures > 0) {
+          console.info('[Isabella] Federation hydration recovered', {
+            attempts: this.hydrationFailures,
+          });
+        }
+        this.hydrationFailures = 0;
         this.degradation = null;
       })
       .catch((error: unknown) => {

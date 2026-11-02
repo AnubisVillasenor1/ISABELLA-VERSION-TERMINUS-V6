@@ -129,6 +129,7 @@ services:
       - app
     environment:
       ACME_AGREE: "true"
+      ADMIN_BCRYPT_HASH: ${ADMIN_BCRYPT_HASH:?define ADMIN_BCRYPT_HASH in .env}
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -165,6 +166,7 @@ services:
           memory: 512M
 
   app:
+    image: ghcr.io/osopanda1/isabella-genesis:${IMAGE_TAG:-latest}
     build:
       context: .
       dockerfile: Dockerfile
@@ -179,22 +181,30 @@ services:
       NODE_ENV: production
       PORT: "8080"
       HOST: 0.0.0.0
-      # The image entrypoint applies pending migrations against DATABASE_URL (fail closed).
+      TRUST_PROXY: "1"
+      # The image entrypoint applies versioned migrations before starting the runtime.
       RUN_MIGRATIONS: "1"
-      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:8080}
-      APP_PUBLIC_URL: ${APP_PUBLIC_URL:-http://localhost:8080}
-      # Explicit operator opt-in: prompts and bounded history may leave the node to the listed
-      # free providers, tried in this order (llm7, then pollinations).
-      # Remove these lines (or set ISABELLA_KEYLESS_FREE_PROVIDER=off) to disable keyless inference.
-      ISABELLA_KEYLESS_FREE_PROVIDER: llm7,pollinations
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:?define ALLOWED_ORIGINS in .env}
+      APP_PUBLIC_URL: ${APP_PUBLIC_URL:?define APP_PUBLIC_URL in .env}
+      # External inference and speech require explicit operator opt-in because prompts may leave the node.
+      ISABELLA_KEYLESS_FREE_PROVIDER: ${ISABELLA_KEYLESS_FREE_PROVIDER:-off}
       KEYLESS_FREE_PROVIDER_TIMEOUT_MS: "30000"
       CHAT_CHAIN_BUDGET_MS: "45000"
-      # Explicit operator opt-in for the keyless neural voice fallback (spoken text leaves the node).
-      ISABELLA_KEYLESS_TTS: google
+      ISABELLA_KEYLESS_TTS: ${ISABELLA_KEYLESS_TTS:-off}
       ISABELLA_KEYLESS_TTS_MAX_CHARS: "1200"
-      # Never commit the connection string: define DATABASE_URL in the untracked .env, e.g.
-      # postgresql://isabella_admin:<POSTGRES_PASSWORD>@postgres:5432/isabella_db
+      # Never commit connection strings or signing credentials; provide them through the untracked .env.
       DATABASE_URL: ${DATABASE_URL:?define DATABASE_URL in .env, matching POSTGRES_PASSWORD}
+      BOOKPI_INTEGRITY_SECRET: ${BOOKPI_INTEGRITY_SECRET:?define BOOKPI_INTEGRITY_SECRET in .env}
+      GENESIS_ADMIN_API_TOKEN: ${GENESIS_ADMIN_API_TOKEN:?define GENESIS_ADMIN_API_TOKEN in .env}
+      ISABELLA_API_KEY_PEPPER: ${ISABELLA_API_KEY_PEPPER:?define ISABELLA_API_KEY_PEPPER in .env}
+      ISABELLA_FEDERATION_SECRET: ${ISABELLA_FEDERATION_SECRET:?define ISABELLA_FEDERATION_SECRET in .env}
+      ISABELLA_FEDERATION_VERIFY_TOKEN: ${ISABELLA_FEDERATION_VERIFY_TOKEN:?define ISABELLA_FEDERATION_VERIFY_TOKEN in .env}
+      ISABELLA_VERIFIED_KNOWLEDGE_BACKEND: ${ISABELLA_VERIFIED_KNOWLEDGE_BACKEND:-mongodb}
+      MONGODB_URI: ${MONGODB_URI:?define MONGODB_URI in .env}
+      MONGODB_DATABASE: ${MONGODB_DATABASE:-}
+      SUPABASE_URL: ${SUPABASE_URL:?define SUPABASE_URL in .env}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:?define SUPABASE_SERVICE_ROLE_KEY in .env}
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:?define SUPABASE_ANON_KEY in .env}
       OLLAMA_BASE_URL: http://ollama:11434
       VICTORIA_METRICS_URL: http://victoriametrics:8428
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel:4318

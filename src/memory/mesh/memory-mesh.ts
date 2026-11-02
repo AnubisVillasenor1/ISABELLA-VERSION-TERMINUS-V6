@@ -1151,9 +1151,12 @@ export class MemoryMesh extends EventEmitter {
    * Start automatic consolidation
    */
   private startConsolidation(): void {
+    // Igual que en ObservabilityStack: el bucle de consolidación debe seguir el ciclo de
+    // vida del servidor, no sostenerlo. Sin `unref()` el proceso nunca termina solo.
     this.consolidationTimer = setInterval(() => {
       this.consolidate().catch((err) => this.emit('error', err));
     }, this.config.consolidationIntervalMs);
+    this.consolidationTimer.unref();
   }
 
   /**

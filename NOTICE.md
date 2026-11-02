@@ -43,6 +43,25 @@ El software se entrega tal cual, sin garantía de ningún tipo, en los mismos t�
 Que una capacidad esté especificada, implementada o probada no implica que esté certificada,
 contratada ni disponible en producción.
 
-## 5. Contacto
+## 5. Material incorporado por fusión
+
+El 1 de noviembre de 2026 se incorporaron a `docs/canon/` los dos documentos canónicos del
+repositorio `AnubisVillasenor1/proyecto-isabella-cero` (commit `ac6136f`), cuyo autor y titular
+es el mismo titular de este repositorio. El material de origen declara CC BY 4.0 para su
+documentación y Apache 2.0 para su software; dicha declaración se conserva como procedencia y
+**no relicencia** este repositorio. El código del Agent Mesh y del sandbox es original de este
+repositorio y se rige por `LICENSE`. Ver `docs/canon/README.md` y
+`docs/rfc/RFC-0011-fusion-isabella-cero.md`.
+
+El mismo 1 de noviembre de 2026 se incorporó también
+`ISABELLA_VILLASENOR_AI_MASTER_CONSOLIDATED.docx`
+(SHA-256 `03d11de521312e4fa90e8cbe87f3dcf199d0124d26211227d6d9e83205e378b1`) en
+`docs/canon/source/`. Su parte ejecutable vive en `src/infinity/` y `src/routes/infinity.ts`,
+es código original de este repositorio y se rige por `LICENSE`. La importación **no**
+relicencia el repositorio, **no** declara producción y **no** convierte en capacidades las
+especificaciones del documento. Ver `docs/rfc/RFC-0012-infinity-master-consolidated.md` y
+`docs/infinity/README.md`.
+
+## 6. Contacto
 
 Solicitudes de licencia, uso o colaboración: a través del titular, **TAMV ONLINE ENTERPRISE**.

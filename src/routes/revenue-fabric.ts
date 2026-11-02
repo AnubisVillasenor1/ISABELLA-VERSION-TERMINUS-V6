@@ -901,6 +901,9 @@ export function registerRevenueFabricRoutes(deps: RevenueFabricDeps): void {
       ready,
       ledgerValid,
       durableDatabaseConfigured,
+      // Estado observado del DDL: distingue «todavía no terminó» (pending) de «no se pudo
+      // aplicar» (failed) sin exponer la cadena de conexión ni el detalle del driver.
+      persistenceSchema: storage.getSchemaState().status,
       // A database URL does not prove that the subscription migration is applied.
       subscriptionPersistenceSchema: 'unverified' as const,
       stripeCheckoutEnvConfigured: Boolean(
@@ -932,6 +935,8 @@ export function registerRevenueFabricRoutes(deps: RevenueFabricDeps): void {
       status: diagnostics.ready ? 'ready' : 'degraded',
       service: 'revenue-fabric',
       version: '5.0.0',
+      persistenceSchema: diagnostics.persistenceSchema,
+      ledgerValid: diagnostics.ledgerValid,
       timestamp: new Date().toISOString(),
     });
   });

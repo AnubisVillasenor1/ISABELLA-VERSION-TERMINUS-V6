@@ -36,7 +36,7 @@
     "smoke:ui": "node --check src/ui/app.js && node --check src/ui/universe-map.js && node scripts/ui-smoke.mjs",
     "smoke:production": "tsx scripts/production-smoke.ts",
     "postgres:e2e": "corepack pnpm run build:dist && node scripts/postgres-e2e.mjs",
-    "deploy:verify": "docker build --tag isabella-genesisai:verify . && corepack pnpm run smoke:runtime && kubectl apply --dry-run=server -k k8s/",
+    "deploy:verify": "corepack pnpm run build:dist && corepack pnpm run deploy:readiness && corepack pnpm run verify:production && docker build --tag isabella-genesisai:verify . && corepack pnpm run smoke:runtime && kubectl apply --dry-run=server -k k8s/",
     "verify:production": "tsx scripts/verify-production.ts",
     "typecheck:layers": "tsc -p tsconfig.layers.json",
     "typecheck:skills": "tsc -p tsconfig.skills.json",

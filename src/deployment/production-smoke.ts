@@ -20,10 +20,16 @@ export interface DeploymentSmokeResult {
   checks: DeploymentSmokeCheck[];
 }
 
+export interface DeploymentSmokeOptions {
+  readonly requireReadiness?: boolean;
+}
+
 export async function verifyDeployment(
   baseUrl: string,
-  fetchImpl: typeof fetch = fetch
+  fetchImpl: typeof fetch = fetch,
+  options: DeploymentSmokeOptions = {}
 ): Promise<DeploymentSmokeResult> {
+  const requireReadiness = options.requireReadiness ?? true;
   const base = baseUrl.replace(/\/+$/, '');
 
   async function attempt(
@@ -69,6 +75,29 @@ export async function verifyDeployment(
       return {
         ok: response.status === 200 && typeof body?.inferenceMode === 'string',
         detail: 'GET /api/v1/health must describe inference mode without exposing credentials.',
+      };
+    })
+  );
+
+  checks.push(
+    await attempt('dependency-readiness', '/api/v1/readyz', async (response) => {
+      const body = (await response.json().catch(() => null)) as {
+        success?: unknown;
+        snapshot?: { readiness?: { ready?: unknown } };
+      } | null;
+      const contractValid =
+        (response.status === 200 || response.status === 503) &&
+        typeof body?.success === 'boolean' &&
+        typeof body.snapshot?.readiness?.ready === 'boolean';
+      const ready =
+        response.status === 200 &&
+        body?.success === true &&
+        body.snapshot?.readiness?.ready === true;
+      return {
+        ok: requireReadiness ? ready : contractValid,
+        detail: requireReadiness
+          ? 'Production deployment requires GET /api/v1/readyz to report ready=true with HTTP 200.'
+          : 'GET /api/v1/readyz must report a consistent 200/503 readiness contract.',
       };
     })
   );

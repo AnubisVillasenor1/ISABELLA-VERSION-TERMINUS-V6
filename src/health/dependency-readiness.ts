@@ -9,6 +9,7 @@
  */
 import { accessSync, constants, existsSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { parseMethodId } from '../authority/method-id';
 import {
   assessProductionReadiness,
   type DependencyHealth,
@@ -121,6 +122,35 @@ export function probeAtlasPersistence(env: EnvLike): DependencyEvidence {
   };
 }
 
+/**
+ * Conformancia del canon de 7 segmentos para todo methodId que llegue a CROWN.
+ *
+ * Un literal no canónico no produce un error de arranque: `parseMethodId` lanza,
+ * CROWN lo marca como riesgo crítico y la capacidad queda bloqueada en 403 de forma
+ * silenciosa e irreversible desde el punto de vista del operador. Por eso se reporta
+ * aquí como dependencia requerida: una capacidad que nunca podrá invocarse es un
+ * defecto de producción, no un detalle de estilo.
+ */
+export function probeMethodIdConformance(gateMethodIds: readonly string[]): DependencyEvidence {
+  const offenders = gateMethodIds.filter((methodId) => {
+    try {
+      parseMethodId(methodId);
+      return false;
+    } catch {
+      return true;
+    }
+  });
+  return {
+    dependency: 'method-id-conformance',
+    status: offenders.length === 0 ? 'healthy' : 'unavailable',
+    required: true,
+    detail:
+      offenders.length === 0
+        ? `Las ${gateMethodIds.length} capacidades del gate cumplen el canon de 7 segmentos.`
+        : `CROWN rechaza estas capacidades registradas por identificador no canónico: ${offenders.join(', ')}`,
+  };
+}
+
 export function probeSigningAuthority(env: EnvLike): DependencyEvidence {
   const configured = isConfigured(env, ['HYPERCORE_SIGNING_KEY', 'BOOKPI_INTEGRITY_SECRET']);
   return {
@@ -148,7 +178,8 @@ export function probeObservability(env: EnvLike): DependencyEvidence {
 export function collectDependencyReadiness(
   env: EnvLike,
   filesystem: FilesystemProbe = nodeFilesystemProbe,
-  now: Date = new Date()
+  now: Date = new Date(),
+  gateMethodIds: readonly string[] = []
 ): DependencyReadinessReport {
   const evidence: DependencyEvidence[] = [
     probeBookPiLedger(env, filesystem),
@@ -156,6 +187,7 @@ export function collectDependencyReadiness(
     probeAtlasPersistence(env),
     probeSigningAuthority(env),
     probeObservability(env),
+    probeMethodIdConformance(gateMethodIds),
   ];
   const dependencies: DependencyHealth[] = evidence.map((entry) => ({
     name: entry.dependency,

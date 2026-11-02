@@ -1,10 +1,10 @@
-# Estado real de Isabella Genesis — actualizado 31 de octubre de 2026
+# Estado real de Isabella Genesis — actualizado 1 de noviembre de 2026
 
-**Corte documental:** 31 de octubre de 2026 (verificación de persistencia durable en producción); anterior: 30 de octubre de 2026 (Kaos Audio System); anterior: 17 de octubre de 2026  
+**Corte documental:** 1 de noviembre de 2026 (fusión de ISABELLA CERO); anterior: 31 de octubre de 2026 (verificación de persistencia durable en producción); anterior: 30 de octubre de 2026 (Kaos Audio System); anterior: 17 de octubre de 2026  
 **Repositorio:** `OsoPanda1/ISABELLA-VERSION-TERMINUS-V6`  
 **Rama principal consultada:** `main`  
-**HEAD de main al consolidar:** `3da3f71`; este corte documental se commitea sobre ese SHA  
-**HEAD de la consolidación anterior:** `8124687`  
+**HEAD de main al consolidar:** `b30b915` + el commit de fusión de este corte; la verificación de producción sigue correspondiendo a `b30b915`  
+**HEAD de la consolidación anterior:** `d1a557d`; antes `8124687`  
 **Clasificación:** preproducción; no certificado para producción.
 
 ## Readiness reportada y límites
@@ -28,22 +28,87 @@
 ## Verificación de producción del 31 de octubre de 2026
 
 Medición contra el alias `https://isabella-version-terminus-v6.vercel.app` y la base
-Neon de producción, sobre el despliegue `dpl_EVczyonXW8WsGCuK3FWw73U95FgE`
-(commit `3da3f71`). Es evidencia observada, no aprobación humana.
+Neon de producción, sobre el despliegue `dpl_EmHNfpFxWEy6qQ8wtDWFQcs83mAc`
+(commit `b30b915`); la verificación de durabilidad inicial correspondió a
+`dpl_EVczyonXW8WsGCuK3FWw73U95FgE` (commit `3da3f71`). Es evidencia observada, no
+aprobación humana.
 
 | Capacidad | Estado observado | Evidencia |
 |---|---|---|
 | Almacén durable de API keys | `tested` en producción | crear → fila en `public.isabella_api_keys`; autenticar → `200`; revocar → `revoked_at`; clave revocada → `401` |
 | Almacén durable de federación | `tested` en producción | crear conector `webhook` → fila en `public.federation_connectors`; eliminar → `0` filas |
 | BookPI pipeline durable | `healthy` | backend `POSTGRES`, cadena verificada, `eventCount: 0` |
-| IKES | `healthy` tras hidratación | el probe espera hasta 5 s la hidratación en curso; una falla se reporta como `degraded`, no como `pending` infinito |
-| Admin y firma | `healthy` | `/api/v1/ops/preflight` = `401` sin token y `200` con token; `/api/isabella/crypto/sign` firma Ed25519 |
+| IKES | `healthy` en el primer probe del cold start | backend `SUPABASE`, `pending: false`, tras subir el timeout por petición a 10 s (`f52de5a`) |
+| Auto-reparación de almacenes durables | `tested` (pruebas), no observada en producción | el backend ya no se abandona al primer timeout: reintento con retroceso 5→60 s y escrituras que fallan de forma visible mientras la base sigue caída (`b30b915`) |
+| Admin y firma | `healthy` | `/api/v1/ops/preflight` = `401` sin token y `503` con token por los dos hallazgos de Stripe; `/api/isabella/crypto/sign` firma Ed25519 |
 | Observabilidad | `degraded` | sin `OTEL_EXPORTER_OTLP_ENDPOINT`; la razón ahora se deriva del probe, no está fija |
 | Ledger BookPI legacy | `degraded` | `VOLATILE_IN_MEMORY`; consumidores síncronos, migración asíncrona pendiente |
 
 `GET /api/v1/readyz` sigue devolviendo **HTTP 503**: el ledger legacy es una
-dependencia requerida y volátil, y la observabilidad opcional degradada mantiene
-el estado global en `degraded`. No se oculta ni se reclasifica.
+dependencia requerida y volátil; la observabilidad opcional degradada mantiene el
+estado global en `degraded` sin añadirse como bloqueador. No se oculta ni se
+reclasifica.
+
+## Fusión ISABELLA CERO (1 de noviembre de 2026)
+
+Origen auditado: `AnubisVillasenor1/proyecto-isabella-cero`, commit `ac6136f` (rama `main`).
+Los dos documentos canónicos se conservan en `docs/canon/source/` con SHA-256; el dictamen
+completo está en `docs/rfc/RFC-0011-fusion-isabella-cero.md`.
+
+| Capacidad fusionada | Estado real | Evidencia | Límite declarado |
+|---|---|---|---|
+| Matriz de 10 roles CERO (`src/agents/mesh.ts`) | `tested (unit)` | `test/agents/mesh.test.ts` | No concede autoridad; `ALLOW` no ejecuta |
+| Evaluación `ALLOW/DENY/ESCALATE` | `tested (unit)` | `test/agents/mesh.test.ts` | Aprobación solo desde bearer verificado |
+| Orquestador con concurrencia y timeout | `tested (unit)` | `test/agents/mesh.test.ts` | Solo adaptadores registrados; `NO_ADAPTER` sin simulación |
+| Sello BookPI por decisión | `tested (unit)` | `test/agents/mesh.test.ts` con `InMemoryBookPiLedger` | No cambia el bloqueo `bookpi-ledger:degraded` |
+| Sandbox de archivos (`src/agents/sandbox.ts`) | `tested (unit)` | `test/agents/sandbox.test.ts` | No cableado a HTTP; no aplica parches |
+| Planner y Reviewer deterministas | `tested (unit)` | `test/agents/mesh.test.ts` | Sin modelo, red ni shell |
+| Coder-en-sandbox | `tested (unit)` | `test/agents/mesh.test.ts` vía adaptador | Solo escribe propuestas en sandbox; no registrado en el servidor |
+| `GET /api/v1/agents/mesh` y `POST /api/v1/agents/mesh/evaluate` | `tested (contract)` | `test/routes/agents-mesh.test.ts` + inventario de rutas | `executionPerformed: false` siempre |
+
+No se importó la aplicación Next.js de origen: su chat, su editor y su "capability deck" son
+simulados (`sendPrompt` devuelve texto fijo, `runProject` solo cambia un estado visual y
+`lib/kernel.ts`/`README.md` no existen en ese repositorio). Tampoco se importaron sus snippets
+de `BookPILedger` ni `safeSandboxPath`, que contienen fallos verificables descritos en el RFC-0011.
+
+La fusión **no** modifica la verificación de producción del 31 de octubre, **no** eleva
+`/api/v1/readyz` y **no** declara ninguna capacidad nueva en producción. Sigue pendiente
+observar el ciclo completo fallo→recuperación de los almacenes durables en una instancia real.
+
+## Fusión Master Consolidated (1 de noviembre de 2026)
+
+Documento fuente: `ISABELLA_VILLASENOR_AI_MASTER_CONSOLIDATED.docx`, importado sin reescribir en
+`docs/canon/source/ISABELLA_VILLASENOR_AI_MASTER_CONSOLIDATED-03d11d.docx` (434 558 B, SHA-256
+`03d11de521312e4fa90e8cbe87f3dcf199d0124d26211227d6d9e83205e378b1`). El dictamen completo está
+en `docs/rfc/RFC-0012-infinity-master-consolidated.md`; el mapa operativo, en
+`docs/infinity/README.md`.
+
+| Capacidad fusionada | Estado real | Evidencia | Límite declarado |
+|---|---|---|---|
+| 14 capas Ω + 9 Fabrics (`src/infinity/architecture.ts`) | `tested (unit)` | `test/infinity/architecture-catalog.test.ts` | Registro de arquitectura; la auditoría falla si se declara `production` |
+| Catálogo 10 skills + 18 tools + 14 primitivas + 12 servicios (`src/infinity/catalog.ts`) | `tested (unit)` | `test/infinity/architecture-catalog.test.ts` | Las tools `mapped` no tienen módulo ni ejecución |
+| Constitución `ALLOW = ID × AUTH × POLICY × EVIDENCE × SAFETY` (`src/infinity/constitution.ts`) | `tested (unit)` | `test/infinity/constitution-skills.test.ts` | `ALLOW` no autoriza, no ejecuta ni sustituye CROWN |
+| Ingesta de 14 etapas, licencias y trust asesor | `tested (unit)` | `test/infinity/constitution-skills.test.ts` | `ADMIT` documental; no descarga ni entrena |
+| 10 skills nativas deterministas (`src/infinity/skills.ts`) | `tested (unit)` | `test/infinity/constitution-skills.test.ts` | `externalCalls: 0`; no buscan en red ni sintetizan audio/voz |
+| Media Fabric (`src/infinity/media.ts`) | `tested (unit)` | `test/infinity/media-build-evolution.test.ts` | `pixelsModified: false`, `networkUsed: false`; no publica ni cobra |
+| Build Fabric (`src/infinity/build.ts`) | `tested (unit)` | `test/infinity/media-build-evolution.test.ts` | Solo plan; no escribe sandbox, no ejecuta, no despliega |
+| Evolution Fabric (`src/infinity/evolution-fabric.ts`) | `tested (unit)` | `test/infinity/media-build-evolution.test.ts` | Simulación en memoria; no publica, no adopta, no emite créditos |
+| 7 rutas `/api/v1/infinity/*` (`src/routes/infinity.ts`) | `tested (contract)` | `test/routes/infinity.test.ts` + inventario de rutas | `production: false` y `executionPerformed: false` siempre |
+
+Divergencia documentada: el resumen del documento dice “19 tools”, pero su tabla de la sección 16
+enumera 18. El catálogo sigue la tabla y no inventa una herramienta para cuadrar la cifra. Las
+capas Ω-4 y Ω-11 no se definen en el canon y no se inventaron.
+
+El 20× se trata como **meta por capacidad**, no como resultado: no existe benchmark reproducible,
+por lo que no se declara. Tampoco se implementaron ejecución real de agentes Coder/Tester/DevOps/
+Operator, despliegue multi-destino, publicación de cápsulas, emisión de créditos, búsqueda/fetch
+web regulada, `repo.*`, aprendizaje de estilo sobre píxeles, detección facial real ni aislamiento
+gVisor/TPM.
+
+Esta fusión **no** modifica la verificación de producción del 31 de octubre y **no** eleva
+`/api/v1/readyz`. Sus rutas quedan en `implemented` + `tested (unit)` hasta que se verifiquen en
+el despliegue; eso demuestra computación local, no producción.
+
 
 ## Evidencia disponible y estado no demostrado
 
@@ -51,6 +116,8 @@ el estado global en `degraded`. No se oculta ni se reclasifica.
 - El README registra que `/api/v1/readyz` devolvió HTTP 503 en un preview evaluado previamente; la medición del 31 de octubre vuelve a observar 503, ahora con `bookpi-ledger` como bloqueo requerido y observabilidad opcional degradada.
 - La inferencia generativa externa no se considera verificada en producción; requiere proveedor configurado, prueba E2E y tratamiento comprobado de timeout, errores y fallback.
 - La persistencia durable de claves de API, federación y BookPI pipeline dejó de ser una suposición: se probó contra la base de producción (ver arriba). Siguen pendientes backup/restore, comportamiento de RLS bajo el rol de servicio, migración asíncrona del ledger legacy, telemetría OTLP y despliegue/rollback reales.
+- El aborto `This operation was aborted` que degradaba IKES en cold start se debía al timeout de 2 s del adaptador Supabase; el valor por defecto es ahora 10 s (`ISABELLA_IKES_REQUEST_TIMEOUT_MS`) y el primer probe del despliegue `b30b915` reportó IKES saludable.
+- En una invocación fría aislada se observó además un timeout simultáneo de Supabase y Postgres. Los almacenes ya no se abandonan: reintentan con retroceso y las escrituras fallan de forma visible mientras la base siga caída. El ciclo completo fallo→recuperación en una instancia real todavía no se observó; solo está cubierto por pruebas.
 - La PR de UI/chat #23 y los cambios de documentación deben evaluarse en su propio SHA; no equivalen a una fusión ni a una liberación.
 
 ## Consolidación del Kaos Audio System (30 de octubre de 2026)

@@ -19,6 +19,8 @@
 | RFC-0008 | Voz y TTS | Genesis TTS, IVCC, consentimiento |
 | RFC-0009 | Sanitización documental | Archivo, unificación, reglas de borrado |
 | RFC-0010 | Nexus: capa unificada | Grafo con procedencia, agente, workflows, antifragilidad, cuántica local |
+| RFC-0011 | Fusión ISABELLA CERO | Agent Mesh, matriz de 10 roles, sandbox y canon importado |
+| RFC-0012 | Fusión Master Consolidated | 14 capas Ω, 9 Fabrics, constitución, skills nativas, Media/Build/Evolution Fabric |
 
 ## Fuentes que permanecen intactas (load-bearing)
 
@@ -26,6 +28,8 @@
 - `docs/ESTADO-REAL-ACTUAL.md`
 - `docs/api/*`
 - `docs/spec/*` y `docs/spec/canonical/*`
+- `docs/canon/*` (canon ISABELLA CERO importado con procedencia)
+- `docs/infinity/*` (mapa operativo de la fusión Master Consolidated)
 - `docs/security/*`
 - `docs/runbooks/*`
 - `docs/architecture/SSOT.md`

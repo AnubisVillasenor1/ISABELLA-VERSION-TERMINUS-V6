@@ -78,9 +78,35 @@ export interface RevenueFabricStorageConfig {
   readonly migrationPath: string;
 }
 
+export type RevenueSchemaState =
+  | { readonly status: 'pending' }
+  | { readonly status: 'ready' }
+  | { readonly status: 'failed'; readonly reason: string };
+
+/**
+ * Un fallo de DDL al arrancar no detiene el proceso: sin este estado, las rutas de revenue
+ * devolvían un 500 sin explicación y el único rastro era un volcado crudo del error de `pg`
+ * (que puede traer la cadena de conexión con credenciales). El motivo se sanea y se expone.
+ */
+function sanitizeConnectionError(error: unknown): string {
+  const e = error as { message?: unknown; name?: unknown; errors?: unknown } | null;
+  // Un AggregateError de conexión de `pg` trae el detalle en `errors` y el `message` vacío:
+  // sin este desenredo el registro de producción queda con "persistence unavailable:" y nada más.
+  const causes = Array.isArray(e?.errors) ? (e?.errors as unknown[]) : [];
+  const parts: string[] = [];
+  if (typeof e?.message === 'string' && e.message.trim()) parts.push(e.message.trim());
+  for (const cause of causes) {
+    const text = cause instanceof Error ? cause.message : String(cause);
+    if (text.trim() && !parts.includes(text.trim())) parts.push(text.trim());
+  }
+  const raw = parts.join('; ') || (typeof e?.name === 'string' ? e.name : '') || String(error);
+  return raw.replace(/\/\/[^@/\s]*:[^@\s]*@/g, '//[redacted]@').slice(0, 200);
+}
+
 export class RevenueFabricStorage {
   private pool: Pool;
   private schemaReady: Promise<void> = Promise.resolve();
+  private schemaState: RevenueSchemaState = { status: 'pending' };
 
   constructor(config: RevenueFabricStorageConfig) {
     this.pool = new Pool({
@@ -89,10 +115,23 @@ export class RevenueFabricStorage {
     });
     if (config.poolConfig.connectionString && process.env.RUNTIME_SMOKE !== '1') {
       this.schemaReady = this.initializeSchema();
-      void this.schemaReady.catch((error: unknown) => {
-        console.error('[RevenueFabricStorage] schema initialization failed', error);
-      });
+      // El estado observado es independiente de `ready()`: la promesa debe seguir rechazando
+      // para quien la espera, y aquí solo se registra el motivo saneado para el operador.
+      void this.schemaReady.then(
+        () => {
+          this.schemaState = { status: 'ready' };
+        },
+        (error: unknown) => {
+          this.schemaState = { status: 'failed', reason: sanitizeConnectionError(error) };
+          console.error(`[RevenueFabric] persistence unavailable: ${this.schemaState.reason}`);
+        }
+      );
     }
+  }
+
+  /** Estado observado de la inicialización del esquema; "pending" hasta que la primera consulta resuelve. */
+  getSchemaState(): RevenueSchemaState {
+    return this.schemaState;
   }
 
   async ready(): Promise<void> {
