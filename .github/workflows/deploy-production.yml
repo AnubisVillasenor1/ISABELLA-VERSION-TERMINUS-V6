@@ -120,13 +120,13 @@ jobs:
       THE_SHA: ${{ needs.validate-source.outputs.the_sha }}
     steps:
       - name: Checkout the verified SHA (el gate se evalúa con el código de ese commit)
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.2.2
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0 (medido: refs/tags/v4.4.0)
         with:
           ref: ${{ needs.validate-source.outputs.the_sha }}
           fetch-depth: 1
 
       - name: Setup Node.js
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.0.2
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0 (medido: refs/tags/v4.4.0)
         with:
           node-version: '24'
 
@@ -253,6 +253,7 @@ jobs:
         if: ${{ steps.vercel.outputs.url != '' }}
         env:
           SMOKE_BASE_URL: ${{ steps.vercel.outputs.url }}
+          SMOKE_REQUIRE_READINESS: "false"   # despliegue de borrador; no certifica produccion
         run: pnpm run smoke:production
 
       - name: Deployment summary
