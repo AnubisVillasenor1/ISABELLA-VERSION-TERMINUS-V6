@@ -79,7 +79,8 @@ const EVIDENCE_MAP: Record<string, string> = {
   'Identidad:ssot_verificable': 'src/lib/user-auth-service.ts dev-only + Supabase Auth canónica',
   'Autorización:ssot_verificable': 'src/lib/authorization.ts + src/lib/rbac.ts + policy-engine',
   'CROWN:ssot_verificable': 'src/lib/crown-v6.ts 12 nodos',
-  'Memoria:ssot_verificable': 'src/lib/lib/repositories/memory-repository.ts + pg_advisory_xact_lock',
+  'Memoria:ssot_verificable':
+    'src/lib/lib/repositories/memory-repository.ts + pg_advisory_xact_lock',
   'ML/IA:ssot_verificable': 'src/lib/lib/native-ml/governed-ml.ts + language-core.ts',
   'HDC/NCUA:ssot_verificable':
     'src/lib/lib/ncua/academic-pipeline.ts + quantum-bridge-client.ts allowlist',
