@@ -7,7 +7,7 @@ import {
 import { evaluateEligibility } from './eligibility';
 
 /**
- * WITHDRAWAL & ZERO-LOSS SETTLEMENT (src/lib/monetization/withdrawal.ts)
+ * WITHDRAWAL & ZERO-LOSS SETTLEMENT (src/lib/lib/monetization/withdrawal.ts)
  * -----------------------------------------------------------------
  * Manages the withdrawal requests. Enforces the 90-day escrow maturation
  * and checks the territorial node's liquidity pool. If the platform lacks

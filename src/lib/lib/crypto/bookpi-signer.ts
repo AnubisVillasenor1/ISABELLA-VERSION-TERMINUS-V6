@@ -1,5 +1,5 @@
 /**
- * BOOKPI SIGNER (src/lib/crypto/bookpi-signer.ts)
+ * BOOKPI SIGNER (src/lib/lib/crypto/bookpi-signer.ts)
  * -----------------------------------------------------------------
  * Autoridad criptográfica del ledger. Separa: hashing, firma, verificación
  * y gestión de claves (§6.5 del manual de reparación).

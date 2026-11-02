@@ -1,5 +1,5 @@
 /**
- * IGDS — Firmante configurado (src/lib/igds/configured.ts)
+ * IGDS — Firmante configurado (src/lib/lib/igds/configured.ts)
  * -----------------------------------------------------------------
  * Construye el firmante Ed25519 desde `IGDS_SIGNING_KEY` (PEM PKCS8) respetando
  * la regla del repositorio: la configuración se lee solo vía `config()`.

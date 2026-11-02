@@ -84,7 +84,7 @@ export function createDefaultCapabilityRegistry(): CapabilityRegistryService {
   register('tenancy', 'implemented', ['supabase/migrations/*', 'src/lib/tenant-guard.ts']);
   register('memory', 'implemented', ['src/lib/memory-engine.ts', 'tabla memories']);
   register('bookpi', 'implemented', ['src/lib/bookpi*.ts', 'tabla bookpi_ledger']);
-  register('audit', 'implemented', ['src/lib/repositories/audit-repository.ts']);
+  register('audit', 'implemented', ['src/lib/lib/repositories/audit-repository.ts']);
   register('crown', 'implemented', ['src/lib/crown.ts', 'constitutional-gate.ts']);
   register('llm', 'implemented', ['src/routes/api/isabella.ts']);
   register('voice', 'implemented', ['src/routes/api/isabella-voice.ts']);

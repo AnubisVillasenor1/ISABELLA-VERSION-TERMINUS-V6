@@ -31,7 +31,7 @@ export interface ModelEntry {
  * Legacy process-local evaluation cache.
  *
  * IMPORTANT: this is intentionally NOT a production authority. Durable model
- * approval lives in src/lib/intelligence/durable-model-registry.ts and is
+ * approval lives in src/lib/lib/intelligence/durable-model-registry.ts and is
  * enforced by production-model-gate.ts. Keeping this cache separate prevents
  * a process restart or a second instance from silently changing authority.
  */

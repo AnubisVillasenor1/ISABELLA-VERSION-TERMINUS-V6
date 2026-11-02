@@ -1,5 +1,5 @@
 /**
- * APPROVAL LEDGER POSTGRES (src/lib/repositories/approval-repository.ts)
+ * APPROVAL LEDGER POSTGRES (src/lib/lib/repositories/approval-repository.ts)
  * -----------------------------------------------------------------
  * Misma interfaz que el ledger en memoria de execution-authority, pero
  * durable en PostgreSQL con consumo atómico (una sola fila gana la

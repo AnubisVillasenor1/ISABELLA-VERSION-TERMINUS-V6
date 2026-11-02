@@ -1,5 +1,5 @@
 /**
- * MARKETPLACE REPOSITORY (src/lib/repositories/marketplace-repository.ts)
+ * MARKETPLACE REPOSITORY (src/lib/lib/repositories/marketplace-repository.ts)
  * -----------------------------------------------------------------
  * Fuente durable de listados del marketplace (tabla PG canónica).
  * Sin DATABASE_URL: falla cerrado (el llamador decide fallback dev).

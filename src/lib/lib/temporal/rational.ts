@@ -1,5 +1,5 @@
 /**
- * Temporal Media Core — Tiempo racional exacto (src/lib/temporal/rational.ts)
+ * Temporal Media Core — Tiempo racional exacto (src/lib/lib/temporal/rational.ts)
  * ---------------------------------------------------------------------------
  * El §9 de "Isabella-Engine-Video X" exige que el tiempo NUNCA use flotantes:
  *

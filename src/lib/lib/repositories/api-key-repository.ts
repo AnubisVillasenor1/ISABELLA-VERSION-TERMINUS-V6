@@ -2,7 +2,7 @@ import { neon } from '@neondatabase/serverless';
 import { config } from '../config';
 
 // ============================================================================
-// API KEY REPOSITORY (src/lib/repositories/api-key-repository.ts)
+// API KEY REPOSITORY (src/lib/lib/repositories/api-key-repository.ts)
 // ----------------------------------------------------------------------------
 // Repositorio DEDICADO con SQL explícito (P0-04/P1-19).
 // Contrato canónico, sin conversión genérica: `prefix`, `key_hash`, etc.

@@ -1,5 +1,5 @@
 /**
- * Chat-to-Skill Executor Bridge (src/lib/skills/chat-bridge.ts)
+ * Chat-to-Skill Executor Bridge (src/lib/lib/skills/chat-bridge.ts)
  * -----------------------------------------------------------------
  * Detecta invocaciones de habilidades soberanas (@skill:<nombre> o @<nombre>)
  * en el flujo de conversación de Isabella y las ejecuta a través del pipeline

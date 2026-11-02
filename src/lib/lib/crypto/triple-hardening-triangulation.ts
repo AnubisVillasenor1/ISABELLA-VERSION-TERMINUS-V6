@@ -1,6 +1,6 @@
 /**
  * TRIPLE HARDENING EN TRIANGULACIÓN CRIPTOGRÁFICA
- * (src/lib/crypto/triple-hardening-triangulation.ts)
+ * (src/lib/lib/crypto/triple-hardening-triangulation.ts)
  * ============================================================================
  * Ecosistema TAMV / RDM Digital Hub / Isabella Villaseñor AI v4.2.0
  *

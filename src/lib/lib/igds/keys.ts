@@ -1,5 +1,5 @@
 /**
- * IGDS — Firmas (src/lib/igds/keys.ts)
+ * IGDS — Firmas (src/lib/lib/igds/keys.ts)
  * -----------------------------------------------------------------
  * Autoridad criptográfica del sello:
  *  - Ed25519 REAL (node:crypto) como firma primaria.

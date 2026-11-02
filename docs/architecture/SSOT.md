@@ -1,7 +1,7 @@
 # SSOT de Arquitectura — Isabella TERMINUS V6
 
 > `state: draft | engine-generated` — Fuente única de verdad arquitectónica. Referenciada por el
-> registro de gobernanza (`src/lib/governance/500-gates.ts`). Este fichero **no** redefine la
+> registro de gobernanza (`src/lib/lib/governance/500-gates.ts`). Este fichero **no** redefine la
 > arquitectura: declara cuáles son las fuentes canónicas y cómo se relacionan.
 
 ## 1. Fuentes canónicas de arquitectura

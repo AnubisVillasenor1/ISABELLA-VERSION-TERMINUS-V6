@@ -1,5 +1,5 @@
 /**
- * PAYOUT EXECUTOR (src/lib/monetization/payout-executor.ts)
+ * PAYOUT EXECUTOR (src/lib/lib/monetization/payout-executor.ts)
  * -----------------------------------------------------------------
  * Ejecución REAL de payouts vía Stripe Transfers (a cuentas conectadas),
  * siempre detrás del payout guard (fraud-review):

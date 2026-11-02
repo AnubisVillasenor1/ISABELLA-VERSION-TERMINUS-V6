@@ -1,5 +1,5 @@
 /**
- * IGDS — Revocación (src/lib/igds/revocation.ts)
+ * IGDS — Revocación (src/lib/lib/igds/revocation.ts)
  * -----------------------------------------------------------------
  * Regla temporal: lo relevante no es si la clave está revocada HOY, sino si
  * estaba válida CUANDO se firmó. Nunca se borra una entrada Genesis: la

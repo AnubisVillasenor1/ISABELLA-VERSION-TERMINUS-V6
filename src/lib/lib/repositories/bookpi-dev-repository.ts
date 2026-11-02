@@ -1,12 +1,12 @@
 /**
- * REPOSITORIO BOOKPI — TEST / DEV ADAPTER (src/lib/repositories/bookpi-dev-repository.ts)
+ * REPOSITORIO BOOKPI — TEST / DEV ADAPTER (src/lib/lib/repositories/bookpi-dev-repository.ts)
  * -----------------------------------------------------------------
  * ADAPTADOR EXCLUSIVO PARA DESARROLLO LOCAL Y PRUEBAS AISLADAS.
  *
  * REMOVIDO DEL FLUJO FINANCIERO DE PRODUCCIÓN:
  * Para producción, transacciones reales y durabilidad inmutable, la única
  * autoridad financiera canónica es PostgreSQL mediante:
- * `createBookpiPostgresRepository()` (src/lib/repositories/bookpi-postgres-repository.ts).
+ * `createBookpiPostgresRepository()` (src/lib/lib/repositories/bookpi-postgres-repository.ts).
  *
  * Este adaptador se mantiene estrictamente para pruebas unitarias de aislamiento,
  * benchmarks locales y simulación criptográfica desacoplada de la base de datos.

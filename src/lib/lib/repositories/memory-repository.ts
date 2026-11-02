@@ -1,5 +1,5 @@
 /**
- * REPOSITORIO DE MEMORIA (src/lib/repositories/memory-repository.ts)
+ * REPOSITORIO DE MEMORIA (src/lib/lib/repositories/memory-repository.ts)
  * -----------------------------------------------------------------
  * Persistencia e integridad de la memoria jerárquica soberana.
  * Real, sin mockdata:

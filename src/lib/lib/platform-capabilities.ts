@@ -39,7 +39,7 @@ export const PLATFORM_CAPABILITIES: readonly PlatformCapability[] = [
     status: 'implemented',
     productionSafe: false,
     evidence: [
-      'src/lib/repositories/bookpi-postgres-repository.ts',
+      'src/lib/lib/repositories/bookpi-postgres-repository.ts',
       'src/lib/bookpi-dev-adapter.ts',
     ],
     notes:
@@ -50,7 +50,7 @@ export const PLATFORM_CAPABILITIES: readonly PlatformCapability[] = [
     owner: 'MNEMOS',
     status: 'implemented',
     productionSafe: false,
-    evidence: ['src/lib/memory-engine.ts', 'src/lib/repositories/memory-repository.ts'],
+    evidence: ['src/lib/memory-engine.ts', 'src/lib/lib/repositories/memory-repository.ts'],
     notes:
       'Implementation exists; production-safe status requires runtime isolation and persistence evidence.',
   },
@@ -87,7 +87,7 @@ export const PLATFORM_CAPABILITIES: readonly PlatformCapability[] = [
     productionSafe: false,
     evidence: [
       'src/lib/monetization/',
-      'src/lib/repositories/bookpi-postgres-repository.ts',
+      'src/lib/lib/repositories/bookpi-postgres-repository.ts',
       'src/lib/bookpi-dev-adapter.ts',
     ],
     notes:
@@ -109,7 +109,7 @@ export const PLATFORM_CAPABILITIES: readonly PlatformCapability[] = [
     evidence: [
       'src/lib/tina/category.ts',
       'src/lib/tina/orchestrator.ts',
-      'src/lib/skills/tina-category.ts',
+      'src/lib/lib/skills/tina-category.ts',
       'test/unit/tina-category.test.ts',
     ],
     notes:

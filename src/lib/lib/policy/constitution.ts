@@ -1,5 +1,5 @@
 /**
- * CONSTITUTION ejecutable (src/lib/policy/constitution.ts)
+ * CONSTITUTION ejecutable (src/lib/lib/policy/constitution.ts)
  * --------------------------------------------------------
  * Espejo en TypeScript de `policy/constitution.rego` (paquete
  * `isabella.constitution`), absorbido de nodo genesis y adaptado a los

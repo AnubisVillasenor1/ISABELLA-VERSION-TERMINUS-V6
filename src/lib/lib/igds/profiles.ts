@@ -1,5 +1,5 @@
 /**
- * IGDS — Perfiles de sello (src/lib/igds/profiles.ts)
+ * IGDS — Perfiles de sello (src/lib/lib/igds/profiles.ts)
  * -----------------------------------------------------------------
  * Cada perfil fija algoritmos, obligatoriedad de timestamp, marca de agua y
  * política de retención. El motor de sellado NUNCA degrada un perfil en

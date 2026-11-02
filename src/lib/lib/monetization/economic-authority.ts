@@ -1,5 +1,5 @@
 /**
- * ECONOMIC AUTHORITY (src/lib/monetization/economic-authority.ts)
+ * ECONOMIC AUTHORITY (src/lib/lib/monetization/economic-authority.ts)
  * -----------------------------------------------------------------
  * Contrato económico único para rutas de monetización:
  *  - validateMonetizationAmount: importe entero > 0, límite duro, currency explícita.

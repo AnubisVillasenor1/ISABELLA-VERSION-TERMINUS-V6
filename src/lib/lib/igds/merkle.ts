@@ -1,5 +1,5 @@
 /**
- * IGDS — Árbol Merkle (src/lib/igds/merkle.ts)
+ * IGDS — Árbol Merkle (src/lib/lib/igds/merkle.ts)
  * -----------------------------------------------------------------
  * Construcción RFC 6962 (Certificate Transparency) sobre digests hex:
  *   leaf  = SHA-256(0x00 || valor)

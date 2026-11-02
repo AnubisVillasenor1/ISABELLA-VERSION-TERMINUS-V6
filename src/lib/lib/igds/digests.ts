@@ -1,5 +1,5 @@
 /**
- * IGDS — Motor de digests (src/lib/igds/digests.ts)
+ * IGDS — Motor de digests (src/lib/lib/igds/digests.ts)
  * -----------------------------------------------------------------
  * SHA-256 para interoperabilidad/C2PA y SHA3-256 para el perfil `long-term`.
  * Los digests se codifican siempre en hex minúscula para el registro Genesis y

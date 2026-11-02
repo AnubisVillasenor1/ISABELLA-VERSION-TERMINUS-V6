@@ -1,5 +1,5 @@
 /**
- * IGDS — Verificación offline (src/lib/igds/verify.ts)
+ * IGDS — Verificación offline (src/lib/lib/igds/verify.ts)
  * -----------------------------------------------------------------
  * Verifica un `IgdsSealPackage` sin acceso al escritor: firma(s), digest final,
  * inclusión Merkle, checkpoint y estado de revocación. Nunca confía en la clave

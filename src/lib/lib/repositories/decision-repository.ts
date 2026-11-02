@@ -1,5 +1,5 @@
 /**
- * LEDGER DE DECISIONES POSTGRES (src/lib/repositories/decision-repository.ts)
+ * LEDGER DE DECISIONES POSTGRES (src/lib/lib/repositories/decision-repository.ts)
  * -----------------------------------------------------------------
  * Implementación durable de `LedgerStore` sobre `isabella_decisions`
  * (migración 20260926030000_isabella_policy_as_code.sql), con las reglas de

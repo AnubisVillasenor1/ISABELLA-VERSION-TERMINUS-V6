@@ -1,5 +1,5 @@
 /**
- * REPOSITORIO DE AUDITORÍA (src/lib/repositories/audit-repository.ts)
+ * REPOSITORIO DE AUDITORÍA (src/lib/lib/repositories/audit-repository.ts)
  * -----------------------------------------------------------------
  * Registro de auditoría append-only con cadena criptográfica real.
  * Sin mockdata:

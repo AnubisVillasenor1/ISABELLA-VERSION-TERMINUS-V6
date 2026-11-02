@@ -3,7 +3,7 @@ import type { AuditEntry, IRepository, Tenant } from '../persistence/repository'
 import { mapTenantRowToDomain, type TenantDomain } from '../domains/tenant';
 
 // ============================================================================
-// TENANT SERVICE (src/lib/services/tenant-service.ts)
+// TENANT SERVICE (src/lib/lib/services/tenant-service.ts)
 // ----------------------------------------------------------------------------
 // Capa de aplicación del dominio de tenants contra repositorios.
 // Encapsula creación, lectura y auditoría transaccional (FASE 5).

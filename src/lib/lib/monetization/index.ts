@@ -1,5 +1,5 @@
 /**
- * MÓDULO DE MONETIZACIÓN (src/lib/monetization/index.ts)
+ * MÓDULO DE MONETIZACIÓN (src/lib/lib/monetization/index.ts)
  * -----------------------------------------------------------------
  * Punto de entrada del dominio de monetización de Isabella.
  *

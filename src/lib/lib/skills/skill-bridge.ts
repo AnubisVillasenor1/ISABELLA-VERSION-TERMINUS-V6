@@ -1,5 +1,5 @@
 /**
- * SKILL INVOCATION BRIDGE (src/lib/skills/skill-bridge.ts)
+ * SKILL INVOCATION BRIDGE (src/lib/lib/skills/skill-bridge.ts)
  * -----------------------------------------------------------------
  * Puente canónico que vincula invocaciones de habilidades soberanas (@skill)
  * con el pipeline seguro de ejecución, orquestando:
