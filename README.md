@@ -193,7 +193,7 @@ corepack pnpm run build
 corepack pnpm run deploy:readiness
 ```
 
-Puertas duras del inventario y del canon: `test/deployment/route-inventory.test.ts` (las 327 rutas registradas en `src/` están congeladas; una extracción de módulo no puede perder ni renombrar un endpoint, y ningún literal puede registrarse en dos módulos), `test/deployment/openapi-contract.test.ts` (ninguna operación documentada en `docs/api/openapi.yaml` puede ser fantasma: hoy 75 operaciones), `test/deployment/env-documentation.test.ts` y `test/deployment/readiness-consistency.test.ts`. La suite del Kaos Audio System son 7 archivos y 105 casos, con oráculo DFT ingenuo que valida la FFT y regresiones explícitas de los dos errores que ya se corrigieron. En total el repositorio tiene 379 archivos `*.test.ts` y 1 125 archivos `.ts` bajo `src/` (548 excluyendo la isla `src/lib/**`).
+Puertas duras del inventario y del canon: `test/deployment/route-inventory.test.ts` (las 336 rutas registradas en `src/` están congeladas; una extracción de módulo no puede perder ni renombrar un endpoint, y ningún literal puede registrarse en dos módulos), `test/deployment/openapi-contract.test.ts` (ninguna operación documentada en `docs/api/openapi.yaml` puede ser fantasma: hoy 75 operaciones), `test/deployment/env-documentation.test.ts` y `test/deployment/readiness-consistency.test.ts`. La suite del Kaos Audio System son 7 archivos y 105 casos, con oráculo DFT ingenuo que valida la FFT y regresiones explícitas de los dos errores que ya se corrigieron. En total el repositorio tiene 392 archivos `*.test.ts` y 969 archivos `.ts` bajo `src/` (594 excluyendo la isla `src/lib/**`).
 
 El inventario se regenera con `node scripts/route-inventory.mjs`; las columnas Auth/Rate-limit/Validación son heurísticas de análisis estático, no pruebas en ejecución.
 
@@ -249,14 +249,14 @@ Los jobs figuran con ~2 s, `steps: []` y `runner_name` vacío, y su log responde
 | Paso del workflow | Resultado local |
 |---|---|
 | `pnpm run lint` (`--max-warnings=0`) | 0 errores, 0 avisos |
-| `pnpm run format:check` | verde tras normalizar 3 archivos con Prettier |
-| `pnpm run typecheck` | sin errores propios: los residuales son `Cannot find module` de `node_modules` obsoleto en esta máquina, y `@supabase/supabase-js`, `drizzle-orm` y `mongodb` están declarados en `package.json` y en el lockfile, que es lo que instala CI con `--frozen-lockfile` |
+| `pnpm run format:check` | `All matched files use Prettier code style!` (exit 0) |
+| `pnpm run typecheck` | exit 0 con cero errores, medido sobre este árbol con el `node_modules` instalado |
 | `pnpm run check:env` / `check:sops` | exit 0 |
 | `node scripts/generate-status.mjs --check` | exit 0 |
 | `pnpm run security:suite` | 14 passed, 0 failed, 0 not_applicable |
 | `pnpm audit --prod --audit-level=moderate` | 0 vulnerabilidades conocidas |
-| `vitest run` (14 archivos tocados por estos cambios) | 100 pruebas en verde |
-| Suite completa `vitest run` | 92 de 100 fallos son de esta máquina, no del repo: `node:crypto` de este runtime no ofrece `sha3-512` (`getHashes()` lo confirma) y `src/bookpi/crypto.ts` sí lo exige |
+| 8 suites nuevas de esta cosecha (`deploy-gate`, `sbom-generator`, `workflow-contract`, `catalog-coherence`, `evolved-bridge`, `skill-evidence-guard`, `skill-provenance`, `skill-provenance-fs`) | 91 pruebas añadidas, las 91 en verde: ningún archivo nuevo aparece en la lista de fallos |
+| Suite completa `vitest run` | 2 552 de 2 690 en verde. Los 138 fallos son de esta máquina, no del repo: 123 son `Digest method not supported` (`node:crypto` de este runtime no ofrece `sha3-512` y `src/bookpi/crypto.ts` sí lo exige), 1 es `Cannot find module 'tslib'` del `node_modules` obsoleto y 2 son el `testTimeout` de 30 s en `hardening-guards`, que lanza `node scripts/*.mjs` como proceso hijo; esos dos scripts, ejecutados sueltos, dan exit 0. La base `d9586ce`, con el mismo `node_modules`, marca 136 fallos en los mismos 35 archivos: el conjunto en rojo no cambia. |
 | IGE-Ω `cargo fmt`/`clippy`/`test`/`build` | no verificable aquí: no hay `cargo` ni `rustc` instalados |
 
 El escaneo Trivy del mismo job (`severity: CRITICAL,HIGH`) queda cubierto de forma indirecta: el único `high` del grafo de producción era `@hono/node-server` dentro de la cadena de Prisma, ya eliminada.
@@ -265,7 +265,7 @@ El escaneo Trivy del mismo job (`severity: CRITICAL,HIGH`) queda cubierto de for
 
 Avance global de implementación: no publicado como porcentaje único. Mientras no exista un denominador de requisitos ponderados y reproducible, una cifra agregada sería especulación y no se presenta como hecho.
 
-Lo que sí es verificable en este SHA: lint y formato en verde, 327 rutas congeladas, 75 operaciones OpenAPI sin fantasmas, la compuerta de coherencia del catálogo con 0 afirmaciones sin soporte, `security:suite` 14/14, `pnpm audit --prod` limpio y superficie TAMV montada en `src/server.ts` con autorización, rate limit, ledger y blackout. Estado documentado y limitaciones: [`docs/ESTADO-REAL-ACTUAL.md`](docs/ESTADO-REAL-ACTUAL.md).
+Lo que sí es verificable en este SHA: lint, typecheck y formato en verde (exit 0 los tres, medidos en esta máquina), 336 rutas congeladas, 75 operaciones OpenAPI sin fantasmas, la compuerta de coherencia del catálogo con 0 afirmaciones sin soporte, `security:suite` 14/14, `pnpm audit --prod` limpio y superficie TAMV montada en `src/server.ts` con autorización, rate limit, ledger y blackout. Estado documentado y limitaciones: [`docs/ESTADO-REAL-ACTUAL.md`](docs/ESTADO-REAL-ACTUAL.md).
 
 ## Despliegue en Vercel
 
