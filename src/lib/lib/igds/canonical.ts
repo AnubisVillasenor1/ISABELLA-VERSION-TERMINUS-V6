@@ -1,5 +1,5 @@
 /**
- * IGDS — Canonicalización JSON (src/lib/igds/canonical.ts)
+ * IGDS — Canonicalización JSON (src/lib/lib/igds/canonical.ts)
  * -----------------------------------------------------------------
  * Serialización determinista compatible con RFC 8785 (JSON Canonicalization
  * Scheme). Toda firma, digest de entrada y digest de manifiesto DEBE usar esta

@@ -1,5 +1,5 @@
 /**
- * IGDS — Sellado temporal (src/lib/igds/tsa.ts)
+ * IGDS — Sellado temporal (src/lib/lib/igds/tsa.ts)
  * -----------------------------------------------------------------
  * Interfaz de autoridad de sellado temporal. El transporte RFC 3161 real vive
  * en `rfc3161.ts`; esta interfaz permite inyectar TSAs manuales/HSM y testear

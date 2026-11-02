@@ -1,6 +1,6 @@
 /**
  * MOTOR NATIVO DE DETECCIÓN Y MITIGACIÓN DE SESGOS, DEBILIDADES E INCONSISTENCIAS
- * (src/lib/native-ml/bias-weakness-mitigation.ts)
+ * (src/lib/lib/native-ml/bias-weakness-mitigation.ts)
  * ============================================================================
  * Ecosistema TAMV / RDM Digital Hub / Isabella Villaseñor AI v4.2.0
  *

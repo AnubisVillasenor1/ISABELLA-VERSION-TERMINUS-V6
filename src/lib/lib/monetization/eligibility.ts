@@ -7,7 +7,7 @@ import {
 } from './types';
 
 /**
- * EVALUACIÓN DE ELEGIBILIDAD (src/lib/monetization/eligibility.ts)
+ * EVALUACIÓN DE ELEGIBILIDAD (src/lib/lib/monetization/eligibility.ts)
  * -----------------------------------------------------------------
  * Implementación real de las reglas del protocolo de monetización:
  *   suscripción activa + identidad verificada + cuenta de retiro

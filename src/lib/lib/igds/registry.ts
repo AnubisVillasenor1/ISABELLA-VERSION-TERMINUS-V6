@@ -1,12 +1,12 @@
 /**
- * IGDS — Registro Genesis (src/lib/igds/registry.ts)
+ * IGDS — Registro Genesis (src/lib/lib/igds/registry.ts)
  * -----------------------------------------------------------------
  * Log append-only con hashes encadenados + árbol Merkle + checkpoints firmados.
  * No usa blockchain: la evidencia se sostiene en hash chaining, Merkle root,
  * firmas y (opcionalmente) timestamps externos RFC 3161.
  *
  * Implementación de referencia en memoria/JSON; la persistencia durable en
- * PostgreSQL vive en `src/lib/repositories/igds-genesis-repository.ts` y
+ * PostgreSQL vive en `src/lib/lib/repositories/igds-genesis-repository.ts` y
  * respeta la MISMA fórmula de hash (`computeEntryHash`).
  */
 import * as fs from 'node:fs';

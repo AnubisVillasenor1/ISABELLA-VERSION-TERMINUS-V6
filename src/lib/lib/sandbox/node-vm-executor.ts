@@ -1,5 +1,5 @@
 /**
- * NODE VM EXECUTOR (src/lib/sandbox/node-vm-executor.ts)
+ * NODE VM EXECUTOR (src/lib/lib/sandbox/node-vm-executor.ts)
  * -----------------------------------------------------------------
  * Ejecutor REAL de cómputo aislado para tareas JavaScript puras:
  *  - Contexto V8 congelado: solo `Math` y `JSON` (sin `process`,

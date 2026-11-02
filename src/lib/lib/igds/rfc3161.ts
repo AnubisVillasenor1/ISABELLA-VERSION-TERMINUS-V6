@@ -1,5 +1,5 @@
 /**
- * IGDS — Transporte RFC 3161 (src/lib/igds/rfc3161.ts)
+ * IGDS — Transporte RFC 3161 (src/lib/lib/igds/rfc3161.ts)
  * -----------------------------------------------------------------
  * Codificador/decodificador DER mínimo y cliente HTTP para obtener sellos de
  * tiempo RFC 3161 sin dependencias externas.

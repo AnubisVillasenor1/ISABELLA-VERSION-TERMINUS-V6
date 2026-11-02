@@ -79,11 +79,11 @@ const EVIDENCE_MAP: Record<string, string> = {
   'Identidad:ssot_verificable': 'src/lib/user-auth-service.ts dev-only + Supabase Auth canónica',
   'Autorización:ssot_verificable': 'src/lib/authorization.ts + src/lib/rbac.ts + policy-engine',
   'CROWN:ssot_verificable': 'src/lib/crown-v6.ts 12 nodos',
-  'Memoria:ssot_verificable': 'src/lib/repositories/memory-repository.ts + pg_advisory_xact_lock',
-  'ML/IA:ssot_verificable': 'src/lib/native-ml/governed-ml.ts + language-core.ts',
+  'Memoria:ssot_verificable': 'src/lib/lib/repositories/memory-repository.ts + pg_advisory_xact_lock',
+  'ML/IA:ssot_verificable': 'src/lib/lib/native-ml/governed-ml.ts + language-core.ts',
   'HDC/NCUA:ssot_verificable':
-    'src/lib/ncua/academic-pipeline.ts + quantum-bridge-client.ts allowlist',
-  'BookPI:ssot_verificable': 'src/lib/repositories/bookpi-postgres-repository.ts WORM',
+    'src/lib/lib/ncua/academic-pipeline.ts + quantum-bridge-client.ts allowlist',
+  'BookPI:ssot_verificable': 'src/lib/lib/repositories/bookpi-postgres-repository.ts WORM',
   'Postgres/RLS:ssot_verificable':
     'supabase/migrations + neon-adapter.ts ssl + channel_binding sanitizado',
   'API:ssot_verificable': 'src/lib/api-contracts.ts + src/server-routes/api/v1/language/profile.ts',
@@ -94,7 +94,7 @@ const EVIDENCE_MAP: Record<string, string> = {
   'QA:ssot_verificable': '545 passed, 10 skipped, test/security/secret-exposure.test.ts',
   'CI/CD:ssot_verificable': '.github/workflows/ci.yml pnpm --frozen-lockfile + sbom.mjs',
   'UX/A11y:ssot_verificable': 'docs/operations/A11Y.md WCAG 2.2 AA + a11y.test.ts',
-  'Ética:ssot_verificable': 'src/lib/governance/idh-d.ts auditIDHDBias + docs/ml/DRIFT.md',
+  'Ética:ssot_verificable': 'src/lib/lib/governance/idh-d.ts auditIDHDBias + docs/ml/DRIFT.md',
   'Docs/comunidad:ssot_verificable': '6 canónicos docs/01..06 (94->6)',
   'Performance:ssot_verificable': 'vite build 2.98s, double-pipeline p95 2ms, NCUA 50/500',
 };
@@ -108,7 +108,7 @@ export function getGateEvidence(domain: Domain, control: Control, commit: string
     status: 'EVIDENCE_GATED',
     commit,
     timestamp: new Date().toISOString(),
-    evidence: EVIDENCE_MAP[gate] || `src/lib/governance/500-gates.ts ${gate}`,
+    evidence: EVIDENCE_MAP[gate] || `src/lib/lib/governance/500-gates.ts ${gate}`,
   };
 }
 

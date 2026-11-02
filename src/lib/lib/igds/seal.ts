@@ -1,5 +1,5 @@
 /**
- * IGDS — Motor de sellado (src/lib/igds/seal.ts)
+ * IGDS — Motor de sellado (src/lib/lib/igds/seal.ts)
  * -----------------------------------------------------------------
  * Orquesta el flujo canónico:
  *   contenido → digest → manifiesto base → (RFC 3161) → manifiesto final

@@ -1,5 +1,5 @@
 /**
- * IGDS — Isabella Genesis Document Seal (src/lib/igds/index.ts)
+ * IGDS — Isabella Genesis Document Seal (src/lib/lib/igds/index.ts)
  * -----------------------------------------------------------------
  * Sello documental verificable: canonicalización JCS, digests SHA-256/SHA3-256,
  * firmas Ed25519 (+ ML-DSA-65 enchufable), manifiesto conceptual C2PA, registro

@@ -6,7 +6,7 @@
  *
  * Para producción y entornos distribuidos, la única fuente autoritativa
  * y duradera de persistencia es `createBookpiPostgresRepository()`
- * (src/lib/repositories/bookpi-postgres-repository.ts).
+ * (src/lib/lib/repositories/bookpi-postgres-repository.ts).
  *
  * Este adaptador se mantiene estrictamente para pruebas unitarias, benchmarks
  * locales y entornos de desarrollo desacoplados de PostgreSQL.

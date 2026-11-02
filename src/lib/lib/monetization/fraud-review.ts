@@ -1,5 +1,5 @@
 /**
- * FRAUD REVIEW + PAYOUT GUARD (src/lib/monetization/fraud-review.ts)
+ * FRAUD REVIEW + PAYOUT GUARD (src/lib/lib/monetization/fraud-review.ts)
  * -----------------------------------------------------------------
  * Flujo real de revisión de fraude y controles de payout:
  *

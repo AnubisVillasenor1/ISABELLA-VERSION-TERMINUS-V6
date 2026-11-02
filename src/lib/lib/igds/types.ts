@@ -1,5 +1,5 @@
 /**
- * IGDS — Contratos canónicos (src/lib/igds/types.ts)
+ * IGDS — Contratos canónicos (src/lib/lib/igds/types.ts)
  * -----------------------------------------------------------------
  * El manifiesto es el modelo conceptual C2PA de Isabella (JSON), NO un
  * contenedor C2PA/CBOR interoperable. El manifiesto se firma; el bundle de

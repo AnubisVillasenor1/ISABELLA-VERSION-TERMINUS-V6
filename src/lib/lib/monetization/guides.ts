@@ -1,7 +1,7 @@
 import type { MonetizationGuide } from './types';
 
 /**
- * GUÍAS DE MONETIZACIÓN (src/lib/monetization/guides.ts)
+ * GUÍAS DE MONETIZACIÓN (src/lib/lib/monetization/guides.ts)
  * -----------------------------------------------------------------
  * Tutoriales paso a paso para que cada usuario comprenda cómo se
  * utiliza, se genera y se crea cada método de monetización con

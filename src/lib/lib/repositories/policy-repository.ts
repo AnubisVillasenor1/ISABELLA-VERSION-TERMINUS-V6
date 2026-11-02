@@ -1,5 +1,5 @@
 /**
- * POLICY AS CODE — REPOSITORIO POSTGRES (src/lib/repositories/policy-repository.ts)
+ * POLICY AS CODE — REPOSITORIO POSTGRES (src/lib/lib/repositories/policy-repository.ts)
  * -----------------------------------------------------------------
  * Carga las reglas versionadas de `isabella_policies` (migración
  * 20260926030000_isabella_policy_as_code.sql) para que la política viva en la

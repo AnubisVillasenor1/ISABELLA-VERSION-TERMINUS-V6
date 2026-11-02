@@ -73,8 +73,8 @@ export const PRODUCTION_AUTHORITIES: readonly AuthorityDefinition[] = [
     infrastructure: ['Neon', 'PostgreSQL'],
     status: 'real',
     implementations: [
-      'src/lib/persistence/repository-factory.ts',
-      'src/lib/persistence/adapters/neon-adapter.ts',
+      'src/lib/lib/persistence/repository-factory.ts',
+      'src/lib/lib/persistence/adapters/neon-adapter.ts',
     ],
     verify: () => [
       {
@@ -111,7 +111,7 @@ export const PRODUCTION_AUTHORITIES: readonly AuthorityDefinition[] = [
     infrastructure: ['PostgreSQL', 'BookPI'],
     status: 'real',
     implementations: [
-      'src/lib/repositories/audit-repository.ts',
+      'src/lib/lib/repositories/audit-repository.ts',
       'src/lib/sovereign-audit.ts',
       'supabase/migrations/20260904070000_bookpi_immutability.sql',
     ],

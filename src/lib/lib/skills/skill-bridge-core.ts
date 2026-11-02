@@ -1,5 +1,5 @@
 /**
- * SKILL BRIDGE CORE (src/lib/skills/skill-bridge-core.ts)
+ * SKILL BRIDGE CORE (src/lib/lib/skills/skill-bridge-core.ts)
  * -----------------------------------------------------------------
  * Utilidades ligeras e isomorfas para detección y tipado de invocaciones
  * a habilidades soberanas (@skill). Seguro para ser importado tanto en

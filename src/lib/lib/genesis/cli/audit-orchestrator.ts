@@ -598,8 +598,8 @@ export class AuditOrchestrator {
 
   private async calculateGeneratorHash(): Promise<string> {
     const files = [
-      'src/lib/genesis/cli/audit-orchestrator.ts',
-      'src/lib/genesis/schemas/evidence.schema.ts',
+      'src/lib/lib/genesis/cli/audit-orchestrator.ts',
+      'src/lib/lib/genesis/schemas/evidence.schema.ts',
     ];
     const hash = createHash('sha3-512');
     for (const file of files) {

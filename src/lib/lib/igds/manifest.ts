@@ -1,5 +1,5 @@
 /**
- * IGDS — Manifiesto (src/lib/igds/manifest.ts)
+ * IGDS — Manifiesto (src/lib/lib/igds/manifest.ts)
  * -----------------------------------------------------------------
  * Construye y valida el manifiesto conceptual C2PA de Isabella. El orden de
  * sellado es estricto:
