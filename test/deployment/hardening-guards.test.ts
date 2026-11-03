@@ -17,7 +17,7 @@ describe("operational hardening guards", () => {
   it("every internet-facing or log-reading service drops capabilities or limits memory", () => {
     const compose = read("docker-compose.yml");
     for (const svc of ["caddy", "otel", "victoriametrics", "app"]) {
-      const block = compose.split(new RegExp(`^  ${svc}:`, "m"))[1]?.split(/^  [a-z_-]+:\s*$/m)[0] ?? "";
+      const block = compose.split(new RegExp(`^  ${svc}:`, "m"))[1]?.split(/^ {2}[a-z_-]+:\s*$/m)[0] ?? "";
       expect(block, svc).toMatch(/no-new-privileges:true/);
       expect(block, svc).toMatch(/cap_drop:\s*\n\s*- ALL/);
       expect(block, svc).toMatch(/memory:/);

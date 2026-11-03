@@ -619,14 +619,16 @@ export class FederationRuntime extends EventEmitter {
     if (!payload) return; // malformed or unknown consensus message: drop, never act on it
 
     switch (payload.type) {
-      case 'request_vote':
+      case 'request_vote': {
         const voteResponse = this.consensus.handleRequestVote(payload);
         this.sendResponse(message, voteResponse);
         break;
-      case 'append_entries':
+      }
+      case 'append_entries': {
         const appendResponse = this.consensus.handleAppendEntries(payload);
         this.sendResponse(message, appendResponse);
         break;
+      }
       case 'vote_response':
         this.consensus.handleVoteResponse(payload);
         break;

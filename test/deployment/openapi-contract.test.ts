@@ -14,9 +14,9 @@ function documented(): Set<string> {
     if (/^paths:/.test(line)) { inPaths = true; continue; }
     if (/^\S/.test(line) && !/^paths:/.test(line)) inPaths = false;
     if (!inPaths) continue;
-    const p = /^  (\/\S*):\s*$/.exec(line);
+    const p = /^ {2}(\/\S*):\s*$/.exec(line);
     if (p) { path = (p[1] ?? "").replace(/\{(\w+)\}/g, ":$1"); continue; }
-    const m = /^    (get|post|put|delete|patch):\s*$/.exec(line);
+    const m = /^ {4}(get|post|put|delete|patch):\s*$/.exec(line);
     if (m && path !== null) out.add(`${(m[1] ?? "").toUpperCase()} ${path}`);
   }
   return out;

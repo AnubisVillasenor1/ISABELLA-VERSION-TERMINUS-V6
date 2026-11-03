@@ -18,7 +18,6 @@ import path from "node:path";
 
 const REPO_ROOT = process.cwd();
 const SRC_DIR = path.join(REPO_ROOT, "src");
-const SERVER_FILE = path.join(REPO_ROOT, "src", "server.ts");
 const TYPES_FILE = path.join(REPO_ROOT, "src", "inference", "types.ts");
 const API_BLUEPRINT = path.join(REPO_ROOT, "docs", "spec", "BLUEPRINT-API-v4.2.0.md");
 const TEST_DIR = path.join(REPO_ROOT, "test");

@@ -156,7 +156,7 @@ jobs:
 
       - name: Strict gate — production evidence, security suite and SBOM
         shell: bash
-        run: node scripts/verify-deploy-gate.mjs --dir evidence
+        run: node scripts/verify-deploy-gate.mjs --dir evidence --sha "$THE_SHA"
         env:
           THE_SHA: ${{ env.THE_SHA }}
 

@@ -1,6 +1,6 @@
 # Isabella Villaseñor AI Génesis Ω∞ — TAMV ONLINE
 
-Isabella es un **Runtime Web Operativo y Sistema Federado de Inteligencia Artificial Gobernada (FGAIS)** construido, propiedad y creado por **Edwin Oswaldo Castillo Trejo (Anubis Villaseñor)** bajo la marca **TAMV ONLINE ENTERPRISE**. No es un chatbot: es un runtime con gobernanza determinista, memoria jerárquica, LLM fundacional propio, RAG soberano, herramientas allowlisted, habilidades ejecutables, auditoría criptográfica y —desde esta versión— un sistema nativo de análisis audio-espectral en tiempo real: el **TAMV Kaos Audio System**.
+Isabella es un **Runtime Web Operativo y Sistema Federado de Inteligencia Artificial Gobernada (FGAIS)** construido, propiedad y creado por **Edwin Oswaldo Castillo Trejo (Anubis Villaseñor)** bajo la marca **TAMV ONLINE ENTERPRISE**. No es un chatbot: es un runtime con gobernanza determinista, memoria jerárquica, un motor de inferencia propio que **orquesta** LLM externos (no es un modelo fundacional entrenado por TAMV), RAG soberano, herramientas allowlisted, habilidades ejecutables, auditoría criptográfica y —desde esta versión— un sistema nativo de análisis audio-espectral en tiempo real: el **TAMV Kaos Audio System**.
 
 > Estado del repositorio: `draft | engine-generated` hasta revisión humana nominal. No se declara conciencia, autonomía jurídica ni autoridad propia.
 >
@@ -89,7 +89,7 @@ Un rechazo 400 devuelve el motivo exacto (`TAMV_PAYLOAD_EMPTY`, `TAMV_BASE64_INV
 | **Integraciones** | MCP, dominios Vercel, Hugging Face Hub, malla federada TAMV | `src/infra/vercel-domains.ts`, `src/federation/`, `/api/mcp` |
 | **Nexus** | Grafo con procedencia, agente con evidencia, workflows DAG, antifragilidad, cuántica local | `src/nexus/`, `src/routes/nexus.ts` |
 
-## LLM fundacional nativo
+## Motor de inferencia propio (orquestación, no modelo fundacional)
 
 `src/inference/foundational-llm.ts` orquesta proveedores open source/free (Hugging Face, Ollama, Gratis, AI SDK Gateway), inyecta memoria conversacional e historial, recupera contexto verificado (RAG + verified knowledge), garantiza respuesta con fallback soberano y cachea 60 s. El fallback determinista local **se declara como fallback**: nunca se presenta como inferencia de modelo.
 
