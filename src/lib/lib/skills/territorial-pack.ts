@@ -1,11 +1,11 @@
-import { createAuditEvent, IsabellaSkill, SkillResult, normalizeText } from "./contracts";
+import { createAuditEvent, IsabellaSkill, SkillResult, normalizeText } from './contracts';
 
 // ============================================================================
 // 8. AURORA (Contextual Orientation Layer)
 // ============================================================================
 export interface AuroraInput {
   request: string;
-  userType: "VISITOR" | "CITIZEN" | "MERCHANT" | "STUDENT";
+  userType: 'VISITOR' | 'CITIZEN' | 'MERCHANT' | 'STUDENT';
   availableResources: Array<{
     id: string;
     title: string;
@@ -15,7 +15,7 @@ export interface AuroraInput {
 }
 
 export interface AuroraOutput {
-  intent: "TOURISM" | "CULTURE" | "COMMERCE" | "EDUCATION" | "SUPPORT" | "UNKNOWN";
+  intent: 'TOURISM' | 'CULTURE' | 'COMMERCE' | 'EDUCATION' | 'SUPPORT' | 'UNKNOWN';
   recommendations: Array<{
     id: string;
     title: string;
@@ -25,30 +25,30 @@ export interface AuroraOutput {
 }
 
 export const AURORA: IsabellaSkill<AuroraInput, AuroraOutput> = {
-  id: "AURORA",
-  name: "Contextual Orientation Layer",
-  version: "v.GENESIS",
-  federation: "TERRITORY",
-  risk: "MEDIUM",
+  id: 'AURORA',
+  name: 'Contextual Orientation Layer',
+  version: 'v.GENESIS',
+  federation: 'TERRITORY',
+  risk: 'MEDIUM',
   description:
-    "Orienta a usuarios dentro de RDM Digital con recomendaciones contextuales y responsables.",
+    'Orienta a usuarios dentro de RDM Digital con recomendaciones contextuales y responsables.',
   canRun: (input) => Boolean(input.request?.trim()),
   async run(input, context): Promise<SkillResult<AuroraOutput>> {
     const text = normalizeText(input.request);
 
     const intent = /(ruta|visitar|hotel|comer|turismo)/.test(text)
-      ? "TOURISM"
+      ? 'TOURISM'
       : /(historia|museo|cultura|mina)/.test(text)
-        ? "CULTURE"
+        ? 'CULTURE'
         : /(negocio|comercio|vender|cliente)/.test(text)
-          ? "COMMERCE"
+          ? 'COMMERCE'
           : /(curso|aprender|investigar|estudiar)/.test(text)
-            ? "EDUCATION"
+            ? 'EDUCATION'
             : /(ayuda|riesgo|emergencia|violencia)/.test(text)
-              ? "SUPPORT"
-              : "UNKNOWN";
+              ? 'SUPPORT'
+              : 'UNKNOWN';
 
-    const requiresEscalation = intent === "SUPPORT";
+    const requiresEscalation = intent === 'SUPPORT';
     const keywords = text.split(/\s+/).filter((word) => word.length > 3);
 
     const recommendations = requiresEscalation
@@ -56,7 +56,7 @@ export const AURORA: IsabellaSkill<AuroraInput, AuroraOutput> = {
       : input.availableResources
           .map((resource) => {
             const searchable = normalizeText(
-              `${resource.title} ${resource.category} ${resource.description}`,
+              `${resource.title} ${resource.category} ${resource.description}`
             );
             const score = keywords.filter((word) => searchable.includes(word)).length;
             return { resource, score };
@@ -71,14 +71,14 @@ export const AURORA: IsabellaSkill<AuroraInput, AuroraOutput> = {
           }));
 
     const escalationMessage = requiresEscalation
-      ? "Para una situación de riesgo o emergencia, contacta servicios locales de emergencia o una persona de confianza. Isabella puede mostrar recursos, pero no sustituye atención profesional."
+      ? 'Para una situación de riesgo o emergencia, contacta servicios locales de emergencia o una persona de confianza. Isabella puede mostrar recursos, pero no sustituye atención profesional.'
       : undefined;
 
     return {
-      skillId: "AURORA",
-      status: requiresEscalation ? "ESCALATED" : "SUCCESS",
+      skillId: 'AURORA',
+      status: requiresEscalation ? 'ESCALATED' : 'SUCCESS',
       summary: requiresEscalation
-        ? "AURORA detectó una solicitud que requiere atención humana o institucional."
+        ? 'AURORA detectó una solicitud que requiere atención humana o institucional.'
         : `AURORA identificó intención ${intent} y generó recomendaciones.`,
       data: { intent, recommendations, escalationMessage },
       evidence: [],
@@ -86,26 +86,26 @@ export const AURORA: IsabellaSkill<AuroraInput, AuroraOutput> = {
       requiresHumanReview: requiresEscalation,
       auditEvents: [
         createAuditEvent(
-          "SKILL_INVOKED",
-          "AURORA",
+          'SKILL_INVOKED',
+          'AURORA',
           { userType: input.userType, intent },
-          context.actorId,
+          context.actorId
         ),
         ...(requiresEscalation
           ? [
               createAuditEvent(
-                "HUMAN_REVIEW_REQUIRED",
-                "AURORA",
-                { reason: "Sensitive support request" },
-                context.actorId,
+                'HUMAN_REVIEW_REQUIRED',
+                'AURORA',
+                { reason: 'Sensitive support request' },
+                context.actorId
               ),
             ]
           : []),
         createAuditEvent(
-          "SKILL_COMPLETED",
-          "AURORA",
+          'SKILL_COMPLETED',
+          'AURORA',
           { recommendationCount: recommendations.length },
-          context.actorId,
+          context.actorId
         ),
       ],
     };
@@ -128,17 +128,17 @@ export interface GaiaInput {
 
 export interface GaiaOutput {
   sustainabilityScore: number;
-  verdict: "REGENERATIVE" | "ACCEPTABLE" | "REVIEW" | "HARMFUL";
+  verdict: 'REGENERATIVE' | 'ACCEPTABLE' | 'REVIEW' | 'HARMFUL';
   criticalDimensions: string[];
 }
 
 export const GAIA: IsabellaSkill<GaiaInput, GaiaOutput> = {
-  id: "GAIA",
-  name: "Territorial Sustainability Engine",
-  version: "v.GENESIS",
-  federation: "TERRITORY",
-  risk: "HIGH",
-  description: "Evalúa sostenibilidad integral de iniciativas con enfoque territorial y cultural.",
+  id: 'GAIA',
+  name: 'Territorial Sustainability Engine',
+  version: 'v.GENESIS',
+  federation: 'TERRITORY',
+  risk: 'HIGH',
+  description: 'Evalúa sostenibilidad integral de iniciativas con enfoque territorial y cultural.',
   canRun: (input) => Boolean(input.initiative?.trim() && input.impacts),
   async run(input, context): Promise<SkillResult<GaiaOutput>> {
     const values = Object.entries(input.impacts);
@@ -151,16 +151,16 @@ export const GAIA: IsabellaSkill<GaiaInput, GaiaOutput> = {
 
     const verdict =
       sustainabilityScore >= 0.65 && !criticalDimensions.length
-        ? "REGENERATIVE"
+        ? 'REGENERATIVE'
         : sustainabilityScore >= 0.2 && criticalDimensions.length < 2
-          ? "ACCEPTABLE"
+          ? 'ACCEPTABLE'
           : sustainabilityScore >= -0.2
-            ? "REVIEW"
-            : "HARMFUL";
+            ? 'REVIEW'
+            : 'HARMFUL';
 
     return {
-      skillId: "GAIA",
-      status: verdict === "HARMFUL" ? "BLOCKED" : verdict === "REVIEW" ? "ESCALATED" : "SUCCESS",
+      skillId: 'GAIA',
+      status: verdict === 'HARMFUL' ? 'BLOCKED' : verdict === 'REVIEW' ? 'ESCALATED' : 'SUCCESS',
       summary: `GAIA evaluó la iniciativa como ${verdict}.`,
       data: {
         sustainabilityScore,
@@ -169,21 +169,21 @@ export const GAIA: IsabellaSkill<GaiaInput, GaiaOutput> = {
       },
       evidence: context.evidence ?? [],
       warnings: criticalDimensions.map(
-        (dimension) => `Impacto negativo identificado en: ${dimension}.`,
+        (dimension) => `Impacto negativo identificado en: ${dimension}.`
       ),
-      requiresHumanReview: verdict === "REVIEW" || verdict === "HARMFUL",
+      requiresHumanReview: verdict === 'REVIEW' || verdict === 'HARMFUL',
       auditEvents: [
         createAuditEvent(
-          "SKILL_INVOKED",
-          "GAIA",
+          'SKILL_INVOKED',
+          'GAIA',
           { initiative: input.initiative },
-          context.actorId,
+          context.actorId
         ),
         createAuditEvent(
-          "SKILL_COMPLETED",
-          "GAIA",
+          'SKILL_COMPLETED',
+          'GAIA',
           { sustainabilityScore, verdict },
-          context.actorId,
+          context.actorId
         ),
       ],
     };
@@ -195,7 +195,7 @@ export const GAIA: IsabellaSkill<GaiaInput, GaiaOutput> = {
 // ============================================================================
 export interface NodoCeroInput {
   initiative: string;
-  stage: "DISCOVERY" | "DESIGN" | "BUILD" | "PILOT" | "OPERATE" | "SCALE";
+  stage: 'DISCOVERY' | 'DESIGN' | 'BUILD' | 'PILOT' | 'OPERATE' | 'SCALE';
   blockers?: string[];
   metrics?: Record<string, number>;
 }
@@ -203,42 +203,42 @@ export interface NodoCeroInput {
 export interface NodoCeroOutput {
   initiative: string;
   stage: string;
-  status: "READY" | "BLOCKED" | "REVIEW";
+  status: 'READY' | 'BLOCKED' | 'REVIEW';
   nextActions: string[];
 }
 
 export const NODO_CERO: IsabellaSkill<NodoCeroInput, NodoCeroOutput> = {
-  id: "NODO_CERO",
-  name: "Real del Monte Node Zero Operations",
-  version: "v.GENESIS",
-  federation: "TERRITORY",
-  risk: "HIGH",
-  description: "Gestiona etapas, dependencias y acciones de iniciativas vinculadas al Nodo Cero.",
+  id: 'NODO_CERO',
+  name: 'Real del Monte Node Zero Operations',
+  version: 'v.GENESIS',
+  federation: 'TERRITORY',
+  risk: 'HIGH',
+  description: 'Gestiona etapas, dependencias y acciones de iniciativas vinculadas al Nodo Cero.',
   canRun: (input) => Boolean(input.initiative?.trim() && input.stage),
   async run(input, context): Promise<SkillResult<NodoCeroOutput>> {
     const blockers = input.blockers ?? [];
-    const status = blockers.length > 0 ? "BLOCKED" : input.stage === "SCALE" ? "REVIEW" : "READY";
+    const status = blockers.length > 0 ? 'BLOCKED' : input.stage === 'SCALE' ? 'REVIEW' : 'READY';
 
     const nextActions =
-      status === "BLOCKED"
+      status === 'BLOCKED'
         ? [
-            "Registrar y clasificar bloqueos.",
-            "Asignar responsable humano.",
-            "Definir fecha de revisión y evidencia necesaria.",
+            'Registrar y clasificar bloqueos.',
+            'Asignar responsable humano.',
+            'Definir fecha de revisión y evidencia necesaria.',
           ]
-        : status === "REVIEW"
+        : status === 'REVIEW'
           ? [
-              "Validar impacto territorial antes de escalar.",
-              "Solicitar revisión comunitaria y técnica.",
+              'Validar impacto territorial antes de escalar.',
+              'Solicitar revisión comunitaria y técnica.',
             ]
           : [
               `Avanzar la iniciativa desde la etapa ${input.stage}.`,
-              "Actualizar métricas y ledger de operación.",
+              'Actualizar métricas y ledger de operación.',
             ];
 
     return {
-      skillId: "NODO_CERO",
-      status: status === "BLOCKED" ? "ESCALATED" : "SUCCESS",
+      skillId: 'NODO_CERO',
+      status: status === 'BLOCKED' ? 'ESCALATED' : 'SUCCESS',
       summary: `NODO_CERO clasificó “${input.initiative}” como ${status}.`,
       data: {
         initiative: input.initiative,
@@ -248,15 +248,15 @@ export const NODO_CERO: IsabellaSkill<NodoCeroInput, NodoCeroOutput> = {
       },
       evidence: [],
       warnings: blockers,
-      requiresHumanReview: status !== "READY",
+      requiresHumanReview: status !== 'READY',
       auditEvents: [
         createAuditEvent(
-          "SKILL_INVOKED",
-          "NODO_CERO",
+          'SKILL_INVOKED',
+          'NODO_CERO',
           { initiative: input.initiative, stage: input.stage },
-          context.actorId,
+          context.actorId
         ),
-        createAuditEvent("SKILL_COMPLETED", "NODO_CERO", { status, blockers }, context.actorId),
+        createAuditEvent('SKILL_COMPLETED', 'NODO_CERO', { status, blockers }, context.actorId),
       ],
     };
   },
@@ -287,13 +287,13 @@ export interface PharosOutput {
 }
 
 export const PHAROS: IsabellaSkill<PharosInput, PharosOutput> = {
-  id: "PHAROS",
-  name: "Responsible Territorial Discovery",
-  version: "v.GENESIS",
-  federation: "TERRITORY",
-  risk: "MEDIUM",
+  id: 'PHAROS',
+  name: 'Responsible Territorial Discovery',
+  version: 'v.GENESIS',
+  federation: 'TERRITORY',
+  risk: 'MEDIUM',
   description:
-    "Recomienda experiencias territoriales con criterios culturales, comunitarios y de accesibilidad.",
+    'Recomienda experiencias territoriales con criterios culturales, comunitarios y de accesibilidad.',
   canRun: (input) => Boolean(input.places?.length),
   async run(input, context): Promise<SkillResult<PharosOutput>> {
     const interests = input.interests.map(normalizeText);
@@ -319,24 +319,24 @@ export const PHAROS: IsabellaSkill<PharosInput, PharosOutput> = {
       .slice(0, 8);
 
     return {
-      skillId: "PHAROS",
-      status: "SUCCESS",
+      skillId: 'PHAROS',
+      status: 'SUCCESS',
       summary: `PHAROS generó ${recommendations.length} recomendaciones territoriales responsables.`,
       data: { recommendations },
       evidence: [],
       warnings: [],
       auditEvents: [
         createAuditEvent(
-          "SKILL_INVOKED",
-          "PHAROS",
+          'SKILL_INVOKED',
+          'PHAROS',
           { interests: input.interests },
-          context.actorId,
+          context.actorId
         ),
         createAuditEvent(
-          "SKILL_COMPLETED",
-          "PHAROS",
+          'SKILL_COMPLETED',
+          'PHAROS',
           { recommendationCount: recommendations.length },
-          context.actorId,
+          context.actorId
         ),
       ],
     };

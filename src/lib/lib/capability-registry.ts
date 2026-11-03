@@ -11,16 +11,16 @@
  */
 
 export type CapabilityState =
-  "implemented" | "verified" | "experimental" | "simulated" | "shadow" | "planned" | "unavailable";
+  'implemented' | 'verified' | 'experimental' | 'simulated' | 'shadow' | 'planned' | 'unavailable';
 
 export const CAPABILITY_STATES: readonly CapabilityState[] = [
-  "implemented",
-  "verified",
-  "experimental",
-  "simulated",
-  "shadow",
-  "planned",
-  "unavailable",
+  'implemented',
+  'verified',
+  'experimental',
+  'simulated',
+  'shadow',
+  'planned',
+  'unavailable',
 ];
 
 export interface CapabilityRecord {
@@ -47,11 +47,11 @@ export class CapabilityRegistryService {
   }
 
   stateOf(id: string): CapabilityState {
-    return this.registry.get(id)?.state ?? "unavailable";
+    return this.registry.get(id)?.state ?? 'unavailable';
   }
 
   isOperational(id: string): boolean {
-    return this.stateOf(id) === "implemented" || this.stateOf(id) === "verified";
+    return this.stateOf(id) === 'implemented' || this.stateOf(id) === 'verified';
   }
 
   all(): CapabilityRecord[] {
@@ -78,30 +78,30 @@ export function createDefaultCapabilityRegistry(): CapabilityRegistryService {
     svc.register(record);
   };
 
-  register("build", "implemented", ["package.json scripts", "npm run typecheck/lint/test/build"]);
-  register("auth", "implemented", ["src/lib/principal-context.ts", "src/lib/jwt-verifier.ts"]);
-  register("identity.oidc", "planned");
-  register("tenancy", "implemented", ["supabase/migrations/*", "src/lib/tenant-guard.ts"]);
-  register("memory", "implemented", ["src/lib/memory-engine.ts", "tabla memories"]);
-  register("bookpi", "implemented", ["src/lib/bookpi*.ts", "tabla bookpi_ledger"]);
-  register("audit", "implemented", ["src/lib/repositories/audit-repository.ts"]);
-  register("crown", "implemented", ["src/lib/crown.ts", "constitutional-gate.ts"]);
-  register("llm", "implemented", ["src/routes/api/isabella.ts"]);
-  register("voice", "implemented", ["src/routes/api/isabella-voice.ts"]);
-  register("tools", "experimental", ["src/lib/tool-registry.ts", "src/lib/orion-engine.ts"]);
-  register("sandbox", "experimental", ["src/lib/sovereign-sandbox.ts"]);
-  register("pqc", "unavailable");
-  register("monetization", "implemented", ["src/lib/monetization/*"]);
-  register("learning", "implemented", [
-    "src/lib/isabella-learning.ts",
-    "src/lib/isabella-learning-api.ts",
+  register('build', 'implemented', ['package.json scripts', 'npm run typecheck/lint/test/build']);
+  register('auth', 'implemented', ['src/lib/principal-context.ts', 'src/lib/jwt-verifier.ts']);
+  register('identity.oidc', 'planned');
+  register('tenancy', 'implemented', ['supabase/migrations/*', 'src/lib/tenant-guard.ts']);
+  register('memory', 'implemented', ['src/lib/memory-engine.ts', 'tabla memories']);
+  register('bookpi', 'implemented', ['src/lib/bookpi*.ts', 'tabla bookpi_ledger']);
+  register('audit', 'implemented', ['src/lib/lib/repositories/audit-repository.ts']);
+  register('crown', 'implemented', ['src/lib/crown.ts', 'constitutional-gate.ts']);
+  register('llm', 'implemented', ['src/routes/api/isabella.ts']);
+  register('voice', 'implemented', ['src/routes/api/isabella-voice.ts']);
+  register('tools', 'experimental', ['src/lib/tool-registry.ts', 'src/lib/orion-engine.ts']);
+  register('sandbox', 'experimental', ['src/lib/sovereign-sandbox.ts']);
+  register('pqc', 'unavailable');
+  register('monetization', 'implemented', ['src/lib/monetization/*']);
+  register('learning', 'implemented', [
+    'src/lib/isabella-learning.ts',
+    'src/lib/isabella-learning-api.ts',
   ]);
-  register("learning.cognitive-training", "implemented", [
-    "src/lib/isabella-cognitive-training.ts",
-    "test/lib/isabella-cognitive-training.test.ts",
+  register('learning.cognitive-training', 'implemented', [
+    'src/lib/isabella-cognitive-training.ts',
+    'test/lib/isabella-cognitive-training.test.ts',
   ]);
-  register("heads.12", "implemented", ["12 cognitive heads configured in sovereign-engine.ts"]);
-  register("nuclei.24", "simulated", ["24 cognitive nuclei modeled in sovereign-engine.ts"]);
+  register('heads.12', 'implemented', ['12 cognitive heads configured in sovereign-engine.ts']);
+  register('nuclei.24', 'simulated', ['24 cognitive nuclei modeled in sovereign-engine.ts']);
 
   return svc;
 }

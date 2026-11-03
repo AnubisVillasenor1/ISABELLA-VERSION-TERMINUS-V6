@@ -1,4 +1,7 @@
-export interface GeoPoint { lat: number; lon: number; }
+export interface GeoPoint {
+  lat: number;
+  lon: number;
+}
 export interface TerritoryContext {
   territoryId: string;
   jurisdiction: string;
@@ -13,7 +16,7 @@ export interface TerritoryContext {
 }
 
 export interface TerritoryQuery {
-  intent: "route" | "history" | "food" | "commerce" | "event" | "safety" | "general";
+  intent: 'route' | 'history' | 'food' | 'commerce' | 'event' | 'safety' | 'general';
   query: string;
   context: TerritoryContext;
 }
@@ -22,13 +25,17 @@ export interface TerritoryAnswer {
   answer: string;
   sourceIds: readonly string[];
   territoryId: string;
-  confidence: "source_bound" | "insufficient_evidence";
+  confidence: 'source_bound' | 'insufficient_evidence';
 }
 
-export function queryTerritory(input: TerritoryQuery, resolver: (query: TerritoryQuery)=>TerritoryAnswer): TerritoryAnswer {
-  if (!input.query.trim()) throw new Error("TERRITORY: query is required");
-  if (!input.context.territoryId) throw new Error("TERRITORY: territoryId is required");
-  const result=resolver(input);
-  if(result.territoryId!==input.context.territoryId) throw new Error("TERRITORY: resolver returned a different territory");
-  return Object.freeze({...result,sourceIds:[...result.sourceIds]});
+export function queryTerritory(
+  input: TerritoryQuery,
+  resolver: (query: TerritoryQuery) => TerritoryAnswer
+): TerritoryAnswer {
+  if (!input.query.trim()) throw new Error('TERRITORY: query is required');
+  if (!input.context.territoryId) throw new Error('TERRITORY: territoryId is required');
+  const result = resolver(input);
+  if (result.territoryId !== input.context.territoryId)
+    throw new Error('TERRITORY: resolver returned a different territory');
+  return Object.freeze({ ...result, sourceIds: [...result.sourceIds] });
 }

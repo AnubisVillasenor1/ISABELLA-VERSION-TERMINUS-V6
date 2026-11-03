@@ -1,1 +1,1 @@
-export * from "./diff-observatory";
+export * from './diff-observatory';

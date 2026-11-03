@@ -10,23 +10,17 @@
  * Invariante (AGENTS.md): solo pregunta, nunca autoriza ni ejecuta. No hay calle-
  * jón sin salida: siempre ofrece alternativas razonables.
  */
-import { assessIntent } from "../crown/intent";
-import { digest, tokenize } from "./util";
+import { assessIntent } from '../crown/intent';
+import { digest, tokenize } from './util';
 
-export const CLARIFY_ENGINE_VERSION = "1.0.0" as const;
+export const CLARIFY_ENGINE_VERSION = '1.0.0' as const;
 export const CLARIFY_ENGINE_METHOD_ID =
-  "A.TWINS.LEGACY.clarify_engine.plan.v1.0.0.LOW.AUTONOMOUS" as const;
+  'A.TWINS.LEGACY.clarify_engine.plan.v1.0.0.LOW.AUTONOMOUS' as const;
 export const CLARIFY_ENGINE_DISCLAIMER =
-  "El motor de preguntas sólo obtiene contexto; no concede autoridad, no ejecuta acciones.";
+  'El motor de preguntas sólo obtiene contexto; no concede autoridad, no ejecuta acciones.';
 
 export type ClarifySlot =
-  | "objective"
-  | "scope"
-  | "subject"
-  | "deadline"
-  | "format"
-  | "audience"
-  | "source";
+  'objective' | 'scope' | 'subject' | 'deadline' | 'format' | 'audience' | 'source';
 
 export interface ClarifyInput {
   readonly input: string;
@@ -67,13 +61,13 @@ const TEMPLATES: Record<ClarifySlot, (fragment: string) => string> = Object.free
 
 function brief(fragment: string): string {
   const t = fragment.trim();
-  if (t.length === 0) return "";
+  if (t.length === 0) return '';
   return ` (${t.slice(0, 40)})`;
 }
 
 export function planClarification(input: ClarifyInput): ClarifyPlan {
-  const text = typeof input?.input === "string" ? input.input.trim() : "";
-  if (!text) throw new Error("CLARIFY_INPUT_REQUIRED");
+  const text = typeof input?.input === 'string' ? input.input.trim() : '';
+  if (!text) throw new Error('CLARIFY_INPUT_REQUIRED');
   const known = input.known ?? {};
   const tokens = tokenize(text);
   const present: ClarifySlot[] = [];
@@ -82,11 +76,12 @@ export function planClarification(input: ClarifyInput): ClarifyPlan {
   }
 
   const intent = assessIntent(text);
-  let required: ClarifySlot[] = ["objective", "scope"];
-  if (tokens.length < 4) required.push("subject");
-  if (intent.category === "personal_data" || intent.touchesPersonalData) required.push("scope", "source");
-  if (intent.category === "governance") required.push("audience");
-  if (intent.category === "knowledge") required.push("format");
+  let required: ClarifySlot[] = ['objective', 'scope'];
+  if (tokens.length < 4) required.push('subject');
+  if (intent.category === 'personal_data' || intent.touchesPersonalData)
+    required.push('scope', 'source');
+  if (intent.category === 'governance') required.push('audience');
+  if (intent.category === 'knowledge') required.push('format');
 
   const missing = required.filter((slot) => !present.includes(slot));
   const needed = intent.ambiguous || missing.length > 0;
@@ -96,7 +91,7 @@ export function planClarification(input: ClarifyInput): ClarifyPlan {
     candidates.push({
       slot,
       question: TEMPLATES[slot](brief(text)),
-      reason: missing.length > 0 ? "SLOT_MISSING" : "INTENT_AMBIGUOUS",
+      reason: missing.length > 0 ? 'SLOT_MISSING' : 'INTENT_AMBIGUOUS',
       weight: missing.includes(slot) ? 1.0 : 0.6,
     });
   }

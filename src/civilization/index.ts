@@ -19,7 +19,7 @@ export {
   type CivilizationLayerStatus,
   layerById,
   layerSummary,
-} from "./layers";
+} from './layers';
 
 export {
   CIVILIZATION_GIFTS,
@@ -27,7 +27,7 @@ export {
   type CivilizationGift,
   civilizationGiftById,
   giftsForLayer,
-} from "./gifts";
+} from './gifts';
 
 export {
   SOVEREIGN_CONTRACT_VERSION,
@@ -41,7 +41,7 @@ export {
   type BuildSovereignResponseInput,
   buildSovereignResponse,
   validateSovereignResponse,
-} from "./contract";
+} from './contract';
 
 export {
   CIVILIZATION_METHOD_ID,
@@ -53,15 +53,15 @@ export {
   type CivilizationDeps,
   type CivilizationStep,
   type CivilizationStepStatus,
-} from "./runtime";
+} from './runtime';
 
-import { CCR_DECLARED_LAYERS, CCR_VERSION, CIVILIZATION_LAYERS, layerSummary } from "./layers";
-import { CIVILIZATION_GIFTS } from "./gifts";
+import { CCR_DECLARED_LAYERS, CCR_VERSION, CIVILIZATION_LAYERS, layerSummary } from './layers';
+import { CIVILIZATION_GIFTS } from './gifts';
 
 /** Resumen honesto de la civilización cognitiva: conteos y estado por capa. */
 export function civilizationSummary() {
   return Object.freeze({
-    spec: "isabella-core-ccr",
+    spec: 'isabella-core-ccr',
     version: CCR_VERSION,
     layers: CIVILIZATION_LAYERS.length,
     declaredLayers: CCR_DECLARED_LAYERS,
@@ -70,4 +70,4 @@ export function civilizationSummary() {
   });
 }
 
-export * from "./evidence-graph";
+export * from './evidence-graph';

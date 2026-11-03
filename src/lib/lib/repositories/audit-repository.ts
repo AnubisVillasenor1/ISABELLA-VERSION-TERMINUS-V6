@@ -1,5 +1,5 @@
 /**
- * REPOSITORIO DE AUDITORÍA (src/lib/repositories/audit-repository.ts)
+ * REPOSITORIO DE AUDITORÍA (src/lib/lib/repositories/audit-repository.ts)
  * -----------------------------------------------------------------
  * Registro de auditoría append-only con cadena criptográfica real.
  * Sin mockdata:
@@ -11,11 +11,11 @@
  * la decisión de qué se audita la determina el pipeline soberano.
  */
 
-import * as fs from "node:fs";
-import * as path from "node:path";
-import * as crypto from "node:crypto";
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import * as crypto from 'node:crypto';
 
-export type AuditSeverity = "S0" | "S1" | "S2" | "S3";
+export type AuditSeverity = 'S0' | 'S1' | 'S2' | 'S3';
 
 export interface AuditEvent {
   id: string;
@@ -36,20 +36,20 @@ export interface AuditStoreFile {
   genesisPreviousHash: string;
 }
 
-const GENESIS_HASH = "0000000000000000000000000000000000000000000000000000000000000000";
+const GENESIS_HASH = '0000000000000000000000000000000000000000000000000000000000000000';
 
 function resolveDefaultStorePath(): string {
   const cwd =
-    typeof process !== "undefined" && typeof process.cwd === "function" ? process.cwd() : ".";
+    typeof process !== 'undefined' && typeof process.cwd === 'function' ? process.cwd() : '.';
   const join =
-    typeof path.join === "function" ? path.join : (...parts: string[]) => parts.join("/");
-  return join(cwd, "isabella_audit_store.json");
+    typeof path.join === 'function' ? path.join : (...parts: string[]) => parts.join('/');
+  return join(cwd, 'isabella_audit_store.json');
 }
 
 const STORE_PATH = resolveDefaultStorePath();
 
 function sha256(input: string): string {
-  return crypto.createHash("sha256").update(input).digest("hex");
+  return crypto.createHash('sha256').update(input).digest('hex');
 }
 
 /**
@@ -69,13 +69,13 @@ export function createAuditRepository(storePath: string = STORE_PATH) {
       return { events: [], genesisPreviousHash: GENESIS_HASH };
     }
     try {
-      const raw = fs.readFileSync(storePath, "utf-8");
+      const raw = fs.readFileSync(storePath, 'utf-8');
       const parsed = JSON.parse(raw) as Partial<AuditStoreFile>;
       const events = Array.isArray(parsed.events) ? (parsed.events as AuditEvent[]) : [];
       return {
         events,
         genesisPreviousHash:
-          typeof parsed.genesisPreviousHash === "string"
+          typeof parsed.genesisPreviousHash === 'string'
             ? parsed.genesisPreviousHash
             : GENESIS_HASH,
       };
@@ -85,12 +85,12 @@ export function createAuditRepository(storePath: string = STORE_PATH) {
   }
 
   function saveStore(store: AuditStoreFile): void {
-    if (typeof fs.mkdirSync !== "function" || typeof fs.writeFileSync !== "function") {
-      throw new Error("Audit persistence requires a server runtime");
+    if (typeof fs.mkdirSync !== 'function' || typeof fs.writeFileSync !== 'function') {
+      throw new Error('Audit persistence requires a server runtime');
     }
-    const dirname = typeof path.dirname === "function" ? path.dirname(storePath) : ".";
+    const dirname = typeof path.dirname === 'function' ? path.dirname(storePath) : '.';
     fs.mkdirSync(dirname, { recursive: true });
-    fs.writeFileSync(storePath, JSON.stringify(store, null, 2), "utf-8");
+    fs.writeFileSync(storePath, JSON.stringify(store, null, 2), 'utf-8');
   }
 
   return {
@@ -110,8 +110,8 @@ export function createAuditRepository(storePath: string = STORE_PATH) {
         const previousLogHash = prev?.verificationHash ?? store.genesisPreviousHash;
         const id = `evt_${crypto.randomUUID()}`;
         const timestamp = new Date().toISOString();
-        const remediated = input.remediated ?? (input.severity === "S1" || input.severity === "S2");
-        const payload = `${id}|${timestamp}|${input.traceId}|${input.correlationId}|${input.actorIp}|${input.event}|${input.severity}|${input.details}|${remediated ? "true" : "false"}|${previousLogHash}`;
+        const remediated = input.remediated ?? (input.severity === 'S1' || input.severity === 'S2');
+        const payload = `${id}|${timestamp}|${input.traceId}|${input.correlationId}|${input.actorIp}|${input.event}|${input.severity}|${input.details}|${remediated ? 'true' : 'false'}|${previousLogHash}`;
         const verificationHash = sha256(payload);
         const event: AuditEvent = {
           id,
@@ -146,23 +146,23 @@ export function createAuditRepository(storePath: string = STORE_PATH) {
         if (!log)
           return {
             success: false,
-            error: "Evento ausente.",
-            corruptedId: "unknown",
+            error: 'Evento ausente.',
+            corruptedId: 'unknown',
           };
         const expectedPrev =
-          i === 0 ? store.genesisPreviousHash : (logs[i - 1]?.verificationHash ?? "");
+          i === 0 ? store.genesisPreviousHash : (logs[i - 1]?.verificationHash ?? '');
         if (log.previousLogHash !== expectedPrev) {
           return {
             success: false,
-            error: "Cadena de auditoría rota.",
+            error: 'Cadena de auditoría rota.',
             corruptedId: log.id,
           };
         }
-        const payload = `${log.id}|${log.timestamp}|${log.traceId}|${log.correlationId}|${log.actorIp}|${log.event}|${log.severity}|${log.details}|${log.remediated ? "true" : "false"}|${log.previousLogHash}`;
+        const payload = `${log.id}|${log.timestamp}|${log.traceId}|${log.correlationId}|${log.actorIp}|${log.event}|${log.severity}|${log.details}|${log.remediated ? 'true' : 'false'}|${log.previousLogHash}`;
         if (sha256(payload) !== log.verificationHash) {
           return {
             success: false,
-            error: "Evento alterado.",
+            error: 'Evento alterado.',
             corruptedId: log.id,
           };
         }

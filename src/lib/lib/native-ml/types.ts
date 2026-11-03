@@ -1,6 +1,6 @@
 /** Isabella Native ML — provider-agnostic governed contracts. Capability does not imply authority. */
-export type MLTask = "classification" | "regression" | "clustering" | "anomaly";
-export type ApprovalStatus = "PENDING_REVIEW" | "APPROVED" | "REJECTED" | "REVOKED";
+export type MLTask = 'classification' | 'regression' | 'clustering' | 'anomaly';
+export type ApprovalStatus = 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED' | 'REVOKED';
 export interface DatasetIdentity {
   datasetId: string;
   version: string;
@@ -47,7 +47,7 @@ export interface TrainingResult {
   artifact: ModelArtifact;
 }
 export interface NativeMLPolicyDecision {
-  decision: "ALLOW" | "DENY" | "REVIEW";
+  decision: 'ALLOW' | 'DENY' | 'REVIEW';
   riskScore: number;
   policyIds: string[];
   reasons: string[];
@@ -60,7 +60,7 @@ export interface NativeMLHooks {
   }) => Promise<NativeMLPolicyDecision> | NativeMLPolicyDecision;
   audit?: (
     event: string,
-    payload: Record<string, unknown>,
+    payload: Record<string, unknown>
   ) => Promise<string | void> | string | void;
 }
 export interface FederatedUpdate {
@@ -83,7 +83,7 @@ export interface FederatedRound {
   baseVersion: string;
   participants: string[];
   updateHashes: string[];
-  aggregation: "FEDAVG";
-  status: "VALIDATING" | "REJECTED" | "COMMITTED";
+  aggregation: 'FEDAVG';
+  status: 'VALIDATING' | 'REJECTED' | 'COMMITTED';
   nextVersion?: string;
 }

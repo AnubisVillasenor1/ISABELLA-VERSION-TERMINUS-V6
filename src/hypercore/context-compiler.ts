@@ -6,14 +6,25 @@
  * NOT a neural semantic distillation. The compression ratio is computed from
  * token estimates, not measured tokenizer output.
  */
-import { tokenize } from "./canonical";
-import type { CognitiveState, HyperCoreTask } from "./types";
+import { tokenize } from './canonical';
+import type { CognitiveState, HyperCoreTask } from './types';
 
 export interface ContextCompilerOptions {
   readonly policyVersion?: string;
 }
 
-const CONSTRAINT_MARKERS = ["no ", "not ", "never", "without", "sin ", "must not", "prohibido", "forbid", "only", "solo "];
+const CONSTRAINT_MARKERS = [
+  'no ',
+  'not ',
+  'never',
+  'without',
+  'sin ',
+  'must not',
+  'prohibido',
+  'forbid',
+  'only',
+  'solo ',
+];
 const MAX_ENTITIES = 12;
 const MAX_LINES = 5;
 
@@ -21,7 +32,7 @@ function extractEntities(prompt: string, domain: string): readonly string[] {
   const found = new Set<string>();
   const quoted = prompt.match(/"([^"]+)"/g) ?? [];
   for (const raw of quoted) {
-    const value = raw.replace(/"/g, "").trim();
+    const value = raw.replace(/"/g, '').trim();
     if (value) found.add(value);
   }
   const capitalized = prompt.match(/\b[A-ZÁÉÍÓÚÑ][a-záéíóúñ0-9]{2,}\b/g) ?? [];
@@ -71,7 +82,7 @@ function estimateCompiledTokens(state: {
 export function compileContext(
   task: HyperCoreTask,
   memory: readonly string[] = [],
-  options: ContextCompilerOptions = {},
+  options: ContextCompilerOptions = {}
 ): CognitiveState {
   const clauses = splitClauses(task.prompt);
   const entities = extractEntities(task.prompt, task.domain);
@@ -80,7 +91,10 @@ export function compileContext(
   const originalTokens = Math.max(0, Math.floor(task.contextTokens));
   const estimated = estimateCompiledTokens({ entities, objectives, constraints, memory });
   const compiledTokens = originalTokens > 0 ? Math.min(originalTokens, estimated) : estimated;
-  const compressionRatio = originalTokens > 0 ? Math.max(0, Math.min(1, (originalTokens - compiledTokens) / originalTokens)) : 0;
+  const compressionRatio =
+    originalTokens > 0
+      ? Math.max(0, Math.min(1, (originalTokens - compiledTokens) / originalTokens))
+      : 0;
 
   return Object.freeze({
     intent: task.intent,
@@ -90,7 +104,7 @@ export function compileContext(
     constraints,
     memory: Object.freeze([...memory]),
     risk: task.risk,
-    policyVersion: options.policyVersion ?? "unversioned",
+    policyVersion: options.policyVersion ?? 'unversioned',
     originalTokens,
     compiledTokens,
     compressionRatio,
@@ -98,5 +112,7 @@ export function compileContext(
 }
 
 export function cognitiveStateTokens(state: CognitiveState): number {
-  return tokenize(state.entities.join(" ") + " " + state.objectives.join(" ") + " " + state.constraints.join(" ")).length;
+  return tokenize(
+    state.entities.join(' ') + ' ' + state.objectives.join(' ') + ' ' + state.constraints.join(' ')
+  ).length;
 }

@@ -7,10 +7,11 @@
  * pendiente); el estado lo mueve una persona o proceso autorizado, no este módulo.
  * La línea de tiempo está encadenada por hash (evidencia de integridad, no WORM).
  */
-import { createHash } from "node:crypto";
+import { createHash } from 'node:crypto';
 
-export type Severity = "S0" | "S1" | "S2" | "S3";
-export type IncidentState = "DETECTED" | "TRIAGED" | "CONTAINED" | "ERADICATED" | "RECOVERED" | "CLOSED";
+export type Severity = 'S0' | 'S1' | 'S2' | 'S3';
+export type IncidentState =
+  'DETECTED' | 'TRIAGED' | 'CONTAINED' | 'ERADICATED' | 'RECOVERED' | 'CLOSED';
 
 export interface IncidentSignals {
   readonly personalDataExposed: boolean;
@@ -35,22 +36,38 @@ export const SEVERITY_POLICY: Readonly<Record<Severity, SeverityPolicy>> = {
 };
 
 export function classifyIncident(s: IncidentSignals): Severity {
-  if (!Number.isFinite(s.availabilityImpactPct) || s.availabilityImpactPct < 0 || s.availabilityImpactPct > 100) {
-    throw new RangeError("INCIDENT: availabilityImpactPct must be in [0,100]");
+  if (
+    !Number.isFinite(s.availabilityImpactPct) ||
+    s.availabilityImpactPct < 0 ||
+    s.availabilityImpactPct > 100
+  ) {
+    throw new RangeError('INCIDENT: availabilityImpactPct must be in [0,100]');
   }
-  if (!Number.isInteger(s.affectedSubjects) || s.affectedSubjects < 0) throw new RangeError("INCIDENT: affectedSubjects must be a non-negative integer");
-  if (s.privilegedCredentialsExposed || (s.activeExploitation && (s.personalDataExposed || s.integrityCompromised)) || s.availabilityImpactPct >= 80) return "S0";
-  if (s.personalDataExposed || s.integrityCompromised || s.activeExploitation || s.availabilityImpactPct >= 30) return "S1";
-  if (s.availabilityImpactPct >= 5 || s.affectedSubjects > 0) return "S2";
-  return "S3";
+  if (!Number.isInteger(s.affectedSubjects) || s.affectedSubjects < 0)
+    throw new RangeError('INCIDENT: affectedSubjects must be a non-negative integer');
+  if (
+    s.privilegedCredentialsExposed ||
+    (s.activeExploitation && (s.personalDataExposed || s.integrityCompromised)) ||
+    s.availabilityImpactPct >= 80
+  )
+    return 'S0';
+  if (
+    s.personalDataExposed ||
+    s.integrityCompromised ||
+    s.activeExploitation ||
+    s.availabilityImpactPct >= 30
+  )
+    return 'S1';
+  if (s.availabilityImpactPct >= 5 || s.affectedSubjects > 0) return 'S2';
+  return 'S3';
 }
 
 const TRANSITIONS: Readonly<Record<IncidentState, readonly IncidentState[]>> = {
-  DETECTED: ["TRIAGED"],
-  TRIAGED: ["CONTAINED"],
-  CONTAINED: ["ERADICATED"],
-  ERADICATED: ["RECOVERED"],
-  RECOVERED: ["CLOSED"],
+  DETECTED: ['TRIAGED'],
+  TRIAGED: ['CONTAINED'],
+  CONTAINED: ['ERADICATED'],
+  ERADICATED: ['RECOVERED'],
+  RECOVERED: ['CLOSED'],
   CLOSED: [],
 };
 
@@ -70,24 +87,33 @@ export interface DeadlineReport {
   readonly notifyDueAt: string | null;
 }
 
-const ZERO = "0".repeat(64);
+const ZERO = '0'.repeat(64);
 
-function entryHash(e: Omit<TimelineEntry, "hash">): string {
-  return createHash("sha256").update(JSON.stringify([e.at, e.state, e.actor, e.note, e.previousHash])).digest("hex");
+function entryHash(e: Omit<TimelineEntry, 'hash'>): string {
+  return createHash('sha256')
+    .update(JSON.stringify([e.at, e.state, e.actor, e.note, e.previousHash]))
+    .digest('hex');
 }
 
 export class Incident {
-  private current: IncidentState = "DETECTED";
+  private current: IncidentState = 'DETECTED';
   private readonly log: TimelineEntry[] = [];
   private notifiedAt: number | null = null;
   private containedAt: number | null = null;
 
-  constructor(readonly id: string, readonly severity: Severity, readonly detectedAt: number, actor: string, note = "detected") {
-    this.push("DETECTED", actor, note, detectedAt);
+  constructor(
+    readonly id: string,
+    readonly severity: Severity,
+    readonly detectedAt: number,
+    actor: string,
+    note = 'detected'
+  ) {
+    this.push('DETECTED', actor, note, detectedAt);
   }
 
   private push(state: IncidentState, actor: string, note: string, at: number): void {
-    if (typeof actor !== "string" || actor.trim().length === 0) throw new Error("INCIDENT: actor is required");
+    if (typeof actor !== 'string' || actor.trim().length === 0)
+      throw new Error('INCIDENT: actor is required');
     const previousHash = this.log[this.log.length - 1]?.hash ?? ZERO;
     const base = { at: new Date(at).toISOString(), state, actor: actor.trim(), note, previousHash };
     this.log.push({ ...base, hash: entryHash(base) });
@@ -102,11 +128,13 @@ export class Incident {
   }
 
   advance(to: IncidentState, actor: string, note: string, now: number = Date.now()): void {
-    if (!TRANSITIONS[this.current].includes(to)) throw new Error(`INCIDENT: illegal transition ${this.current} -> ${to}`);
-    if (to === "CLOSED" && note.trim().length === 0) throw new Error("INCIDENT: closing requires a post-mortem reference in note");
+    if (!TRANSITIONS[this.current].includes(to))
+      throw new Error(`INCIDENT: illegal transition ${this.current} -> ${to}`);
+    if (to === 'CLOSED' && note.trim().length === 0)
+      throw new Error('INCIDENT: closing requires a post-mortem reference in note');
     this.push(to, actor, note, now);
     this.current = to;
-    if (to === "CONTAINED") this.containedAt = now;
+    if (to === 'CONTAINED') this.containedAt = now;
   }
 
   recordNotification(now: number = Date.now()): void {
@@ -120,8 +148,12 @@ export class Incident {
     const containDone = this.containedAt !== null;
     const notifyDone = this.notifiedAt !== null;
     return {
-      containOverdue: containDue !== null && (containDone ? (this.containedAt as number) > containDue : now > containDue),
-      notifyOverdue: notifyDue !== null && (notifyDone ? (this.notifiedAt as number) > notifyDue : now > notifyDue),
+      containOverdue:
+        containDue !== null &&
+        (containDone ? (this.containedAt as number) > containDue : now > containDue),
+      notifyOverdue:
+        notifyDue !== null &&
+        (notifyDone ? (this.notifiedAt as number) > notifyDue : now > notifyDue),
       containDueAt: containDue === null ? null : new Date(containDue).toISOString(),
       notifyDueAt: notifyDue === null ? null : new Date(notifyDue).toISOString(),
     };

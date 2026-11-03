@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from 'react';
 
 /**
  * STARFIELD ATMOSFÉRICO (src/components/isabella/Starfield.tsx)
@@ -60,11 +60,11 @@ export function Starfield() {
   const [reducedMotion, setReducedMotion] = useState(false);
 
   useEffect(() => {
-    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const query = window.matchMedia('(prefers-reduced-motion: reduce)');
     setReducedMotion(query.matches);
     const onChange = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
-    query.addEventListener?.("change", onChange);
-    return () => query.removeEventListener?.("change", onChange);
+    query.addEventListener?.('change', onChange);
+    return () => query.removeEventListener?.('change', onChange);
   }, []);
 
   const stars = useMemo(() => buildStars(SEED), []);
@@ -81,9 +81,9 @@ export function Starfield() {
               top: `${s.top}%`,
               width: `${s.size}px`,
               height: `${s.size}px`,
-              ["--star-size" as string]: `${s.size}px`,
-              ["--star-alpha" as string]: String(s.alpha),
-              ["--star-glow-alpha" as string]: String(s.glowAlpha),
+              ['--star-size' as string]: `${s.size}px`,
+              ['--star-alpha' as string]: String(s.alpha),
+              ['--star-glow-alpha' as string]: String(s.glowAlpha),
               animation: reducedMotion
                 ? undefined
                 : `star-twinkle ${s.twinkleDuration}s ease-in-out ${s.twinkleDelay}s infinite`,

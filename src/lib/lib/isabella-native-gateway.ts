@@ -1,20 +1,20 @@
-import { z } from "zod";
-import { SecuritySystem } from "@/lib/security";
-import { standardError, IsabellaChatErrorCode } from "@/lib/api-contracts";
-import { parseSafeJsonBody } from "@/lib/input-limits";
-import { runNativeComprehension } from "@/lib/native-comprehension";
+import { z } from 'zod';
+import { SecuritySystem } from '@/lib/security';
+import { standardError, IsabellaChatErrorCode } from '@/lib/api-contracts';
+import { parseSafeJsonBody } from '@/lib/input-limits';
+import { runNativeComprehension } from '@/lib/native-comprehension';
 
 const NativeComprehensionRequestSchema = z.object({
   input: z.string().trim().min(1).max(8000),
-  locale: z.enum(["es", "es-MX", "es-419", "auto"]).default("auto"),
-  responseMode: z.enum(["concise", "balanced", "deep"]).default("balanced"),
+  locale: z.enum(['es', 'es-MX', 'es-419', 'auto']).default('auto'),
+  responseMode: z.enum(['concise', 'balanced', 'deep']).default('balanced'),
 });
 
 function normalizeSpanishInput(input: string): string {
   return input
-    .normalize("NFC")
-    .replace(/[\u200B-\u200D\uFEFF]/g, "")
-    .replace(/\s+/g, " ")
+    .normalize('NFC')
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    .replace(/\s+/g, ' ')
     .trim();
 }
 
@@ -30,18 +30,18 @@ function json(data: unknown, status = 200): Response {
     status,
     headers: SecuritySystem.injectSecureHeaders(
       new Headers({
-        "content-type": "application/json; charset=utf-8",
-        "cache-control": "no-store",
-        "x-isabella-native": "ncua",
-        "x-isabella-api-version": "3.2.0",
-      }),
+        'content-type': 'application/json; charset=utf-8',
+        'cache-control': 'no-store',
+        'x-isabella-native': 'ncua',
+        'x-isabella-api-version': '3.2.0',
+      })
     ),
   });
 }
 
 export async function handleNativeComprehension(
   context: NativeGatewayContext,
-  request: Request,
+  request: Request
 ): Promise<Response> {
   let rawBody: unknown;
   try {
@@ -49,20 +49,20 @@ export async function handleNativeComprehension(
   } catch {
     return standardError(
       IsabellaChatErrorCode.INVALID_JSON,
-      "El cuerpo de la petición no contiene JSON válido.",
+      'El cuerpo de la petición no contiene JSON válido.',
       context.correlationId,
       context.traceId,
-      { status: 400, tenantId: context.tenantId },
+      { status: 400, tenantId: context.tenantId }
     );
   }
   const validation = NativeComprehensionRequestSchema.safeParse(rawBody);
   if (!validation.success) {
     return standardError(
       IsabellaChatErrorCode.VALIDATION_ERROR,
-      "La petición no cumple el contrato de comprensión nativa.",
+      'La petición no cumple el contrato de comprensión nativa.',
       context.correlationId,
       context.traceId,
-      { status: 400, tenantId: context.tenantId },
+      { status: 400, tenantId: context.tenantId }
     );
   }
   const normalizedInput = normalizeSpanishInput(validation.data.input);

@@ -9,8 +9,8 @@
  * never executes a forbidden action. Confidence and value figures are DECLARED
  * heuristics, not calibrated probabilities.
  */
-import { canonicalJson, sha256Hex } from "./canonical";
-import { EnergyLedger } from "./energy";
+import { canonicalJson, sha256Hex } from './canonical';
+import { EnergyLedger } from './energy';
 import type {
   EnergyBudget,
   IntentPrediction,
@@ -18,12 +18,12 @@ import type {
   PrefetchOutcome,
   HyperPredictSession,
   RiskClass,
-} from "./types";
-import { HYPERPREDICT_POLICY_VERSION } from "./types";
+} from './types';
+import { HYPERPREDICT_POLICY_VERSION } from './types';
 
 export interface HyperPredictPolicy {
   readonly version: string;
-  readonly mode: "observe-only" | "active";
+  readonly mode: 'observe-only' | 'active';
   readonly allowedPrefetch: readonly string[];
   readonly forbiddenPrefetch: readonly string[];
   readonly requiresCrownApproval: readonly string[];
@@ -33,10 +33,16 @@ export interface HyperPredictPolicy {
 
 export const DEFAULT_HYPERPREDICT_POLICY: HyperPredictPolicy = {
   version: HYPERPREDICT_POLICY_VERSION,
-  mode: "active",
-  allowedPrefetch: ["generate.api", "analyze.financial", "territorial.query", "code.review"],
-  forbiddenPrefetch: ["payment.execute", "ledger.write", "identity.revoke", "production.deploy", "secret.read"],
-  requiresCrownApproval: ["payment.proposal", "state.transition", "policy.change"],
+  mode: 'active',
+  allowedPrefetch: ['generate.api', 'analyze.financial', 'territorial.query', 'code.review'],
+  forbiddenPrefetch: [
+    'payment.execute',
+    'ledger.write',
+    'identity.revoke',
+    'production.deploy',
+    'secret.read',
+  ],
+  requiresCrownApproval: ['payment.proposal', 'state.transition', 'policy.change'],
   minimumConfidence: 0.72,
   maxPrefetchTasksPerUser: 3,
 };
@@ -53,40 +59,40 @@ export interface PrefetchTaskDefinition {
 
 export const DEFAULT_PREFETCH_CATALOG: readonly PrefetchTaskDefinition[] = Object.freeze([
   {
-    intent: "generate.api",
-    artifacts: ["openapi.schema", "validation.schema", "test.plan", "docker.template"],
+    intent: 'generate.api',
+    artifacts: ['openapi.schema', 'validation.schema', 'test.plan', 'docker.template'],
     energyKwh: 0.00004,
     latencyMs: 80,
     ttlSeconds: 900,
     value: 0.9,
-    run: () => ({ openapi: "draft-ready", validation: "draft-ready", tests: "planned" }),
+    run: () => ({ openapi: 'draft-ready', validation: 'draft-ready', tests: 'planned' }),
   },
   {
-    intent: "analyze.financial",
-    artifacts: ["budget.query", "ledger.schema", "impact.report"],
+    intent: 'analyze.financial',
+    artifacts: ['budget.query', 'ledger.schema', 'impact.report'],
     energyKwh: 0.00003,
     latencyMs: 60,
     ttlSeconds: 900,
     value: 0.86,
-    run: () => ({ budget: "available", ledger: "read-only", impact: "draft" }),
+    run: () => ({ budget: 'available', ledger: 'read-only', impact: 'draft' }),
   },
   {
-    intent: "territorial.query",
-    artifacts: ["rag.index", "territory.filter", "document.cache"],
+    intent: 'territorial.query',
+    artifacts: ['rag.index', 'territory.filter', 'document.cache'],
     energyKwh: 0.00002,
     latencyMs: 45,
     ttlSeconds: 900,
     value: 0.78,
-    run: () => ({ rag: "indexed", filter: "ready" }),
+    run: () => ({ rag: 'indexed', filter: 'ready' }),
   },
   {
-    intent: "code.review",
-    artifacts: ["diff.read", "dependency.graph", "static.analysis", "review.checklist"],
+    intent: 'code.review',
+    artifacts: ['diff.read', 'dependency.graph', 'static.analysis', 'review.checklist'],
     energyKwh: 0.00003,
     latencyMs: 70,
     ttlSeconds: 900,
     value: 0.82,
-    run: () => ({ diff: "loaded", dependencies: "resolved", analysis: "draft" }),
+    run: () => ({ diff: 'loaded', dependencies: 'resolved', analysis: 'draft' }),
   },
 ]);
 
@@ -130,10 +136,10 @@ export interface HyperPredictOptions {
 }
 
 const INTENT_WEIGHTS: Record<string, readonly number[]> = {
-  "generate.api": [1.8, 0.4, 1.5, 0.8, 2.2, 0.0, 0.6, 0.2],
-  "analyze.financial": [1.2, 0.3, 0.0, 0.6, 0.0, 2.4, 0.3, 0.8],
-  "territorial.query": [0.8, 0.2, 0.0, 0.0, 0.0, 0.0, 0.2, 1.8],
-  "code.review": [1.0, 0.3, 1.2, 0.5, 0.4, 0.0, 1.6, 0.1],
+  'generate.api': [1.8, 0.4, 1.5, 0.8, 2.2, 0.0, 0.6, 0.2],
+  'analyze.financial': [1.2, 0.3, 0.0, 0.6, 0.0, 2.4, 0.3, 0.8],
+  'territorial.query': [0.8, 0.2, 0.0, 0.0, 0.0, 0.0, 0.2, 1.8],
+  'code.review': [1.0, 0.3, 1.2, 0.5, 0.4, 0.0, 1.6, 0.1],
 };
 
 export function sigmoid(value: number): number {
@@ -145,14 +151,14 @@ export function sigmoid(value: number): number {
 export function sessionFeatures(session: HyperPredictSession): readonly number[] {
   const recentLast = session.recentIntents.at(-1);
   return [
-    session.role === "architect" || session.role === "guardian" ? 1 : 0,
+    session.role === 'architect' || session.role === 'guardian' ? 1 : 0,
     session.deviceTrusted ? 1 : 0,
-    session.openArtifacts.includes("api.py") ? 1 : 0,
-    session.openArtifacts.includes("schema.sql") ? 1 : 0,
-    session.currentIntent === "generate.api" ? 1 : 0,
-    session.currentIntent === "analyze.financial" ? 1 : 0,
-    recentLast === "code.review" ? 1 : 0,
-    session.territory === "real-del-monte" ? 1 : 0,
+    session.openArtifacts.includes('api.py') ? 1 : 0,
+    session.openArtifacts.includes('schema.sql') ? 1 : 0,
+    session.currentIntent === 'generate.api' ? 1 : 0,
+    session.currentIntent === 'analyze.financial' ? 1 : 0,
+    recentLast === 'code.review' ? 1 : 0,
+    session.territory === 'real-del-monte' ? 1 : 0,
   ];
 }
 
@@ -162,11 +168,15 @@ export function scoreIntent(intent: string, session: HyperPredictSession): numbe
   return weights.reduce((acc, weight, index) => acc + weight * (features[index] ?? 0), 0);
 }
 
-export function valueScore(_intent: string, session: HyperPredictSession, baseValue: number): number {
+export function valueScore(
+  _intent: string,
+  session: HyperPredictSession,
+  baseValue: number
+): number {
   let value = baseValue;
-  if (session.role === "architect" || session.role === "guardian") value += 0.05;
+  if (session.role === 'architect' || session.role === 'guardian') value += 0.05;
   if (session.deviceTrusted) value += 0.03;
-  if (session.risk === "high" || session.risk === "critical") value -= 0.15;
+  if (session.risk === 'high' || session.risk === 'critical') value -= 0.15;
   return Math.max(0, Math.min(1, value));
 }
 
@@ -176,25 +186,49 @@ function expectedCost(task: PrefetchTaskDefinition): number {
 
 export function createHyperPredict(options: HyperPredictOptions = {}): HyperPredictEngine {
   const policy = options.policy ?? DEFAULT_HYPERPREDICT_POLICY;
-  const budget: EnergyBudget = options.budget ?? { maxWatts: 35, maxLatencyMs: 120, maxEnergyKwh: 0.00005, carbonBudgetDailyKwh: 12 };
+  const budget: EnergyBudget = options.budget ?? {
+    maxWatts: 35,
+    maxLatencyMs: 120,
+    maxEnergyKwh: 0.00005,
+    carbonBudgetDailyKwh: 12,
+  };
   const catalog = options.catalog ?? DEFAULT_PREFETCH_CATALOG;
   const audit = options.audit ?? (() => undefined);
   const now = options.now ?? (() => Date.now());
   const ledger = new EnergyLedger(budget);
   const cache = new Map<string, { artifacts: readonly string[]; expiresAt: number }>();
-  const counters = { observations: 0, denied: 0, deferred: 0, prefetchDecisions: 0, prepared: 0, cacheHits: 0 };
+  const counters = {
+    observations: 0,
+    denied: 0,
+    deferred: 0,
+    prefetchDecisions: 0,
+    prepared: 0,
+    cacheHits: 0,
+  };
   let preparedThisSession = 0;
 
-  function decide(_session: HyperPredictSession, task: PrefetchTaskDefinition, confidence: number, value: number, cost: number): { decision: PrefetchDecision; reason: string } {
-    if (policy.forbiddenPrefetch.includes(task.intent)) return { decision: "DENY", reason: "PREFETCH_FORBIDDEN_BY_CROWN" };
-    if (!policy.allowedPrefetch.includes(task.intent)) return { decision: "DENY", reason: "INTENT_NOT_REGISTERED" };
-    if (confidence < policy.minimumConfidence) return { decision: "DENY", reason: "CONFIDENCE_BELOW_THRESHOLD" };
-    if (policy.mode === "observe-only") return { decision: "OBSERVE", reason: "OBSERVE_ONLY_MODE" };
-    if (value <= cost) return { decision: "OBSERVE", reason: "VALUE_NOT_ABOVE_COST" };
-    if (!ledger.canSpend(task.energyKwh)) return { decision: "DEFER", reason: "ENERGY_BUDGET_EXCEEDED" };
-    if (task.latencyMs > budget.maxLatencyMs) return { decision: "DEFER", reason: "LATENCY_BUDGET_EXCEEDED" };
-    if (preparedThisSession >= policy.maxPrefetchTasksPerUser) return { decision: "DEFER", reason: "PREFETCH_TASK_LIMIT" };
-    return { decision: "PREFETCH", reason: "VALUE_ABOVE_COST" };
+  function decide(
+    _session: HyperPredictSession,
+    task: PrefetchTaskDefinition,
+    confidence: number,
+    value: number,
+    cost: number
+  ): { decision: PrefetchDecision; reason: string } {
+    if (policy.forbiddenPrefetch.includes(task.intent))
+      return { decision: 'DENY', reason: 'PREFETCH_FORBIDDEN_BY_CROWN' };
+    if (!policy.allowedPrefetch.includes(task.intent))
+      return { decision: 'DENY', reason: 'INTENT_NOT_REGISTERED' };
+    if (confidence < policy.minimumConfidence)
+      return { decision: 'DENY', reason: 'CONFIDENCE_BELOW_THRESHOLD' };
+    if (policy.mode === 'observe-only') return { decision: 'OBSERVE', reason: 'OBSERVE_ONLY_MODE' };
+    if (value <= cost) return { decision: 'OBSERVE', reason: 'VALUE_NOT_ABOVE_COST' };
+    if (!ledger.canSpend(task.energyKwh))
+      return { decision: 'DEFER', reason: 'ENERGY_BUDGET_EXCEEDED' };
+    if (task.latencyMs > budget.maxLatencyMs)
+      return { decision: 'DEFER', reason: 'LATENCY_BUDGET_EXCEEDED' };
+    if (preparedThisSession >= policy.maxPrefetchTasksPerUser)
+      return { decision: 'DEFER', reason: 'PREFETCH_TASK_LIMIT' };
+    return { decision: 'PREFETCH', reason: 'VALUE_ABOVE_COST' };
   }
 
   function predict(session: HyperPredictSession): readonly IntentPrediction[] {
@@ -205,14 +239,14 @@ export function createHyperPredict(options: HyperPredictOptions = {}): HyperPred
       const cost = expectedCost(task);
       const { decision, reason } = decide(session, task, confidence, value, cost);
       const decisionHash = sha256Hex(
-        canonicalJson({ subject: session.subject, intent: task.intent, confidence, decision }),
+        canonicalJson({ subject: session.subject, intent: task.intent, confidence, decision })
       );
-      if (decision === "OBSERVE") counters.observations += 1;
-      else if (decision === "DENY") counters.denied += 1;
-      else if (decision === "DEFER") counters.deferred += 1;
+      if (decision === 'OBSERVE') counters.observations += 1;
+      else if (decision === 'DENY') counters.denied += 1;
+      else if (decision === 'DEFER') counters.deferred += 1;
       else counters.prefetchDecisions += 1;
       audit({
-        type: "hyperpredict.intent.predicted",
+        type: 'hyperpredict.intent.predicted',
         subject: session.subject,
         risk: session.risk,
         intent: task.intent,
@@ -239,9 +273,9 @@ export function createHyperPredict(options: HyperPredictOptions = {}): HyperPred
   }
 
   function prepare(session: HyperPredictSession, prediction: IntentPrediction): PrefetchOutcome {
-    if (prediction.decision !== "PREFETCH") {
+    if (prediction.decision !== 'PREFETCH') {
       audit({
-        type: "hyperpredict.prefetch.rejected",
+        type: 'hyperpredict.prefetch.rejected',
         subject: session.subject,
         risk: session.risk,
         intent: prediction.intent,
@@ -252,9 +286,9 @@ export function createHyperPredict(options: HyperPredictOptions = {}): HyperPred
         policyVersion: policy.version,
       });
       return Object.freeze({
-        status: "not-prepared",
+        status: 'not-prepared',
         intent: prediction.intent,
-        cacheKey: "",
+        cacheKey: '',
         artifacts: Object.freeze([]),
         energyKwh: 0,
         expiresAt: null,
@@ -264,35 +298,35 @@ export function createHyperPredict(options: HyperPredictOptions = {}): HyperPred
     const task = catalog.find((item) => item.intent === prediction.intent);
     if (!task) {
       return Object.freeze({
-        status: "not-prepared",
+        status: 'not-prepared',
         intent: prediction.intent,
-        cacheKey: "",
+        cacheKey: '',
         artifacts: Object.freeze([]),
         energyKwh: 0,
         expiresAt: null,
-        reason: "TASK_NOT_FOUND",
+        reason: 'TASK_NOT_FOUND',
       });
     }
     if (preparedThisSession >= policy.maxPrefetchTasksPerUser || !ledger.canSpend(task.energyKwh)) {
       audit({
-        type: "hyperpredict.energy.exceeded",
+        type: 'hyperpredict.energy.exceeded',
         subject: session.subject,
         risk: session.risk,
         intent: task.intent,
-        decision: "DEFER",
+        decision: 'DEFER',
         confidence: prediction.confidence,
         expectedValue: prediction.expectedValue,
         expectedCost: prediction.expectedCost,
         policyVersion: policy.version,
       });
       return Object.freeze({
-        status: "deferred",
+        status: 'deferred',
         intent: task.intent,
-        cacheKey: "",
+        cacheKey: '',
         artifacts: Object.freeze([]),
         energyKwh: 0,
         expiresAt: null,
-        reason: "ENERGY_BUDGET_EXCEEDED",
+        reason: 'ENERGY_BUDGET_EXCEEDED',
       });
     }
 
@@ -302,30 +336,30 @@ export function createHyperPredict(options: HyperPredictOptions = {}): HyperPred
         intent: task.intent,
         territory: session.territory,
         artifacts: task.artifacts,
-      }),
+      })
     );
     const cached = cache.get(cacheKey);
     if (cached && cached.expiresAt > now()) {
       counters.cacheHits += 1;
       audit({
-        type: "hyperpredict.cache.hit",
+        type: 'hyperpredict.cache.hit',
         subject: session.subject,
         risk: session.risk,
         intent: task.intent,
-        decision: "PREFETCH",
+        decision: 'PREFETCH',
         confidence: prediction.confidence,
         expectedValue: prediction.expectedValue,
         expectedCost: prediction.expectedCost,
         policyVersion: policy.version,
       });
       return Object.freeze({
-        status: "cache-hit",
+        status: 'cache-hit',
         intent: task.intent,
         cacheKey,
         artifacts: cached.artifacts,
         energyKwh: 0,
         expiresAt: cached.expiresAt,
-        reason: "CACHE_HIT",
+        reason: 'CACHE_HIT',
       });
     }
 
@@ -338,24 +372,24 @@ export function createHyperPredict(options: HyperPredictOptions = {}): HyperPred
     preparedThisSession += 1;
     counters.prepared += 1;
     audit({
-      type: "hyperpredict.prefetch.completed",
+      type: 'hyperpredict.prefetch.completed',
       subject: session.subject,
       risk: session.risk,
       intent: task.intent,
-      decision: "PREFETCH",
+      decision: 'PREFETCH',
       confidence: prediction.confidence,
       expectedValue: prediction.expectedValue,
       expectedCost: prediction.expectedCost,
       policyVersion: policy.version,
     });
     return Object.freeze({
-      status: "prepared",
+      status: 'prepared',
       intent: task.intent,
       cacheKey,
       artifacts,
       energyKwh: task.energyKwh,
       expiresAt,
-      reason: "PREPARED",
+      reason: 'PREPARED',
     });
   }
 

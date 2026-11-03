@@ -1,5 +1,5 @@
 /** IDENTITY & AUTHORITY — PrincipalContext (who asks). */
-export type PrincipalKind = "human" | "machine" | "service";
+export type PrincipalKind = 'human' | 'machine' | 'service';
 
 export interface Principal {
   id: string;
@@ -19,20 +19,31 @@ export interface PrincipalContext {
   traceId?: string;
 }
 
-export function createPrincipal(partial: Omit<Principal, "roles" | "attributes"> & {
-  roles?: readonly string[];
-  attributes?: Record<string, string | number | boolean>;
-}): Principal {
+export function createPrincipal(
+  partial: Omit<Principal, 'roles' | 'attributes'> & {
+    roles?: readonly string[];
+    attributes?: Record<string, string | number | boolean>;
+  }
+): Principal {
   return Object.freeze({
-    id: partial.id, kind: partial.kind, displayName: partial.displayName, tenantId: partial.tenantId,
-    roles: partial.roles ?? [], attributes: partial.attributes ?? {}, approvalKeyId: partial.approvalKeyId,
+    id: partial.id,
+    kind: partial.kind,
+    displayName: partial.displayName,
+    tenantId: partial.tenantId,
+    roles: partial.roles ?? [],
+    attributes: partial.attributes ?? {},
+    approvalKeyId: partial.approvalKeyId,
   }) as Principal;
 }
 
-export function isHuman(p: Principal): boolean { return p.kind === "human"; }
+export function isHuman(p: Principal): boolean {
+  return p.kind === 'human';
+}
 
 export function assertBalancedAuthority(p: Principal): void {
-  if (p.kind !== "human" && p.roles.includes("admin")) {
-    throw new Error("IDENTITY: una máquina o principal no humano no puede ostentar admin sin delegación humana (non-human principals cannot hold admin without explicit human delegation).");
+  if (p.kind !== 'human' && p.roles.includes('admin')) {
+    throw new Error(
+      'IDENTITY: una máquina o principal no humano no puede ostentar admin sin delegación humana (non-human principals cannot hold admin without explicit human delegation).'
+    );
   }
 }

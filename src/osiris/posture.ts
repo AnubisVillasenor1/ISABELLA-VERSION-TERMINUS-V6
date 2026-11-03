@@ -5,7 +5,7 @@
  * unknown. It NEVER reports "secure" or "certified": an unobserved control is
  * `unknown`, not `active`. state: draft | engine-generated.
  */
-import type { DefensePosture, PostureControl, PostureState } from "./types";
+import type { DefensePosture, PostureControl, PostureState } from './types';
 
 export interface PostureInputs {
   /** ISA-X post-quantum verification is wired and reachable. */
@@ -25,8 +25,8 @@ export interface PostureInputs {
 }
 
 function stateOf(value: boolean | undefined): PostureState {
-  if (value === undefined) return "unknown";
-  return value ? "active" : "inactive";
+  if (value === undefined) return 'unknown';
+  return value ? 'active' : 'inactive';
 }
 
 interface ControlSpec {
@@ -39,72 +39,77 @@ interface ControlSpec {
 
 export function assessDefensePosture(
   inputs: PostureInputs = {},
-  now: () => string = () => new Date().toISOString(),
+  now: () => string = () => new Date().toISOString()
 ): DefensePosture {
   const specs: readonly ControlSpec[] = [
     {
-      control: "post_quantum_readiness",
+      control: 'post_quantum_readiness',
       value: inputs.pqcAvailable,
-      activeNote: "ISA-X post-quantum verification is reachable",
-      inactiveNote: "No post-quantum verifier is wired",
-      unknownNote: "Post-quantum readiness was not probed",
+      activeNote: 'ISA-X post-quantum verification is reachable',
+      inactiveNote: 'No post-quantum verifier is wired',
+      unknownNote: 'Post-quantum readiness was not probed',
     },
     {
-      control: "signature_identity",
+      control: 'signature_identity',
       value: inputs.ed25519Active,
-      activeNote: "An Ed25519 identity key is active",
-      inactiveNote: "No active Ed25519 identity key",
-      unknownNote: "Signature identity was not probed",
+      activeNote: 'An Ed25519 identity key is active',
+      inactiveNote: 'No active Ed25519 identity key',
+      unknownNote: 'Signature identity was not probed',
     },
     {
-      control: "secret_hygiene",
+      control: 'secret_hygiene',
       value: inputs.secretsConfigured,
-      activeNote: "Required secrets are present server-side",
-      inactiveNote: "One or more required secrets are missing",
-      unknownNote: "Secret configuration was not probed",
+      activeNote: 'Required secrets are present server-side',
+      inactiveNote: 'One or more required secrets are missing',
+      unknownNote: 'Secret configuration was not probed',
     },
     {
-      control: "rate_limiting",
+      control: 'rate_limiting',
       value: inputs.rateLimitEnabled,
-      activeNote: "Public routes enforce rate limits",
-      inactiveNote: "Rate limiting is not enforced on public routes",
-      unknownNote: "Rate limiting was not probed",
+      activeNote: 'Public routes enforce rate limits',
+      inactiveNote: 'Rate limiting is not enforced on public routes',
+      unknownNote: 'Rate limiting was not probed',
     },
     {
-      control: "transport_tls",
+      control: 'transport_tls',
       value: inputs.tlsEnforced,
-      activeNote: "Inbound transport is TLS-terminated",
-      inactiveNote: "Inbound transport is not TLS-terminated",
-      unknownNote: "TLS termination was not probed",
+      activeNote: 'Inbound transport is TLS-terminated',
+      inactiveNote: 'Inbound transport is not TLS-terminated',
+      unknownNote: 'TLS termination was not probed',
     },
     {
-      control: "ledger_durability",
+      control: 'ledger_durability',
       value: inputs.ledgerDurable,
-      activeNote: "BookPI is backed by durable storage",
-      inactiveNote: "BookPI is in-memory only (not durable)",
-      unknownNote: "Ledger durability was not probed",
+      activeNote: 'BookPI is backed by durable storage',
+      inactiveNote: 'BookPI is in-memory only (not durable)',
+      unknownNote: 'Ledger durability was not probed',
     },
     {
-      control: "audit_chain_integrity",
+      control: 'audit_chain_integrity',
       value: inputs.auditChainValid,
-      activeNote: "The audit hash chain verified with no integrity failures",
-      inactiveNote: "The audit hash chain reported an integrity failure",
-      unknownNote: "Audit chain integrity was not probed",
+      activeNote: 'The audit hash chain verified with no integrity failures',
+      inactiveNote: 'The audit hash chain reported an integrity failure',
+      unknownNote: 'Audit chain integrity was not probed',
     },
   ];
 
   const controls: PostureControl[] = specs.map((spec) => {
     const state = stateOf(spec.value);
-    const note = state === "active" ? spec.activeNote : state === "inactive" ? spec.inactiveNote : spec.unknownNote;
+    const note =
+      state === 'active'
+        ? spec.activeNote
+        : state === 'inactive'
+          ? spec.inactiveNote
+          : spec.unknownNote;
     return Object.freeze({ control: spec.control, state, note });
   });
 
   return Object.freeze({
     assessedAt: now(),
     controls: Object.freeze(controls),
-    activeCount: controls.filter((c) => c.state === "active").length,
-    unknownCount: controls.filter((c) => c.state === "unknown").length,
-    certification: "NOT_CERTIFIED" as const,
+    activeCount: controls.filter((c) => c.state === 'active').length,
+    unknownCount: controls.filter((c) => c.state === 'unknown').length,
+    certification: 'NOT_CERTIFIED' as const,
     trainedModelPresent: false as const,
   });
 }

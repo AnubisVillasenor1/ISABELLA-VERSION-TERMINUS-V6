@@ -1,9 +1,9 @@
-import { createHash } from "node:crypto";
+import { createHash } from 'node:crypto';
 import {
   createIsabellaLearningEngine,
   type IsabellaLearningEngine,
   type LearningResult,
-} from "./isabella-learning";
+} from './isabella-learning';
 
 /**
  * Cognitive training strategies that operate above the token/model layer.
@@ -11,14 +11,14 @@ import {
  * persistence to IsabellaLearningEngine.
  */
 export type CognitiveTrainingStrategy =
-  | "semantic"
-  | "procedural"
-  | "contrastive"
-  | "counterfactual"
-  | "retrieval"
-  | "reflection"
-  | "preference"
-  | "multimodal";
+  | 'semantic'
+  | 'procedural'
+  | 'contrastive'
+  | 'counterfactual'
+  | 'retrieval'
+  | 'reflection'
+  | 'preference'
+  | 'multimodal';
 
 export interface CognitiveTrainingSample {
   input: string;
@@ -47,22 +47,22 @@ export interface CognitiveTrainingBatchResult {
 
 const strategyModes: Record<
   CognitiveTrainingStrategy,
-  | "supervised"
-  | "contrastive"
-  | "preference"
-  | "episodic"
-  | "procedural"
-  | "reflective"
-  | "multimodal"
+  | 'supervised'
+  | 'contrastive'
+  | 'preference'
+  | 'episodic'
+  | 'procedural'
+  | 'reflective'
+  | 'multimodal'
 > = {
-  semantic: "supervised",
-  procedural: "procedural",
-  contrastive: "contrastive",
-  counterfactual: "contrastive",
-  retrieval: "episodic",
-  reflection: "reflective",
-  preference: "preference",
-  multimodal: "multimodal",
+  semantic: 'supervised',
+  procedural: 'procedural',
+  contrastive: 'contrastive',
+  counterfactual: 'contrastive',
+  retrieval: 'episodic',
+  reflection: 'reflective',
+  preference: 'preference',
+  multimodal: 'multimodal',
 };
 
 export class IsabellaCognitiveTrainingEngine {
@@ -70,7 +70,7 @@ export class IsabellaCognitiveTrainingEngine {
 
   train(
     strategy: CognitiveTrainingStrategy,
-    sample: CognitiveTrainingSample,
+    sample: CognitiveTrainingSample
   ): CognitiveTrainingResult {
     const normalized = normalizeSample(sample);
     const expanded = expandStrategy(strategy, normalized);
@@ -103,7 +103,7 @@ export class IsabellaCognitiveTrainingEngine {
     samples: Array<{
       strategy: CognitiveTrainingStrategy;
       sample: CognitiveTrainingSample;
-    }>,
+    }>
   ): CognitiveTrainingBatchResult {
     const byStrategy = {} as Record<CognitiveTrainingStrategy, CognitiveTrainingResult>;
     let accepted = 0;
@@ -133,97 +133,97 @@ export class IsabellaCognitiveTrainingEngine {
 }
 
 export function createIsabellaCognitiveTrainingEngine(
-  learning?: IsabellaLearningEngine,
+  learning?: IsabellaLearningEngine
 ): IsabellaCognitiveTrainingEngine {
   return new IsabellaCognitiveTrainingEngine(learning);
 }
 
 function expandStrategy(strategy: CognitiveTrainingStrategy, sample: CognitiveTrainingSample) {
   switch (strategy) {
-    case "counterfactual":
+    case 'counterfactual':
       return [
         {
           input: sample.input,
           target: sample.target,
-          negative: sample.negative ?? "Alternative outcome to avoid.",
-          context: { ...sample.context, trainingSignal: "counterfactual" },
+          negative: sample.negative ?? 'Alternative outcome to avoid.',
+          context: { ...sample.context, trainingSignal: 'counterfactual' },
         },
         {
           input: `What would change if the assumptions were reversed? ${sample.input}`,
           target: sample.negative ?? sample.target,
-          context: { ...sample.context, trainingSignal: "assumption-reversal" },
+          context: { ...sample.context, trainingSignal: 'assumption-reversal' },
         },
       ];
-    case "retrieval":
+    case 'retrieval':
       return [
         {
           input: sample.input,
           target: sample.target,
-          context: { ...sample.context, trainingSignal: "retrieval-practice" },
+          context: { ...sample.context, trainingSignal: 'retrieval-practice' },
         },
         {
           input: `Recall the relevant procedure or concept for: ${sample.input}`,
           target: sample.target,
-          context: { ...sample.context, trainingSignal: "active-recall" },
+          context: { ...sample.context, trainingSignal: 'active-recall' },
         },
       ];
-    case "reflection":
+    case 'reflection':
       return [
         {
           input: sample.input,
           target: sample.target,
-          context: { ...sample.context, trainingSignal: "reflection" },
+          context: { ...sample.context, trainingSignal: 'reflection' },
         },
         {
           input: `Critically review the reasoning behind: ${sample.input}`,
           target: sample.target,
-          context: { ...sample.context, trainingSignal: "self-critique" },
+          context: { ...sample.context, trainingSignal: 'self-critique' },
         },
       ];
-    case "semantic":
+    case 'semantic':
       return [
         {
           input: sample.input,
           target: sample.target,
-          context: { ...sample.context, trainingSignal: "semantic-grounding" },
+          context: { ...sample.context, trainingSignal: 'semantic-grounding' },
         },
       ];
-    case "procedural":
+    case 'procedural':
       return [
         {
           input: sample.input,
           target: sample.target,
           context: {
             ...sample.context,
-            trainingSignal: "procedure-acquisition",
+            trainingSignal: 'procedure-acquisition',
           },
         },
       ];
-    case "contrastive":
+    case 'contrastive':
       return [
         {
           input: sample.input,
           target: sample.target,
           negative: sample.negative,
-          context: { ...sample.context, trainingSignal: "contrastive-ranking" },
+          context: { ...sample.context, trainingSignal: 'contrastive-ranking' },
         },
       ];
-    case "preference":
+    case 'preference':
       return [
         {
           input: sample.input,
           target: sample.target,
-          context: { ...sample.context, trainingSignal: "preference-learning" },
+          context: { ...sample.context, trainingSignal: 'preference-learning' },
         },
       ];
-    case "multimodal":
+    case 'multimodal':
       return [
         {
           input: sample.input,
           target: sample.target,
           context: {
             ...sample.context,
-            trainingSignal: "multimodal-grounding",
+            trainingSignal: 'multimodal-grounding',
           },
         },
       ];
@@ -231,7 +231,7 @@ function expandStrategy(strategy: CognitiveTrainingStrategy, sample: CognitiveTr
 }
 
 function stripControlCharacters(value: string): string {
-  let sanitized = "";
+  let sanitized = '';
   for (const character of value) {
     const code = character.codePointAt(0) ?? 0;
     if (code >= 0x20 || code === 0x09 || code === 0x0a || code === 0x0d) sanitized += character;
@@ -243,7 +243,7 @@ function normalizeSample(sample: CognitiveTrainingSample): CognitiveTrainingSamp
   const input = stripControlCharacters(sample.input).trim();
   const target = sample.target ? stripControlCharacters(sample.target).trim() : undefined;
   const negative = sample.negative ? stripControlCharacters(sample.negative).trim() : undefined;
-  if (!input) throw new Error("Cognitive training input cannot be empty");
+  if (!input) throw new Error('Cognitive training input cannot be empty');
 
   return {
     ...sample,
@@ -260,7 +260,7 @@ function normalizeSample(sample: CognitiveTrainingSample): CognitiveTrainingSamp
 
 function mergeTrainingResults(
   existing: CognitiveTrainingResult | undefined,
-  incoming: CognitiveTrainingResult,
+  incoming: CognitiveTrainingResult
 ): CognitiveTrainingResult {
   if (!existing) return incoming;
   return {
@@ -274,9 +274,9 @@ function mergeTrainingResults(
 
 export function trainingSampleSignature(
   strategy: CognitiveTrainingStrategy,
-  sample: CognitiveTrainingSample,
+  sample: CognitiveTrainingSample
 ): string {
-  return createHash("sha3-512")
+  return createHash('sha3-512')
     .update(JSON.stringify({ strategy, sample: normalizeSample(sample) }))
-    .digest("hex");
+    .digest('hex');
 }

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { computeIDHD } from "@/lib/governance/idh-d";
+import { useState } from 'react';
+import { computeIDHD } from '@/lib/governance/idh-d';
 
 export function IDHDPanel() {
   const [vals, setVals] = useState({
@@ -37,14 +37,14 @@ export function IDHDPanel() {
       </div>
       <div className="mt-4 rounded-xl bg-background/60 p-3 font-mono text-xs">
         <div className="text-lg font-bold text-platinum">
-          {r.score}/100{" "}
+          {r.score}/100{' '}
           <span className="text-xs font-normal text-muted-foreground">· hash {r.hash}</span>
         </div>
         <div className="mt-2 text-[10px] leading-4 text-muted-foreground">
-          {r.explainability.join(" · ")}
+          {r.explainability.join(' · ')}
         </div>
         <div className="mt-2 text-[10px] text-emerald-400">
-          Apelable: sí · SLA 72h · {r.appealable ? "Revisión humana requerida si <40" : ""}
+          Apelable: sí · SLA 72h · {r.appealable ? 'Revisión humana requerida si <40' : ''}
         </div>
       </div>
     </div>

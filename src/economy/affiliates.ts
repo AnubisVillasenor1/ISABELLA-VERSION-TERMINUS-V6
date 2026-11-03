@@ -1,7 +1,7 @@
-﻿import { assessFraud, type FraudInput } from "../commerce/anti-fraud";
-import type { FraudVerdict } from "../commerce/types";
-import type { EconomicLedger } from "./ledger";
-import { ROYALTY_TOTAL_BASIS_POINTS } from "./royalty";
+﻿import { assessFraud, type FraudInput } from '../commerce/anti-fraud';
+import type { FraudVerdict } from '../commerce/types';
+import type { EconomicLedger } from './ledger';
+import { ROYALTY_TOTAL_BASIS_POINTS } from './royalty';
 
 // SCER Affiliate Network (state: draft | engine-generated).
 // Registro de afiliados y atribución de conversiones. Cada atribución pasa por el
@@ -23,7 +23,7 @@ export interface CommissionResult {
   readonly affiliateId: string;
   readonly orderMinor: string;
   readonly commissionMinor: string;
-  readonly status: "pending" | "blocked";
+  readonly status: 'pending' | 'blocked';
   readonly verdict: FraudVerdict;
 }
 
@@ -34,15 +34,15 @@ export class AffiliateLedger {
   constructor(private readonly ledger: EconomicLedger) {}
 
   register(affiliateId: string, commissionBasisPoints: number): Affiliate {
-    if (typeof affiliateId !== "string" || affiliateId.trim() === "") {
-      throw new Error("AFFILIATE_REGISTRATION_INVALID");
+    if (typeof affiliateId !== 'string' || affiliateId.trim() === '') {
+      throw new Error('AFFILIATE_REGISTRATION_INVALID');
     }
     if (
       !Number.isInteger(commissionBasisPoints) ||
       commissionBasisPoints < 0 ||
       commissionBasisPoints > ROYALTY_TOTAL_BASIS_POINTS
     ) {
-      throw new Error("AFFILIATE_COMMISSION_BASIS_POINTS_INVALID");
+      throw new Error('AFFILIATE_COMMISSION_BASIS_POINTS_INVALID');
     }
     const affiliate: Affiliate = { affiliateId, commissionBasisPoints };
     this.affiliates.set(affiliateId, affiliate);
@@ -55,9 +55,9 @@ export class AffiliateLedger {
 
   attribute(input: AttributionInput): CommissionResult {
     const affiliate = this.affiliates.get(input.affiliateId);
-    if (!affiliate) throw new Error("AFFILIATE_NOT_REGISTERED");
-    if (typeof input.orderMinor !== "bigint" || input.orderMinor <= 0n) {
-      throw new Error("AFFILIATE_ORDER_INVALID");
+    if (!affiliate) throw new Error('AFFILIATE_NOT_REGISTERED');
+    if (typeof input.orderMinor !== 'bigint' || input.orderMinor <= 0n) {
+      throw new Error('AFFILIATE_ORDER_INVALID');
     }
 
     const fraud: FraudInput = {
@@ -78,22 +78,23 @@ export class AffiliateLedger {
     };
     const verdict = assessFraud(fraud);
 
-    const blocked = verdict.decision === "block";
+    const blocked = verdict.decision === 'block';
     const commission = blocked
       ? 0n
-      : (input.orderMinor * BigInt(affiliate.commissionBasisPoints)) / BigInt(ROYALTY_TOTAL_BASIS_POINTS);
+      : (input.orderMinor * BigInt(affiliate.commissionBasisPoints)) /
+        BigInt(ROYALTY_TOTAL_BASIS_POINTS);
 
     if (!blocked && commission > 0n) {
       this.pendingByAffiliate.set(input.affiliateId, this.pending(input.affiliateId) + commission);
     }
 
     this.ledger.append({
-      kind: "affiliate.commission",
+      kind: 'affiliate.commission',
       payload: {
         affiliateId: input.affiliateId,
         orderMinor: input.orderMinor.toString(),
         commissionMinor: commission.toString(),
-        status: blocked ? "blocked" : "pending",
+        status: blocked ? 'blocked' : 'pending',
         decision: verdict.decision,
         reference: input.reference,
       },
@@ -103,7 +104,7 @@ export class AffiliateLedger {
       affiliateId: input.affiliateId,
       orderMinor: input.orderMinor.toString(),
       commissionMinor: commission.toString(),
-      status: blocked ? "blocked" : "pending",
+      status: blocked ? 'blocked' : 'pending',
       verdict,
     };
   }

@@ -1,10 +1,10 @@
 /** Model-agnostic intelligence contracts. Capability does not imply authority. */
-export type Modality = "text" | "image" | "audio";
-export type IntelligenceDecision = "ALLOW" | "DENY" | "REVIEW" | "MODIFY";
-export type IntelligenceRisk = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+export type Modality = 'text' | 'image' | 'audio';
+export type IntelligenceDecision = 'ALLOW' | 'DENY' | 'REVIEW' | 'MODIFY';
+export type IntelligenceRisk = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 
 export interface IntelligenceMessage {
-  role: "system" | "user" | "assistant";
+  role: 'system' | 'user' | 'assistant';
   content: string;
 }
 export interface IntelligenceRequest {

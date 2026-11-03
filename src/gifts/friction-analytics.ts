@@ -11,14 +11,14 @@
  * Invariante (AGENTS.md): mide y recomienda; no cambia políticas por sí mismo ni
  * concede autoridad. La corrección es decisión humana.
  */
-import { TRAFFIC_BANDS, type TrafficBand } from "../governance/traffic-light";
-import { digest, round } from "./util";
+import { TRAFFIC_BANDS, type TrafficBand } from '../governance/traffic-light';
+import { digest, round } from './util';
 
-export const FRICTION_ANALYTICS_VERSION = "1.0.0" as const;
+export const FRICTION_ANALYTICS_VERSION = '1.0.0' as const;
 export const FRICTION_ANALYTICS_METHOD_ID =
-  "A.TWINS.LEGACY.friction_analytics.observe.v1.0.0.LOW.AUTONOMOUS" as const;
+  'A.TWINS.LEGACY.friction_analytics.observe.v1.0.0.LOW.AUTONOMOUS' as const;
 export const FRICTION_ANALYTICS_DISCLAIMER =
-  "La analítica de fricción mide y recomienda; no modifica políticas ni concede autoridad.";
+  'La analítica de fricción mide y recomienda; no modifica políticas ni concede autoridad.';
 
 export interface DecisionSample {
   readonly band: TrafficBand;
@@ -30,7 +30,7 @@ export interface FrictionOptions {
   readonly maxBlockRate?: number;
 }
 
-export type FrictionVerdict = "HEALTHY" | "OVER_BLOCKING" | "MISCONFIGURED";
+export type FrictionVerdict = 'HEALTHY' | 'OVER_BLOCKING' | 'MISCONFIGURED';
 
 export interface BandBreakdown {
   readonly total: number;
@@ -67,9 +67,9 @@ function emptyBreakdown(): Record<TrafficBand, BandBreakdown> {
 
 export function analyzeFriction(
   samples: readonly DecisionSample[],
-  options: FrictionOptions = {},
+  options: FrictionOptions = {}
 ): FrictionReport {
-  if (!Array.isArray(samples)) throw new Error("FRICTION_SAMPLES_REQUIRED");
+  if (!Array.isArray(samples)) throw new Error('FRICTION_SAMPLES_REQUIRED');
   const list: readonly DecisionSample[] = samples;
   const maxBlockRate = options.maxBlockRate ?? 0.5;
   const byBand = emptyBreakdown();
@@ -78,7 +78,7 @@ export function analyzeFriction(
 
   for (const sample of list) {
     if (!(TRAFFIC_BANDS as readonly string[]).includes(sample.band)) {
-      throw new Error("FRICTION_BAND_INVALID");
+      throw new Error('FRICTION_BAND_INVALID');
     }
     const current = byBand[sample.band];
     byBand[sample.band] = {
@@ -96,20 +96,30 @@ export function analyzeFriction(
   const overBlocking = blockRate > maxBlockRate;
   const misconfigured = greenBlocked > 0;
 
-  const verdict: FrictionVerdict = misconfigured ? "MISCONFIGURED" : overBlocking ? "OVER_BLOCKING" : "HEALTHY";
+  const verdict: FrictionVerdict = misconfigured
+    ? 'MISCONFIGURED'
+    : overBlocking
+      ? 'OVER_BLOCKING'
+      : 'HEALTHY';
 
   const recommendations: string[] = [];
   if (misconfigured) {
-    recommendations.push("Hay flujos VERDES bloqueados: revisa la configuración del semáforo y el ensanchado por confianza ganada.");
+    recommendations.push(
+      'Hay flujos VERDES bloqueados: revisa la configuración del semáforo y el ensanchado por confianza ganada.'
+    );
   }
   if (overBlocking) {
-    recommendations.push(`Tasa de bloqueo ${round(blockRate * 100, 2)}% > máximo ${round(maxBlockRate * 100, 2)}%: activa confianza ganada y revisa filtros obligatorios.`);
+    recommendations.push(
+      `Tasa de bloqueo ${round(blockRate * 100, 2)}% > máximo ${round(maxBlockRate * 100, 2)}%: activa confianza ganada y revisa filtros obligatorios.`
+    );
   }
   if (byBand.RED.blocked === byBand.RED.total && byBand.RED.total > 0) {
-    recommendations.push("Todo lo ROJO está bloqueado (correcto): ofrece remediación para convertirlo en una ruta admisible.");
+    recommendations.push(
+      'Todo lo ROJO está bloqueado (correcto): ofrece remediación para convertirlo en una ruta admisible.'
+    );
   }
   if (recommendations.length === 0) {
-    recommendations.push("Fricción sana: la mayoría del flujo fluye y lo rojo se contiene.");
+    recommendations.push('Fricción sana: la mayoría del flujo fluye y lo rojo se contiene.');
   }
 
   return {
@@ -137,7 +147,7 @@ export class FrictionAnalytics {
 
   record(sample: DecisionSample): void {
     if (!(TRAFFIC_BANDS as readonly string[]).includes(sample.band)) {
-      throw new Error("FRICTION_BAND_INVALID");
+      throw new Error('FRICTION_BAND_INVALID');
     }
     this.samples.push({ band: sample.band, admitted: sample.admitted === true });
   }

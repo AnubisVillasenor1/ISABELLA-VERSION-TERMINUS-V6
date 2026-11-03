@@ -1,5 +1,5 @@
-import * as crypto from "node:crypto";
-import { config } from "./config";
+import * as crypto from 'node:crypto';
+import { config } from './config';
 
 export interface MerkleNode {
   hash: string;
@@ -21,7 +21,7 @@ export class SovereignAudit {
    * Hashes data using SHA3-512
    */
   public static hashData(data: string | Buffer): string {
-    return crypto.createHash("sha3-512").update(data).digest("hex");
+    return crypto.createHash('sha3-512').update(data).digest('hex');
   }
 
   /**
@@ -30,7 +30,7 @@ export class SovereignAudit {
    */
   public static buildMerkleTree(dataLeaves: string[]): MerkleTree {
     if (dataLeaves.length === 0) {
-      throw new Error("Cannot build Merkle tree from empty leaves");
+      throw new Error('Cannot build Merkle tree from empty leaves');
     }
 
     const leafHashes = dataLeaves.map((leaf) => this.hashData(leaf));
@@ -70,12 +70,12 @@ export class SovereignAudit {
   public static async signAuditSeal(payloadHash: string): Promise<string> {
     const secret = config().AEGIS_AUDIT_SECRET;
     if (!secret) {
-      throw new Error("[SovereignAudit] AEGIS_AUDIT_SECRET ausente: sello denegado (fail-closed).");
+      throw new Error('[SovereignAudit] AEGIS_AUDIT_SECRET ausente: sello denegado (fail-closed).');
     }
     const mac = crypto
-      .createHmac("sha3-512", secret)
-      .update(payloadHash, "utf8")
-      .digest("base64url");
+      .createHmac('sha3-512', secret)
+      .update(payloadHash, 'utf8')
+      .digest('base64url');
     return `audit-seal-v1:${mac}`;
   }
 
@@ -84,7 +84,7 @@ export class SovereignAudit {
    * constante. Nunca asume validez por prefijo.
    */
   public static async verifyAuditSeal(payloadHash: string, seal: string): Promise<boolean> {
-    const PREFIX = "audit-seal-v1:";
+    const PREFIX = 'audit-seal-v1:';
     if (!seal.startsWith(PREFIX)) return false;
     let secret: string | undefined;
     try {
@@ -93,8 +93,8 @@ export class SovereignAudit {
       return false;
     }
     if (!secret) return false;
-    const expected = crypto.createHmac("sha3-512", secret).update(payloadHash, "utf8").digest();
-    const presented = Buffer.from(seal.slice(PREFIX.length), "base64url");
+    const expected = crypto.createHmac('sha3-512', secret).update(payloadHash, 'utf8').digest();
+    const presented = Buffer.from(seal.slice(PREFIX.length), 'base64url');
     if (presented.length !== expected.length) return false;
     return crypto.timingSafeEqual(presented, expected);
   }

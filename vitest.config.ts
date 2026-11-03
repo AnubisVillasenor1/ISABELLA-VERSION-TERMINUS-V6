@@ -9,5 +9,15 @@ export default defineConfig({
       NODE_ENV: "test",
     },
     include: ["test/**/*.test.ts"],
+    // Several suites import the full server module (heavy on Windows and shared runners)
+    // and a few benchmark loops run 500+ samples. The defaults (5s/10s) are too tight.
+    testTimeout: 30_000,
+    hookTimeout: 120_000,
+    // Only used by `pnpm test:coverage` (needs @vitest/coverage-v8). No threshold is enforced until a baseline is measured in CI.
+    coverage: {
+      provider: "v8",
+      reporter: ["text-summary", "lcov"],
+      include: ["src/**/*.ts"],
+    },
   },
 });

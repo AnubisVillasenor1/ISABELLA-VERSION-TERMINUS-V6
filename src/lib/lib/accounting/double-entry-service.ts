@@ -1,11 +1,11 @@
-import type { AccountingRepository, CreateJournalEntryDTO } from "./accounting-repository";
+import type { AccountingRepository, CreateJournalEntryDTO } from './accounting-repository';
 import type {
   JournalEntry,
   LedgerLine,
   TrialBalance,
   BalanceSheet,
   DoubleEntryValidation,
-} from "./types";
+} from './types';
 
 export interface DoubleEntryService {
   createDoubleEntryTransaction(dto: CreateJournalEntryDTO): Promise<{
@@ -20,7 +20,7 @@ export interface DoubleEntryService {
   }>;
   reverseJournalEntry(
     entryId: string,
-    reason: string,
+    reason: string
   ): Promise<{
     success: boolean;
     error?: string;
@@ -37,7 +37,7 @@ export function createDoubleEntryService(repository: AccountingRepository): Doub
     let totalCreditsCents = 0;
 
     if (!dto.lines || dto.lines.length === 0) {
-      errors.push("La transacción debe tener al menos una línea.");
+      errors.push('La transacción debe tener al menos una línea.');
       return {
         isValid: false,
         errors,
@@ -48,18 +48,18 @@ export function createDoubleEntryService(repository: AccountingRepository): Doub
     }
 
     if (dto.lines.length < 2) {
-      errors.push("La contabilidad de doble entrada requiere al menos dos líneas.");
+      errors.push('La contabilidad de doble entrada requiere al menos dos líneas.');
     }
 
     for (const line of dto.lines) {
       if (!line.accountId) {
-        errors.push("Cada línea debe tener una cuenta válida.");
+        errors.push('Cada línea debe tener una cuenta válida.');
       }
       if (line.debitCents !== undefined && line.debitCents < 0) {
-        errors.push("Los débitos no pueden ser negativos.");
+        errors.push('Los débitos no pueden ser negativos.');
       }
       if (line.creditCents !== undefined && line.creditCents < 0) {
-        errors.push("Los créditos no pueden ser negativos.");
+        errors.push('Los créditos no pueden ser negativos.');
       }
       if (
         line.debitCents !== undefined &&
@@ -67,10 +67,10 @@ export function createDoubleEntryService(repository: AccountingRepository): Doub
         line.creditCents !== undefined &&
         line.creditCents > 0
       ) {
-        errors.push("Una línea no puede tener tanto débito como crédito.");
+        errors.push('Una línea no puede tener tanto débito como crédito.');
       }
       if (!line.debitCents && !line.creditCents) {
-        errors.push("Cada línea debe tener débito o crédito.");
+        errors.push('Cada línea debe tener débito o crédito.');
       }
 
       totalDebitsCents += line.debitCents || 0;
@@ -78,12 +78,12 @@ export function createDoubleEntryService(repository: AccountingRepository): Doub
     }
 
     if (totalDebitsCents === 0 && totalCreditsCents === 0) {
-      errors.push("La transacción debe tener montos.");
+      errors.push('La transacción debe tener montos.');
     }
 
     if (totalDebitsCents !== totalCreditsCents) {
       errors.push(
-        `Los débitos (${totalDebitsCents}) no son iguales a los créditos (${totalCreditsCents}).`,
+        `Los débitos (${totalDebitsCents}) no son iguales a los créditos (${totalCreditsCents}).`
       );
     }
 
@@ -104,19 +104,19 @@ export function createDoubleEntryService(repository: AccountingRepository): Doub
   }> {
     const validation = validateDoubleEntry(dto);
     if (!validation.isValid) {
-      return { success: false, error: validation.errors.join(" ") };
+      return { success: false, error: validation.errors.join(' ') };
     }
 
     // Vía atómica cuando el repositorio la implementa (PostgreSQL real:
     // asiento + líneas en una sola transacción, rollback total al fallar).
-    if (typeof repository.createJournalEntryAtomic === "function") {
+    if (typeof repository.createJournalEntryAtomic === 'function') {
       try {
         const { entry, lines } = await repository.createJournalEntryAtomic(dto);
         return { success: true, entry, lines };
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : "Error desconocido",
+          error: error instanceof Error ? error.message : 'Error desconocido',
         };
       }
     }
@@ -138,8 +138,8 @@ export function createDoubleEntryService(repository: AccountingRepository): Doub
       }));
 
       const lines = await repository.createLedgerLines(
-        linesData as Omit<LedgerLine, "id" | "createdAt">[],
-        tx,
+        linesData as Omit<LedgerLine, 'id' | 'createdAt'>[],
+        tx
       );
 
       await repository.commitTransaction(tx);
@@ -151,7 +151,7 @@ export function createDoubleEntryService(repository: AccountingRepository): Doub
       }
       return {
         success: false,
-        error: error instanceof Error ? error.message : "Error desconocido",
+        error: error instanceof Error ? error.message : 'Error desconocido',
       };
     }
   }
@@ -163,19 +163,19 @@ export function createDoubleEntryService(repository: AccountingRepository): Doub
     try {
       const entry = await repository.getJournalEntryById(entryId);
       if (!entry) {
-        return { success: false, error: "Entrada de diario no encontrada" };
+        return { success: false, error: 'Entrada de diario no encontrada' };
       }
 
-      if (entry.status !== "pending") {
+      if (entry.status !== 'pending') {
         return {
           success: false,
-          error: "La entrada ya está publicada o reversada",
+          error: 'La entrada ya está publicada o reversada',
         };
       }
 
       const lines = await repository.getLedgerLinesByEntry(entryId);
       if (lines.length === 0) {
-        return { success: false, error: "La entrada no tiene líneas" };
+        return { success: false, error: 'La entrada no tiene líneas' };
       }
 
       const totalDebits = lines.reduce((sum, l) => sum + l.debitCents, 0);
@@ -188,19 +188,19 @@ export function createDoubleEntryService(repository: AccountingRepository): Doub
         };
       }
 
-      await repository.updateJournalEntryStatus(entryId, "posted");
+      await repository.updateJournalEntryStatus(entryId, 'posted');
       return { success: true };
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : "Error al publicar",
+        error: error instanceof Error ? error.message : 'Error al publicar',
       };
     }
   }
 
   async function reverseJournalEntry(
     entryId: string,
-    reason: string,
+    reason: string
   ): Promise<{
     success: boolean;
     error?: string;
@@ -208,13 +208,13 @@ export function createDoubleEntryService(repository: AccountingRepository): Doub
     try {
       const entry = await repository.getJournalEntryById(entryId);
       if (!entry) {
-        return { success: false, error: "Entrada de diario no encontrada" };
+        return { success: false, error: 'Entrada de diario no encontrada' };
       }
 
-      if (entry.status !== "posted") {
+      if (entry.status !== 'posted') {
         return {
           success: false,
-          error: "Solo se pueden reversar entradas publicadas",
+          error: 'Solo se pueden reversar entradas publicadas',
         };
       }
 
@@ -224,13 +224,13 @@ export function createDoubleEntryService(repository: AccountingRepository): Doub
       const reversalDto: CreateJournalEntryDTO = {
         tenantId: entry.tenantId,
         description: `Reversión: ${reason}`,
-        createdBy: "system",
+        createdBy: 'system',
         metadata: { reversedEntryId: entryId, reason },
         lines: lines.map((line) => ({
           accountId: line.accountId,
           debitCents: line.creditCents,
           creditCents: line.debitCents,
-          description: `Reversión de: ${line.description || ""}`,
+          description: `Reversión de: ${line.description || ''}`,
         })),
       };
 
@@ -239,12 +239,12 @@ export function createDoubleEntryService(repository: AccountingRepository): Doub
         return result;
       }
 
-      await repository.updateJournalEntryStatus(entryId, "reversed");
+      await repository.updateJournalEntryStatus(entryId, 'reversed');
       return { success: true };
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : "Error al reversar",
+        error: error instanceof Error ? error.message : 'Error al reversar',
       };
     }
   }
@@ -252,7 +252,7 @@ export function createDoubleEntryService(repository: AccountingRepository): Doub
   async function getTrialBalance(
     tenantId: string,
     periodStart: Date,
-    periodEnd: Date,
+    periodEnd: Date
   ): Promise<TrialBalance> {
     return repository.generateTrialBalance(tenantId, periodStart, periodEnd);
   }

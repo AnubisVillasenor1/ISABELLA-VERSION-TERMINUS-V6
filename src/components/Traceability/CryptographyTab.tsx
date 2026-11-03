@@ -1,54 +1,84 @@
-import React, { useState } from "react";
-import { Shield, Key, Lock, FileText, CheckCircle2, AlertTriangle, Cpu, RefreshCw, Copy, Sparkles, Activity } from "lucide-react";
-import { generateMLKEMKeyPair, encapsulateMLKEM, signMLDSA87, signSLHDSA128s, evaluateLitle32Gates } from "../../lib/postQuantumCrypto";
-import { soundManager } from "../../utils/soundEffects";
+import React, { useState } from 'react';
+import {
+  Shield,
+  Key,
+  Lock,
+  FileText,
+  CheckCircle2,
+  AlertTriangle,
+  Cpu,
+  RefreshCw,
+  Copy,
+  Sparkles,
+  Activity,
+} from 'lucide-react';
+import {
+  generateMLKEMKeyPair,
+  encapsulateMLKEM,
+  signMLDSA87,
+  signSLHDSA128s,
+  evaluateLitle32Gates,
+} from '../../lib/postQuantumCrypto';
+import { soundManager } from '../../utils/soundEffects';
 
 const PROFILES = [
   {
-    id: "LATAMV-KEM-1",
-    name: "Establecimiento de Claves (KEM)",
-    algorithm: "ML-KEM-768 + X25519 (Híbrido)",
-    status: "active",
-    type: "standard",
-    details: "Transcript binding activado. Resiliencia contra algoritmos de Shor. Protección de túneles de telemetría y estado de red.",
-    usage: "100% (Modo Estándar CROWN)"
+    id: 'LATAMV-KEM-1',
+    name: 'Establecimiento de Claves (KEM)',
+    algorithm: 'ML-KEM-768 + X25519 (Híbrido)',
+    status: 'active',
+    type: 'standard',
+    details:
+      'Transcript binding activado. Resiliencia contra algoritmos de Shor. Protección de túneles de telemetría y estado de red.',
+    usage: '100% (Modo Estándar CROWN)',
   },
   {
-    id: "LATAMV-SIG-1",
-    name: "Firma Digital Principal (SIG)",
-    algorithm: "ML-DSA-87 (Dilithium)",
-    status: "active",
-    type: "standard",
-    details: "Firmas deterministas y rápidas en redes reticulares (Lattice-based). Anclaje principal para el Ledger BookPI y la atestación ARGUS.",
-    usage: "100% (Verificación de Integridad)"
+    id: 'LATAMV-SIG-1',
+    name: 'Firma Digital Principal (SIG)',
+    algorithm: 'ML-DSA-87 (Dilithium)',
+    status: 'active',
+    type: 'standard',
+    details:
+      'Firmas deterministas y rápidas en redes reticulares (Lattice-based). Anclaje principal para el Ledger BookPI y la atestación ARGUS.',
+    usage: '100% (Verificación de Integridad)',
   },
   {
-    id: "LATAMV-SIG-LONG-1",
-    name: "Preservación Largo Plazo (SIG-LONG)",
-    algorithm: "SLH-DSA-128s (SPHINCS+)",
-    status: "active",
-    type: "standard",
-    details: "Hash-based signatures. Utilizado para documentos canónicos y actas de gobernanza que requieren décadas de inmutabilidad comprobable.",
-    usage: "Archivos Inmutables & Códice"
+    id: 'LATAMV-SIG-LONG-1',
+    name: 'Preservación Largo Plazo (SIG-LONG)',
+    algorithm: 'SLH-DSA-128s (SPHINCS+)',
+    status: 'active',
+    type: 'standard',
+    details:
+      'Hash-based signatures. Utilizado para documentos canónicos y actas de gobernanza que requieren décadas de inmutabilidad comprobable.',
+    usage: 'Archivos Inmutables & Códice',
   },
   {
-    id: "LATAMV-SIG-EXP-1",
-    name: "Firmas Compactas (SIG-EXP)",
-    algorithm: "FN-DSA-512 (Falcon)",
-    status: "experimental",
-    type: "experimental",
-    details: "Draft FIPS 206. Uso restringido para la malla CITEMESH IoT donde el ancho de banda es hiper-restringido.",
-    usage: "Edge Nodes & IoT (CITEMESH)"
+    id: 'LATAMV-SIG-EXP-1',
+    name: 'Firmas Compactas (SIG-EXP)',
+    algorithm: 'FN-DSA-512 (Falcon)',
+    status: 'experimental',
+    type: 'experimental',
+    details:
+      'Draft FIPS 206. Uso restringido para la malla CITEMESH IoT donde el ancho de banda es hiper-restringido.',
+    usage: 'Edge Nodes & IoT (CITEMESH)',
   },
 ];
 
 export const CryptographyTab: React.FC = () => {
-  const [activeInput, setActiveInput] = useState("Nodo Cero :: Real del Monte :: C.R.O.W.N. Payload");
-  const [keyPair, setKeyPair] = useState(() => generateMLKEMKeyPair("rdm-nodo-cero"));
+  const [activeInput, setActiveInput] = useState(
+    'Nodo Cero :: Real del Monte :: C.R.O.W.N. Payload'
+  );
+  const [keyPair, setKeyPair] = useState(() => generateMLKEMKeyPair('rdm-nodo-cero'));
   const [encapsulation, setEncapsulation] = useState(() => encapsulateMLKEM(keyPair.publicKey));
-  const [mldsaSig, setMldsaSig] = useState(() => signMLDSA87("Nodo Cero :: Real del Monte :: C.R.O.W.N. Payload"));
-  const [slhSig, setSlhSig] = useState(() => signSLHDSA128s("Nodo Cero :: Real del Monte :: C.R.O.W.N. Payload"));
-  const [litleGates, setLitleGates] = useState(() => evaluateLitle32Gates("Nodo Cero :: Real del Monte :: C.R.O.W.N. Payload"));
+  const [mldsaSig, setMldsaSig] = useState(() =>
+    signMLDSA87('Nodo Cero :: Real del Monte :: C.R.O.W.N. Payload')
+  );
+  const [slhSig, setSlhSig] = useState(() =>
+    signSLHDSA128s('Nodo Cero :: Real del Monte :: C.R.O.W.N. Payload')
+  );
+  const [litleGates, setLitleGates] = useState(() =>
+    evaluateLitle32Gates('Nodo Cero :: Real del Monte :: C.R.O.W.N. Payload')
+  );
   const [isRecomputing, setIsRecomputing] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
@@ -92,10 +122,13 @@ export const CryptographyTab: React.FC = () => {
           <div>
             <h4 className="text-sm font-mono font-bold text-slate-100 flex items-center gap-2">
               <span>CRYSTALS-LATAMV</span>
-              <span className="text-[9px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded font-mono">PQC ACTIVE</span>
+              <span className="text-[9px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded font-mono">
+                PQC ACTIVE
+              </span>
             </h4>
             <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-              Suite de Criptografía Poscuántica (ML-KEM-768 & ML-DSA-87). Resistencia comprobada contra algoritmos de Shor y Grover.
+              Suite de Criptografía Poscuántica (ML-KEM-768 & ML-DSA-87). Resistencia comprobada
+              contra algoritmos de Shor y Grover.
             </p>
           </div>
         </div>
@@ -108,10 +141,13 @@ export const CryptographyTab: React.FC = () => {
           <div>
             <h4 className="text-sm font-mono font-bold text-slate-100 flex items-center gap-2">
               <span>LITLE 32 Gates</span>
-              <span className="text-[9px] bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded font-mono">32/32 VERIFIED</span>
+              <span className="text-[9px] bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded font-mono">
+                32/32 VERIFIED
+              </span>
             </h4>
             <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-              Matriz de atestación cuántica de 32 compuertas lógicas (Hadamard, CNOT, Pauli-Z, Toffoli).
+              Matriz de atestación cuántica de 32 compuertas lógicas (Hadamard, CNOT, Pauli-Z,
+              Toffoli).
             </p>
           </div>
         </div>
@@ -124,10 +160,13 @@ export const CryptographyTab: React.FC = () => {
           <div>
             <h4 className="text-sm font-mono font-bold text-slate-100 flex items-center gap-2">
               <span>Encapsulamiento KEM</span>
-              <span className="text-[9px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded font-mono">HYBRID</span>
+              <span className="text-[9px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded font-mono">
+                HYBRID
+              </span>
             </h4>
             <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-              Capa híbrida X25519 + ML-KEM-768 para máxima compatibilidad y protección ante descifrado retrospectivo.
+              Capa híbrida X25519 + ML-KEM-768 para máxima compatibilidad y protección ante
+              descifrado retrospectivo.
             </p>
           </div>
         </div>
@@ -141,8 +180,12 @@ export const CryptographyTab: React.FC = () => {
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-mono font-bold text-slate-100">CONSOLA DE ATESTACIÓN Y FIRMA POSCUÁNTICA</h3>
-              <p className="text-xs text-slate-400">Generación y verificación determinista en vivo de la suite CRYSTALS-LATAMV</p>
+              <h3 className="text-base font-mono font-bold text-slate-100">
+                CONSOLA DE ATESTACIÓN Y FIRMA POSCUÁNTICA
+              </h3>
+              <p className="text-xs text-slate-400">
+                Generación y verificación determinista en vivo de la suite CRYSTALS-LATAMV
+              </p>
             </div>
           </div>
 
@@ -152,7 +195,7 @@ export const CryptographyTab: React.FC = () => {
             disabled={isRecomputing}
             className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-mono font-bold rounded-xl transition-all shadow-md flex items-center gap-2 cursor-pointer disabled:opacity-50"
           >
-            <RefreshCw className={`w-4 h-4 ${isRecomputing ? "animate-spin" : ""}`} />
+            <RefreshCw className={`w-4 h-4 ${isRecomputing ? 'animate-spin' : ''}`} />
             <span>Recalcular Firmas PQC</span>
           </button>
         </div>
@@ -181,11 +224,11 @@ export const CryptographyTab: React.FC = () => {
               </span>
               <button
                 type="button"
-                onClick={() => handleCopy(mldsaSig.signatureHex, "mldsa")}
+                onClick={() => handleCopy(mldsaSig.signatureHex, 'mldsa')}
                 className="text-[10px] text-slate-400 hover:text-slate-200 flex items-center gap-1 cursor-pointer"
               >
                 <Copy className="w-3 h-3" />
-                <span>{copiedKey === "mldsa" ? "Copiado!" : "Copiar"}</span>
+                <span>{copiedKey === 'mldsa' ? 'Copiado!' : 'Copiar'}</span>
               </button>
             </div>
             <p className="text-[11px] text-slate-400 break-all bg-black/40 p-2.5 rounded border border-slate-800/60 font-mono">
@@ -206,11 +249,11 @@ export const CryptographyTab: React.FC = () => {
               </span>
               <button
                 type="button"
-                onClick={() => handleCopy(slhSig.signatureHex, "slh")}
+                onClick={() => handleCopy(slhSig.signatureHex, 'slh')}
                 className="text-[10px] text-slate-400 hover:text-slate-200 flex items-center gap-1 cursor-pointer"
               >
                 <Copy className="w-3 h-3" />
-                <span>{copiedKey === "slh" ? "Copiado!" : "Copiar"}</span>
+                <span>{copiedKey === 'slh' ? 'Copiado!' : 'Copiar'}</span>
               </button>
             </div>
             <p className="text-[11px] text-slate-400 break-all bg-black/40 p-2.5 rounded border border-slate-800/60 font-mono">
@@ -243,8 +286,12 @@ export const CryptographyTab: React.FC = () => {
                 title={`Gate ${gate.gateIndex}: ${gate.gateType} | State: ${gate.qubitState} | Fidelity: ${(gate.fidelity * 100).toFixed(2)}%`}
               >
                 <div className="text-[10px] text-amber-400 font-bold">G{gate.gateIndex}</div>
-                <div className="text-[9px] text-slate-400 truncate">{gate.gateType.slice(0, 5)}</div>
-                <div className="text-[8px] text-emerald-400 font-bold mt-1">{(gate.fidelity * 100).toFixed(1)}%</div>
+                <div className="text-[9px] text-slate-400 truncate">
+                  {gate.gateType.slice(0, 5)}
+                </div>
+                <div className="text-[8px] text-emerald-400 font-bold mt-1">
+                  {(gate.fidelity * 100).toFixed(1)}%
+                </div>
               </div>
             ))}
           </div>
@@ -257,22 +304,31 @@ export const CryptographyTab: React.FC = () => {
           <FileText className="w-4 h-4 text-slate-400" />
           Subperfiles Operacionales (TAMV-RFC-0007)
         </h3>
-        
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {PROFILES.map((p) => (
-            <div key={p.id} className="bg-slate-900/40 border border-slate-800/80 p-5 rounded-2xl hover:border-slate-700 transition-colors shadow-lg">
+            <div
+              key={p.id}
+              className="bg-slate-900/40 border border-slate-800/80 p-5 rounded-2xl hover:border-slate-700 transition-colors shadow-lg"
+            >
               <div className="flex justify-between items-start mb-3">
                 <div className="flex items-center gap-2">
                   {p.type === 'standard' && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
-                  {p.type === 'experimental' && <AlertTriangle className="w-4 h-4 text-amber-400" />}
+                  {p.type === 'experimental' && (
+                    <AlertTriangle className="w-4 h-4 text-amber-400" />
+                  )}
                   {p.type === 'backup' && <Shield className="w-4 h-4 text-slate-400" />}
                   <h4 className="font-mono text-sm text-slate-200 font-bold">{p.id}</h4>
                 </div>
-                <span className={`text-[9px] font-mono px-2 py-0.5 rounded border uppercase tracking-widest ${
-                  p.status === 'active' ? 'bg-emerald-900/30 text-emerald-400 border-emerald-500/30' : 
-                  p.status === 'experimental' ? 'bg-amber-900/30 text-amber-400 border-amber-500/30' :
-                  'bg-slate-800 text-slate-400 border-slate-600'
-                }`}>
+                <span
+                  className={`text-[9px] font-mono px-2 py-0.5 rounded border uppercase tracking-widest ${
+                    p.status === 'active'
+                      ? 'bg-emerald-900/30 text-emerald-400 border-emerald-500/30'
+                      : p.status === 'experimental'
+                        ? 'bg-amber-900/30 text-amber-400 border-amber-500/30'
+                        : 'bg-slate-800 text-slate-400 border-slate-600'
+                  }`}
+                >
                   {p.status}
                 </span>
               </div>
@@ -280,9 +336,7 @@ export const CryptographyTab: React.FC = () => {
               <div className="text-[10px] font-mono text-slate-400 mb-3 bg-[#030712] p-2.5 rounded-xl border border-slate-800/50">
                 Algoritmo: <span className="text-slate-300 font-bold">{p.algorithm}</span>
               </div>
-              <p className="text-xs text-slate-400 leading-relaxed mb-4">
-                {p.details}
-              </p>
+              <p className="text-xs text-slate-400 leading-relaxed mb-4">{p.details}</p>
               <div className="flex items-center justify-between text-[10px] font-mono border-t border-slate-800/50 pt-3">
                 <span className="text-slate-500">Despliegue:</span>
                 <span className="text-slate-300">{p.usage}</span>

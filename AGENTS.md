@@ -46,7 +46,7 @@ sugerencias.
 
 ## 6. Fuente canónica de la especificación
 
-- `docs/evolution/*`: evolución Gen-5 V5 (7,000 controles).
+- `docs/history/archive/evolution/*`: evolución Gen-5 V5 (7,000 controles, archivado).
 - `docs/spec/*`: canon v40.0.0 y blueprints (api, librerías, CQRS/BookPI).
 - En conflicto entre código y spec, gana la spec; el conflicto se archiva en el
   manifest como divergencia pendiente de arbitraje humano.

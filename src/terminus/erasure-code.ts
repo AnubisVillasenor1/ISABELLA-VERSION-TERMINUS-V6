@@ -7,7 +7,7 @@
 export const DATA_SHARDS = 6 as const;
 export const TOTAL_SHARDS = 9 as const;
 export const PARITY_SHARDS = TOTAL_SHARDS - DATA_SHARDS;
-export const ERASURE_ALGORITHM = "RS_GF256_6_9_V1" as const;
+export const ERASURE_ALGORITHM = 'RS_GF256_6_9_V1' as const;
 
 const EXP = new Uint16Array(512);
 const LOG = new Uint16Array(256);
@@ -29,7 +29,7 @@ function gfMul(a: number, b: number): number {
 }
 
 function gfInv(value: number): number {
-  if (value === 0) throw new Error("TERMINUS_RS_MATRIX_SINGULAR");
+  if (value === 0) throw new Error('TERMINUS_RS_MATRIX_SINGULAR');
   return EXP[255 - LOG[value]!]!;
 }
 
@@ -44,7 +44,7 @@ type Matrix = number[][];
 function invertMatrix(input: Matrix): Matrix {
   const size = input.length;
   if (size === 0 || input.some((row) => row.length !== size)) {
-    throw new Error("TERMINUS_RS_MATRIX_INVALID");
+    throw new Error('TERMINUS_RS_MATRIX_INVALID');
   }
   const augmented = input.map((row, index) => [
     ...row,
@@ -54,7 +54,7 @@ function invertMatrix(input: Matrix): Matrix {
   for (let column = 0; column < size; column += 1) {
     let pivot = column;
     while (pivot < size && augmented[pivot]![column] === 0) pivot += 1;
-    if (pivot === size) throw new Error("TERMINUS_RS_MATRIX_SINGULAR");
+    if (pivot === size) throw new Error('TERMINUS_RS_MATRIX_SINGULAR');
     if (pivot !== column) {
       const tmp = augmented[column]!;
       augmented[column] = augmented[pivot]!;
@@ -82,18 +82,20 @@ function invertMatrix(input: Matrix): Matrix {
 
 function multiplyMatrices(left: Matrix, right: Matrix): Matrix {
   if (left.length === 0 || right.length === 0 || left[0]!.length !== right.length) {
-    throw new Error("TERMINUS_RS_MATRIX_DIMENSIONS");
+    throw new Error('TERMINUS_RS_MATRIX_DIMENSIONS');
   }
-  return left.map((row) => right[0]!.map((_, column) => {
-    let value = 0;
-    for (let k = 0; k < right.length; k += 1) value ^= gfMul(row[k]!, right[k]![column]!);
-    return value;
-  }));
+  return left.map((row) =>
+    right[0]!.map((_, column) => {
+      let value = 0;
+      for (let k = 0; k < right.length; k += 1) value ^= gfMul(row[k]!, right[k]![column]!);
+      return value;
+    })
+  );
 }
 
 function buildGeneratorMatrix(): Matrix {
   const vandermonde = Array.from({ length: TOTAL_SHARDS }, (_, row) =>
-    Array.from({ length: DATA_SHARDS }, (_, column) => gfPow(row, column)),
+    Array.from({ length: DATA_SHARDS }, (_, column) => gfPow(row, column))
   );
   const top = vandermonde.slice(0, DATA_SHARDS);
   return multiplyMatrices(vandermonde, invertMatrix(top));
@@ -152,7 +154,7 @@ export function encodeShards(input: Uint8Array): EncodedShards {
 /** Reconstruct from any six valid, unique shard indexes. Extra shards are ignored. */
 export function decodeShards(pieces: readonly ShardPiece[], originalLength: number): Uint8Array {
   if (!Number.isSafeInteger(originalLength) || originalLength < 0) {
-    throw new Error("TERMINUS_RS_ORIGINAL_LENGTH_INVALID");
+    throw new Error('TERMINUS_RS_ORIGINAL_LENGTH_INVALID');
   }
   const unique = new Map<number, Uint8Array>();
   for (const piece of pieces) {
@@ -160,13 +162,14 @@ export function decodeShards(pieces: readonly ShardPiece[], originalLength: numb
     if (!(piece.bytes instanceof Uint8Array) || unique.has(piece.index)) continue;
     unique.set(piece.index, piece.bytes);
   }
-  if (unique.size < DATA_SHARDS) throw new Error("TERMINUS_RS_INSUFFICIENT_SHARDS");
+  if (unique.size < DATA_SHARDS) throw new Error('TERMINUS_RS_INSUFFICIENT_SHARDS');
   const chosen = [...unique.entries()].slice(0, DATA_SHARDS);
   const shardLength = chosen[0]![1].byteLength;
   if (chosen.some(([, bytes]) => bytes.byteLength !== shardLength)) {
-    throw new Error("TERMINUS_RS_SHARD_LENGTH_MISMATCH");
+    throw new Error('TERMINUS_RS_SHARD_LENGTH_MISMATCH');
   }
-  if (originalLength > shardLength * DATA_SHARDS) throw new Error("TERMINUS_RS_LENGTH_EXCEEDS_CAPACITY");
+  if (originalLength > shardLength * DATA_SHARDS)
+    throw new Error('TERMINUS_RS_LENGTH_EXCEEDS_CAPACITY');
 
   const selectedMatrix = chosen.map(([index]) => GENERATOR[index]!);
   const inverse = invertMatrix(selectedMatrix);

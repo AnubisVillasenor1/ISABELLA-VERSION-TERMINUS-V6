@@ -1,4 +1,4 @@
-import type { PrismaClient } from "@/generated/prisma";
+import type { PrismaClient } from '@/generated/prisma';
 
 type PrismaModelMethod = (...args: unknown[]) => Promise<unknown>;
 
@@ -13,17 +13,17 @@ export interface PrismaClientOptions {
 async function getPrismaClient(options: PrismaClientOptions = {}): Promise<PrismaClient> {
   if (globalForPrisma.prisma) return globalForPrisma.prisma;
 
-  const { PrismaClient: PrismaClientConstructor } = await import("../generated/prisma");
+  const { PrismaClient: PrismaClientConstructor } = await import('../generated/prisma');
 
-  let logLevel: Array<"query" | "info" | "warn" | "error"> = ["error"];
+  let logLevel: Array<'query' | 'info' | 'warn' | 'error'> = ['error'];
   try {
-    const { config } = await import("./config");
+    const { config } = await import('./config');
     const cfg = config();
-    if (cfg.NODE_ENV !== "production") {
-      logLevel = ["warn", "error"];
+    if (cfg.NODE_ENV !== 'production') {
+      logLevel = ['warn', 'error'];
     }
   } catch {
-    logLevel = ["error"];
+    logLevel = ['error'];
   }
 
   const client = new PrismaClientConstructor({
@@ -40,8 +40,8 @@ async function getPrismaClient(options: PrismaClientOptions = {}): Promise<Prism
   // fail-closed (sin caché global).
   let cacheGlobal = false;
   try {
-    const { config } = await import("./config");
-    cacheGlobal = config().NODE_ENV !== "production";
+    const { config } = await import('./config');
+    cacheGlobal = config().NODE_ENV !== 'production';
   } catch {
     cacheGlobal = false;
   }
@@ -74,10 +74,10 @@ export async function withPrismaTransaction<T>(
   callback: (
     client: Omit<
       PrismaClient,
-      "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends"
-    >,
+      '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
+    >
   ) => Promise<T>,
-  options: { maxWaitMs?: number; timeoutMs?: number } = {},
+  options: { maxWaitMs?: number; timeoutMs?: number } = {}
 ): Promise<T> {
   const client = await getPrismaClient({
     poolConnectionTimeoutMs: options.timeoutMs ?? 10000,
@@ -112,6 +112,6 @@ export const prisma = new Proxy({} as PrismaClient, {
             >;
             return modelClient[method](...args);
           }) as PrismaModelMethod,
-      },
+      }
     ),
 });

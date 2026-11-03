@@ -1,10 +1,10 @@
-import * as fs from "node:fs";
-import * as path from "node:path";
-import * as yaml from "js-yaml";
-import { Policy, validatePolicy } from "../schemas/policy.schema";
-import { ClaimStatus, Claim } from "../schemas/claim.schema";
-import { Finding } from "../schemas/finding.schema";
-import { Evidence } from "../schemas/evidence.schema";
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import * as yaml from 'js-yaml';
+import { Policy, validatePolicy } from '../schemas/policy.schema';
+import { ClaimStatus, Claim } from '../schemas/claim.schema';
+import { Finding } from '../schemas/finding.schema';
+import { Evidence } from '../schemas/evidence.schema';
 
 export interface PolicyEngineConfig {
   policyPath?: string;
@@ -17,13 +17,13 @@ export class PolicyEngine {
 
   constructor(config: PolicyEngineConfig = {}) {
     this.policyPath =
-      config.policyPath ?? path.join(process.cwd(), "src/lib/genesis/policy/genesis-2.0.yaml");
+      config.policyPath ?? path.join(process.cwd(), 'src/lib/genesis/policy/genesis-2.0.yaml');
     this.policy = config.customPolicy ?? this.loadPolicy();
   }
 
   private loadPolicy(): Policy {
     try {
-      const content = fs.readFileSync(this.policyPath, "utf8");
+      const content = fs.readFileSync(this.policyPath, 'utf8');
       const parsed = yaml.load(content);
       return validatePolicy(parsed);
     } catch (error) {
@@ -34,12 +34,12 @@ export class PolicyEngine {
 
   private getDefaultPolicy(): Policy {
     return {
-      version: "2.0.1",
-      name: "Genesis 2.0 Core Policy (Default)",
-      description: "Default fallback policy",
+      version: '2.0.1',
+      name: 'Genesis 2.0 Core Policy (Default)',
+      description: 'Default fallback policy',
       globals: {
         failClosed: true,
-        trustLevel: "zero",
+        trustLevel: 'zero',
         evidenceTtlDays: 90,
         reauditFrequencyDays: 30,
       },
@@ -47,46 +47,46 @@ export class PolicyEngine {
         PLANNED: { minEvidence: 0, requiredEvidenceTypes: [] },
         DESIGNED: {
           minEvidence: 1,
-          requiredEvidenceTypes: ["ARCHITECTURE_DOCUMENT", "ADR"],
+          requiredEvidenceTypes: ['ARCHITECTURE_DOCUMENT', 'ADR'],
         },
         IMPLEMENTED: {
           minEvidence: 2,
-          requiredEvidenceTypes: ["SOURCE_CODE", "UNIT_TEST"],
+          requiredEvidenceTypes: ['SOURCE_CODE', 'UNIT_TEST'],
           minCodeCoverage: 0.8,
         },
         TESTED: {
           minEvidence: 4,
-          requiredEvidenceTypes: ["SOURCE_CODE", "UNIT_TEST", "INTEGRATION_TEST", "SECURITY_TEST"],
+          requiredEvidenceTypes: ['SOURCE_CODE', 'UNIT_TEST', 'INTEGRATION_TEST', 'SECURITY_TEST'],
           minCodeCoverage: 0.9,
           stabilityDays: 30,
         },
         VERIFIED: {
           minEvidence: 6,
           requiredEvidenceTypes: [
-            "SOURCE_CODE",
-            "UNIT_TEST",
-            "INTEGRATION_TEST",
-            "SECURITY_TEST",
-            "CONCURRENCY_TEST",
-            "EXTERNAL_AUDIT",
+            'SOURCE_CODE',
+            'UNIT_TEST',
+            'INTEGRATION_TEST',
+            'SECURITY_TEST',
+            'CONCURRENCY_TEST',
+            'EXTERNAL_AUDIT',
           ],
           minCodeCoverage: 0.95,
           stabilityDays: 90,
           externalReviewRequired: true,
         },
-        "PRODUCTION-VERIFIED": {
+        'PRODUCTION-VERIFIED': {
           minEvidence: 10,
           requiredEvidenceTypes: [
-            "SOURCE_CODE",
-            "UNIT_TEST",
-            "INTEGRATION_TEST",
-            "SECURITY_TEST",
-            "CONCURRENCY_TEST",
-            "EXTERNAL_AUDIT",
-            "DEPLOYMENT_RECORD",
-            "HEALTH_CHECK",
-            "MONITORING_DATA",
-            "INCIDENT_REPORT",
+            'SOURCE_CODE',
+            'UNIT_TEST',
+            'INTEGRATION_TEST',
+            'SECURITY_TEST',
+            'CONCURRENCY_TEST',
+            'EXTERNAL_AUDIT',
+            'DEPLOYMENT_RECORD',
+            'HEALTH_CHECK',
+            'MONITORING_DATA',
+            'INCIDENT_REPORT',
           ],
           minCodeCoverage: 0.95,
           stabilityDays: 90,
@@ -100,38 +100,38 @@ export class PolicyEngine {
         high: {
           maxOpen: 0,
           maxAccepted: 3,
-          acceptanceRequires: ["risk_assessment", "mitigation_plan", "owner_approval"],
+          acceptanceRequires: ['risk_assessment', 'mitigation_plan', 'owner_approval'],
         },
         medium: { maxOpen: 5, maxAccepted: 10 },
         low: { maxOpen: 20, maxAccepted: 50 },
       },
       requiredGates: {
-        preCommit: ["secret_scan", "lint", "typecheck"],
-        preMerge: ["build", "unit_test", "integration_test", "security_scan"],
+        preCommit: ['secret_scan', 'lint', 'typecheck'],
+        preMerge: ['build', 'unit_test', 'integration_test', 'security_scan'],
         preRelease: [
-          "build",
-          "unit_test",
-          "integration_test",
-          "security_test",
-          "concurrency_test",
-          "e2e_test",
-          "performance_test",
-          "security_audit",
-          "dependency_scan",
-          "sbom_generation",
+          'build',
+          'unit_test',
+          'integration_test',
+          'security_test',
+          'concurrency_test',
+          'e2e_test',
+          'performance_test',
+          'security_audit',
+          'dependency_scan',
+          'sbom_generation',
         ],
-        postRelease: ["health_check", "smoke_test", "monitoring_verification"],
+        postRelease: ['health_check', 'smoke_test', 'monitoring_verification'],
       },
       claims: {},
       exceptions: {
         allowException: {
           requires: [
-            "justification",
-            "risk_assessment",
-            "compensating_control",
-            "owner_approval",
-            "expiration_date",
-            "review_date",
+            'justification',
+            'risk_assessment',
+            'compensating_control',
+            'owner_approval',
+            'expiration_date',
+            'review_date',
           ],
         },
         maxExceptionAgeDays: 90,
@@ -168,7 +168,7 @@ export class PolicyEngine {
   evaluateClaim(
     claim: Claim,
     evidences: Evidence[],
-    findings: Finding[],
+    findings: Finding[]
   ): {
     status: ClaimStatus;
     meetsRequirements: boolean;
@@ -196,7 +196,7 @@ export class PolicyEngine {
         coverageEvidence.metadata.testResult!.coverage! < requirements.minCodeCoverage
       ) {
         gaps.push(
-          `Code coverage below threshold: ${coverageEvidence.metadata.testResult!.coverage} < ${requirements.minCodeCoverage}`,
+          `Code coverage below threshold: ${coverageEvidence.metadata.testResult!.coverage} < ${requirements.minCodeCoverage}`
         );
       }
     }
@@ -212,21 +212,21 @@ export class PolicyEngine {
   }
 
   evaluateRelease(findings: Finding[]): {
-    decision: "GO" | "CONDITIONAL" | "NO-GO";
+    decision: 'GO' | 'CONDITIONAL' | 'NO-GO';
     blockingFindings: Finding[];
     acceptedFindings: Finding[];
     justification: string;
   } {
     const thresholds = this.policy.releaseThresholds;
 
-    const criticalOpen = findings.filter((f) => f.severity === "CRITICAL" && f.status === "OPEN");
-    const highOpen = findings.filter((f) => f.severity === "HIGH" && f.status === "OPEN");
-    const highAccepted = findings.filter((f) => f.severity === "HIGH" && f.status === "ACCEPTED");
-    const mediumOpen = findings.filter((f) => f.severity === "MEDIUM" && f.status === "OPEN");
+    const criticalOpen = findings.filter((f) => f.severity === 'CRITICAL' && f.status === 'OPEN');
+    const highOpen = findings.filter((f) => f.severity === 'HIGH' && f.status === 'OPEN');
+    const highAccepted = findings.filter((f) => f.severity === 'HIGH' && f.status === 'ACCEPTED');
+    const mediumOpen = findings.filter((f) => f.severity === 'MEDIUM' && f.status === 'OPEN');
     const mediumAccepted = findings.filter(
-      (f) => f.severity === "MEDIUM" && f.status === "ACCEPTED",
+      (f) => f.severity === 'MEDIUM' && f.status === 'ACCEPTED'
     );
-    const lowOpen = findings.filter((f) => f.severity === "LOW" && f.status === "OPEN");
+    const lowOpen = findings.filter((f) => f.severity === 'LOW' && f.status === 'OPEN');
 
     const blockingFindings: Finding[] = [];
 
@@ -249,18 +249,18 @@ export class PolicyEngine {
       blockingFindings.push(...lowOpen);
     }
 
-    let decision: "GO" | "CONDITIONAL" | "NO-GO";
-    let justification = "";
+    let decision: 'GO' | 'CONDITIONAL' | 'NO-GO';
+    let justification = '';
 
     if (blockingFindings.length > 0) {
-      decision = "NO-GO";
+      decision = 'NO-GO';
       justification = `Se detectaron ${blockingFindings.length} findings que bloquean el release según la política.`;
     } else if (highAccepted.length > 0) {
-      decision = "CONDITIONAL";
+      decision = 'CONDITIONAL';
       justification = `Release condicional: ${highAccepted.length} findings HIGH aceptados con plan de mitigación.`;
     } else {
-      decision = "GO";
-      justification = "Todos los criterios de release cumplidos.";
+      decision = 'GO';
+      justification = 'Todos los criterios de release cumplidos.';
     }
 
     return {

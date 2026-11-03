@@ -1,5 +1,5 @@
 /**
- * POLICY AS CODE — REPOSITORIO POSTGRES (src/lib/repositories/policy-repository.ts)
+ * POLICY AS CODE — REPOSITORIO POSTGRES (src/lib/lib/repositories/policy-repository.ts)
  * -----------------------------------------------------------------
  * Carga las reglas versionadas de `isabella_policies` (migración
  * 20260926030000_isabella_policy_as_code.sql) para que la política viva en la
@@ -19,9 +19,9 @@
  * bundle del cliente.
  */
 
-import { config } from "../config";
+import { config } from '../config';
 
-export type DbPolicyStatus = "allowed" | "denied" | "requires_approval";
+export type DbPolicyStatus = 'allowed' | 'denied' | 'requires_approval';
 
 export interface DbPolicyRuleWhen {
   /** Nombre exacto de la herramienta (whitelist). */
@@ -73,10 +73,10 @@ async function getPool(): Promise<PoolLike> {
   const url = config().DATABASE_URL;
   if (!url) {
     throw new Error(
-      "POLICY_STORE_UNAVAILABLE: DATABASE_URL ausente; no se pueden leer isabella_policies.",
+      'POLICY_STORE_UNAVAILABLE: DATABASE_URL ausente; no se pueden leer isabella_policies.'
     );
   }
-  const { Pool } = await import("pg");
+  const { Pool } = await import('pg');
   pool = new Pool({ connectionString: url, max: 2 });
   return pool;
 }
@@ -93,7 +93,7 @@ function mapRow(row: Record<string, unknown>): StoredPolicy {
   let rules: DbPolicyRule[] = [];
   if (Array.isArray(rawRules)) {
     rules = rawRules as DbPolicyRule[];
-  } else if (typeof rawRules === "string") {
+  } else if (typeof rawRules === 'string') {
     try {
       const parsed: unknown = JSON.parse(rawRules);
       if (Array.isArray(parsed)) rules = parsed as DbPolicyRule[];
@@ -105,7 +105,7 @@ function mapRow(row: Record<string, unknown>): StoredPolicy {
     policyKey: String(row.policy_key),
     description: row.description == null ? null : String(row.description),
     rules,
-    version: String(row.version ?? "0.0.0"),
+    version: String(row.version ?? '0.0.0'),
     priority: Number(row.priority ?? 100),
   };
 }
@@ -120,7 +120,7 @@ export async function loadDbPolicies(): Promise<StoredPolicy[]> {
     `SELECT policy_key, description, rules, version, priority
        FROM public.isabella_policies
       WHERE enabled = TRUE
-      ORDER BY priority ASC, policy_key ASC`,
+      ORDER BY priority ASC, policy_key ASC`
   );
   return rows.map(mapRow);
 }

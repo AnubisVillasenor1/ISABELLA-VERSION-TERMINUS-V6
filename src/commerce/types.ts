@@ -1,17 +1,12 @@
 /** COMMERCE — planos comerciales gobernados (canon v40, prototipo final empresarial). */
 
-export type PlanId = "free" | "premium" | "vip" | "enterprise";
+export type PlanId = 'free' | 'premium' | 'vip' | 'enterprise';
 
-export type CommerceRiskLevel = "low" | "medium" | "high" | "critical";
+export type CommerceRiskLevel = 'low' | 'medium' | 'high' | 'critical';
 
-export type WorkspaceRole = "owner" | "admin" | "operator" | "viewer";
+export type WorkspaceRole = 'owner' | 'admin' | 'operator' | 'viewer';
 
-export type SubscriptionStatus =
-  | "active"
-  | "trialing"
-  | "past_due"
-  | "canceled"
-  | "suspended";
+export type SubscriptionStatus = 'active' | 'trialing' | 'past_due' | 'canceled' | 'suspended';
 
 export interface AuthContext {
   userId: string;
@@ -25,32 +20,32 @@ export interface AuthContext {
 }
 
 export type FeatureCode =
-  | "publish"
-  | "collect_payment"
-  | "affiliate"
-  | "revenue_dashboard"
-  | "funnel"
-  | "lead_process"
-  | "marketplace"
-  | "monetizable_automation"
-  | "offer"
-  | "campaign"
-  | "landing"
-  | "checkout"
-  | "attribution"
-  | "analytics"
-  | "recommendations"
-  | "multi_workspace"
-  | "scheduled_automation"
-  | "priority_review";
+  | 'publish'
+  | 'collect_payment'
+  | 'affiliate'
+  | 'revenue_dashboard'
+  | 'funnel'
+  | 'lead_process'
+  | 'marketplace'
+  | 'monetizable_automation'
+  | 'offer'
+  | 'campaign'
+  | 'landing'
+  | 'checkout'
+  | 'attribution'
+  | 'analytics'
+  | 'recommendations'
+  | 'multi_workspace'
+  | 'scheduled_automation'
+  | 'priority_review';
 
 export type QuotaKey =
-  | "active_offers"
-  | "active_campaigns"
-  | "connections_per_platform"
-  | "attribution_events_per_day"
-  | "leads_per_month"
-  | "workspaces";
+  | 'active_offers'
+  | 'active_campaigns'
+  | 'connections_per_platform'
+  | 'attribution_events_per_day'
+  | 'leads_per_month'
+  | 'workspaces';
 
 export interface PlanConfig {
   id: PlanId;
@@ -80,7 +75,7 @@ export interface RevenueSummary {
   updatedAt: string;
 }
 
-export type CommerceConfidenceLevel = "low" | "medium" | "high";
+export type CommerceConfidenceLevel = 'low' | 'medium' | 'high';
 
 export interface RevenueMetric {
   name: string;
@@ -91,7 +86,7 @@ export interface RevenueMetric {
   updatedAt: string;
 }
 
-export type FraudCategory = "identity" | "device" | "revenue" | "affiliate" | "lead";
+export type FraudCategory = 'identity' | 'device' | 'revenue' | 'affiliate' | 'lead';
 
 export interface FraudSignal {
   category: FraudCategory;
@@ -100,7 +95,7 @@ export interface FraudSignal {
   detail: string;
 }
 
-export type FraudDecision = "allow" | "review" | "block";
+export type FraudDecision = 'allow' | 'review' | 'block';
 
 export interface FraudVerdict {
   level: CommerceRiskLevel;

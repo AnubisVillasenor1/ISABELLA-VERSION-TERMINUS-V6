@@ -6,7 +6,7 @@
  *
  * CAPABILITY ≠ AUTHORITY ≠ EXECUTION ≠ EVIDENCE ≠ LEARNING ≠ PRODUCTION.
  */
-import { createHash } from "node:crypto";
+import { createHash } from 'node:crypto';
 
 export interface TemporalSnapshot<T = unknown> {
   readonly version: number;
@@ -28,27 +28,45 @@ export class TemporalCognitionEngine<T = unknown> {
   private readonly versions: TemporalSnapshot<T>[] = [];
   private current = 0;
 
-  get currentVersion(): number { return this.current; }
-  get size(): number { return this.versions.length; }
+  get currentVersion(): number {
+    return this.current;
+  }
+  get size(): number {
+    return this.versions.length;
+  }
 
-  record(state: T, label = "snapshot", parentVersion: number | null = this.current === 0 ? null : this.current): TemporalSnapshot<T> {
+  record(
+    state: T,
+    label = 'snapshot',
+    parentVersion: number | null = this.current === 0 ? null : this.current
+  ): TemporalSnapshot<T> {
     const version = this.versions.length + 1;
     const timestamp = new Date().toISOString();
-    const snap: Omit<TemporalSnapshot<T>, "hash"> = { version, timestamp, label, state: structuredClone(state), parentVersion };
-    const hash = createHash("sha256").update(JSON.stringify(snap)).digest("hex");
+    const snap: Omit<TemporalSnapshot<T>, 'hash'> = {
+      version,
+      timestamp,
+      label,
+      state: structuredClone(state),
+      parentVersion,
+    };
+    const hash = createHash('sha256').update(JSON.stringify(snap)).digest('hex');
     const full: TemporalSnapshot<T> = { ...snap, hash };
     this.versions.push(full);
     this.current = version;
     return full;
   }
 
-  get(version: number): TemporalSnapshot<T> | undefined { return this.versions.find((v) => v.version === version); }
+  get(version: number): TemporalSnapshot<T> | undefined {
+    return this.versions.find((v) => v.version === version);
+  }
 
-  list(): readonly TemporalSnapshot<T>[] { return [...this.versions]; }
+  list(): readonly TemporalSnapshot<T>[] {
+    return [...this.versions];
+  }
 
   rollback(version: number): TemporalSnapshot<T> {
     const target = this.get(version);
-    if (target === undefined) throw new RangeError("TEMPORAL: unknown version");
+    if (target === undefined) throw new RangeError('TEMPORAL: unknown version');
     this.current = version;
     return target;
   }
@@ -56,23 +74,28 @@ export class TemporalCognitionEngine<T = unknown> {
   diff(fromVersion: number, toVersion: number): { from: number; to: number; changed: boolean } {
     const a = this.get(fromVersion);
     const b = this.get(toVersion);
-    if (a === undefined || b === undefined) throw new RangeError("TEMPORAL: unknown version");
+    if (a === undefined || b === undefined) throw new RangeError('TEMPORAL: unknown version');
     return { from: fromVersion, to: toVersion, changed: a.hash !== b.hash };
   }
 
   /** Contrafactual: proyecta un estado derivado aplicando una transformación sobre una versión base. */
-  counterfactual(baseVersion: number, scenario: string, transform: (state: T) => T, confidence = 0.5): CounterfactualResult<T> {
+  counterfactual(
+    baseVersion: number,
+    scenario: string,
+    transform: (state: T) => T,
+    confidence = 0.5
+  ): CounterfactualResult<T> {
     const base = this.get(baseVersion);
-    if (base === undefined) throw new RangeError("TEMPORAL: unknown base version");
-    if (confidence < 0 || confidence > 1) throw new RangeError("TEMPORAL: confidence must be 0..1");
+    if (base === undefined) throw new RangeError('TEMPORAL: unknown base version');
+    if (confidence < 0 || confidence > 1) throw new RangeError('TEMPORAL: confidence must be 0..1');
     const projected = transform(structuredClone(base.state));
     return { baseVersion, scenario, projectedState: projected, confidence };
   }
 
   /** Simulación: ejecuta una función sobre el estado actual y registra el resultado como nueva versión si se solicita. */
-  simulate(transform: (state: T) => T, label = "simulation", persist = false): T {
+  simulate(transform: (state: T) => T, label = 'simulation', persist = false): T {
     const cur = this.get(this.current);
-    if (cur === undefined) throw new RangeError("TEMPORAL: no current state");
+    if (cur === undefined) throw new RangeError('TEMPORAL: no current state');
     const next = transform(structuredClone(cur.state));
     if (persist) this.record(next, label, this.current);
     return next;
@@ -82,9 +105,20 @@ export class TemporalCognitionEngine<T = unknown> {
     const reasons: string[] = [];
     let prev: number | null = null;
     this.versions.forEach((v, i) => {
-      const recompute = createHash("sha256").update(JSON.stringify({ version: v.version, timestamp: v.timestamp, label: v.label, state: v.state, parentVersion: v.parentVersion })).digest("hex");
+      const recompute = createHash('sha256')
+        .update(
+          JSON.stringify({
+            version: v.version,
+            timestamp: v.timestamp,
+            label: v.label,
+            state: v.state,
+            parentVersion: v.parentVersion,
+          })
+        )
+        .digest('hex');
       if (recompute !== v.hash) reasons.push(`HASH_MISMATCH@${i}`);
-      if (v.parentVersion !== prev && !(v.parentVersion === null && i === 0)) reasons.push(`PARENT_MISMATCH@${i}`);
+      if (v.parentVersion !== prev && !(v.parentVersion === null && i === 0))
+        reasons.push(`PARENT_MISMATCH@${i}`);
       prev = v.version;
     });
     return { valid: reasons.length === 0, reasons, count: this.versions.length };

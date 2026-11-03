@@ -16,7 +16,7 @@ export interface TerritorialIndex {
   name: string;
   sovereignty: string;
   index: number;
-  priority: "immediate" | "planned" | "deferred";
+  priority: 'immediate' | 'planned' | 'deferred';
 }
 
 function round4(value: number): number {
@@ -25,20 +25,20 @@ function round4(value: number): number {
 
 function validatePopulation(population: number): void {
   if (!Number.isInteger(population) || population < 0) {
-    throw new Error("TERRITORY_POPULATION_INVALID");
+    throw new Error('TERRITORY_POPULATION_INVALID');
   }
 }
 
 function validateReadiness(readiness: number): void {
   if (!Number.isFinite(readiness) || readiness < 0 || readiness > 1) {
-    throw new Error("TERRITORY_READINESS_OUT_OF_RANGE");
+    throw new Error('TERRITORY_READINESS_OUT_OF_RANGE');
   }
 }
 
-function priorityFor(readiness: number): "immediate" | "planned" | "deferred" {
-  if (readiness >= 0.8) return "immediate";
-  if (readiness >= 0.5) return "planned";
-  return "deferred";
+function priorityFor(readiness: number): 'immediate' | 'planned' | 'deferred' {
+  if (readiness >= 0.8) return 'immediate';
+  if (readiness >= 0.5) return 'planned';
+  return 'deferred';
 }
 
 export function fabricateTerritories(territories: Territory[]): {
@@ -50,7 +50,7 @@ export function fabricateTerritories(territories: Territory[]): {
 
   for (const territory of territories) {
     if (seen.has(territory.id)) {
-      throw new Error("TERRITORY_DUPLICATE_ID");
+      throw new Error('TERRITORY_DUPLICATE_ID');
     }
     seen.add(territory.id);
     validatePopulation(territory.population);

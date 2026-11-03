@@ -21,32 +21,32 @@
  *    intento de intrusión/spoofing en el AuditStore encadenado por SHA-256.
  */
 
-import * as crypto from "node:crypto";
-import { config } from "./config";
-import { createJwksCache, type JwksCache } from "./jwks-cache";
-import { verifyJwt, type JwtClaims, type JwtHeader } from "./jwt-verifier";
-import { jwkToPem } from "./oidc";
-import { createAuditRepository, type AuditSeverity } from "./repositories/audit-repository";
-import { mapSupabaseRole } from "./supabase-auth";
-import { ROLES, type Role } from "./rbac";
-import type { TokenClaims } from "./security";
+import * as crypto from 'node:crypto';
+import { config } from './config';
+import { createJwksCache, type JwksCache } from './jwks-cache';
+import { verifyJwt, type JwtClaims, type JwtHeader } from './jwt-verifier';
+import { jwkToPem } from './oidc';
+import { createAuditRepository, type AuditSeverity } from './repositories/audit-repository';
+import { mapSupabaseRole } from './supabase-auth';
+import { ROLES, type Role } from './rbac';
+import type { TokenClaims } from './security';
 
-export type AuthProviderType = "internal_sovereign" | "oidc_jwks" | "supabase_auth";
+export type AuthProviderType = 'internal_sovereign' | 'oidc_jwks' | 'supabase_auth';
 
 export type AuthFailureReasonCode =
-  | "TOKEN_MISSING"
-  | "FORMAT_INVALID"
-  | "ALGORITHM_NONE_FORBIDDEN"
-  | "ALGORITHM_CONFUSION"
-  | "UNTRUSTED_ISSUER"
-  | "SIGNATURE_TAMPERED"
-  | "TOKEN_EXPIRED"
-  | "TOKEN_NOT_YET_VALID"
-  | "AUDIENCE_MISMATCH"
-  | "SUBJECT_MISSING"
-  | "JWKS_KEY_NOT_FOUND"
-  | "PRIVILEGE_SPOOFING_ATTEMPT"
-  | "CRYPTO_ERROR";
+  | 'TOKEN_MISSING'
+  | 'FORMAT_INVALID'
+  | 'ALGORITHM_NONE_FORBIDDEN'
+  | 'ALGORITHM_CONFUSION'
+  | 'UNTRUSTED_ISSUER'
+  | 'SIGNATURE_TAMPERED'
+  | 'TOKEN_EXPIRED'
+  | 'TOKEN_NOT_YET_VALID'
+  | 'AUDIENCE_MISMATCH'
+  | 'SUBJECT_MISSING'
+  | 'JWKS_KEY_NOT_FOUND'
+  | 'PRIVILEGE_SPOOFING_ATTEMPT'
+  | 'CRYPTO_ERROR';
 
 export interface AuthVerificationContext {
   ip?: string;
@@ -69,7 +69,7 @@ export interface AuthVerificationSuccess {
     email?: string;
     username?: string;
   };
-  auditSeverity: "S3";
+  auditSeverity: 'S3';
   traceId: string;
   correlationId: string;
 }
@@ -106,24 +106,24 @@ class AuthVerificationLayerImpl {
     const issuers = new Set<string>();
 
     // Emisor soberano interno
-    issuers.add("TAMV Online Network Security Hub");
-    issuers.add("isabella.sovereign");
+    issuers.add('TAMV Online Network Security Hub');
+    issuers.add('isabella.sovereign');
 
     // Emisor OIDC canónico configurado en env
     if (cfg.AUTH_ISSUER) {
-      issuers.add(cfg.AUTH_ISSUER.replace(/\/+$/, ""));
+      issuers.add(cfg.AUTH_ISSUER.replace(/\/+$/, ''));
     }
 
     // Emisor Supabase si está configurado
     if (cfg.SUPABASE_URL) {
-      const base = cfg.SUPABASE_URL.replace(/\/+$/, "");
+      const base = cfg.SUPABASE_URL.replace(/\/+$/, '');
       issuers.add(`${base}/auth/v1`);
       issuers.add(base);
     }
 
     // Proveedores personalizados registrados
     for (const [iss] of this.customTrustedProviders) {
-      issuers.add(iss.replace(/\/+$/, ""));
+      issuers.add(iss.replace(/\/+$/, ''));
     }
 
     return Array.from(issuers);
@@ -133,7 +133,7 @@ class AuthVerificationLayerImpl {
    * Registra un proveedor OIDC confiable para entornos federados.
    */
   public registerTrustedProvider(provider: TrustedOidcProviderConfig): void {
-    const norm = provider.issuer.replace(/\/+$/, "");
+    const norm = provider.issuer.replace(/\/+$/, '');
     this.customTrustedProviders.set(norm, { ...provider, issuer: norm });
   }
 
@@ -141,7 +141,7 @@ class AuthVerificationLayerImpl {
    * Obtiene o inicializa la caché JWKS para un emisor específico.
    */
   private getJwksCacheForIssuer(issuer: string, customJwksUri?: string): JwksCache {
-    const norm = issuer.replace(/\/+$/, "");
+    const norm = issuer.replace(/\/+$/, '');
     let cache = this.jwksCaches.get(norm);
     if (!cache) {
       const cfg = config();
@@ -149,15 +149,15 @@ class AuthVerificationLayerImpl {
       // Si se define OIDC_JWKS_URL global o customJwksUri
       const effectiveJwksUri =
         customJwksUri ||
-        (cfg.AUTH_ISSUER && norm === cfg.AUTH_ISSUER.replace(/\/+$/, "")
+        (cfg.AUTH_ISSUER && norm === cfg.AUTH_ISSUER.replace(/\/+$/, '')
           ? cfg.OIDC_JWKS_URL
           : undefined);
 
       if (effectiveJwksUri) {
         // JwksCache usa `${issuer}/.well-known/jwks.json`, si se pasa URI directa la adaptamos
         const urlObj = new URL(effectiveJwksUri);
-        const derivedBase = urlObj.pathname.endsWith("/.well-known/jwks.json")
-          ? `${urlObj.origin}${urlObj.pathname.replace(/\/\.well-known\/jwks\.json$/, "")}`
+        const derivedBase = urlObj.pathname.endsWith('/.well-known/jwks.json')
+          ? `${urlObj.origin}${urlObj.pathname.replace(/\/\.well-known\/jwks\.json$/, '')}`
           : norm;
         cache = createJwksCache(derivedBase, { ttlMs });
       } else {
@@ -172,21 +172,21 @@ class AuthVerificationLayerImpl {
    * Decodifica de forma segura la cabecera del JWT sin confiar en su firma aún.
    */
   private inspectHeader(
-    token: string,
+    token: string
   ): { ok: true; header: Partial<JwtHeader> } | { ok: false; reason: string } {
-    const parts = token.split(".");
+    const parts = token.split('.');
     if (parts.length !== 3) {
-      return { ok: false, reason: "Formato JWT inválido (se esperan 3 segmentos)." };
+      return { ok: false, reason: 'Formato JWT inválido (se esperan 3 segmentos).' };
     }
     const [headerB64] = parts;
     try {
-      const normalized = headerB64.replace(/-/g, "+").replace(/_/g, "/");
-      const pad = normalized.length % 4 === 0 ? "" : "=".repeat(4 - (normalized.length % 4));
-      const json = Buffer.from(normalized + pad, "base64").toString("utf-8");
+      const normalized = headerB64.replace(/-/g, '+').replace(/_/g, '/');
+      const pad = normalized.length % 4 === 0 ? '' : '='.repeat(4 - (normalized.length % 4));
+      const json = Buffer.from(normalized + pad, 'base64').toString('utf-8');
       const header = JSON.parse(json) as Partial<JwtHeader>;
       return { ok: true, header };
     } catch {
-      return { ok: false, reason: "Cabecera JWT corrupta o no parseable." };
+      return { ok: false, reason: 'Cabecera JWT corrupta o no parseable.' };
     }
   }
 
@@ -194,21 +194,21 @@ class AuthVerificationLayerImpl {
    * Decodifica el payload sin verificar para inspeccionar claims de emisor/sujeto antes de resolver la clave.
    */
   private inspectPayload(
-    token: string,
+    token: string
   ): { ok: true; payload: Partial<JwtClaims> } | { ok: false; reason: string } {
-    const parts = token.split(".");
+    const parts = token.split('.');
     if (parts.length !== 3) {
-      return { ok: false, reason: "Formato JWT inválido." };
+      return { ok: false, reason: 'Formato JWT inválido.' };
     }
     const [, payloadB64] = parts;
     try {
-      const normalized = payloadB64.replace(/-/g, "+").replace(/_/g, "/");
-      const pad = normalized.length % 4 === 0 ? "" : "=".repeat(4 - (normalized.length % 4));
-      const json = Buffer.from(normalized + pad, "base64").toString("utf-8");
+      const normalized = payloadB64.replace(/-/g, '+').replace(/_/g, '/');
+      const pad = normalized.length % 4 === 0 ? '' : '='.repeat(4 - (normalized.length % 4));
+      const json = Buffer.from(normalized + pad, 'base64').toString('utf-8');
       const payload = JSON.parse(json) as Partial<JwtClaims>;
       return { ok: true, payload };
     } catch {
-      return { ok: false, reason: "Payload JWT corrupto." };
+      return { ok: false, reason: 'Payload JWT corrupto.' };
     }
   }
 
@@ -218,35 +218,35 @@ class AuthVerificationLayerImpl {
    */
   public async verifyToken(
     token: string | null | undefined,
-    ctx: AuthVerificationContext = {},
+    ctx: AuthVerificationContext = {}
   ): Promise<AuthVerificationOutcome> {
     const traceId = ctx.traceId || `tr_${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
     const correlationId =
       ctx.correlationId || `corr_${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
-    const actorIp = ctx.ip || "127.0.0.1";
+    const actorIp = ctx.ip || '127.0.0.1';
 
-    if (!token || typeof token !== "string" || !token.trim()) {
+    if (!token || typeof token !== 'string' || !token.trim()) {
       return this.fail({
         traceId,
         correlationId,
         actorIp,
-        error: "Credencial ausente o nula.",
-        reasonCode: "TOKEN_MISSING",
+        error: 'Credencial ausente o nula.',
+        reasonCode: 'TOKEN_MISSING',
         spoofingAttempt: false,
-        severity: "S2",
+        severity: 'S2',
       });
     }
 
-    if (token.startsWith("isa_live_")) {
+    if (token.startsWith('isa_live_')) {
       return this.fail({
         traceId,
         correlationId,
         actorIp,
         error:
           "El formato de token 'isa_live_' ha sido plenamente deprecado. Inicie sesión mediante OIDC/OAuth.",
-        reasonCode: "FORMAT_INVALID",
+        reasonCode: 'FORMAT_INVALID',
         spoofingAttempt: false,
-        severity: "S2",
+        severity: 'S2',
       });
     }
 
@@ -258,9 +258,9 @@ class AuthVerificationLayerImpl {
         correlationId,
         actorIp,
         error: headerResult.reason,
-        reasonCode: "FORMAT_INVALID",
+        reasonCode: 'FORMAT_INVALID',
         spoofingAttempt: true,
-        severity: "S1",
+        severity: 'S1',
       });
     }
 
@@ -268,16 +268,16 @@ class AuthVerificationLayerImpl {
     const alg = header.alg;
 
     // 2. Prevención de ataque 'alg: none'
-    if (!alg || alg.toLowerCase() === "none") {
+    if (!alg || alg.toLowerCase() === 'none') {
       return this.fail({
         traceId,
         correlationId,
         actorIp,
         error:
           "Ataque detectado: Algoritmo 'none' estrictamente prohibido por política Sovereign Zero-Trust.",
-        reasonCode: "ALGORITHM_NONE_FORBIDDEN",
+        reasonCode: 'ALGORITHM_NONE_FORBIDDEN',
         spoofingAttempt: true,
-        severity: "S0",
+        severity: 'S0',
       });
     }
 
@@ -289,15 +289,15 @@ class AuthVerificationLayerImpl {
         correlationId,
         actorIp,
         error: payloadResult.reason,
-        reasonCode: "FORMAT_INVALID",
+        reasonCode: 'FORMAT_INVALID',
         spoofingAttempt: true,
-        severity: "S1",
+        severity: 'S1',
       });
     }
 
     const rawPayload = payloadResult.payload;
     const tokenIssuer =
-      typeof rawPayload.iss === "string" ? rawPayload.iss.replace(/\/+$/, "") : "";
+      typeof rawPayload.iss === 'string' ? rawPayload.iss.replace(/\/+$/, '') : '';
     const trustedIssuers = this.getTrustedIssuers();
 
     // 4. Verificación de Emisor (Issuer Whitelist & Anti-Spoofing)
@@ -307,14 +307,14 @@ class AuthVerificationLayerImpl {
         correlationId,
         actorIp,
         error: "Suplantación rechazada: Falta el emisor 'iss' en el token.",
-        reasonCode: "UNTRUSTED_ISSUER",
+        reasonCode: 'UNTRUSTED_ISSUER',
         spoofingAttempt: true,
-        severity: "S0",
+        severity: 'S0',
       });
     }
 
     const isTrustedIssuer = trustedIssuers.some(
-      (ti) => ti.toLowerCase() === tokenIssuer.toLowerCase(),
+      (ti) => ti.toLowerCase() === tokenIssuer.toLowerCase()
     );
     if (!isTrustedIssuer) {
       return this.fail({
@@ -322,18 +322,18 @@ class AuthVerificationLayerImpl {
         correlationId,
         actorIp,
         error: `Suplantación rechazada: Emisor '${tokenIssuer}' no reconocido ni autorizado en la lista de confianza soberana.`,
-        reasonCode: "UNTRUSTED_ISSUER",
+        reasonCode: 'UNTRUSTED_ISSUER',
         spoofingAttempt: true,
-        severity: "S0",
+        severity: 'S0',
       });
     }
 
     // 5. Determinación de la ruta criptográfica según algoritmo y emisor
     const cfg = config();
     const isInternalIssuer =
-      tokenIssuer === "TAMV Online Network Security Hub" || tokenIssuer === "isabella.sovereign";
+      tokenIssuer === 'TAMV Online Network Security Hub' || tokenIssuer === 'isabella.sovereign';
 
-    if (alg === "HS256") {
+    if (alg === 'HS256') {
       // Prevención de Confusión de Algoritmo:
       // Tokens externos de OIDC NUNCA deben verificarse con secreto simétrico HMAC local
       if (!isInternalIssuer) {
@@ -342,9 +342,9 @@ class AuthVerificationLayerImpl {
           correlationId,
           actorIp,
           error: `Intento de ataque por confusión de algoritmos: Emisor externo '${tokenIssuer}' intentó autenticar con clave simétrica HS256.`,
-          reasonCode: "ALGORITHM_CONFUSION",
+          reasonCode: 'ALGORITHM_CONFUSION',
           spoofingAttempt: true,
-          severity: "S0",
+          severity: 'S0',
         });
       }
 
@@ -354,32 +354,32 @@ class AuthVerificationLayerImpl {
           traceId,
           correlationId,
           actorIp,
-          error: "Error interno del servidor: AUTH_JWT_SECRET no configurado.",
-          reasonCode: "CRYPTO_ERROR",
+          error: 'Error interno del servidor: AUTH_JWT_SECRET no configurado.',
+          reasonCode: 'CRYPTO_ERROR',
           spoofingAttempt: false,
-          severity: "S1",
+          severity: 'S1',
         });
       }
 
       const verified = verifyJwt(token, {
         key: secret,
-        algorithm: "HS256",
+        algorithm: 'HS256',
         issuer: tokenIssuer,
         audiences: ctx.expectedAudience
           ? [ctx.expectedAudience]
-          : ["Isabella S0 Gateway", cfg.AUTH_AUDIENCE || "isabella"],
+          : ['Isabella S0 Gateway', cfg.AUTH_AUDIENCE || 'isabella'],
       });
 
       if (!verified.ok) {
-        const isExpired = verified.reason.includes("expirado");
+        const isExpired = verified.reason.includes('expirado');
         return this.fail({
           traceId,
           correlationId,
           actorIp,
           error: verified.reason,
-          reasonCode: isExpired ? "TOKEN_EXPIRED" : "SIGNATURE_TAMPERED",
+          reasonCode: isExpired ? 'TOKEN_EXPIRED' : 'SIGNATURE_TAMPERED',
           spoofingAttempt: !isExpired,
-          severity: isExpired ? "S2" : "S1",
+          severity: isExpired ? 'S2' : 'S1',
         });
       }
 
@@ -387,12 +387,12 @@ class AuthVerificationLayerImpl {
         traceId,
         correlationId,
         actorIp,
-        provider: "internal_sovereign",
+        provider: 'internal_sovereign',
         payload: verified.payload,
       });
     }
 
-    if (alg === "RS256") {
+    if (alg === 'RS256') {
       // 6. Verificación Asimétrica con JWKS / OIDC Provider
       const customConfig = this.customTrustedProviders.get(tokenIssuer);
       const jwksCache = this.getJwksCacheForIssuer(tokenIssuer, customConfig?.jwksUri);
@@ -406,43 +406,43 @@ class AuthVerificationLayerImpl {
           traceId,
           correlationId,
           actorIp,
-          error: `Error al resolver clave pública JWKS para kid '${header.kid ?? "(sin kid)"}': ${err instanceof Error ? err.message : String(err)}`,
-          reasonCode: "JWKS_KEY_NOT_FOUND",
+          error: `Error al resolver clave pública JWKS para kid '${header.kid ?? '(sin kid)'}': ${err instanceof Error ? err.message : String(err)}`,
+          reasonCode: 'JWKS_KEY_NOT_FOUND',
           spoofingAttempt: true,
-          severity: "S1",
+          severity: 'S1',
         });
       }
 
       const expectedAudiences = [
-        ctx.expectedAudience || cfg.AUTH_AUDIENCE || "isabella",
-        "Isabella S0 Gateway",
+        ctx.expectedAudience || cfg.AUTH_AUDIENCE || 'isabella',
+        'Isabella S0 Gateway',
         ...(customConfig?.audience ? [customConfig.audience] : []),
       ];
 
       const verified = verifyJwt(token, {
         key: keyPem,
-        algorithm: "RS256",
+        algorithm: 'RS256',
         issuer: tokenIssuer,
         audiences: expectedAudiences,
       });
 
       if (!verified.ok) {
-        const isExpired = verified.reason.includes("expirado");
+        const isExpired = verified.reason.includes('expirado');
         return this.fail({
           traceId,
           correlationId,
           actorIp,
           error: `Firma OIDC/JWKS inválida: ${verified.reason}`,
-          reasonCode: isExpired ? "TOKEN_EXPIRED" : "SIGNATURE_TAMPERED",
+          reasonCode: isExpired ? 'TOKEN_EXPIRED' : 'SIGNATURE_TAMPERED',
           spoofingAttempt: !isExpired,
-          severity: isExpired ? "S2" : "S1",
+          severity: isExpired ? 'S2' : 'S1',
         });
       }
 
       // Mapeo seguro de identidad y prevención de escalado de privilegios
       const p = verified.payload;
-      const isSupabase = tokenIssuer.includes("supabase.co") || tokenIssuer.includes("/auth/v1");
-      const providerType: AuthProviderType = isSupabase ? "supabase_auth" : "oidc_jwks";
+      const isSupabase = tokenIssuer.includes('supabase.co') || tokenIssuer.includes('/auth/v1');
+      const providerType: AuthProviderType = isSupabase ? 'supabase_auth' : 'oidc_jwks';
 
       // Control Anti-Spoofing de Roles:
       // - Un rol desconocido/ausente degrada a Guest, nunca a Operator
@@ -450,12 +450,12 @@ class AuthVerificationLayerImpl {
       // - Un emisor EXTERNO (OIDC de terceros) sólo puede declarar roles de
       //   la allowlist: jamás governance_admin ni SovereignOwner. La
       //   administración de gobernanza/permisos no viene de un IdP ajeno.
-      const EXTERNAL_ISSUER_ROLES: readonly string[] = ["Guest", "Auditor", "Operator"];
+      const EXTERNAL_ISSUER_ROLES: readonly string[] = ['Guest', 'Auditor', 'Operator'];
       const rawRole =
         (p.role as unknown) ?? (p.app_metadata as Record<string, unknown> | undefined)?.role;
       // Normalización case-insensitive: los IdP suelen emitir "operator".
       const normalizedRole =
-        typeof rawRole === "string"
+        typeof rawRole === 'string'
           ? (ROLES.find((role) => role.toLowerCase() === rawRole.trim().toLowerCase()) as
               Role | undefined)
           : undefined;
@@ -466,19 +466,19 @@ class AuthVerificationLayerImpl {
         ? mapSupabaseRole(rawRole)
         : normalizedRole && roleAllowed
           ? normalizedRole
-          : "Guest";
+          : 'Guest';
 
       const normalizedClaims: TokenClaims = {
         iss: p.iss ?? tokenIssuer,
         sub: p.sub,
-        aud: Array.isArray(p.aud) ? p.aud.join(" ") : String(p.aud ?? "isabella"),
+        aud: Array.isArray(p.aud) ? p.aud.join(' ') : String(p.aud ?? 'isabella'),
         exp: p.exp ?? Math.floor(Date.now() / 1000) + 3600,
         tenantId:
           (p.tenantId as string) ??
           ((p.app_metadata as Record<string, unknown> | undefined)?.tenant_id as string) ??
-          "sovereign-default",
+          'sovereign-default',
         role: mappedRole,
-        scope: typeof p.scope === "string" ? p.scope : "isabella:chat",
+        scope: typeof p.scope === 'string' ? p.scope : 'isabella:chat',
         jti: (p.jti as string) ?? `oidc_${crypto.randomUUID().slice(0, 12)}`,
       };
 
@@ -497,9 +497,9 @@ class AuthVerificationLayerImpl {
       correlationId,
       actorIp,
       error: `Algoritmo criptográfico '${alg}' no permitido por la política Sovereign Zero-Trust.`,
-      reasonCode: "ALGORITHM_CONFUSION",
+      reasonCode: 'ALGORITHM_CONFUSION',
       spoofingAttempt: true,
-      severity: "S0",
+      severity: 'S0',
     });
   }
 
@@ -510,7 +510,7 @@ class AuthVerificationLayerImpl {
     error: string;
     reasonCode: AuthFailureReasonCode;
     spoofingAttempt: boolean;
-    severity: Exclude<AuditSeverity, "S3">;
+    severity: Exclude<AuditSeverity, 'S3'>;
   }): Promise<AuthVerificationFailure> {
     const eventName = params.spoofingAttempt
       ? `AUTH_SPOOFING_PREVENTED_${params.reasonCode}`
@@ -532,7 +532,7 @@ class AuthVerificationLayerImpl {
         remediated: true, // Bloqueado activamente por la capa de verificación
       });
     } catch (err) {
-      console.error("[AuthVerificationLayer] Error al persistir evento de auditoría:", err);
+      console.error('[AuthVerificationLayer] Error al persistir evento de auditoría:', err);
     }
 
     return {
@@ -555,16 +555,16 @@ class AuthVerificationLayerImpl {
   }): Promise<AuthVerificationSuccess> {
     const p = params.payload;
     const claims: TokenClaims = {
-      iss: p.iss ?? "unknown",
+      iss: p.iss ?? 'unknown',
       sub: p.sub,
-      aud: Array.isArray(p.aud) ? p.aud.join(" ") : String(p.aud ?? "isabella"),
+      aud: Array.isArray(p.aud) ? p.aud.join(' ') : String(p.aud ?? 'isabella'),
       exp: p.exp ?? Math.floor(Date.now() / 1000) + 3600,
-      tenantId: (p.tenantId as string) ?? "sovereign-default",
+      tenantId: (p.tenantId as string) ?? 'sovereign-default',
       role:
-        typeof p.role === "string" && (ROLES as readonly string[]).includes(p.role)
+        typeof p.role === 'string' && (ROLES as readonly string[]).includes(p.role)
           ? p.role
-          : "Guest",
-      scope: (p.scope as string) ?? "isabella:chat",
+          : 'Guest',
+      scope: (p.scope as string) ?? 'isabella:chat',
       jti: (p.jti as string) ?? `jti_${crypto.randomUUID().slice(0, 8)}`,
     };
 
@@ -574,7 +574,7 @@ class AuthVerificationLayerImpl {
         correlationId: params.correlationId,
         actorIp: params.actorIp,
         event: `AUTH_SUCCESS_${params.provider.toUpperCase()}`,
-        severity: "S3",
+        severity: 'S3',
         details: JSON.stringify({
           provider: params.provider,
           sub: claims.sub,
@@ -586,7 +586,7 @@ class AuthVerificationLayerImpl {
         remediated: false,
       });
     } catch (err) {
-      console.error("[AuthVerificationLayer] Error al persistir evento de éxito:", err);
+      console.error('[AuthVerificationLayer] Error al persistir evento de éxito:', err);
     }
 
     return {
@@ -598,10 +598,10 @@ class AuthVerificationLayerImpl {
         tenantId: claims.tenantId,
         role: claims.role,
         scope: claims.scope,
-        email: typeof p.email === "string" ? p.email : undefined,
-        username: typeof p.username === "string" ? p.username : undefined,
+        email: typeof p.email === 'string' ? p.email : undefined,
+        username: typeof p.username === 'string' ? p.username : undefined,
       },
-      auditSeverity: "S3",
+      auditSeverity: 'S3',
       traceId: params.traceId,
       correlationId: params.correlationId,
     };

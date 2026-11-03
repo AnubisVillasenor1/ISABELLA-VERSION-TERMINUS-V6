@@ -6,4 +6,4 @@ export {
   type MagpieHandler,
   type MagpiePublishInput,
   type MagpieDeliveryReport,
-} from "./magpie";
+} from './magpie';

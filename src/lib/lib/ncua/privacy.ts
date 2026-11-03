@@ -53,11 +53,11 @@ export class PrivacyBudget {
   noisy(
     value: number,
     sensitivity: number,
-    mechanism: "laplace" | "gaussian",
-    epsilonPerQuery: number,
+    mechanism: 'laplace' | 'gaussian',
+    epsilonPerQuery: number
   ): number | null {
     if (!this.spend(epsilonPerQuery)) return null;
-    if (mechanism === "laplace") {
+    if (mechanism === 'laplace') {
       const scale = sensitivity / Math.max(1e-12, epsilonPerQuery);
       return value + laplaceNoise(scale);
     }
@@ -69,7 +69,7 @@ export class PrivacyBudget {
 function secureUniform(): number {
   const cryptoApi = globalThis.crypto;
   if (!cryptoApi?.getRandomValues) {
-    throw new Error("Secure randomness unavailable: crypto.getRandomValues is required");
+    throw new Error('Secure randomness unavailable: crypto.getRandomValues is required');
   }
   const values = new Uint32Array(1);
   cryptoApi.getRandomValues(values);
@@ -104,11 +104,11 @@ export interface AnonymityReport {
 export function kAnonymity(
   rows: Array<Record<string, string>>,
   quasiIdentifiers: string[],
-  k: number,
+  k: number
 ): AnonymityReport {
   const groups = new Map<string, number>();
   for (const row of rows) {
-    const key = quasiIdentifiers.map((column) => row[column] ?? "").join("\u0001");
+    const key = quasiIdentifiers.map((column) => row[column] ?? '').join('\u0001');
     groups.set(key, (groups.get(key) ?? 0) + 1);
   }
   const groupSizes = Array.from(groups.values());
@@ -130,13 +130,13 @@ export function lDiversity(
   rows: Array<Record<string, string>>,
   quasiIdentifiers: string[],
   sensitiveColumn: string,
-  l: number,
+  l: number
 ): DiversityReport {
   const groups = new Map<string, Set<string>>();
   for (const row of rows) {
-    const key = quasiIdentifiers.map((column) => row[column] ?? "").join("\u0001");
+    const key = quasiIdentifiers.map((column) => row[column] ?? '').join('\u0001');
     const set = groups.get(key) ?? new Set<string>();
-    set.add(row[sensitiveColumn] ?? "");
+    set.add(row[sensitiveColumn] ?? '');
     groups.set(key, set);
   }
   const distinctValues = Array.from(groups.values()).reduce((sum, set) => sum + set.size, 0);

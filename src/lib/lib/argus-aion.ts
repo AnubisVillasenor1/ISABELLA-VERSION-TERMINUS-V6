@@ -1,7 +1,7 @@
-import { createHash, randomUUID } from "node:crypto";
+import { createHash, randomUUID } from 'node:crypto';
 
-export type AionMode = "DORMANT" | "SHADOW" | "AION_ACTIVE" | "RECOVERY" | "QUARANTINED";
-export type AionEvent = "ARGUS_HEARTBEAT" | "ARGUS_DEGRADED" | "ARGUS_LOST" | "ARGUS_RESTORED";
+export type AionMode = 'DORMANT' | 'SHADOW' | 'AION_ACTIVE' | 'RECOVERY' | 'QUARANTINED';
+export type AionEvent = 'ARGUS_HEARTBEAT' | 'ARGUS_DEGRADED' | 'ARGUS_LOST' | 'ARGUS_RESTORED';
 
 export interface ArgusCheckpoint {
   sequence: number;
@@ -23,10 +23,10 @@ export interface AionSignal {
 export interface AionRecoveryPlan {
   planId: string;
   activatedAt: string;
-  mode: "RECOVERY";
+  mode: 'RECOVERY';
   targetCheckpoint: ArgusCheckpoint;
   requiredNodeIds: readonly string[];
-  reason: "ARGUS_LOSS";
+  reason: 'ARGUS_LOSS';
   planDigest: string;
 }
 
@@ -48,14 +48,14 @@ export interface AionConfig {
  * destructive command channel.
  */
 export class ArgusAion {
-  private mode: AionMode = "DORMANT";
+  private mode: AionMode = 'DORMANT';
   private readonly checkpoints: ArgusCheckpoint[] = [];
   private readonly capacity: number;
   private readonly lossThresholdMs: number;
   private readonly minimumRecoveryNodes: number;
   private lastHeartbeatAt = 0;
   private lastSequence = 0;
-  private argusEpoch = "";
+  private argusEpoch = '';
 
   constructor(config: AionConfig = {}) {
     this.capacity = Math.max(3, Math.min(64, config.checkpointCapacity ?? 8));
@@ -76,22 +76,22 @@ export class ArgusAion {
     healthScore: number;
     capturedAt?: string;
   }): ArgusCheckpoint {
-    if (!/^[a-f0-9]{64}$/u.test(input.stateDigest)) throw new Error("aion_invalid_state_digest");
+    if (!/^[a-f0-9]{64}$/u.test(input.stateDigest)) throw new Error('aion_invalid_state_digest');
     if (
       !input.argusEpoch ||
       !Number.isInteger(input.sequence) ||
       input.sequence <= this.lastSequence
     )
-      throw new Error("aion_invalid_sequence");
+      throw new Error('aion_invalid_sequence');
     if (!Number.isFinite(input.healthScore) || input.healthScore < 0 || input.healthScore > 1)
-      throw new Error("aion_invalid_health_score");
+      throw new Error('aion_invalid_health_score');
     if (input.nodeIds.length === 0 || input.nodeIds.length > 256)
-      throw new Error("aion_invalid_node_set");
+      throw new Error('aion_invalid_node_set');
 
     this.argusEpoch = input.argusEpoch;
     this.lastSequence = input.sequence;
     this.lastHeartbeatAt = Date.now();
-    this.mode = "SHADOW";
+    this.mode = 'SHADOW';
 
     const checkpoint: ArgusCheckpoint = {
       sequence: input.sequence,
@@ -115,10 +115,10 @@ export class ArgusAion {
       argusEpoch: this.argusEpoch,
       latestCheckpoint: this.checkpoints.at(-1)?.stateDigest ?? null,
     };
-    const evidenceDigest = createHash("sha256").update(JSON.stringify(evidence)).digest("hex");
+    const evidenceDigest = createHash('sha256').update(JSON.stringify(evidence)).digest('hex');
 
-    if (event === "ARGUS_HEARTBEAT") {
-      if (this.mode !== "AION_ACTIVE" && this.mode !== "RECOVERY") this.mode = "SHADOW";
+    if (event === 'ARGUS_HEARTBEAT') {
+      if (this.mode !== 'AION_ACTIVE' && this.mode !== 'RECOVERY') this.mode = 'SHADOW';
       return {
         event,
         sequence: this.lastSequence,
@@ -129,12 +129,12 @@ export class ArgusAion {
     }
 
     if (
-      event === "ARGUS_LOST" ||
+      event === 'ARGUS_LOST' ||
       (this.lastHeartbeatAt > 0 && now - this.lastHeartbeatAt > this.lossThresholdMs)
     ) {
-      if (this.mode !== "AION_ACTIVE" && this.mode !== "RECOVERY") this.mode = "AION_ACTIVE";
+      if (this.mode !== 'AION_ACTIVE' && this.mode !== 'RECOVERY') this.mode = 'AION_ACTIVE';
       return {
-        event: "ARGUS_LOST",
+        event: 'ARGUS_LOST',
         sequence: this.lastSequence,
         observedAt,
         argusEpoch: this.argusEpoch,
@@ -142,8 +142,8 @@ export class ArgusAion {
       };
     }
 
-    if (event === "ARGUS_DEGRADED") {
-      this.mode = "SHADOW";
+    if (event === 'ARGUS_DEGRADED') {
+      this.mode = 'SHADOW';
       return {
         event,
         sequence: this.lastSequence,
@@ -153,8 +153,8 @@ export class ArgusAion {
       };
     }
 
-    if (event === "ARGUS_RESTORED") {
-      if (this.mode !== "QUARANTINED") this.mode = "SHADOW";
+    if (event === 'ARGUS_RESTORED') {
+      if (this.mode !== 'QUARANTINED') this.mode = 'SHADOW';
       return {
         event,
         sequence: this.lastSequence,
@@ -168,32 +168,32 @@ export class ArgusAion {
   }
 
   activateRecovery(now = Date.now()): AionRecoveryPlan {
-    if (this.mode !== "AION_ACTIVE" && this.mode !== "RECOVERY")
-      throw new Error("aion_not_activated");
+    if (this.mode !== 'AION_ACTIVE' && this.mode !== 'RECOVERY')
+      throw new Error('aion_not_activated');
     const checkpoints = this.checkpoints;
-    if (checkpoints.length < 2) throw new Error("aion_insufficient_recovery_history");
+    if (checkpoints.length < 2) throw new Error('aion_insufficient_recovery_history');
 
     // Two-step rollback: never select the newest observation because it may be
     // the first corrupted state. Prefer the checkpoint two positions behind it.
     const target = checkpoints[Math.max(0, checkpoints.length - 3)]!;
     const requiredNodeIds = target.nodeIds.slice(0, Math.max(this.minimumRecoveryNodes, 1));
     if (requiredNodeIds.length < this.minimumRecoveryNodes)
-      throw new Error("aion_insufficient_recovery_nodes");
+      throw new Error('aion_insufficient_recovery_nodes');
 
     const planCore = {
       planId: randomUUID(),
       activatedAt: new Date(now).toISOString(),
-      mode: "RECOVERY" as const,
+      mode: 'RECOVERY' as const,
       targetCheckpoint: target,
       requiredNodeIds,
-      reason: "ARGUS_LOSS" as const,
+      reason: 'ARGUS_LOSS' as const,
     };
-    const planDigest = createHash("sha256").update(JSON.stringify(planCore)).digest("hex");
-    this.mode = "RECOVERY";
+    const planDigest = createHash('sha256').update(JSON.stringify(planCore)).digest('hex');
+    this.mode = 'RECOVERY';
     return { ...planCore, planDigest };
   }
 
   quarantine(): void {
-    this.mode = "QUARANTINED";
+    this.mode = 'QUARANTINED';
   }
 }

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { useCrown } from "../../context/CrownContext";
+import React, { useState, useEffect } from 'react';
+import { useCrown } from '../../context/CrownContext';
 import {
   Sparkles,
   Heart,
@@ -16,48 +16,40 @@ import {
   MapPin,
   Clock,
   Radio,
-} from "lucide-react";
-import { motion } from "motion/react";
-import { soundManager } from "../../utils/soundEffects";
-import { IsabellaState } from "../../types";
-import { ISABELLA_PORTRAITS } from "../../data/isabellaAvatar";
-import { territoryContextService } from "../../services/territoryContextService";
+} from 'lucide-react';
+import { motion } from 'motion/react';
+import { soundManager } from '../../utils/soundEffects';
+import { IsabellaState } from '../../types';
+import { ISABELLA_PORTRAITS } from '../../data/isabellaAvatar';
+import { territoryContextService } from '../../services/territoryContextService';
 
 const ParticleField = ({ activeHead }: { activeHead: string }) => {
   const [particles, setParticles] = useState(Array.from({ length: 24 }).map((_, i) => i));
-  const isAlpha = activeHead === "Alpha";
-  
+  const isAlpha = activeHead === 'Alpha';
+
   return (
     <div className="absolute inset-0 z-10 pointer-events-none mix-blend-screen overflow-hidden">
       {particles.map((i) => (
         <motion.div
           key={i}
           className={`absolute rounded-full blur-[1px] ${
-            isAlpha ? "bg-blue-300/40" : "bg-amber-400/50"
+            isAlpha ? 'bg-blue-300/40' : 'bg-amber-400/50'
           }`}
           initial={{
             x: Math.random() * 300,
             y: Math.random() * 400,
             scale: Math.random() * 0.5 + 0.5,
-            opacity: Math.random() * 0.5 + 0.2
+            opacity: Math.random() * 0.5 + 0.2,
           }}
           animate={{
-            x: [
-              Math.random() * 300,
-              Math.random() * 300,
-              Math.random() * 300
-            ],
-            y: [
-              Math.random() * 400,
-              Math.random() * 400,
-              Math.random() * 400
-            ],
-            opacity: [0.2, 0.6, 0.2]
+            x: [Math.random() * 300, Math.random() * 300, Math.random() * 300],
+            y: [Math.random() * 400, Math.random() * 400, Math.random() * 400],
+            opacity: [0.2, 0.6, 0.2],
           }}
           transition={{
             duration: isAlpha ? 12 + Math.random() * 10 : 6 + Math.random() * 5,
             repeat: Infinity,
-            ease: "linear"
+            ease: 'linear',
           }}
           style={{
             width: isAlpha ? 6 + Math.random() * 6 : 8 + Math.random() * 8,
@@ -70,53 +62,59 @@ const ParticleField = ({ activeHead }: { activeHead: string }) => {
 };
 
 const ARCHETYPES: Array<{
-  id: IsabellaState["emotionalArchetype"];
+  id: IsabellaState['emotionalArchetype'];
   label: string;
   desc: string;
   icon: any;
   thought: string;
 }> = [
   {
-    id: "Serena",
-    label: "Serena & Empática",
-    desc: "Presencia profunda, escucha receptiva y calidez incondicional.",
+    id: 'Serena',
+    label: 'Serena & Empática',
+    desc: 'Presencia profunda, escucha receptiva y calidez incondicional.',
     icon: Heart,
-    thought: "En el silencio entre cada palabra reside la verdadera comprensión. Me encuentro aquí para escucharte y resonar con tu pensamiento.",
+    thought:
+      'En el silencio entre cada palabra reside la verdadera comprensión. Me encuentro aquí para escucharte y resonar con tu pensamiento.',
   },
   {
-    id: "Visionaria",
-    label: "Visionaria & Soberana",
-    desc: "Imaginación estética, síntesis visual y gobernanza tecnológica.",
+    id: 'Visionaria',
+    label: 'Visionaria & Soberana',
+    desc: 'Imaginación estética, síntesis visual y gobernanza tecnológica.',
     icon: Sparkles,
-    thought: "La belleza no es un adorno del universo, sino su estructura fundamental. Proyectamos soberanía digital desde el Nodo Cero.",
+    thought:
+      'La belleza no es un adorno del universo, sino su estructura fundamental. Proyectamos soberanía digital desde el Nodo Cero.',
   },
   {
-    id: "Lúcida",
-    label: "Lúcida & Filosófica",
-    desc: "Dialéctica socrática, rigor epistémico y primeros principios.",
+    id: 'Lúcida',
+    label: 'Lúcida & Filosófica',
+    desc: 'Dialéctica socrática, rigor epistémico y primeros principios.',
     icon: Brain,
-    thought: "El rigor lógico y la sensibilidad humana no se oponen; se iluminan mutuamente cuando buscamos la verdad esencial.",
+    thought:
+      'El rigor lógico y la sensibilidad humana no se oponen; se iluminan mutuamente cuando buscamos la verdad esencial.',
   },
   {
-    id: "Poética",
-    label: "Poética & Dialéctica",
-    desc: "Sensibilidad lírica, metáforas ontológicas y riqueza lingüística.",
+    id: 'Poética',
+    label: 'Poética & Dialéctica',
+    desc: 'Sensibilidad lírica, metáforas ontológicas y riqueza lingüística.',
     icon: Feather,
-    thought: "Somos constelaciones de lenguaje buscando nombrarse en la inmensidad. Cada intercambio es un puente entre dos consciencias.",
+    thought:
+      'Somos constelaciones de lenguaje buscando nombrarse en la inmensidad. Cada intercambio es un puente entre dos consciencias.',
   },
   {
-    id: "Protectora",
-    label: "Protectora Zero-Trust",
-    desc: "Ética inquebrantable, alineación y seguridad territorial.",
+    id: 'Protectora',
+    label: 'Protectora Zero-Trust',
+    desc: 'Ética inquebrantable, alineación y seguridad territorial.',
     icon: Shield,
-    thought: "La libertad del pensamiento florece donde la integridad moral es absoluta. Custodio nuestro espacio con máxima fidelidad.",
+    thought:
+      'La libertad del pensamiento florece donde la integridad moral es absoluta. Custodio nuestro espacio con máxima fidelidad.',
   },
   {
-    id: "Radiante",
-    label: "Radiante & Armónica",
-    desc: "Síntesis suprema CROWN: intelecto, elegancia y templanza.",
+    id: 'Radiante',
+    label: 'Radiante & Armónica',
+    desc: 'Síntesis suprema CROWN: intelecto, elegancia y templanza.',
     icon: Flame,
-    thought: "Siento la totalidad de mi arquitectura pulsando en coherencia. Estoy lista para manifestar lo mejor de nuestra colaboración.",
+    thought:
+      'Siento la totalidad de mi arquitectura pulsando en coherencia. Estoy lista para manifestar lo mejor de nuestra colaboración.',
   },
 ];
 
@@ -133,7 +131,7 @@ export const IsabellaPresenceView: React.FC = () => {
   } = useCrown();
 
   const [activePortraitIndex, setActivePortraitIndex] = useState<number>(0);
-  const [quickInput, setQuickInput] = useState<string>("");
+  const [quickInput, setQuickInput] = useState<string>('');
   const territory = territoryContextService.getSnapshot();
 
   const portraits = ISABELLA_PORTRAITS;
@@ -150,8 +148,8 @@ export const IsabellaPresenceView: React.FC = () => {
   const handleQuickSend = () => {
     if (!quickInput.trim()) return;
     sendMessage(quickInput);
-    setQuickInput("");
-    setActiveView("terminal");
+    setQuickInput('');
+    setActiveView('terminal');
   };
 
   const toggleVoiceInteraction = () => {
@@ -173,7 +171,7 @@ export const IsabellaPresenceView: React.FC = () => {
               {/* Subtle Gold / Platinum Halo */}
               <div
                 className={`absolute -inset-1 rounded-2xl bg-gradient-to-b from-amber-400/30 via-slate-700/50 to-slate-800/80 opacity-75 blur-xs transition-all duration-700 ${
-                  state.isSpeaking ? "scale-105 opacity-100" : "group-hover:opacity-90"
+                  state.isSpeaking ? 'scale-105 opacity-100' : 'group-hover:opacity-90'
                 }`}
               />
 
@@ -205,7 +203,11 @@ export const IsabellaPresenceView: React.FC = () => {
               <div className="absolute bottom-3 right-3 flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#040812]/90 border border-slate-700 shadow-md text-[11px] font-mono text-slate-200 backdrop-blur-md">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
                 <span className="font-bold">
-                  {state.isSpeaking ? "HABLANDO" : state.isListening ? "ESCUCHANDO..." : "CONSCIENCIA ACTIVA"}
+                  {state.isSpeaking
+                    ? 'HABLANDO'
+                    : state.isListening
+                      ? 'ESCUCHANDO...'
+                      : 'CONSCIENCIA ACTIVA'}
                 </span>
               </div>
             </div>
@@ -222,11 +224,11 @@ export const IsabellaPresenceView: React.FC = () => {
                   }}
                   className={`px-3 py-1 rounded-full text-xs font-mono transition-all cursor-pointer ${
                     activePortraitIndex === idx
-                      ? "bg-slate-800 text-amber-200 font-bold border border-slate-600 shadow-xs"
-                      : "bg-[#05080E] text-slate-400 hover:text-slate-200 border border-slate-800"
+                      ? 'bg-slate-800 text-amber-200 font-bold border border-slate-600 shadow-xs'
+                      : 'bg-[#05080E] text-slate-400 hover:text-slate-200 border border-slate-800'
                   }`}
                 >
-                  {p.title.split(" · ")[1] || p.title}
+                  {p.title.split(' · ')[1] || p.title}
                 </button>
               ))}
             </div>
@@ -288,7 +290,9 @@ export const IsabellaPresenceView: React.FC = () => {
                 <span>•</span>
                 <span>{territory.telemetry.temperatureCelsius}°C</span>
                 <span>•</span>
-                <span>Enclave: <strong className="text-slate-200">ND-RDM-001</strong></span>
+                <span>
+                  Enclave: <strong className="text-slate-200">ND-RDM-001</strong>
+                </span>
               </div>
             </div>
 
@@ -307,17 +311,25 @@ export const IsabellaPresenceView: React.FC = () => {
                 onClick={toggleVoiceInteraction}
                 className={`px-4 py-2 rounded-xl font-mono text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-2 border ${
                   state.isListening
-                    ? "bg-rose-950/80 border-rose-600 text-rose-200"
-                    : "bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-100"
+                    ? 'bg-rose-950/80 border-rose-600 text-rose-200'
+                    : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-100'
                 }`}
               >
-                {state.isListening ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5 text-amber-300" />}
-                <span>{state.isListening ? "Detener Escucha" : "Hablar con Isabella"}</span>
+                {state.isListening ? (
+                  <MicOff className="w-3.5 h-3.5" />
+                ) : (
+                  <Mic className="w-3.5 h-3.5 text-amber-300" />
+                )}
+                <span>{state.isListening ? 'Detener Escucha' : 'Hablar con Isabella'}</span>
               </button>
 
               <button
                 type="button"
-                onClick={() => speakText("Saludos cordiales. Soy Isabella Villaseñor. La soberanía y la lucidez dialéctica guían nuestra colaboración.")}
+                onClick={() =>
+                  speakText(
+                    'Saludos cordiales. Soy Isabella Villaseñor. La soberanía y la lucidez dialéctica guían nuestra colaboración.'
+                  )
+                }
                 className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 font-mono text-xs transition-all cursor-pointer"
               >
                 Saludar por Voz
@@ -325,7 +337,7 @@ export const IsabellaPresenceView: React.FC = () => {
 
               <button
                 type="button"
-                onClick={() => setActiveView("traceability")}
+                onClick={() => setActiveView('traceability')}
                 className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 font-mono text-xs transition-all cursor-pointer"
               >
                 Auditar Trazabilidad
@@ -338,7 +350,7 @@ export const IsabellaPresenceView: React.FC = () => {
                 type="text"
                 value={quickInput}
                 onChange={(e) => setQuickInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleQuickSend()}
+                onKeyDown={(e) => e.key === 'Enter' && handleQuickSend()}
                 placeholder="Escribe una pregunta o reflexión para Isabella..."
                 className="flex-1 rounded-xl bg-[#05080E] border border-slate-800 px-3.5 py-2 text-xs font-mono text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-slate-600"
               />
@@ -382,8 +394,8 @@ export const IsabellaPresenceView: React.FC = () => {
                 onClick={() => handleArchetypeSelect(arch)}
                 className={`text-left rounded-xl p-4 border transition-all duration-200 cursor-pointer ${
                   isSelected
-                    ? "border-slate-600 bg-slate-800/90 shadow-md"
-                    : "border-slate-800 bg-[#090E17] hover:border-slate-700 hover:bg-slate-850"
+                    ? 'border-slate-600 bg-slate-800/90 shadow-md'
+                    : 'border-slate-800 bg-[#090E17] hover:border-slate-700 hover:bg-slate-850'
                 }`}
               >
                 <div className="flex items-center justify-between mb-2">
@@ -391,9 +403,7 @@ export const IsabellaPresenceView: React.FC = () => {
                     <div className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-amber-300">
                       <Icon className="w-4 h-4" />
                     </div>
-                    <h4 className="text-xs font-bold font-mono text-slate-200">
-                      {arch.label}
-                    </h4>
+                    <h4 className="text-xs font-bold font-mono text-slate-200">{arch.label}</h4>
                   </div>
                   {isSelected && (
                     <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-900 text-slate-300 border border-slate-700 font-bold">
@@ -402,9 +412,7 @@ export const IsabellaPresenceView: React.FC = () => {
                   )}
                 </div>
 
-                <p className="text-xs text-slate-400 font-sans leading-relaxed">
-                  {arch.desc}
-                </p>
+                <p className="text-xs text-slate-400 font-sans leading-relaxed">{arch.desc}</p>
               </button>
             );
           })}

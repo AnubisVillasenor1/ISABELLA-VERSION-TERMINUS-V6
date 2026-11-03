@@ -1,12 +1,7 @@
 export type JsonValue =
-  | null
-  | boolean
-  | number
-  | string
-  | JsonValue[]
-  | { [key: string]: JsonValue };
+  null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
 
-export const BOOKPI_PROTOCOL = "tamv-federation-v1" as const;
+export const BOOKPI_PROTOCOL = 'tamv-federation-v1' as const;
 
 /** Structurally assignable a `{ [key: string]: JsonValue }` (alias, no interface). */
 export type HeHePContext = {
@@ -56,7 +51,7 @@ export interface BookPiEventRecord {
 }
 
 /** Núcleo del evento previo al sellado (sin hash/integrity/canonical). */
-export type BookPiEventCore = Omit<BookPiEventRecord, "integrity" | "hash" | "canonical">;
+export type BookPiEventCore = Omit<BookPiEventRecord, 'integrity' | 'hash' | 'canonical'>;
 
 export interface BookPiSeed {
   type: string;

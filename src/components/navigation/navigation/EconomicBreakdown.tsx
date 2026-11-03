@@ -6,83 +6,83 @@
  * Incluye: método, red, estado, reversibilidad, autorización.
  */
 
-import type { EconomicOperation } from "./types";
+import type { EconomicOperation } from './types';
 
 interface EconomicBreakdownProps {
   operation: EconomicOperation;
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  pending: "Pendiente",
-  verified: "Verificado",
-  settled: "Liquidado",
-  reversed: "Revertido",
+  pending: 'Pendiente',
+  verified: 'Verificado',
+  settled: 'Liquidado',
+  reversed: 'Revertido',
 };
 
 const STATUS_TONES: Record<string, string> = {
-  pending: "warning",
-  verified: "info",
-  settled: "success",
-  reversed: "danger",
+  pending: 'warning',
+  verified: 'info',
+  settled: 'success',
+  reversed: 'danger',
 };
 
 function formatCurrency(amount: number, currency: string): string {
-  return new Intl.NumberFormat("es-MX", {
-    style: "currency",
+  return new Intl.NumberFormat('es-MX', {
+    style: 'currency',
     currency: currency,
     minimumFractionDigits: 2,
   }).format(amount);
 }
 
 function formatDateTime(iso: string): string {
-  return new Date(iso).toLocaleString("es-MX", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
+  return new Date(iso).toLocaleString('es-MX', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
   });
 }
 
 export function EconomicBreakdown({ operation }: EconomicBreakdownProps) {
   const rows = [
     {
-      label: "Ingreso bruto",
+      label: 'Ingreso bruto',
       value: formatCurrency(operation.grossAmount, operation.currency),
-      type: "gross",
+      type: 'gross',
     },
     {
-      label: "Comisión de plataforma",
+      label: 'Comisión de plataforma',
       value: `-${formatCurrency(operation.platformFee, operation.currency)}`,
-      type: "fee",
+      type: 'fee',
     },
     {
-      label: "Procesamiento de pago",
+      label: 'Procesamiento de pago',
       value: `-${formatCurrency(operation.processingFee, operation.currency)}`,
-      type: "fee",
+      type: 'fee',
     },
     ...(operation.aiUsageCost
       ? [
           {
-            label: "Consumo de inteligencia artificial",
+            label: 'Consumo de inteligencia artificial',
             value: `-${formatCurrency(operation.aiUsageCost, operation.currency)}`,
-            type: "fee" as const,
+            type: 'fee' as const,
           },
         ]
       : []),
     ...(operation.communityDistribution
       ? [
           {
-            label: "Distribución comunitaria",
+            label: 'Distribución comunitaria',
             value: `-${formatCurrency(operation.communityDistribution, operation.currency)}`,
-            type: "distribution" as const,
+            type: 'distribution' as const,
           },
         ]
       : []),
     {
-      label: "Ingreso neto",
+      label: 'Ingreso neto',
       value: formatCurrency(operation.netAmount, operation.currency),
-      type: "net",
+      type: 'net',
     },
   ];
 
@@ -92,7 +92,7 @@ export function EconomicBreakdown({ operation }: EconomicBreakdownProps) {
         {rows.map((row) => (
           <div
             key={row.label}
-            className={`economic-row ${row.type === "net" ? "economic-row-net" : ""} ${row.type === "gross" ? "economic-row-gross" : ""}`}
+            className={`economic-row ${row.type === 'net' ? 'economic-row-net' : ''} ${row.type === 'gross' ? 'economic-row-gross' : ''}`}
           >
             <span className="economic-label">{row.label}</span>
             <span className="economic-value">{row.value}</span>
@@ -104,20 +104,16 @@ export function EconomicBreakdown({ operation }: EconomicBreakdownProps) {
         <div className="economic-meta-row">
           <span className="economic-meta-label">Método:</span>
           <span className="economic-meta-value">
-            {operation.paymentMethod ?? "No especificado"}
+            {operation.paymentMethod ?? 'No especificado'}
           </span>
         </div>
         <div className="economic-meta-row">
           <span className="economic-meta-label">Red:</span>
-          <span className="economic-meta-value">
-            {operation.socialNetwork ?? "Directo"}
-          </span>
+          <span className="economic-meta-value">{operation.socialNetwork ?? 'Directo'}</span>
         </div>
         <div className="economic-meta-row">
           <span className="economic-meta-label">Estado:</span>
-          <span
-            className={`economic-status ${STATUS_TONES[operation.status]}`}
-          >
+          <span className={`economic-status ${STATUS_TONES[operation.status]}`}>
             {STATUS_LABELS[operation.status]}
           </span>
         </div>
@@ -126,14 +122,12 @@ export function EconomicBreakdown({ operation }: EconomicBreakdownProps) {
           <span className="economic-meta-value">
             {operation.reversibleUntil
               ? `Sí, hasta ${formatDateTime(operation.reversibleUntil)}`
-              : "No"}
+              : 'No'}
           </span>
         </div>
         <div className="economic-meta-row">
           <span className="economic-meta-label">Autorización:</span>
-          <span className="economic-meta-value">
-            {operation.authorizationId ?? "Ninguna"}
-          </span>
+          <span className="economic-meta-value">{operation.authorizationId ?? 'Ninguna'}</span>
         </div>
       </div>
     </div>

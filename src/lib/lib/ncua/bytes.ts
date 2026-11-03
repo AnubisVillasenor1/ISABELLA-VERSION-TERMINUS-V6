@@ -4,7 +4,7 @@
  */
 
 const textEncoder = new TextEncoder();
-const textDecoder = new TextDecoder("utf-8", { fatal: false });
+const textDecoder = new TextDecoder('utf-8', { fatal: false });
 
 export function encodeUtf8(input: string): Uint8Array {
   return textEncoder.encode(input);
@@ -46,7 +46,7 @@ export interface ByteNgramOptions {
 export function forEachByteNgram(
   bytes: Uint8Array,
   callback: (gram: Uint8Array, start: number) => void,
-  options: ByteNgramOptions = {},
+  options: ByteNgramOptions = {}
 ): number {
   const minN = options.minN ?? 2;
   const maxN = options.maxN ?? 4;

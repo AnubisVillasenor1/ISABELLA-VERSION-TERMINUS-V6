@@ -5,21 +5,21 @@
  * engine-generated. The weights come from the constitution; the resulting score
  * is a declared heuristic, not measured accuracy.
  */
-import { GAMEOVER_CONSTITUTION } from "./constitution";
-import type { TrustMetrics, TrustScorecard } from "./types";
+import { GAMEOVER_CONSTITUTION } from './constitution';
+import type { TrustMetrics, TrustScorecard } from './types';
 
 function clampMetric(value: number | undefined): number {
-  if (typeof value !== "number" || !Number.isFinite(value)) return 0;
+  if (typeof value !== 'number' || !Number.isFinite(value)) return 0;
   return Math.min(100, Math.max(0, value));
 }
 
-function classify(score: number): TrustScorecard["level"] {
+function classify(score: number): TrustScorecard['level'] {
   const t = GAMEOVER_CONSTITUTION.trustLevelThresholds;
-  if (score >= t.exemplary) return "EXEMPLARY";
-  if (score >= t.high) return "HIGH";
-  if (score >= t.moderate) return "MODERATE";
-  if (score >= t.low) return "LOW";
-  return "UNTRUSTED";
+  if (score >= t.exemplary) return 'EXEMPLARY';
+  if (score >= t.high) return 'HIGH';
+  if (score >= t.moderate) return 'MODERATE';
+  if (score >= t.low) return 'LOW';
+  return 'UNTRUSTED';
 }
 
 /** Weighted trust scorecard from declared 0..100 metrics (missing => 0). */

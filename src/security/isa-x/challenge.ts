@@ -8,17 +8,13 @@
  * so a replayed answer is rejected (`NONCE_REUSE`). Timestamps outside the
  * skew window are rejected (`TIMESTAMP_SKEW`), as are scope mismatches.
  */
-import { randomUUID } from "node:crypto";
-import { ISA_X_DEFAULT_CLOCK_SKEW_MS, ISA_X_DEFAULT_TTL_MS } from "./protocol";
-import { createNonceRegistry, nonce, type NonceRegistry } from "../nonce";
-import {
-  IsaXError,
-  assertSupportedVersion,
-  scopeMatches,
-} from "./protocol";
-import type { IsaXRequest } from "./protocol";
-import type { IsaXSignature, IsaXSigner } from "./signer";
-import { issueSessionToken, type IsaXRevocationRegistry } from "./revocation";
+import { randomUUID } from 'node:crypto';
+import { ISA_X_DEFAULT_CLOCK_SKEW_MS, ISA_X_DEFAULT_TTL_MS } from './protocol';
+import { createNonceRegistry, nonce, type NonceRegistry } from '../nonce';
+import { IsaXError, assertSupportedVersion, scopeMatches } from './protocol';
+import type { IsaXRequest } from './protocol';
+import type { IsaXSignature, IsaXSigner } from './signer';
+import { issueSessionToken, type IsaXRevocationRegistry } from './revocation';
 
 export interface IsaXChallenge {
   readonly challengeId: string;
@@ -42,28 +38,32 @@ export interface IsaXChallengeAnswer {
 }
 
 export type IsaXChallengeFailureReason =
-  | "UNKNOWN_CHALLENGE"
-  | "EXPIRED"
-  | "TIMESTAMP_SKEW"
-  | "SCOPE_REJECTED"
-  | "NONCE_REUSE"
-  | "MALFORMED"
-  | "PROTOCOL_MISMATCH"
-  | "UNKNOWN_KEY"
-  | "KEY_REVOKED"
-  | "BAD_SIGNATURE";
+  | 'UNKNOWN_CHALLENGE'
+  | 'EXPIRED'
+  | 'TIMESTAMP_SKEW'
+  | 'SCOPE_REJECTED'
+  | 'NONCE_REUSE'
+  | 'MALFORMED'
+  | 'PROTOCOL_MISMATCH'
+  | 'UNKNOWN_KEY'
+  | 'KEY_REVOKED'
+  | 'BAD_SIGNATURE';
 
 export type IsaXChallengeVerdict =
   | {
       readonly ok: true;
-      readonly reason: "OK";
+      readonly reason: 'OK';
       readonly challengeId: string;
       readonly scope: string;
       readonly keyId: string;
       readonly token: string;
       readonly consumedAt: number;
     }
-  | { readonly ok: false; readonly reason: IsaXChallengeFailureReason; readonly challengeId: string };
+  | {
+      readonly ok: false;
+      readonly reason: IsaXChallengeFailureReason;
+      readonly challengeId: string;
+    };
 
 export interface IsaXChallengeServiceOptions {
   readonly signer: IsaXSigner;
@@ -84,8 +84,8 @@ export interface IsaXChallengeService {
 /** The canonical request both sides derive from a challenge. */
 export function challengeRequest(challenge: IsaXChallenge): IsaXRequest {
   return {
-    method: "POST",
-    path: "/isa-x/v1/challenge",
+    method: 'POST',
+    path: '/isa-x/v1/challenge',
     query: {
       challengeId: challenge.challengeId,
       nonce: challenge.nonce,
@@ -94,11 +94,13 @@ export function challengeRequest(challenge: IsaXChallenge): IsaXRequest {
       issuedAt: String(challenge.issuedAt),
       expiresAt: String(challenge.expiresAt),
     },
-    headers: { "content-type": "application/json" },
+    headers: { 'content-type': 'application/json' },
   };
 }
 
-export function createIsaXChallengeService(options: IsaXChallengeServiceOptions): IsaXChallengeService {
+export function createIsaXChallengeService(
+  options: IsaXChallengeServiceOptions
+): IsaXChallengeService {
   const now = options.now ?? Date.now;
   const ttlMs = options.ttlMs ?? ISA_X_DEFAULT_TTL_MS;
   const clockSkewMs = options.clockSkewMs ?? ISA_X_DEFAULT_CLOCK_SKEW_MS;
@@ -115,13 +117,13 @@ export function createIsaXChallengeService(options: IsaXChallengeServiceOptions)
   }
 
   return {
-    issue(scope, audience = "isa-x") {
-      if (typeof scope !== "string" || scope.trim().length === 0) {
-        throw new IsaXError("ISA_X_MALFORMED", "challenge scope is required");
+    issue(scope, audience = 'isa-x') {
+      if (typeof scope !== 'string' || scope.trim().length === 0) {
+        throw new IsaXError('ISA_X_MALFORMED', 'challenge scope is required');
       }
       prune();
       if (challenges.size >= maxChallenges) {
-        throw new IsaXError("ISA_X_CAPACITY", `challenge registry is full (${maxChallenges})`);
+        throw new IsaXError('ISA_X_CAPACITY', `challenge registry is full (${maxChallenges})`);
       }
       const issuedAt = now();
       const challenge: IsaXChallenge = Object.freeze({
@@ -140,27 +142,27 @@ export function createIsaXChallengeService(options: IsaXChallengeServiceOptions)
       const resolvedAt = at ?? now();
       const challenge = challenges.get(answer.challengeId);
       if (!challenge) {
-        return { ok: false, reason: "UNKNOWN_CHALLENGE", challengeId: answer.challengeId };
+        return { ok: false, reason: 'UNKNOWN_CHALLENGE', challengeId: answer.challengeId };
       }
       const { signature } = answer;
 
       try {
         assertSupportedVersion(signature.version);
       } catch {
-        return { ok: false, reason: "PROTOCOL_MISMATCH", challengeId: answer.challengeId };
+        return { ok: false, reason: 'PROTOCOL_MISMATCH', challengeId: answer.challengeId };
       }
 
       if (signature.nonce !== challenge.nonce || signature.scope !== challenge.scope) {
-        return { ok: false, reason: "MALFORMED", challengeId: answer.challengeId };
+        return { ok: false, reason: 'MALFORMED', challengeId: answer.challengeId };
       }
       if (resolvedAt > challenge.expiresAt) {
-        return { ok: false, reason: "EXPIRED", challengeId: answer.challengeId };
+        return { ok: false, reason: 'EXPIRED', challengeId: answer.challengeId };
       }
       if (!scopeMatches(signature.scope, challenge.scope)) {
-        return { ok: false, reason: "SCOPE_REJECTED", challengeId: answer.challengeId };
+        return { ok: false, reason: 'SCOPE_REJECTED', challengeId: answer.challengeId };
       }
       if (Math.abs(resolvedAt - signature.timestamp) > clockSkewMs) {
-        return { ok: false, reason: "TIMESTAMP_SKEW", challengeId: answer.challengeId };
+        return { ok: false, reason: 'TIMESTAMP_SKEW', challengeId: answer.challengeId };
       }
 
       const verified = await options.signer.verify({
@@ -175,16 +177,16 @@ export function createIsaXChallengeService(options: IsaXChallengeServiceOptions)
       }
 
       if (consumed.has(answer.challengeId)) {
-        return { ok: false, reason: "NONCE_REUSE", challengeId: answer.challengeId };
+        return { ok: false, reason: 'NONCE_REUSE', challengeId: answer.challengeId };
       }
       if (registry.claim(signature.nonce) === false) {
-        return { ok: false, reason: "NONCE_REUSE", challengeId: answer.challengeId };
+        return { ok: false, reason: 'NONCE_REUSE', challengeId: answer.challengeId };
       }
       consumed.add(answer.challengeId);
 
       return {
         ok: true,
-        reason: "OK",
+        reason: 'OK',
         challengeId: answer.challengeId,
         scope: challenge.scope,
         keyId: signature.keyId,

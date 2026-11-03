@@ -17,20 +17,20 @@
  * Fail-closed: sin muestra suficiente no se ensancha; lo destructivo/LO-que-falla
  * empuja la reputación hacia abajo (peso mayor que el éxito), nunca hacia arriba.
  */
-import type { RiskTier } from "../authority/method-id";
-import type { TrafficBand } from "../governance/traffic-light";
-import { clamp, digest, round } from "./util";
+import type { RiskTier } from '../authority/method-id';
+import type { TrafficBand } from '../governance/traffic-light';
+import { clamp, digest, round } from './util';
 
-export const EARNED_TRUST_VERSION = "1.0.0" as const;
+export const EARNED_TRUST_VERSION = '1.0.0' as const;
 export const EARNED_TRUST_METHOD_ID =
-  "A.TWINS.LEGACY.earned_trust.reduce_friction.v1.0.0.LOW.AUTONOMOUS" as const;
+  'A.TWINS.LEGACY.earned_trust.reduce_friction.v1.0.0.LOW.AUTONOMOUS' as const;
 export const EARNED_TRUST_DISCLAIMER =
-  "La confianza ganada reduce fricción dentro de lo ya autorizado; nunca concede autoridad, nunca relaja ROJO/NARANJA y no constituye facultad verificada.";
+  'La confianza ganada reduce fricción dentro de lo ya autorizado; nunca concede autoridad, nunca relaja ROJO/NARANJA y no constituye facultad verificada.';
 
-export const TRUST_OUTCOMES = ["ALLOWED", "DENIED", "ESCALATED"] as const;
+export const TRUST_OUTCOMES = ['ALLOWED', 'DENIED', 'ESCALATED'] as const;
 export type TrustOutcome = (typeof TRUST_OUTCOMES)[number];
 
-export const TRUST_TIERS = ["PROBATION", "EMERGING", "ESTABLISHED", "TRUSTED"] as const;
+export const TRUST_TIERS = ['PROBATION', 'EMERGING', 'ESTABLISHED', 'TRUSTED'] as const;
 export type TrustTier = (typeof TRUST_TIERS)[number];
 
 export interface TrustStats {
@@ -68,20 +68,20 @@ const ESCALATE_WEIGHT = 2;
 const MIN_SAMPLES_FOR_TRUST = 5;
 const WIDEN_SCORE_THRESHOLD = 70;
 
-const BAND_ORDER: readonly TrafficBand[] = ["GREEN", "YELLOW", "ORANGE", "RED"];
+const BAND_ORDER: readonly TrafficBand[] = ['GREEN', 'YELLOW', 'ORANGE', 'RED'];
 
 function emptyStats(): TrustStats {
   return { allowed: 0, denied: 0, escalated: 0, streak: 0 };
 }
 
 function assertKey(principalId: string, capabilityId: string): void {
-  if (!principalId || !principalId.trim()) throw new Error("EARNED_TRUST_PRINCIPAL_REQUIRED");
-  if (!capabilityId || !capabilityId.trim()) throw new Error("EARNED_TRUST_CAPABILITY_REQUIRED");
+  if (!principalId || !principalId.trim()) throw new Error('EARNED_TRUST_PRINCIPAL_REQUIRED');
+  if (!capabilityId || !capabilityId.trim()) throw new Error('EARNED_TRUST_CAPABILITY_REQUIRED');
 }
 
 function assertOutcome(outcome: TrustOutcome): void {
   if (!(TRUST_OUTCOMES as readonly string[]).includes(outcome)) {
-    throw new Error("EARNED_TRUST_OUTCOME_INVALID");
+    throw new Error('EARNED_TRUST_OUTCOME_INVALID');
   }
 }
 
@@ -103,10 +103,10 @@ export class EarnedTrustLedger {
     const key = EarnedTrustLedger.keyOf(principalId, capabilityId);
     const current = this.ledger.get(key) ?? emptyStats();
     const next: TrustStats = {
-      allowed: current.allowed + (outcome === "ALLOWED" ? 1 : 0),
-      denied: current.denied + (outcome === "DENIED" ? 1 : 0),
-      escalated: current.escalated + (outcome === "ESCALATED" ? 1 : 0),
-      streak: outcome === "ALLOWED" ? current.streak + 1 : 0,
+      allowed: current.allowed + (outcome === 'ALLOWED' ? 1 : 0),
+      denied: current.denied + (outcome === 'DENIED' ? 1 : 0),
+      escalated: current.escalated + (outcome === 'ESCALATED' ? 1 : 0),
+      streak: outcome === 'ALLOWED' ? current.streak + 1 : 0,
     };
     this.ledger.set(key, next);
     return this.snapshot(principalId, capabilityId);
@@ -116,17 +116,20 @@ export class EarnedTrustLedger {
     const s = this.stats(principalId, capabilityId);
     const successes = s.allowed;
     const failures = s.denied * DENY_WEIGHT + s.escalated * ESCALATE_WEIGHT;
-    return round(clamp((100 * (successes + PRIOR)) / (successes + failures + 2 * PRIOR), 0, 100), 2);
+    return round(
+      clamp((100 * (successes + PRIOR)) / (successes + failures + 2 * PRIOR), 0, 100),
+      2
+    );
   }
 
   tier(principalId: string, capabilityId: string): TrustTier {
     const s = this.stats(principalId, capabilityId);
     const samples = s.allowed + s.denied + s.escalated;
     const score = this.score(principalId, capabilityId);
-    if (samples >= MIN_SAMPLES_FOR_TRUST && score >= 80) return "TRUSTED";
-    if (samples >= MIN_SAMPLES_FOR_TRUST && score >= 60) return "ESTABLISHED";
-    if (score >= 45) return "EMERGING";
-    return "PROBATION";
+    if (samples >= MIN_SAMPLES_FOR_TRUST && score >= 80) return 'TRUSTED';
+    if (samples >= MIN_SAMPLES_FOR_TRUST && score >= 60) return 'ESTABLISHED';
+    if (score >= 45) return 'EMERGING';
+    return 'PROBATION';
   }
 
   snapshot(principalId: string, capabilityId: string): TrustSnapshot {
@@ -150,7 +153,7 @@ export class EarnedTrustLedger {
   snapshotAll(): readonly TrustSnapshot[] {
     const out: TrustSnapshot[] = [];
     for (const key of this.ledger.keys()) {
-      const separator = key.indexOf("::");
+      const separator = key.indexOf('::');
       const principalId = key.slice(0, separator);
       const capabilityId = key.slice(separator + 2);
       out.push(this.snapshot(principalId, capabilityId));
@@ -163,26 +166,26 @@ export class EarnedTrustLedger {
    */
   reduceFriction(principalId: string, capabilityId: string, band: TrafficBand): FrictionAdjustment {
     if (!(BAND_ORDER as readonly string[]).includes(band)) {
-      throw new Error("EARNED_TRUST_BAND_INVALID");
+      throw new Error('EARNED_TRUST_BAND_INVALID');
     }
     const snap = this.snapshot(principalId, capabilityId);
-    if (band === "RED") {
-      return this.adjustment(band, band, snap, false, "RED_NEVER_RELAXED_BY_TRUST");
+    if (band === 'RED') {
+      return this.adjustment(band, band, snap, false, 'RED_NEVER_RELAXED_BY_TRUST');
     }
-    if (band === "ORANGE") {
-      return this.adjustment(band, band, snap, false, "HIGH_RISK_NEVER_RELAXED_BY_TRUST");
+    if (band === 'ORANGE') {
+      return this.adjustment(band, band, snap, false, 'HIGH_RISK_NEVER_RELAXED_BY_TRUST');
     }
     const trustworthy =
-      (snap.tier === "ESTABLISHED" || snap.tier === "TRUSTED") &&
+      (snap.tier === 'ESTABLISHED' || snap.tier === 'TRUSTED') &&
       snap.samples >= MIN_SAMPLES_FOR_TRUST &&
       snap.score >= WIDEN_SCORE_THRESHOLD;
     if (!trustworthy) {
-      return this.adjustment(band, band, snap, false, "INSUFFICIENT_EARNED_TRUST");
+      return this.adjustment(band, band, snap, false, 'INSUFFICIENT_EARNED_TRUST');
     }
-    if (band === "YELLOW") {
-      return this.adjustment(band, "GREEN", snap, true, "EARNED_TRUST_WIDENS_FAST_LANE");
+    if (band === 'YELLOW') {
+      return this.adjustment(band, 'GREEN', snap, true, 'EARNED_TRUST_WIDENS_FAST_LANE');
     }
-    return this.adjustment(band, band, snap, false, "ALREADY_FAST_LANE");
+    return this.adjustment(band, band, snap, false, 'ALREADY_FAST_LANE');
   }
 
   private adjustment(
@@ -190,7 +193,7 @@ export class EarnedTrustLedger {
     band: TrafficBand,
     snap: TrustSnapshot,
     adjusted: boolean,
-    reason: string,
+    reason: string
   ): FrictionAdjustment {
     return {
       originalBand,
@@ -210,12 +213,12 @@ export function reduceFrictionWithTrust(
   ledger: EarnedTrustLedger,
   principalId: string,
   capabilityId: string,
-  band: TrafficBand,
+  band: TrafficBand
 ): FrictionAdjustment {
   return ledger.reduceFriction(principalId, capabilityId, band);
 }
 
 /** La confianza ganada solo aplica cuando el riesgo del método es bajo. */
 export function trustMayApply(riskTier: RiskTier): boolean {
-  return riskTier === "LOW" || riskTier === "NEGLIGIBLE";
+  return riskTier === 'LOW' || riskTier === 'NEGLIGIBLE';
 }

@@ -22,25 +22,25 @@
  * responsabilidad y es el único que puede administrar gobernanza.
  */
 export type Role =
-  "SovereignOwner" | "Operator" | "Auditor" | "Guest" | "System" | "governance_admin";
+  'SovereignOwner' | 'Operator' | 'Auditor' | 'Guest' | 'System' | 'governance_admin';
 
 export const ROLES: readonly Role[] = [
-  "SovereignOwner",
-  "Operator",
-  "Auditor",
-  "Guest",
-  "System",
-  "governance_admin",
+  'SovereignOwner',
+  'Operator',
+  'Auditor',
+  'Guest',
+  'System',
+  'governance_admin',
 ];
 
 /** Guía de responsabilidad de cada rol (documental, no autoritativa). */
 export const ROLE_DESCRIPTIONS: Record<Role, string> = {
-  SovereignOwner: "Propietario soberano del nodo: gobierno, administración y moneda.",
-  Operator: "Operador comunitario autorizado para operaciones de tenant.",
-  Auditor: "Auditoría y verificación de cadena / cumplimiento (solo lectura).",
-  Guest: "Acceso público no autenticado con privilegios mínimos.",
-  System: "Identidad de sistema para trabajos internos autorizados.",
-  governance_admin: "Administración de políticas, constitución y permisos.",
+  SovereignOwner: 'Propietario soberano del nodo: gobierno, administración y moneda.',
+  Operator: 'Operador comunitario autorizado para operaciones de tenant.',
+  Auditor: 'Auditoría y verificación de cadena / cumplimiento (solo lectura).',
+  Guest: 'Acceso público no autenticado con privilegios mínimos.',
+  System: 'Identidad de sistema para trabajos internos autorizados.',
+  governance_admin: 'Administración de políticas, constitución y permisos.',
 };
 
 /** Mapa completo de herencia entre roles (el rol hereda de su lista). */
@@ -48,12 +48,12 @@ export const ROLE_DESCRIPTIONS: Record<Role, string> = {
 // permisos de roles de mayor privilegio si no son estrictamente necesarios.
 const ROLE_INHERITANCE: Record<Role, readonly Role[]> = {
   // El propietario soberano es el único rol con acceso completo al sistema.
-  SovereignOwner: ["governance_admin", "Operator", "Auditor", "System", "Guest"],
+  SovereignOwner: ['governance_admin', 'Operator', 'Auditor', 'System', 'Guest'],
   // governance_admin administra gobernanza y lee auditoría/ledger; NO hereda
   // privilegios de Operator (sandbox/http) ni System (telemetría de sistema).
-  governance_admin: ["Auditor", "Guest"],
-  Operator: ["Guest"],
-  Auditor: ["Guest"],
+  governance_admin: ['Auditor', 'Guest'],
+  Operator: ['Guest'],
+  Auditor: ['Guest'],
   System: [],
   Guest: [],
 };
@@ -80,8 +80,8 @@ export interface PermissionCheck {
   reason: string;
 }
 
-const PERMISSION_NOT_GRANTED = "Permiso no concedido (fail-closed)";
-const PERMISSION_NOT_DEFINED = "Permiso no definido en el catálogo";
+const PERMISSION_NOT_GRANTED = 'Permiso no concedido (fail-closed)';
+const PERMISSION_NOT_DEFINED = 'Permiso no definido en el catálogo';
 
 /**
  * Expande un rol a sí mismo más todos los roles de los que hereda,
@@ -106,8 +106,8 @@ export function resolveRoleChain(role: Role): Role[] {
  * y la cadena de herencia. Nunca lanza: resuelve fail-closed.
  */
 export function identityHasPermission(
-  identity: Pick<PrincipalIdentity, "role">,
-  permission: string,
+  identity: Pick<PrincipalIdentity, 'role'>,
+  permission: string
 ): boolean {
   if (!permission || permission.length === 0) return false;
   if (!ROLES.includes(identity.role)) return false;
@@ -122,8 +122,8 @@ export function identityHasPermission(
  * auditoría y mensajes seguros.
  */
 export function checkPermission(
-  identity: Pick<PrincipalIdentity, "role">,
-  permission: string,
+  identity: Pick<PrincipalIdentity, 'role'>,
+  permission: string
 ): PermissionCheck {
   if (!ROLES.includes(identity.role)) {
     return {
@@ -163,46 +163,46 @@ export function grantedPermissions(role: Role): ReadonlySet<string> {
 /** Todos los permisos del sistema (registro declarativo). */
 export const PERMISSIONS = {
   // Memoria
-  "memory:read:own": "Leer memoria propia",
-  "memory:read:territorial": "Leer memoria territorial",
-  "memory:read:restricted": "Leer memoria restringida",
-  "memory:write:own": "Escribir memoria propia",
-  "memory:delete:own": "Eliminar memoria propia",
-  "memory:admin": "Administrar memoria de terceros",
+  'memory:read:own': 'Leer memoria propia',
+  'memory:read:territorial': 'Leer memoria territorial',
+  'memory:read:restricted': 'Leer memoria restringida',
+  'memory:write:own': 'Escribir memoria propia',
+  'memory:delete:own': 'Eliminar memoria propia',
+  'memory:admin': 'Administrar memoria de terceros',
   // BookPI / ledger
-  "ledger:read:own": "Leer libro mayor propio",
-  "ledger:read:any": "Leer libro mayor de cualquier actor",
-  "ledger:write": "Registrar operaciones en el libro mayor",
-  "ledger:refund": "Reembolsar operaciones del libro mayor",
-  "ledger:verify": "Verificar integridad de la cadena",
+  'ledger:read:own': 'Leer libro mayor propio',
+  'ledger:read:any': 'Leer libro mayor de cualquier actor',
+  'ledger:write': 'Registrar operaciones en el libro mayor',
+  'ledger:refund': 'Reembolsar operaciones del libro mayor',
+  'ledger:verify': 'Verificar integridad de la cadena',
   // Auditoría
-  "audit:write": "Registrar eventos de auditoría",
-  "audit:read": "Leer registros de auditoría",
-  "audit:verify": "Verificar cadena de auditoría",
+  'audit:write': 'Registrar eventos de auditoría',
+  'audit:read': 'Leer registros de auditoría',
+  'audit:verify': 'Verificar cadena de auditoría',
   // Datos personales
-  "data:personal:process": "Procesar datos personales",
-  "data:personal:export": "Exportar datos personales propios",
+  'data:personal:process': 'Procesar datos personales',
+  'data:personal:export': 'Exportar datos personales propios',
   // Gobernanza
-  "governance:read": "Consultar políticas y constitución",
-  "governance:write": "Modificar políticas y constitución",
-  "permission:grant": "Conceder permisos a identidades",
-  "permission:revoke": "Revocar permisos a identidades",
+  'governance:read': 'Consultar políticas y constitución',
+  'governance:write': 'Modificar políticas y constitución',
+  'permission:grant': 'Conceder permisos a identidades',
+  'permission:revoke': 'Revocar permisos a identidades',
   // Herramientas / sandbox
-  "tool:list": "Listar herramientas registradas",
-  "tool:execute:readonly": "Ejecutar herramientas de solo lectura",
-  "tool:execute": "Ejecutar herramientas autorizadas",
-  "sandbox:run": "Ejecutar tareas en sandbox aislado",
+  'tool:list': 'Listar herramientas registradas',
+  'tool:execute:readonly': 'Ejecutar herramientas de solo lectura',
+  'tool:execute': 'Ejecutar herramientas autorizadas',
+  'sandbox:run': 'Ejecutar tareas en sandbox aislado',
   // Monetización
-  "monetization:read": "Consultar estado de monetización",
-  "monetization:configure": "Configurar métodos de monetización",
-  "monetization:withdraw": "Solicitar retiros",
+  'monetization:read': 'Consultar estado de monetización',
+  'monetization:configure': 'Configurar métodos de monetización',
+  'monetization:withdraw': 'Solicitar retiros',
   // Sistema / telemetría
-  "system:state": "Consultar estado del sistema",
-  "system:telemetry": "Consultar telemetría operativa",
-  "system:admin": "Operaciones administrativas del sistema",
-  "system:execute": "Ejecutar operaciones internas del sistema (rol operativo)",
-  "chat:execute": "Conversar con Isabella en el turno de chat",
-  "session:read": "Consultar la sesion de la propia identidad",
+  'system:state': 'Consultar estado del sistema',
+  'system:telemetry': 'Consultar telemetría operativa',
+  'system:admin': 'Operaciones administrativas del sistema',
+  'system:execute': 'Ejecutar operaciones internas del sistema (rol operativo)',
+  'chat:execute': 'Conversar con Isabella en el turno de chat',
+  'session:read': 'Consultar la sesion de la propia identidad',
 } as const satisfies Record<string, string>;
 
 export type Permission = keyof typeof PERMISSIONS;
@@ -216,74 +216,74 @@ const ALL = Object.keys(PERMISSIONS) as Permission[];
 const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   // Guest: acceso público no autenticado con privilegios mínimos. Puede chatear con Isabella (system:telemetry) y leer memoria propia.
   Guest: [
-    "memory:read:own",
-    "ledger:read:own",
-    "governance:read",
-    "tool:list",
-    "monetization:read",
-    "system:telemetry",
-    "chat:execute",
-    "session:read",
+    'memory:read:own',
+    'ledger:read:own',
+    'governance:read',
+    'tool:list',
+    'monetization:read',
+    'system:telemetry',
+    'chat:execute',
+    'session:read',
   ],
   System: [
-    "audit:write",
-    "ledger:verify",
-    "tool:list",
-    "tool:execute:readonly",
-    "system:state",
-    "system:telemetry",
-    "system:execute",
-    "chat:execute",
-    "session:read",
+    'audit:write',
+    'ledger:verify',
+    'tool:list',
+    'tool:execute:readonly',
+    'system:state',
+    'system:telemetry',
+    'system:execute',
+    'chat:execute',
+    'session:read',
   ],
   Auditor: [
-    "ledger:read:any",
-    "ledger:verify",
-    "audit:read",
-    "audit:verify",
-    "governance:read",
-    "system:state",
-    "chat:execute",
-    "session:read",
+    'ledger:read:any',
+    'ledger:verify',
+    'audit:read',
+    'audit:verify',
+    'governance:read',
+    'system:state',
+    'chat:execute',
+    'session:read',
   ],
   Operator: [
-    "memory:write:own",
-    "memory:delete:own",
-    "memory:read:territorial",
-    "ledger:write",
-    "tool:execute",
-    "sandbox:run",
-    "monetization:configure",
-    "monetization:withdraw",
-    "system:state",
-    "system:telemetry",
-    "system:execute",
-    "chat:execute",
-    "session:read",
+    'memory:write:own',
+    'memory:delete:own',
+    'memory:read:territorial',
+    'ledger:write',
+    'tool:execute',
+    'sandbox:run',
+    'monetization:configure',
+    'monetization:withdraw',
+    'system:state',
+    'system:telemetry',
+    'system:execute',
+    'chat:execute',
+    'session:read',
   ],
   governance_admin: [
-    "governance:write",
-    "permission:grant",
-    "permission:revoke",
-    "memory:admin",
-    "system:admin",
-    "system:state",
-    "ledger:read:any",
-    "audit:read",
-    "system:execute",
-    "chat:execute",
-    "session:read",
+    'governance:write',
+    'permission:grant',
+    'permission:revoke',
+    'memory:admin',
+    'system:admin',
+    'system:state',
+    'ledger:read:any',
+    'audit:read',
+    'system:execute',
+    'chat:execute',
+    'session:read',
   ],
   SovereignOwner: [
-    "ledger:refund",
-    "permission:grant",
-    "permission:revoke",
-    "memory:admin",
-    "system:admin",
-    "governance:write",
-    "system:execute",
-    "chat:execute",
-    "session:read",
+    'ledger:refund',
+    'permission:grant',
+    'permission:revoke',
+    'memory:admin',
+    'system:admin',
+    'governance:write',
+    'system:execute',
+    'chat:execute',
+    'session:read',
   ],
 };
 

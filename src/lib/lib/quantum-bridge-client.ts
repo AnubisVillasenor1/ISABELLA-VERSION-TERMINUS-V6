@@ -1,12 +1,12 @@
-import { spawn } from "node:child_process";
-import path from "node:path";
-import { config, passthroughChildEnv } from "./config";
+import { spawn } from 'node:child_process';
+import path from 'node:path';
+import { config, passthroughChildEnv } from './config';
 
 export interface QuantumBridgePayload {
-  schema: "pennylane-request-v5";
+  schema: 'pennylane-request-v5';
   requestId: string;
   tenantId: string;
-  task: "execute" | "diagnose";
+  task: 'execute' | 'diagnose';
   provider: string;
   wires: number;
   features: number[];
@@ -21,7 +21,7 @@ export interface QuantumBridgePayload {
 
 export interface QuantumBridgeResponse {
   schema?: string;
-  status: "ok" | "degraded" | "error";
+  status: 'ok' | 'degraded' | 'error';
   implementation: string;
   requestId: string;
   tenantId?: string;
@@ -43,14 +43,14 @@ const DEFAULT_MAX_STDOUT = 4_194_304;
 
 export class QuantumBridgeClient {
   constructor(
-    private readonly pythonPath = config().PYTHON_PATH ?? "python3",
+    private readonly pythonPath = config().PYTHON_PATH ?? 'python3',
     private readonly scriptPath = config().QUANTUM_BRIDGE_PATH ??
-      path.resolve(process.cwd(), "scripts", "quantum", "isabella_quantum_bridge_v5.py"),
+      path.resolve(process.cwd(), 'scripts', 'quantum', 'isabella_quantum_bridge_v5.py')
   ) {}
 
   dispatch(
     payload: QuantumBridgePayload,
-    options: QuantumDispatchOptions = {},
+    options: QuantumDispatchOptions = {}
   ): Promise<QuantumBridgeResponse> {
     const timeoutMs = options.timeoutMs ?? 30_000;
     const maxStdout = Number(config().QUANTUM_BRIDGE_MAX_STDOUT_BYTES ?? DEFAULT_MAX_STDOUT);
@@ -62,45 +62,45 @@ export class QuantumBridgeClient {
         PYTHON_PATH: config().PYTHON_PATH,
         QUANTUM_BRIDGE_PATH: config().QUANTUM_BRIDGE_PATH,
       };
-      const child = spawn(this.pythonPath, [this.scriptPath, "--stdio"], {
+      const child = spawn(this.pythonPath, [this.scriptPath, '--stdio'], {
         env: allowEnv,
-        stdio: ["pipe", "pipe", "pipe"],
+        stdio: ['pipe', 'pipe', 'pipe'],
       });
 
-      let stdout = "";
-      let stderr = "";
+      let stdout = '';
+      let stderr = '';
       let settled = false;
       const finish = (fn: () => void) => {
         if (settled) return;
         settled = true;
         clearTimeout(timer);
-        options.signal?.removeEventListener("abort", abortHandler);
+        options.signal?.removeEventListener('abort', abortHandler);
         fn();
       };
       const timer = setTimeout(() => {
-        child.kill("SIGTERM");
+        child.kill('SIGTERM');
         finish(() => reject(new Error(`Quantum Bridge timeout: ${payload.requestId}`)));
       }, timeoutMs);
       const abortHandler = () => {
-        child.kill("SIGTERM");
+        child.kill('SIGTERM');
         finish(() => reject(new Error(`Solicitud cancelada: ${payload.requestId}`)));
       };
 
-      options.signal?.addEventListener("abort", abortHandler, { once: true });
-      child.stdout.setEncoding("utf8");
-      child.stderr.setEncoding("utf8");
-      child.stdout.on("data", (chunk: string) => {
+      options.signal?.addEventListener('abort', abortHandler, { once: true });
+      child.stdout.setEncoding('utf8');
+      child.stderr.setEncoding('utf8');
+      child.stdout.on('data', (chunk: string) => {
         stdout += chunk;
         if (Buffer.byteLength(stdout) > maxStdout) {
-          child.kill("SIGTERM");
-          finish(() => reject(new Error("Respuesta del bridge demasiado grande")));
+          child.kill('SIGTERM');
+          finish(() => reject(new Error('Respuesta del bridge demasiado grande')));
         }
       });
-      child.stderr.on("data", (chunk: string) => {
+      child.stderr.on('data', (chunk: string) => {
         if (Buffer.byteLength(stderr) < 16_384) stderr += chunk;
       });
-      child.on("error", (error) => finish(() => reject(error)));
-      child.on("close", (code) => {
+      child.on('error', (error) => finish(() => reject(error)));
+      child.on('close', (code) => {
         if (settled) return;
         if (!stdout.trim()) {
           finish(() => reject(new Error(`Bridge sin respuesta (code=${code}): ${stderr}`)));

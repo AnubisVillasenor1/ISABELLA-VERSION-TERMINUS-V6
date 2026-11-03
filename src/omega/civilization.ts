@@ -21,18 +21,18 @@ export interface CivilizationValue {
 }
 
 const FACTOR_NAMES = [
-  "intelligence",
-  "governance",
-  "evidence",
-  "trust",
-  "economy",
-  "memory",
-  "resilience",
-  "territorialImpact",
+  'intelligence',
+  'governance',
+  'evidence',
+  'trust',
+  'economy',
+  'memory',
+  'resilience',
+  'territorialImpact',
 ] as const;
 
 function unit(value: number, name: string): number {
-  if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || value > 1) {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 1) {
     throw new Error(`CIVILIZATION_FACTOR_INVALID:${name}`);
   }
   return value;

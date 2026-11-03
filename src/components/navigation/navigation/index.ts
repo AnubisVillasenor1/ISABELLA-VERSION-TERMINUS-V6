@@ -6,19 +6,16 @@
  * Cada una permanece oculta al iniciar; se activa por icono.
  */
 
-export { NavigationShell } from "./NavigationShell";
-export { NavigationPanel } from "./NavigationPanel";
-export { NavigationTrigger } from "./NavigationTrigger";
-export { AccordionFolder } from "./AccordionFolder";
-export { ContextNavbar } from "./ContextNavbar";
-export { WorkspaceNavbar } from "./WorkspaceNavbar";
-export { GovernanceNavbar } from "./GovernanceNavbar";
-export { MonetizationNavbar } from "./MonetizationNavbar";
-export { EconomicBreakdown } from "./EconomicBreakdown";
-export {
-  NavigationStateProvider,
-  useNavigation,
-} from "./NavigationStateProvider";
+export { NavigationShell } from './NavigationShell';
+export { NavigationPanel } from './NavigationPanel';
+export { NavigationTrigger } from './NavigationTrigger';
+export { AccordionFolder } from './AccordionFolder';
+export { ContextNavbar } from './ContextNavbar';
+export { WorkspaceNavbar } from './WorkspaceNavbar';
+export { GovernanceNavbar } from './GovernanceNavbar';
+export { MonetizationNavbar } from './MonetizationNavbar';
+export { EconomicBreakdown } from './EconomicBreakdown';
+export { NavigationStateProvider, useNavigation } from './NavigationStateProvider';
 export type {
   NavigationNode,
   NavigationNodeType,
@@ -30,5 +27,5 @@ export type {
   NavigationAction,
   EconomicOperation,
   EconomicStatus,
-} from "./types";
-export { NAVBAR_CONFIGS } from "./types";
+} from './types';
+export { NAVBAR_CONFIGS } from './types';

@@ -5,8 +5,8 @@
  * Ecosistema: TAMV ONLINE NETWORK / Nodo Cero (Real del Monte, Hidalgo, México)
  */
 
-import { config } from "./config";
-import { ENV_VAR_CATALOG, type RuntimeMode } from "./env-schema";
+import { config } from './config';
+import { ENV_VAR_CATALOG, type RuntimeMode } from './env-schema';
 
 export interface EnvValidationResult {
   valid: boolean;
@@ -25,7 +25,7 @@ export function validateStartupEnvironment(): EnvValidationResult {
     const errorMsg = err instanceof Error ? err.message : String(err);
     return {
       valid: false,
-      mode: "development",
+      mode: 'development',
       criticalMissing: [errorMsg],
       invalidFormat: [],
       warnings: [],
@@ -42,59 +42,59 @@ export function validateStartupEnvironment(): EnvValidationResult {
     const value = cfg[descriptor.name];
     const isRequired = descriptor.required.includes(mode);
 
-    if (isRequired && (value === undefined || value === null || value === "")) {
+    if (isRequired && (value === undefined || value === null || value === '')) {
       criticalMissing.push(String(descriptor.name));
       continue;
     }
 
     // Comprobaciones de formato
-    if (value !== undefined && value !== null && value !== "") {
+    if (value !== undefined && value !== null && value !== '') {
       const strVal = String(value);
 
       // Verificación de URLs
       if (
-        descriptor.name === "PUBLIC_URL" ||
-        descriptor.name === "DATABASE_URL" ||
-        descriptor.name === "OTEL_EXPORTER_OTLP_ENDPOINT"
+        descriptor.name === 'PUBLIC_URL' ||
+        descriptor.name === 'DATABASE_URL' ||
+        descriptor.name === 'OTEL_EXPORTER_OTLP_ENDPOINT'
       ) {
         try {
           const u = new URL(strVal);
-          if (!["http:", "https:", "postgres:", "postgresql:"].includes(u.protocol)) {
+          if (!['http:', 'https:', 'postgres:', 'postgresql:'].includes(u.protocol)) {
             invalidFormat.push({
               key: String(descriptor.name),
-              error: "Protocolo URL no soportado",
+              error: 'Protocolo URL no soportado',
             });
           }
         } catch {
           invalidFormat.push({
             key: String(descriptor.name),
-            error: "Sintaxis de URL inválida",
+            error: 'Sintaxis de URL inválida',
           });
         }
       }
 
       // Verificación de longitudes criptográficas mínimas
-      if (descriptor.name === "AUTH_JWT_SECRET" && strVal.length < 16) {
+      if (descriptor.name === 'AUTH_JWT_SECRET' && strVal.length < 16) {
         invalidFormat.push({
-          key: "AUTH_JWT_SECRET",
-          error: "Longitud insuficiente (< 16 caracteres)",
+          key: 'AUTH_JWT_SECRET',
+          error: 'Longitud insuficiente (< 16 caracteres)',
         });
       }
       if (
-        (descriptor.name === "ENCRYPTION_MASTER_KEY" ||
-          descriptor.name === "BOOKPI_SIGNING_KEY" ||
-          descriptor.name === "AEGIS_AUDIT_SECRET") &&
+        (descriptor.name === 'ENCRYPTION_MASTER_KEY' ||
+          descriptor.name === 'BOOKPI_SIGNING_KEY' ||
+          descriptor.name === 'AEGIS_AUDIT_SECRET') &&
         strVal.length < 32
       ) {
         invalidFormat.push({
           key: String(descriptor.name),
-          error: "Longitud criptográfica insuficiente (< 32 caracteres)",
+          error: 'Longitud criptográfica insuficiente (< 32 caracteres)',
         });
       }
     }
   }
 
-  const isProdLike = mode === "production" || mode === "staging";
+  const isProdLike = mode === 'production' || mode === 'staging';
   const valid = isProdLike ? criticalMissing.length === 0 && invalidFormat.length === 0 : true;
 
   return {

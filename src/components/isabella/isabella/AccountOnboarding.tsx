@@ -1,4 +1,4 @@
-import { useState, useId, useCallback, KeyboardEvent } from "react";
+import { useState, useId, useCallback, KeyboardEvent } from 'react';
 import {
   Shield,
   User,
@@ -9,7 +9,7 @@ import {
   ArrowLeft,
   X,
   Sparkles,
-} from "lucide-react";
+} from 'lucide-react';
 
 export interface OnboardingProps {
   isOpen: boolean;
@@ -19,8 +19,8 @@ export interface OnboardingProps {
 
 export function AccountOnboarding({ isOpen, onClose, onComplete }: OnboardingProps) {
   const [step, setStep] = useState(1);
-  const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [telemetryConsent, setTelemetryConsent] = useState(true);
   const [isAgreed, setIsAgreed] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,17 +42,17 @@ export function AccountOnboarding({ isOpen, onClose, onComplete }: OnboardingPro
       const cleanEmail = email.trim();
 
       if (!cleanUser || !cleanEmail) {
-        setError("Por favor completa todos los campos obligatorios.");
+        setError('Por favor completa todos los campos obligatorios.');
         return;
       }
       if (!validateEmail(cleanEmail)) {
-        setError("Ingresa una dirección de correo electrónico válida (ejemplo@dominio.com).");
+        setError('Ingresa una dirección de correo electrónico válida (ejemplo@dominio.com).');
         return;
       }
       setStep(2);
     } else if (step === 2) {
       if (!isAgreed) {
-        setError("Debes aceptar los Términos Constitucionales y Políticas de Privacidad.");
+        setError('Debes aceptar los Términos Constitucionales y Políticas de Privacidad.');
         return;
       }
       onComplete({
@@ -65,14 +65,14 @@ export function AccountOnboarding({ isOpen, onClose, onComplete }: OnboardingPro
   }, [step, username, email, isAgreed, telemetryConsent, onComplete]);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === "Enter") {
+    if (e.key === 'Enter') {
       e.preventDefault();
       if (step < 3) {
         handleNext();
       } else {
         onClose();
       }
-    } else if (e.key === "Escape") {
+    } else if (e.key === 'Escape') {
       onClose();
     }
   };
@@ -126,7 +126,7 @@ export function AccountOnboarding({ isOpen, onClose, onComplete }: OnboardingPro
             <div
               key={s}
               className={`h-1 flex-1 rounded-full transition-all duration-500 ${
-                s <= step ? "bg-electric shadow-[0_0_8px_rgba(110,234,255,0.4)]" : "bg-secondary/35"
+                s <= step ? 'bg-electric shadow-[0_0_8px_rgba(110,234,255,0.4)]' : 'bg-secondary/35'
               }`}
             />
           ))}
@@ -286,7 +286,7 @@ export function AccountOnboarding({ isOpen, onClose, onComplete }: OnboardingPro
                   />
                   <div className="flex flex-col">
                     <span className="font-mono text-[11.5px] text-platinum font-semibold group-hover:text-electric transition-colors">
-                      Acepto los términos y políticas constitucionales{" "}
+                      Acepto los términos y políticas constitucionales{' '}
                       <span className="text-rose-400">*</span>
                     </span>
                   </div>
@@ -327,11 +327,11 @@ export function AccountOnboarding({ isOpen, onClose, onComplete }: OnboardingPro
                   <span
                     className={
                       telemetryConsent
-                        ? "text-emerald-400 font-semibold"
-                        : "text-rose-400 font-semibold"
+                        ? 'text-emerald-400 font-semibold'
+                        : 'text-rose-400 font-semibold'
                     }
                   >
-                    {telemetryConsent ? "ACTIVA" : "INACTIVA"}
+                    {telemetryConsent ? 'ACTIVA' : 'INACTIVA'}
                   </span>
                 </div>
               </div>

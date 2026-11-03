@@ -1,21 +1,21 @@
-import { z } from "zod";
-import { createIsabellaLearningEngine, type IsabellaLearningEngine } from "./isabella-learning";
+import { z } from 'zod';
+import { createIsabellaLearningEngine, type IsabellaLearningEngine } from './isabella-learning';
 
 export const LearningIngestApiSchema = z.object({
   mode: z.enum([
-    "supervised",
-    "contrastive",
-    "preference",
-    "episodic",
-    "procedural",
-    "reflective",
-    "multimodal",
+    'supervised',
+    'contrastive',
+    'preference',
+    'episodic',
+    'procedural',
+    'reflective',
+    'multimodal',
   ]),
   input: z.string().min(1).max(100_000),
   target: z.string().max(100_000).optional(),
   negative: z.string().max(100_000).optional(),
   context: z.record(z.string(), z.unknown()).optional(),
-  outcome: z.enum(["success", "partial", "failure", "unknown"]).default("unknown"),
+  outcome: z.enum(['success', 'partial', 'failure', 'unknown']).default('unknown'),
   quality: z.number().min(0).max(1).default(0.5),
   consent: z.boolean().default(false),
   source: z.string().min(1).max(256),
@@ -39,7 +39,7 @@ export interface NativeLearningApi {
 }
 
 export function createNativeLearningApi(
-  engine: IsabellaLearningEngine = createIsabellaLearningEngine(),
+  engine: IsabellaLearningEngine = createIsabellaLearningEngine()
 ): NativeLearningApi {
   return {
     ingest(payload) {
@@ -49,13 +49,13 @@ export function createNativeLearningApi(
     retrieve(payload) {
       const parsed = LearningQueryApiSchema.safeParse(payload);
       if (!parsed.success)
-        return json({ error: "VALIDATION_ERROR", issues: parsed.error.issues }, 400);
+        return json({ error: 'VALIDATION_ERROR', issues: parsed.error.issues }, 400);
       return json({ items: engine.retrieve(parsed.data.query, parsed.data.limit) }, 200);
     },
     evaluate(payload) {
       const parsed = LearningEvaluateApiSchema.safeParse(payload);
       if (!parsed.success)
-        return json({ error: "VALIDATION_ERROR", issues: parsed.error.issues }, 400);
+        return json({ error: 'VALIDATION_ERROR', issues: parsed.error.issues }, 400);
       return json(engine.evaluate(parsed.data.query), 200);
     },
     snapshot() {
@@ -68,8 +68,8 @@ function json(data: unknown, status: number): Response {
   return new Response(JSON.stringify(data), {
     status,
     headers: {
-      "content-type": "application/json; charset=utf-8",
-      "cache-control": "no-store",
+      'content-type': 'application/json; charset=utf-8',
+      'cache-control': 'no-store',
     },
   });
 }

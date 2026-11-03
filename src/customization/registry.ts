@@ -4,8 +4,8 @@
 // y expone conteos y un digest determinista.
 //
 // Invariante: registrar NO autoriza, NO instala y NO ejecuta; sólo cataloga.
-import { manifestDigest } from "../skills/canonical-json";
-import { CUSTOMIZATION_KINDS, type CustomizationEntry, type CustomizationKind } from "./types";
+import { manifestDigest } from '../skills/canonical-json';
+import { CUSTOMIZATION_KINDS, type CustomizationEntry, type CustomizationKind } from './types';
 
 function emptyKindCounts(): Record<CustomizationKind, number> {
   const counts = {} as Record<CustomizationKind, number>;
@@ -18,7 +18,7 @@ export class CustomizationRegistry {
 
   register(entry: CustomizationEntry): void {
     if (!entry.id.trim() || !entry.version.trim() || !entry.kind) {
-      throw new Error("CUSTOMIZATION_INVALID_DESCRIPTOR");
+      throw new Error('CUSTOMIZATION_INVALID_DESCRIPTOR');
     }
     if (this.entries.has(entry.id)) {
       throw new Error(`CUSTOMIZATION_DUPLICATE:${entry.id}`);
@@ -51,7 +51,12 @@ export class CustomizationRegistry {
   /** Digest determinista sobre la identidad de las entidades (id, versión, tipo, estado). */
   manifest(): string {
     return manifestDigest(
-      this.list().map((entry) => ({ id: entry.id, version: entry.version, kind: entry.kind, state: entry.state })),
+      this.list().map((entry) => ({
+        id: entry.id,
+        version: entry.version,
+        kind: entry.kind,
+        state: entry.state,
+      }))
     );
   }
 }

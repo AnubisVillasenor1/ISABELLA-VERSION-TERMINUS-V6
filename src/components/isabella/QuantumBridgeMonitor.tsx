@@ -1,5 +1,5 @@
-import React from "react";
-import { Activity, CircleHelp, Clock, Cpu, Gauge, Shield, Zap } from "lucide-react";
+import React from 'react';
+import { Activity, CircleHelp, Clock, Cpu, Gauge, Shield, Zap } from 'lucide-react';
 
 export interface QuantumTelemetryPoint {
   timestamp: string;
@@ -10,7 +10,7 @@ export interface QuantumTelemetryPoint {
   wiresUsed: number;
   shotsExecuted: number;
   fidelity: number;
-  status: "COMPLETED" | "EXECUTING" | "TRANSPILED" | "TIMEOUT" | "ERROR";
+  status: 'COMPLETED' | 'EXECUTING' | 'TRANSPILED' | 'TIMEOUT' | 'ERROR';
 }
 
 export interface QuantumEnvConfig {

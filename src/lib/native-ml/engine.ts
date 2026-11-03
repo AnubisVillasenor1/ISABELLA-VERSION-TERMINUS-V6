@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash } from 'node:crypto';
 import type {
   DatasetIdentity,
   ModelIdentity,
@@ -7,7 +7,7 @@ import type {
   TrainingResult,
   MLTask,
   ModelArtifact,
-} from "./types";
+} from './types';
 
 export interface BinaryDataset {
   dataset: DatasetIdentity;
@@ -15,7 +15,7 @@ export interface BinaryDataset {
   labels: number[];
 }
 function hash(value: unknown): string {
-  return createHash("sha256").update(JSON.stringify(value)).digest("hex");
+  return createHash('sha256').update(JSON.stringify(value)).digest('hex');
 }
 function sigmoid(x: number): number {
   return 1 / (1 + Math.exp(-Math.max(-40, Math.min(40, x))));
@@ -36,36 +36,36 @@ function validateArtifact(model: ModelIdentity, artifact: ModelArtifact): void {
     artifact.weights.length === 0 ||
     artifact.weights.some((v) => !Number.isFinite(v))
   )
-    throw new Error("invalid_model_artifact");
+    throw new Error('invalid_model_artifact');
   const artifactHash = artifactHashOf(artifact.weights, artifact.bias);
   if (artifactHash !== model.modelHash || artifact.artifactHash !== artifactHash)
-    throw new Error("model_artifact_hash_mismatch");
+    throw new Error('model_artifact_hash_mismatch');
 }
 
 export async function trainBinaryClassifier(
   input: BinaryDataset,
   ownerId: string,
   territoryId: string,
-  hooks: NativeMLHooks = {},
+  hooks: NativeMLHooks = {}
 ): Promise<TrainingResult> {
   if (input.features.length === 0 || input.features.length !== input.labels.length)
-    throw new Error("invalid dataset cardinality");
+    throw new Error('invalid dataset cardinality');
   const width = input.features[0]?.length ?? 0;
   if (
     width === 0 ||
     input.features.some((row) => row.length !== width || row.some((v) => !Number.isFinite(v)))
   )
-    throw new Error("invalid feature matrix");
-  if (input.labels.some((v) => v !== 0 && v !== 1)) throw new Error("binary labels required");
+    throw new Error('invalid feature matrix');
+  if (input.labels.some((v) => v !== 0 && v !== 1)) throw new Error('binary labels required');
   if (!input.dataset.license || !input.dataset.contentHash || !input.dataset.schemaHash)
-    throw new Error("dataset provenance required");
+    throw new Error('dataset provenance required');
   const modelId = `native-logreg-${hash({ dataset: input.dataset.datasetId, version: input.dataset.version, ownerId }).slice(0, 16)}`;
   const decision = await hooks.authorize?.({
-    action: "native_ml.train",
+    action: 'native_ml.train',
     territoryId,
     modelId,
   });
-  if (decision && decision.decision !== "ALLOW")
+  if (decision && decision.decision !== 'ALLOW')
     throw new Error(`native_ml_${decision.decision.toLowerCase()}`);
   const weights = Array.from({ length: width }, () => 0);
   let bias = 0;
@@ -92,20 +92,20 @@ export async function trainBinaryClassifier(
   const artifactHash = hash({ weights, bias });
   const model: ModelIdentity = {
     modelId,
-    version: "0.1.0",
+    version: '0.1.0',
     territoryId,
     ownerId,
-    task: "classification",
-    algorithm: "deterministic-logistic-sgd",
+    task: 'classification',
+    algorithm: 'deterministic-logistic-sgd',
     datasetIds: [input.dataset.datasetId],
     modelHash: artifactHash,
     createdAt: new Date().toISOString(),
-    approvalStatus: "PENDING_REVIEW",
+    approvalStatus: 'PENDING_REVIEW',
   };
   const artifact: ModelArtifact = { weights: [...weights], bias, artifactHash };
   const trainingHash = hash({ dataset: input.dataset, weights, bias });
   const provenanceId = `prov_${hash({ dataset: input.dataset, trainingHash }).slice(0, 24)}`;
-  await hooks.audit?.("native_ml.training_completed", {
+  await hooks.audit?.('native_ml.training_completed', {
     modelId,
     trainingHash,
     provenanceId,
@@ -128,9 +128,9 @@ export async function predictBinary(
   weights: number[],
   bias: number,
   features: number[][],
-  hooks: NativeMLHooks = {},
+  hooks: NativeMLHooks = {}
 ): Promise<PredictionResult<number>> {
-  if (model.approvalStatus !== "APPROVED") throw new Error("model_not_approved");
+  if (model.approvalStatus !== 'APPROVED') throw new Error('model_not_approved');
   const artifact: ModelArtifact = {
     weights,
     bias,
@@ -138,21 +138,21 @@ export async function predictBinary(
   };
   validateArtifact(model, artifact);
   if (features.some((row) => row.length !== weights.length || row.some((v) => !Number.isFinite(v))))
-    throw new Error("invalid features");
+    throw new Error('invalid features');
   const decision = await hooks.authorize?.({
-    action: "native_ml.predict",
+    action: 'native_ml.predict',
     territoryId: model.territoryId,
     modelId: model.modelId,
   });
-  if (decision && decision.decision === "DENY") throw new Error("native_ml_denied");
+  if (decision && decision.decision === 'DENY') throw new Error('native_ml_denied');
   const probabilities = features.map((row) =>
-    sigmoid(row.reduce((sum, x, j) => sum + x * weights[j]!, bias)),
+    sigmoid(row.reduce((sum, x, j) => sum + x * weights[j]!, bias))
   );
   const predictions = probabilities.map((p) => (p >= 0.5 ? 1 : 0));
   const confidence = probabilities.map((p) => Math.max(p, 1 - p));
   let minConfidence = 1;
   for (const value of confidence) if (value < minConfidence) minConfidence = value;
-  const auditId = await hooks.audit?.("native_ml.prediction", {
+  const auditId = await hooks.audit?.('native_ml.prediction', {
     modelId: model.modelId,
     artifactHash: artifact.artifactHash,
     count: predictions.length,
@@ -162,11 +162,11 @@ export async function predictBinary(
     predictions,
     confidence,
     explanation: {
-      method: "linear_feature_contribution",
+      method: 'linear_feature_contribution',
       featureCount: weights.length,
     },
     riskScore: Math.max(0, 1 - minConfidence),
-    requiresReview: decision?.decision === "REVIEW",
+    requiresReview: decision?.decision === 'REVIEW',
     degraded: false,
     ...(auditId ? { auditId } : {}),
   };

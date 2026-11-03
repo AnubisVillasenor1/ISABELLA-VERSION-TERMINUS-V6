@@ -1,0 +1,8 @@
+# Isabella Genesis — static output directory.
+#
+# Vercel needs a static output directory even when every request is routed to
+# the serverless function in `api/index.js`. The application UI is served by the
+# Express runtime (rewrites send `/(.*)` to `/api`), so this directory only
+# holds crawl directives and must stay free of application code.
+User-agent: *
+Disallow: /api/

@@ -146,20 +146,41 @@ describe("native adapter + engine", () => {
     const e = new GenesisTtsEngine({ env: {}, native, serverTts: async () => null });
     const r = await e.synthesize({ text: "Hola, ¿qué onda?", mode: "PODCAST", actorId: "u" });
     expect(r.status).toBe("client-plan");
-    if (r.status === "client-plan") { expect(r.audio).toBeNull(); expect(r.backend).toBe("browser-speech"); expect(r.plan.phrases.length).toBeGreaterThan(0); }
+    if (r.status === "client-plan") { expect(r.audio).toBeNull(); expect(r.backend).toBe("browser-speech"); expect(r.plan.phrases.length).toBeGreaterThan(0); expect(r.voice).toBe("isabella-esmx-female-v1"); }
   });
   it("uses server TTS bytes when configured and ranked, and denies replayed nonces", async () => {
-    const e = new GenesisTtsEngine({ env: { GROQ_API_KEY: "k", GROQ_TTS_MODEL: "m" }, native: null, serverTts: async () => ({ provider: "groq", mimeType: "audio/wav", dataUrl: "data:audio/wav;base64,AAAA", bytes: 3 }) });
+    const e = new GenesisTtsEngine({ env: { GROQ_API_KEY: "k", GROQ_TTS_MODEL: "m" }, native: null, serverTts: async () => ({ provider: "groq", mimeType: "audio/wav", dataUrl: "data:audio/wav;base64,AAAA", bytes: 3, voice: "Celeste-PlayAI" }) });
     const first = await e.synthesize({ text: "Texto de prueba para el servidor de voz.", mode: "PODCAST", actorId: "u", nonce: "abcdefgh1" });
     expect(first.status === "audio" && first.backend).toBe("server-tts");
     const replay = await e.synthesize({ text: "Texto de prueba para el servidor de voz.", mode: "PODCAST", actorId: "u", nonce: "abcdefgh1" });
     expect(replay).toMatchObject({ status: "denied", reason: "NONCE_REPLAY_DETECTED" });
   });
+  it("planStream segments sentences, assigns pauses and never implies audio", () => {
+    const e = new GenesisTtsEngine({ env: {}, native: null });
+    const result = e.planStream({
+      text: "Primera oración de prueba. ¿Segunda oración de prueba? Tercera oración final.",
+      actorId: "u",
+      mode: "CONVERSACION",
+    });
+    expect(result.chunks.length).toBeGreaterThanOrEqual(3);
+    expect(result.chunks.map((chunk) => chunk.index)).toEqual(result.chunks.map((_, i) => i));
+    expect(result.chunks.every((chunk) => chunk.total === result.chunks.length)).toBe(true);
+    expect(result.chunks.at(-1)?.pauseAfterMs).toBe(0);
+    expect(result.chunks.slice(0, -1).every((chunk) => chunk.pauseAfterMs > 0)).toBe(true);
+    expect(result.chunks.every((chunk) => chunk.plan.phrases.length > 0)).toBe(true);
+    const summed = result.chunks.reduce((total, chunk) => total + chunk.estimatedDurationMs + chunk.pauseAfterMs, 0);
+    expect(result.estimatedDurationMs).toBe(summed);
+    expect(result.estimatedDurationMs).toBeGreaterThan(0);
+    expect(JSON.stringify(result)).not.toContain("audio");
+  });
+
   it("status is truthful: nothing configured means no server audio and spec-only items are listed", async () => {
     const s = await new GenesisTtsEngine({ env: {}, native: null }).status();
     expect(s.audioServerSide).toBe(false);
     expect((s.backends as Record<string, { state: string }>)["native-fsim"]?.state).toBe("not_configured");
     expect(s.designTargetsNotMeasured).toBe(true);
+    expect((s.voice as { id: string; gender: string }).id).toBe("isabella-esmx-female-v1");
+    expect((s.voice as { id: string; gender: string }).gender).toBe("female");
     expect(JSON.stringify(s)).toContain("BigVGAN");
   });
 });

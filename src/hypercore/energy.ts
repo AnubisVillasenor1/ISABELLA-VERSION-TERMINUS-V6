@@ -13,14 +13,49 @@ import type {
   HyperCoreMode,
   ModeDecision,
   ModeProfile,
-} from "./types";
+} from './types';
 
 const MODE_PROFILES: Record<HyperCoreMode, ModeProfile> = {
-  ECO: { mode: "ECO", cpuLimitPercent: 20, speculative: false, parallelBranches: 1, cacheBias: "maximum", governance: "standard" },
-  CRUISE: { mode: "CRUISE", cpuLimitPercent: 40, speculative: false, parallelBranches: 2, cacheBias: "high", governance: "standard" },
-  BOOST: { mode: "BOOST", cpuLimitPercent: 70, speculative: true, parallelBranches: 4, cacheBias: "high", governance: "elevated" },
-  HYPERBOOST: { mode: "HYPERBOOST", cpuLimitPercent: 90, speculative: true, parallelBranches: 16, cacheBias: "maximum", governance: "elevated" },
-  OMEGA: { mode: "OMEGA", cpuLimitPercent: 100, speculative: true, parallelBranches: 64, cacheBias: "total", governance: "maximum" },
+  ECO: {
+    mode: 'ECO',
+    cpuLimitPercent: 20,
+    speculative: false,
+    parallelBranches: 1,
+    cacheBias: 'maximum',
+    governance: 'standard',
+  },
+  CRUISE: {
+    mode: 'CRUISE',
+    cpuLimitPercent: 40,
+    speculative: false,
+    parallelBranches: 2,
+    cacheBias: 'high',
+    governance: 'standard',
+  },
+  BOOST: {
+    mode: 'BOOST',
+    cpuLimitPercent: 70,
+    speculative: true,
+    parallelBranches: 4,
+    cacheBias: 'high',
+    governance: 'elevated',
+  },
+  HYPERBOOST: {
+    mode: 'HYPERBOOST',
+    cpuLimitPercent: 90,
+    speculative: true,
+    parallelBranches: 16,
+    cacheBias: 'maximum',
+    governance: 'elevated',
+  },
+  OMEGA: {
+    mode: 'OMEGA',
+    cpuLimitPercent: 100,
+    speculative: true,
+    parallelBranches: 64,
+    cacheBias: 'total',
+    governance: 'maximum',
+  },
 };
 
 export function modeProfile(mode: HyperCoreMode): ModeProfile {
@@ -51,35 +86,35 @@ export interface GovernModeInput {
 export function governMode(input: GovernModeInput): ModeDecision {
   const { estimate, budget } = input;
   if (estimate.estimatedEnergyKwh > budget.maxEnergyKwh) {
-    return { mode: "ECO", reason: "ENERGY_OVER_BUDGET" };
+    return { mode: 'ECO', reason: 'ENERGY_OVER_BUDGET' };
   }
   if (input.authorizedCritical) {
-    return { mode: "OMEGA", reason: "AUTHORIZED_CRITICAL_OPERATION" };
+    return { mode: 'OMEGA', reason: 'AUTHORIZED_CRITICAL_OPERATION' };
   }
   if (input.critical && estimate.estimatedEnergyKwh <= budget.maxEnergyKwh) {
-    return { mode: "HYPERBOOST", reason: "CRITICAL_WITHIN_BUDGET" };
+    return { mode: 'HYPERBOOST', reason: 'CRITICAL_WITHIN_BUDGET' };
   }
   if (estimate.estimatedLatencyMs <= budget.maxLatencyMs) {
-    return { mode: "CRUISE", reason: "LATENCY_WITHIN_TARGET" };
+    return { mode: 'CRUISE', reason: 'LATENCY_WITHIN_TARGET' };
   }
-  return { mode: "BOOST", reason: "LATENCY_OVER_TARGET_WITHIN_ENERGY" };
+  return { mode: 'BOOST', reason: 'LATENCY_OVER_TARGET_WITHIN_ENERGY' };
 }
 
 export type DegradationStep =
-  | "reduce_parallelism"
-  | "disable_speculation"
-  | "reduce_context"
-  | "switch_to_eco_model"
-  | "queue_non_critical_tasks"
-  | "pause_prefetch";
+  | 'reduce_parallelism'
+  | 'disable_speculation'
+  | 'reduce_context'
+  | 'switch_to_eco_model'
+  | 'queue_non_critical_tasks'
+  | 'pause_prefetch';
 
 export const DEGRADATION_ORDER: readonly DegradationStep[] = [
-  "reduce_parallelism",
-  "disable_speculation",
-  "reduce_context",
-  "switch_to_eco_model",
-  "queue_non_critical_tasks",
-  "pause_prefetch",
+  'reduce_parallelism',
+  'disable_speculation',
+  'reduce_context',
+  'switch_to_eco_model',
+  'queue_non_critical_tasks',
+  'pause_prefetch',
 ];
 
 /**

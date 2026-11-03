@@ -12,21 +12,21 @@
  * conciencia humana decide. `confidence` es una estimación determinista, no una
  * probabilidad calibrada.
  */
-import { sha256 } from "../skills/canonical-json";
-import type { TrafficBand } from "../governance/traffic-light";
+import { sha256 } from '../skills/canonical-json';
+import type { TrafficBand } from '../governance/traffic-light';
 
-export const SOVEREIGN_CONTRACT_VERSION = "1.0.0" as const;
+export const SOVEREIGN_CONTRACT_VERSION = '1.0.0' as const;
 
 export const SOVEREIGN_CONTRACT_DISCLAIMER =
-  "La respuesta soberana clasifica, explica, evidencia y propone. NO autoriza, NO ejecuta y NO se declara verdad. `authorityPath` permanece FULL: la conciencia humana decide, aprueba y ejecuta." as const;
+  'La respuesta soberana clasifica, explica, evidencia y propone. NO autoriza, NO ejecuta y NO se declara verdad. `authorityPath` permanece FULL: la conciencia humana decide, aprueba y ejecuta.' as const;
 
-export type SovereignDecision = "ALLOW" | "DENY" | "REVIEW";
+export type SovereignDecision = 'ALLOW' | 'DENY' | 'REVIEW';
 
 export interface SovereignSimulation {
   /** Motor de simulación solicitado (p. ej. "reality-twin"). */
   readonly engine: string;
   /** Estado honesto: SIMULATED cuando corre el bridge, NOT_WIRED cuando no existe. */
-  readonly status: "SIMULATED" | "NOT_WIRED";
+  readonly status: 'SIMULATED' | 'NOT_WIRED';
   readonly notes: string;
 }
 
@@ -43,7 +43,7 @@ export interface SovereignPolicy {
   readonly band: TrafficBand;
   readonly policyVersion: string;
   /** Invariante: la composición no eleva ni reduce la autoridad. */
-  readonly authorityPath: "FULL";
+  readonly authorityPath: 'FULL';
 }
 
 export interface SovereignResponse {
@@ -60,7 +60,7 @@ export interface SovereignResponse {
   readonly policy: SovereignPolicy;
   /** SHA-256 canónico del ciclo (integridad BookPI). */
   readonly bookpiHash: string;
-  readonly authorityPath: "FULL";
+  readonly authorityPath: 'FULL';
   readonly authorizationPerformed: false;
   readonly executionPerformed: false;
   readonly disclaimer: typeof SOVEREIGN_CONTRACT_DISCLAIMER;
@@ -91,7 +91,12 @@ function freezeResponse(response: SovereignResponse): SovereignResponse {
     policy: Object.freeze({ ...response.policy }),
     ...(response.simulation ? { simulation: Object.freeze({ ...response.simulation }) } : {}),
     ...(response.evolution
-      ? { evolution: Object.freeze({ ...response.evolution, delta: Object.freeze({ ...response.evolution.delta }) }) }
+      ? {
+          evolution: Object.freeze({
+            ...response.evolution,
+            delta: Object.freeze({ ...response.evolution.delta }),
+          }),
+        }
       : {}),
   });
 }
@@ -102,10 +107,12 @@ function freezeResponse(response: SovereignResponse): SovereignResponse {
  * marca autorización ni ejecución.
  */
 export function buildSovereignResponse(input: BuildSovereignResponseInput): SovereignResponse {
-  const answer = typeof input.answer === "string" ? input.answer.trim() : "";
-  if (!answer) throw new Error("SOVEREIGN_ANSWER_REQUIRED");
+  const answer = typeof input.answer === 'string' ? input.answer.trim() : '';
+  if (!answer) throw new Error('SOVEREIGN_ANSWER_REQUIRED');
 
-  const confidence = Number.isFinite(input.confidence) ? Math.min(1, Math.max(0, input.confidence)) : 0;
+  const confidence = Number.isFinite(input.confidence)
+    ? Math.min(1, Math.max(0, input.confidence))
+    : 0;
 
   const bookpiHash = sha256({
     version: SOVEREIGN_CONTRACT_VERSION,
@@ -130,7 +137,7 @@ export function buildSovereignResponse(input: BuildSovereignResponseInput): Sove
     evolution: input.evolution ?? null,
     policy: input.policy,
     bookpiHash,
-    authorityPath: "FULL",
+    authorityPath: 'FULL',
     authorizationPerformed: false,
     executionPerformed: false,
     disclaimer: SOVEREIGN_CONTRACT_DISCLAIMER,
@@ -143,25 +150,32 @@ export function buildSovereignResponse(input: BuildSovereignResponseInput): Sove
  */
 export function validateSovereignResponse(value: unknown): SovereignResponseValidation {
   const errors: string[] = [];
-  if (typeof value !== "object" || value === null) {
-    return { valid: false, errors: ["SOVEREIGN_RESPONSE_NOT_OBJECT"] };
+  if (typeof value !== 'object' || value === null) {
+    return { valid: false, errors: ['SOVEREIGN_RESPONSE_NOT_OBJECT'] };
   }
   const r = value as Partial<SovereignResponse>;
 
-  if (r.version !== SOVEREIGN_CONTRACT_VERSION) errors.push("SOVEREIGN_VERSION_UNSUPPORTED");
-  if (typeof r.answer !== "string" || !r.answer.trim()) errors.push("SOVEREIGN_ANSWER_REQUIRED");
-  if (typeof r.confidence !== "number" || !Number.isFinite(r.confidence) || r.confidence < 0 || r.confidence > 1) {
-    errors.push("SOVEREIGN_CONFIDENCE_INVALID");
+  if (r.version !== SOVEREIGN_CONTRACT_VERSION) errors.push('SOVEREIGN_VERSION_UNSUPPORTED');
+  if (typeof r.answer !== 'string' || !r.answer.trim()) errors.push('SOVEREIGN_ANSWER_REQUIRED');
+  if (
+    typeof r.confidence !== 'number' ||
+    !Number.isFinite(r.confidence) ||
+    r.confidence < 0 ||
+    r.confidence > 1
+  ) {
+    errors.push('SOVEREIGN_CONFIDENCE_INVALID');
   }
-  if (!Array.isArray(r.reasoningPath)) errors.push("SOVEREIGN_REASONING_PATH_INVALID");
-  if (!Array.isArray(r.usedKnowledgeDomains)) errors.push("SOVEREIGN_DOMAINS_INVALID");
-  if (!Array.isArray(r.evidence)) errors.push("SOVEREIGN_EVIDENCE_INVALID");
-  if (typeof r.bookpiHash !== "string" || !r.bookpiHash) errors.push("SOVEREIGN_BOOKPI_HASH_REQUIRED");
-  if (r.authorityPath !== "FULL") errors.push("SOVEREIGN_AUTHORITY_PATH_MUST_BE_FULL");
-  if (r.authorizationPerformed !== false) errors.push("SOVEREIGN_MUST_NOT_AUTHORIZE");
-  if (r.executionPerformed !== false) errors.push("SOVEREIGN_MUST_NOT_EXECUTE");
-  if (typeof r.policy !== "object" || r.policy === null) errors.push("SOVEREIGN_POLICY_REQUIRED");
-  else if ((r.policy as SovereignPolicy).authorityPath !== "FULL") errors.push("SOVEREIGN_POLICY_AUTHORITY_PATH_MUST_BE_FULL");
+  if (!Array.isArray(r.reasoningPath)) errors.push('SOVEREIGN_REASONING_PATH_INVALID');
+  if (!Array.isArray(r.usedKnowledgeDomains)) errors.push('SOVEREIGN_DOMAINS_INVALID');
+  if (!Array.isArray(r.evidence)) errors.push('SOVEREIGN_EVIDENCE_INVALID');
+  if (typeof r.bookpiHash !== 'string' || !r.bookpiHash)
+    errors.push('SOVEREIGN_BOOKPI_HASH_REQUIRED');
+  if (r.authorityPath !== 'FULL') errors.push('SOVEREIGN_AUTHORITY_PATH_MUST_BE_FULL');
+  if (r.authorizationPerformed !== false) errors.push('SOVEREIGN_MUST_NOT_AUTHORIZE');
+  if (r.executionPerformed !== false) errors.push('SOVEREIGN_MUST_NOT_EXECUTE');
+  if (typeof r.policy !== 'object' || r.policy === null) errors.push('SOVEREIGN_POLICY_REQUIRED');
+  else if ((r.policy as SovereignPolicy).authorityPath !== 'FULL')
+    errors.push('SOVEREIGN_POLICY_AUTHORITY_PATH_MUST_BE_FULL');
 
   return { valid: errors.length === 0, errors };
 }

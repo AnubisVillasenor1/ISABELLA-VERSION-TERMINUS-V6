@@ -15,13 +15,13 @@ export class TtlCache<T> {
 
   constructor(
     private readonly ttlMs = 30_000,
-    private readonly maxEntries = 1_000,
+    private readonly maxEntries = 1_000
   ) {
     if (!Number.isSafeInteger(ttlMs) || ttlMs < 1) {
-      throw new RangeError("TTL_CACHE_TTL_INVALID");
+      throw new RangeError('TTL_CACHE_TTL_INVALID');
     }
     if (!Number.isSafeInteger(maxEntries) || maxEntries < 1) {
-      throw new RangeError("TTL_CACHE_MAX_ENTRIES_INVALID");
+      throw new RangeError('TTL_CACHE_MAX_ENTRIES_INVALID');
     }
   }
 

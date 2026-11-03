@@ -1,4 +1,4 @@
-import { useRef, type ReactNode } from "react";
+import { useRef, type ReactNode } from 'react';
 import {
   ChevronDown,
   ChevronRight,
@@ -11,7 +11,7 @@ import {
   Cpu,
   Shield,
   Video,
-} from "lucide-react";
+} from 'lucide-react';
 
 /**
  * CRYSTAL NAVIGATION (src/components/isabella/CrystalNavigation.tsx)
@@ -27,16 +27,16 @@ import {
  */
 
 export type NavTabId =
-  | "terminal"
-  | "cli"
-  | "governance"
-  | "catalog"
-  | "monetization"
-  | "quantum"
-  | "interfaces"
-  | "aegis"
-  | "findarepo"
-  | "video-x";
+  | 'terminal'
+  | 'cli'
+  | 'governance'
+  | 'catalog'
+  | 'monetization'
+  | 'quantum'
+  | 'interfaces'
+  | 'aegis'
+  | 'findarepo'
+  | 'video-x';
 
 export interface NavGroupItem {
   id: NavTabId;
@@ -142,27 +142,27 @@ function AccordionGroup({
                 tabIndex={0}
                 onClick={() => onSelect(item.id)}
                 onKeyDown={(e) => {
-                  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
                     e.preventDefault();
                     const all =
-                      listRef.current?.querySelectorAll<HTMLButtonElement>("[data-nav-item]");
+                      listRef.current?.querySelectorAll<HTMLButtonElement>('[data-nav-item]');
                     if (!all || all.length === 0) return;
                     let next = index;
-                    if (e.key === "ArrowDown") next = (index + 1) % group.items.length;
+                    if (e.key === 'ArrowDown') next = (index + 1) % group.items.length;
                     else next = (index - 1 + group.items.length) % group.items.length;
                     all[next]?.focus();
-                  } else if (e.key === "Enter" || e.key === " ") {
+                  } else if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
                     onSelect(item.id);
                   }
                 }}
                 data-nav-item
                 aria-label={item.label}
-                aria-current={isCurrent ? "page" : undefined}
+                aria-current={isCurrent ? 'page' : undefined}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-mono text-[11.5px] transition-all ${item.glow} ${
                   isCurrent
                     ? `${item.activeClass} font-semibold`
-                    : "text-muted-foreground hover:bg-secondary/20 hover:text-platinum border border-transparent"
+                    : 'text-muted-foreground hover:bg-secondary/20 hover:text-platinum border border-transparent'
                 }`}
               >
                 <span className="shrink-0">{item.icon}</span>
@@ -179,115 +179,115 @@ function AccordionGroup({
 /* Conveniencia: grupos preconstruidos desde index.tsx */
 export const NAV_GROUPS = (
   open: Record<string, boolean>,
-  onToggle: (id: string) => void,
+  onToggle: (id: string) => void
 ): NavGroup[] => [
   {
-    id: "cognition",
-    label: "Cognición & Flujos",
+    id: 'cognition',
+    label: 'Cognición & Flujos',
     Icon: Sparkles,
-    colorClass: "text-electric",
+    colorClass: 'text-electric',
     isOpen: open.cognition ?? true,
-    onToggle: () => onToggle("cognition"),
+    onToggle: () => onToggle('cognition'),
     items: [
       {
-        id: "terminal",
-        label: "Terminal Cognitivo",
+        id: 'terminal',
+        label: 'Terminal Cognitivo',
         icon: <MessageSquare className="size-4" />,
-        glow: "crystal-glow-electric",
+        glow: 'crystal-glow-electric',
         activeClass:
-          "bg-electric/15 text-electric border border-electric/30 shadow-[0_0_15px_-4px_rgba(112,102,249,0.3)]",
+          'bg-electric/15 text-electric border border-electric/30 shadow-[0_0_15px_-4px_rgba(112,102,249,0.3)]',
       },
       {
-        id: "cli",
-        label: "Consola Retro CLI",
+        id: 'cli',
+        label: 'Consola Retro CLI',
         icon: <TerminalIcon className="size-4" />,
-        glow: "crystal-glow-electric",
+        glow: 'crystal-glow-electric',
         activeClass:
-          "bg-electric/15 text-electric border border-electric/30 shadow-[0_0_15px_-4px_rgba(112,102,249,0.3)]",
+          'bg-electric/15 text-electric border border-electric/30 shadow-[0_0_15px_-4px_rgba(112,102,249,0.3)]',
       },
       {
-        id: "governance",
-        label: "Gobernanza y Salud",
+        id: 'governance',
+        label: 'Gobernanza y Salud',
         icon: <Layers className="size-4" />,
-        glow: "crystal-glow-electric",
+        glow: 'crystal-glow-electric',
         activeClass:
-          "bg-electric/15 text-electric border border-electric/30 shadow-[0_0_15px_-4px_rgba(112,102,249,0.3)]",
+          'bg-electric/15 text-electric border border-electric/30 shadow-[0_0_15px_-4px_rgba(112,102,249,0.3)]',
       },
       {
-        id: "interfaces",
-        label: "Interfaces IA",
+        id: 'interfaces',
+        label: 'Interfaces IA',
         icon: <Sparkles className="size-4" />,
-        glow: "crystal-glow-electric",
+        glow: 'crystal-glow-electric',
         activeClass:
-          "bg-electric/15 text-electric border border-electric/30 shadow-[0_0_15px_-4px_rgba(112,102,249,0.3)]",
+          'bg-electric/15 text-electric border border-electric/30 shadow-[0_0_15px_-4px_rgba(112,102,249,0.3)]',
       },
       {
-        id: "findarepo",
-        label: "AI Agents Repos (Findarepo)",
+        id: 'findarepo',
+        label: 'AI Agents Repos (Findarepo)',
         icon: <TrendingUp className="size-4" />,
-        glow: "crystal-glow-electric",
+        glow: 'crystal-glow-electric',
         activeClass:
-          "bg-electric/15 text-electric border border-electric/30 shadow-[0_0_15px_-4px_rgba(112,102,249,0.3)]",
+          'bg-electric/15 text-electric border border-electric/30 shadow-[0_0_15px_-4px_rgba(112,102,249,0.3)]',
       },
       {
-        id: "video-x",
-        label: "Isabella-Engine-Video X",
+        id: 'video-x',
+        label: 'Isabella-Engine-Video X',
         icon: <Video className="size-4" />,
-        glow: "crystal-glow-electric",
+        glow: 'crystal-glow-electric',
         activeClass:
-          "bg-electric/15 text-electric border border-electric/30 shadow-[0_0_15px_-4px_rgba(112,102,249,0.3)]",
+          'bg-electric/15 text-electric border border-electric/30 shadow-[0_0_15px_-4px_rgba(112,102,249,0.3)]',
       },
     ],
   },
   {
-    id: "catalog",
-    label: "Catálogo & Contratos",
+    id: 'catalog',
+    label: 'Catálogo & Contratos',
     Icon: Layers,
-    colorClass: "text-crown",
+    colorClass: 'text-crown',
     isOpen: open.catalog ?? true,
-    onToggle: () => onToggle("catalog"),
+    onToggle: () => onToggle('catalog'),
     items: [
       {
-        id: "catalog",
-        label: "Catálogo de APIs",
+        id: 'catalog',
+        label: 'Catálogo de APIs',
         icon: <BookOpen className="size-4" />,
-        glow: "crystal-glow-crown",
+        glow: 'crystal-glow-crown',
         activeClass:
-          "bg-crown/15 text-crown border border-crown/30 shadow-[0_0_15px_-4px_rgba(180,112,249,0.3)]",
+          'bg-crown/15 text-crown border border-crown/30 shadow-[0_0_15px_-4px_rgba(180,112,249,0.3)]',
       },
       {
-        id: "quantum",
-        label: "Utilidad Cuántica (qup)",
+        id: 'quantum',
+        label: 'Utilidad Cuántica (qup)',
         icon: <Cpu className="size-4" />,
-        glow: "crystal-glow-crown",
+        glow: 'crystal-glow-crown',
         activeClass:
-          "bg-crown/15 text-crown border border-crown/30 shadow-[0_0_15px_-4px_rgba(180,112,249,0.3)]",
+          'bg-crown/15 text-crown border border-crown/30 shadow-[0_0_15px_-4px_rgba(180,112,249,0.3)]',
       },
       {
-        id: "aegis",
-        label: "Defensa AEGIS-X",
+        id: 'aegis',
+        label: 'Defensa AEGIS-X',
         icon: <Shield className="size-4" />,
-        glow: "crystal-glow-crown",
+        glow: 'crystal-glow-crown',
         activeClass:
-          "bg-rose-500/15 text-rose-400 border border-rose-500/30 shadow-[0_0_15px_-4px_rgba(239,68,68,0.3)]",
+          'bg-rose-500/15 text-rose-400 border border-rose-500/30 shadow-[0_0_15px_-4px_rgba(239,68,68,0.3)]',
       },
     ],
   },
   {
-    id: "sovereignty",
-    label: "Soberanía & Cuotas",
+    id: 'sovereignty',
+    label: 'Soberanía & Cuotas',
     Icon: TrendingUp,
-    colorClass: "text-emerald-400",
+    colorClass: 'text-emerald-400',
     isOpen: open.sovereignty ?? true,
-    onToggle: () => onToggle("sovereignty"),
+    onToggle: () => onToggle('sovereignty'),
     items: [
       {
-        id: "monetization",
-        label: "Suscripción y Cuotas",
+        id: 'monetization',
+        label: 'Suscripción y Cuotas',
         icon: <TrendingUp className="size-4" />,
-        glow: "crystal-glow-emerald",
+        glow: 'crystal-glow-emerald',
         activeClass:
-          "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-[0_0_15px_-4px_rgba(52,211,153,0.3)]",
+          'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-[0_0_15px_-4px_rgba(52,211,153,0.3)]',
       },
     ],
   },

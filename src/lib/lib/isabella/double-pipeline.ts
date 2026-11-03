@@ -4,8 +4,8 @@
  * Pipeline A (principal activo) y Pipeline B (failover / activo-activo)
  * Métricas: p50, p95, p99, queue, crypto, inference, DB, total, retries, backpressure
  */
-export type PipelinePort = "Ingest" | "Policy" | "Context" | "Inference" | "Evidence" | "Delivery";
-export type PipelineId = "A" | "B";
+export type PipelinePort = 'Ingest' | 'Policy' | 'Context' | 'Inference' | 'Evidence' | 'Delivery';
+export type PipelineId = 'A' | 'B';
 
 export type PortLatencyMap = Record<PipelinePort, number>;
 
@@ -117,7 +117,7 @@ export class TriangularTurboCache {
 
 export class HexagonalPipeline {
   id: PipelineId;
-  ports: PipelinePort[] = ["Ingest", "Policy", "Context", "Inference", "Evidence", "Delivery"];
+  ports: PipelinePort[] = ['Ingest', 'Policy', 'Context', 'Inference', 'Evidence', 'Delivery'];
   private latencies: number[] = [];
   private portAccumulators: Record<PipelinePort, number[]> = {
     Ingest: [],
@@ -155,21 +155,21 @@ export class HexagonalPipeline {
       context?: string;
       modelo?: string;
       policyVersion?: string;
-    },
+    }
   ): string | null {
     try {
       const fnHash = fn.toString().slice(0, 200);
-      if (fnHash.includes("Math.random") || fnHash.includes("Date.now")) return null;
+      if (fnHash.includes('Math.random') || fnHash.includes('Date.now')) return null;
       if (!ctx) return fnHash;
       // Hash canónico: JSON ordenado con todos los factores de aislamiento
       const payload = JSON.stringify({
         fn: fnHash,
-        tenantId: ctx.tenantId ?? "",
-        userId: ctx.userId ?? "",
-        input: (ctx.input ?? "").slice(0, 500),
-        context: ctx.context ?? "",
-        modelo: ctx.modelo ?? "",
-        policyVersion: ctx.policyVersion ?? "",
+        tenantId: ctx.tenantId ?? '',
+        userId: ctx.userId ?? '',
+        input: (ctx.input ?? '').slice(0, 500),
+        context: ctx.context ?? '',
+        modelo: ctx.modelo ?? '',
+        policyVersion: ctx.policyVersion ?? '',
       });
       let h = 0;
       for (let i = 0; i < payload.length; i++) h = ((h << 5) - h + payload.charCodeAt(i)) | 0;
@@ -224,12 +224,12 @@ export class HexagonalPipeline {
 
   public getPortBreakdown(): PortLatencyMap {
     return {
-      Ingest: this.getAveragePortTiming("Ingest"),
-      Policy: this.getAveragePortTiming("Policy"),
-      Context: this.getAveragePortTiming("Context"),
-      Inference: this.getAveragePortTiming("Inference"),
-      Evidence: this.getAveragePortTiming("Evidence"),
-      Delivery: this.getAveragePortTiming("Delivery"),
+      Ingest: this.getAveragePortTiming('Ingest'),
+      Policy: this.getAveragePortTiming('Policy'),
+      Context: this.getAveragePortTiming('Context'),
+      Inference: this.getAveragePortTiming('Inference'),
+      Evidence: this.getAveragePortTiming('Evidence'),
+      Delivery: this.getAveragePortTiming('Delivery'),
     };
   }
 
@@ -258,7 +258,7 @@ export class HexagonalPipeline {
       backpressure: parseFloat(Math.min(1, this.latencies.length / 1000).toFixed(3)),
       portBreakdown,
       throughputReqSec: parseFloat(
-        (Math.max(1, 1000 / Math.max(1, totalMs)) * (this.id === "A" ? 1.2 : 0.9)).toFixed(1),
+        (Math.max(1, 1000 / Math.max(1, totalMs)) * (this.id === 'A' ? 1.2 : 0.9)).toFixed(1)
       ),
       sampleCount: this.totalExecutions || this.latencies.length,
     };
@@ -287,7 +287,7 @@ export class HexagonalPipeline {
       context?: string;
       modelo?: string;
       policyVersion?: string;
-    },
+    }
   ): Promise<{ result: T; metrics: PipelineMetrics }> {
     this.totalExecutions++;
     const start = performance.now();
@@ -296,7 +296,7 @@ export class HexagonalPipeline {
     const tIngestStart = performance.now();
     const key = this.cacheKey(fn as unknown as () => Promise<unknown>, ctx);
     const ingestDuration = performance.now() - tIngestStart;
-    this.recordPortTiming("Ingest", ingestDuration);
+    this.recordPortTiming('Ingest', ingestDuration);
 
     // Fast path: cache hit (TTL 30s) — clave canónica completa
     if (key) {
@@ -316,12 +316,12 @@ export class HexagonalPipeline {
     // Puerto 2: Policy (evaluación CROWN de reglas sin sleeps)
     const tPolicyStart = performance.now();
     const policyDuration = performance.now() - tPolicyStart;
-    this.recordPortTiming("Policy", Math.max(0.05, policyDuration));
+    this.recordPortTiming('Policy', Math.max(0.05, policyDuration));
 
     // Puerto 3: Context (resolución contextual)
     const tContextStart = performance.now();
     const contextDuration = performance.now() - tContextStart;
-    this.recordPortTiming("Context", Math.max(0.08, contextDuration));
+    this.recordPortTiming('Context', Math.max(0.08, contextDuration));
 
     // Puerto 4: Inference (ejecución de la función invocada)
     const tInferenceStart = performance.now();
@@ -333,12 +333,12 @@ export class HexagonalPipeline {
       throw error;
     }
     const inferenceDuration = performance.now() - tInferenceStart;
-    this.recordPortTiming("Inference", Math.max(0.1, inferenceDuration));
+    this.recordPortTiming('Inference', Math.max(0.1, inferenceDuration));
 
     // Puerto 5: Evidence (sello y hash de salida)
     const tEvidenceStart = performance.now();
     const evidenceDuration = performance.now() - tEvidenceStart;
-    this.recordPortTiming("Evidence", Math.max(0.04, evidenceDuration));
+    this.recordPortTiming('Evidence', Math.max(0.04, evidenceDuration));
 
     // Puerto 6: Delivery (serialización y entrega)
     const tDeliveryStart = performance.now();
@@ -351,7 +351,7 @@ export class HexagonalPipeline {
       }
     }
     const deliveryDuration = performance.now() - tDeliveryStart;
-    this.recordPortTiming("Delivery", Math.max(0.03, deliveryDuration));
+    this.recordPortTiming('Delivery', Math.max(0.03, deliveryDuration));
 
     const totalMs = performance.now() - start;
     this.latencies.push(parseFloat(totalMs.toFixed(3)));
@@ -392,7 +392,7 @@ export class HexagonalPipeline {
       context?: string;
       modelo?: string;
       policyVersion?: string;
-    },
+    }
   ): Promise<{ result: T; metrics: PipelineMetrics; turboSavingsMs: number }> {
     this.totalExecutions++;
     this.turboExecutions++;
@@ -402,7 +402,7 @@ export class HexagonalPipeline {
     const tIngestStart = performance.now();
     const key = this.cacheKey(fn as unknown as () => Promise<unknown>, ctx);
     const ingestDuration = performance.now() - tIngestStart;
-    this.recordPortTiming("Ingest", Math.max(0.01, ingestDuration));
+    this.recordPortTiming('Ingest', Math.max(0.01, ingestDuration));
 
     // Fast-path: Anillo 3 de la Caché Triangular
     if (key) {
@@ -441,8 +441,8 @@ export class HexagonalPipeline {
     const savings = Math.max(0.01, serialEstimated - parallelDuration);
     this.totalParallelSavingsMs += savings;
 
-    this.recordPortTiming("Policy", policyDuration);
-    this.recordPortTiming("Context", contextDuration);
+    this.recordPortTiming('Policy', policyDuration);
+    this.recordPortTiming('Context', contextDuration);
 
     // Puerto 4: Inference
     const tInferenceStart = performance.now();
@@ -454,12 +454,12 @@ export class HexagonalPipeline {
       throw error;
     }
     const inferenceDuration = performance.now() - tInferenceStart;
-    this.recordPortTiming("Inference", Math.max(0.05, inferenceDuration));
+    this.recordPortTiming('Inference', Math.max(0.05, inferenceDuration));
 
     // Puerto 5: Evidence - Sellado Asíncrono no bloqueante
     const tEvidenceStart = performance.now();
     const evidenceDuration = performance.now() - tEvidenceStart;
-    this.recordPortTiming("Evidence", Math.max(0.02, evidenceDuration));
+    this.recordPortTiming('Evidence', Math.max(0.02, evidenceDuration));
 
     // Despacho del sellado en background para no demorar la entrega
     queueMicrotask(() => {
@@ -471,7 +471,7 @@ export class HexagonalPipeline {
     // Puerto 6: Delivery
     const tDeliveryStart = performance.now();
     const deliveryDuration = performance.now() - tDeliveryStart;
-    this.recordPortTiming("Delivery", Math.max(0.02, deliveryDuration));
+    this.recordPortTiming('Delivery', Math.max(0.02, deliveryDuration));
 
     const totalMs = performance.now() - start;
     this.latencies.push(parseFloat(totalMs.toFixed(3)));
@@ -488,11 +488,11 @@ export class HexagonalPipeline {
 }
 
 export class DoublePipelineRouter {
-  A = new HexagonalPipeline("A");
-  B = new HexagonalPipeline("B");
+  A = new HexagonalPipeline('A');
+  B = new HexagonalPipeline('B');
   private history: DoublePipelineHistoryPoint[] = [];
   private listeners = new Set<(snapshot: DoublePipelineSnapshot) => void>();
-  private activePipeline: PipelineId = "A";
+  private activePipeline: PipelineId = 'A';
   private turboModeEnabled = true;
 
   constructor() {
@@ -537,11 +537,11 @@ export class DoublePipelineRouter {
     const executions = totalsA.executions + totalsB.executions;
     const hits = totalsA.hits + totalsB.hits;
     const totalSavings = parseFloat(
-      (this.A.getParallelSavings() + this.B.getParallelSavings()).toFixed(2),
+      (this.A.getParallelSavings() + this.B.getParallelSavings()).toFixed(2)
     );
     const speedup = this.turboModeEnabled
       ? parseFloat(
-          ((this.A.getTurboSpeedupFactor() + this.B.getTurboSpeedupFactor()) / 2).toFixed(3),
+          ((this.A.getTurboSpeedupFactor() + this.B.getTurboSpeedupFactor()) / 2).toFixed(3)
         )
       : 1.0;
 
@@ -564,9 +564,9 @@ export class DoublePipelineRouter {
 
   private appendHistoryPoint(): void {
     const timeStr = new Date().toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
     });
     const mA = this.A.getMetrics();
     const mB = this.B.getMetrics();
@@ -598,7 +598,7 @@ export class DoublePipelineRouter {
       context?: string;
       modelo?: string;
       policyVersion?: string;
-    },
+    }
   ) {
     // Selección por score (salud 0-1 + p95). La salud y la latencia se toman
     // de MEDICIONES reales cuando el pipeline ya tiene ejecuciones; el
@@ -654,10 +654,10 @@ export class DoublePipelineRouter {
                 return { ok: true, checksum: val };
               },
               {
-                tenantId: "benchmark-tenant",
+                tenantId: 'benchmark-tenant',
                 userId: `bench-${i}`,
                 input: `benchmark-payload-cycle-${Date.now()}-${i}`,
-              },
+              }
             )
         : () =>
             target.execute(
@@ -669,10 +669,10 @@ export class DoublePipelineRouter {
                 return { ok: true, checksum: val };
               },
               {
-                tenantId: "benchmark-tenant",
+                tenantId: 'benchmark-tenant',
                 userId: `bench-${i}`,
                 input: `benchmark-payload-cycle-${Date.now()}-${i}`,
-              },
+              }
             );
 
       await executeFn();
@@ -699,10 +699,10 @@ export class DoublePipelineRouter {
           return { ok: true, turbo: true, checksum: val };
         },
         {
-          tenantId: "turbo-bench-tenant",
+          tenantId: 'turbo-bench-tenant',
           userId: `turbo-user-${i}`,
           input: `turbo-payload-${Date.now()}-${i}`,
-        },
+        }
       );
     }
 

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback } from 'react';
 import {
   Video,
   Play,
@@ -15,7 +15,7 @@ import {
   Sliders,
   Lock,
   GitBranch,
-} from "lucide-react";
+} from 'lucide-react';
 import type {
   VideoProject,
   NarrativeGraph,
@@ -24,16 +24,16 @@ import type {
   C2PAManifest,
   ImpactAnalysisResult,
   ShotCardX,
-} from "@/lib/video-x/types";
-import { PROJECT_STATUS_FLOW } from "@/lib/video-x/engine";
-import { getSessionToken } from "@/lib/auth-client";
+} from '@/lib/video-x/types';
+import { PROJECT_STATUS_FLOW } from '@/lib/video-x/engine';
+import { getSessionToken } from '@/lib/auth-client';
 
 /**
  * Todas las llamadas a la API llevan la sesion: el handler exige
  * withSovereignAuth y sin Bearer el servidor responde 401.
  */
 async function videoFetch(input: string, init?: RequestInit): Promise<Response> {
-  const token = getSessionToken() || sessionStorage.getItem("isabella_session_token") || "";
+  const token = getSessionToken() || sessionStorage.getItem('isabella_session_token') || '';
   return fetch(input, {
     ...init,
     headers: {
@@ -45,7 +45,7 @@ async function videoFetch(input: string, init?: RequestInit): Promise<Response> 
 
 export function VideoEngineXDashboard() {
   const [projects, setProjects] = useState<VideoProject[]>([]);
-  const [selectedProjectId, setSelectedProjectId] = useState<string>("proj-isabella-mineral-01");
+  const [selectedProjectId, setSelectedProjectId] = useState<string>('proj-isabella-mineral-01');
   const [project, setProject] = useState<VideoProject | null>(null);
   const [graph, setGraph] = useState<NarrativeGraph | null>(null);
   const [timeline, setTimeline] = useState<ITSGTimeline | null>(null);
@@ -54,17 +54,17 @@ export function VideoEngineXDashboard() {
   const [shotCards, setShotCards] = useState<ShotCardX[]>([]);
 
   const [activeTab, setActiveTab] = useState<
-    "graph" | "timeline" | "shotcards" | "fabric" | "qa" | "c2pa"
-  >("graph");
+    'graph' | 'timeline' | 'shotcards' | 'fabric' | 'qa' | 'c2pa'
+  >('graph');
 
   const [loading, setLoading] = useState(false);
   const [errorNotice, setErrorNotice] = useState<string | null>(null);
   const [impactAnalysis, setImpactAnalysis] = useState<ImpactAnalysisResult | null>(null);
-  const [selectedShotCardCategory, setSelectedShotCardCategory] = useState<string>("all");
+  const [selectedShotCardCategory, setSelectedShotCardCategory] = useState<string>('all');
 
   // New project modal state
-  const [newTitle, setNewTitle] = useState("");
-  const [newPremise, setNewPremise] = useState("");
+  const [newTitle, setNewTitle] = useState('');
+  const [newPremise, setNewPremise] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   // Fetch project details
@@ -81,10 +81,10 @@ export function VideoEngineXDashboard() {
         setQaReport(data.qaReport);
         setC2paManifest(data.c2paManifest);
       } else if (res.status === 401 || res.status === 403) {
-        setErrorNotice("Sesion requerida: inicia sesion para consultar los proyectos de Video X.");
+        setErrorNotice('Sesion requerida: inicia sesion para consultar los proyectos de Video X.');
       }
     } catch (e) {
-      console.error("Error fetching Video X details", e);
+      console.error('Error fetching Video X details', e);
     } finally {
       setLoading(false);
     }
@@ -95,8 +95,8 @@ export function VideoEngineXDashboard() {
     async function initData() {
       try {
         const [projRes, cardsRes] = await Promise.all([
-          videoFetch("/api/video-engine-x?action=projects"),
-          videoFetch("/api/video-engine-x?action=shot-cards"),
+          videoFetch('/api/video-engine-x?action=projects'),
+          videoFetch('/api/video-engine-x?action=shot-cards'),
         ]);
         const projData = await projRes.json();
         const cardsData = await cardsRes.json();
@@ -110,14 +110,14 @@ export function VideoEngineXDashboard() {
           }
         } else if (projRes.status === 401 || projRes.status === 403) {
           setErrorNotice(
-            "Sesion requerida: inicia sesion para consultar los proyectos de Video X.",
+            'Sesion requerida: inicia sesion para consultar los proyectos de Video X.'
           );
         }
         if (cardsData.success) {
           setShotCards(cardsData.shotCards);
         }
       } catch (e) {
-        console.error("Error initializing Video X Dashboard", e);
+        console.error('Error initializing Video X Dashboard', e);
       }
     }
     void initData();
@@ -127,11 +127,11 @@ export function VideoEngineXDashboard() {
   const handleAdvanceState = async () => {
     if (!project) return;
     try {
-      const res = await videoFetch("/api/video-engine-x", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await videoFetch('/api/video-engine-x', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: "advance-status",
+          action: 'advance-status',
           projectId: project.id,
         }),
       });
@@ -141,7 +141,7 @@ export function VideoEngineXDashboard() {
         void fetchProjectDetails(project.id);
       }
     } catch (e) {
-      console.error("Error advancing state", e);
+      console.error('Error advancing state', e);
     }
   };
 
@@ -149,14 +149,14 @@ export function VideoEngineXDashboard() {
   const handleMutateNode = async (nodeId: string) => {
     if (!project) return;
     try {
-      const res = await videoFetch("/api/video-engine-x", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await videoFetch('/api/video-engine-x', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: "mutate-node",
+          action: 'mutate-node',
           projectId: project.id,
           nodeId,
-          properties: { wardrobe: "historical_coat_dark_blue_v2", lighting: "blue_hour_enhanced" },
+          properties: { wardrobe: 'historical_coat_dark_blue_v2', lighting: 'blue_hour_enhanced' },
         }),
       });
       const data = await res.json();
@@ -164,7 +164,7 @@ export function VideoEngineXDashboard() {
         setImpactAnalysis(data.impactAnalysis);
       }
     } catch (e) {
-      console.error("Error mutating node", e);
+      console.error('Error mutating node', e);
     }
   };
 
@@ -172,11 +172,11 @@ export function VideoEngineXDashboard() {
   const handleRegenerateShot = async (shotId: string) => {
     if (!project) return;
     try {
-      const res = await videoFetch("/api/video-engine-x", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await videoFetch('/api/video-engine-x', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: "regenerate-shot",
+          action: 'regenerate-shot',
           projectId: project.id,
           shotId,
         }),
@@ -186,7 +186,7 @@ export function VideoEngineXDashboard() {
         void fetchProjectDetails(project.id);
       }
     } catch (e) {
-      console.error("Error regenerating shot", e);
+      console.error('Error regenerating shot', e);
     }
   };
 
@@ -194,11 +194,11 @@ export function VideoEngineXDashboard() {
   const handleRunQA = async () => {
     if (!project) return;
     try {
-      const res = await videoFetch("/api/video-engine-x", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await videoFetch('/api/video-engine-x', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: "run-qa",
+          action: 'run-qa',
           projectId: project.id,
         }),
       });
@@ -207,7 +207,7 @@ export function VideoEngineXDashboard() {
         setQaReport(data.qaReport);
       }
     } catch (e) {
-      console.error("Error running QA", e);
+      console.error('Error running QA', e);
     }
   };
 
@@ -215,11 +215,11 @@ export function VideoEngineXDashboard() {
   const handleExportC2PA = async () => {
     if (!project) return;
     try {
-      const res = await videoFetch("/api/video-engine-x", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await videoFetch('/api/video-engine-x', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: "export-c2pa",
+          action: 'export-c2pa',
           projectId: project.id,
         }),
       });
@@ -229,7 +229,7 @@ export function VideoEngineXDashboard() {
         void fetchProjectDetails(project.id);
       }
     } catch (e) {
-      console.error("Error exporting C2PA", e);
+      console.error('Error exporting C2PA', e);
     }
   };
 
@@ -237,14 +237,14 @@ export function VideoEngineXDashboard() {
   const handleCreateProject = async () => {
     if (!newTitle.trim()) return;
     try {
-      const res = await videoFetch("/api/video-engine-x", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await videoFetch('/api/video-engine-x', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: "create-project",
+          action: 'create-project',
           title: newTitle,
-          premise: newPremise || "Producción audiovisual determinista",
-          genre: "Documental & Ficción Cinematográfica",
+          premise: newPremise || 'Producción audiovisual determinista',
+          genre: 'Documental & Ficción Cinematográfica',
         }),
       });
       const data = await res.json();
@@ -253,16 +253,16 @@ export function VideoEngineXDashboard() {
         setSelectedProjectId(data.project.id);
         void fetchProjectDetails(data.project.id);
         setShowCreateModal(false);
-        setNewTitle("");
-        setNewPremise("");
+        setNewTitle('');
+        setNewPremise('');
       }
     } catch (e) {
-      console.error("Error creating project", e);
+      console.error('Error creating project', e);
     }
   };
 
   const filteredShotCards =
-    selectedShotCardCategory === "all"
+    selectedShotCardCategory === 'all'
       ? shotCards
       : shotCards.filter((c) => c.category === selectedShotCardCategory);
 
@@ -330,7 +330,7 @@ export function VideoEngineXDashboard() {
               <div className="flex items-center gap-2">
                 <h2 className="text-base font-semibold text-foreground">{project.title}</h2>
                 <span className="rounded-md border border-crown/40 bg-crown/10 px-2 py-0.5 font-mono text-[10px] font-bold uppercase text-crown">
-                  {project.status.replace(/_/g, " ")}
+                  {project.status.replace(/_/g, ' ')}
                 </span>
               </div>
               <p className="mt-0.5 text-xs text-muted-foreground">{project.brief.premise}</p>
@@ -376,18 +376,18 @@ export function VideoEngineXDashboard() {
                     <div
                       className={`flex flex-col items-center justify-center p-2 rounded-xl text-center border transition-all text-[10px] font-mono ${
                         isCurrent
-                          ? "border-electric bg-electric/20 text-electric font-bold shadow-[0_0_12px_rgba(59,130,246,0.3)]"
+                          ? 'border-electric bg-electric/20 text-electric font-bold shadow-[0_0_12px_rgba(59,130,246,0.3)]'
                           : isCompleted
-                            ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
-                            : "border-border/20 bg-background/20 text-muted-foreground/60"
+                            ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
+                            : 'border-border/20 bg-background/20 text-muted-foreground/60'
                       }`}
                     >
-                      <span>{statusItem.replace(/_/g, " ")}</span>
+                      <span>{statusItem.replace(/_/g, ' ')}</span>
                     </div>
                     {idx < PROJECT_STATUS_FLOW.length - 1 && (
                       <div
                         className={`h-0.5 w-2 shrink-0 ${
-                          idx < currentIdx ? "bg-emerald-500/40" : "bg-border/20"
+                          idx < currentIdx ? 'bg-emerald-500/40' : 'bg-border/20'
                         }`}
                       />
                     )}
@@ -402,12 +402,12 @@ export function VideoEngineXDashboard() {
       {/* SUB-TABS NAVIGATION */}
       <div className="flex border-b border-border/20 overflow-x-auto gap-2">
         {[
-          { id: "graph", label: "Narrative Graph", icon: GitBranch },
-          { id: "timeline", label: "Temporal Media Core (ITSG)", icon: Film },
-          { id: "shotcards", label: "Shot Cards X Library", icon: Sliders },
-          { id: "fabric", label: "Execution Fabric & Router", icon: Cpu },
-          { id: "qa", label: "Multimodal QA & Remediation", icon: ShieldCheck },
-          { id: "c2pa", label: "C2PA Provenance & Master", icon: FileCheck },
+          { id: 'graph', label: 'Narrative Graph', icon: GitBranch },
+          { id: 'timeline', label: 'Temporal Media Core (ITSG)', icon: Film },
+          { id: 'shotcards', label: 'Shot Cards X Library', icon: Sliders },
+          { id: 'fabric', label: 'Execution Fabric & Router', icon: Cpu },
+          { id: 'qa', label: 'Multimodal QA & Remediation', icon: ShieldCheck },
+          { id: 'c2pa', label: 'C2PA Provenance & Master', icon: FileCheck },
         ].map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -417,8 +417,8 @@ export function VideoEngineXDashboard() {
               onClick={() => setActiveTab(tab.id as typeof activeTab)}
               className={`flex items-center gap-2 border-b-2 px-4 py-3 font-mono text-xs font-medium transition-colors whitespace-nowrap ${
                 isActive
-                  ? "border-electric text-electric bg-electric/5"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
+                  ? 'border-electric text-electric bg-electric/5'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
               }`}
             >
               <Icon className="size-4" />
@@ -436,7 +436,7 @@ export function VideoEngineXDashboard() {
       ) : (
         <>
           {/* TAB 1: NARRATIVE GRAPH */}
-          {activeTab === "graph" && graph && (
+          {activeTab === 'graph' && graph && (
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
               <div className="lg:col-span-2 space-y-4 rounded-3xl border border-border/20 bg-background/40 p-5">
                 <div className="flex items-center justify-between border-b border-border/15 pb-3">
@@ -565,7 +565,7 @@ export function VideoEngineXDashboard() {
           )}
 
           {/* TAB 2: TEMPORAL MEDIA CORE (ITSG) */}
-          {activeTab === "timeline" && timeline && (
+          {activeTab === 'timeline' && timeline && (
             <div className="space-y-6">
               <div className="rounded-3xl border border-border/20 bg-background/40 p-5">
                 <div className="flex flex-wrap items-center justify-between border-b border-border/15 pb-4 gap-4">
@@ -575,7 +575,7 @@ export function VideoEngineXDashboard() {
                       Especificación de Timeline Racional (ITSG v1.0)
                     </h3>
                     <p className="text-xs text-muted-foreground">
-                      Timebase: {timeline.timebase.fps} fps • Audio:{" "}
+                      Timebase: {timeline.timebase.fps} fps • Audio:{' '}
                       {timeline.timebase.audioSampleRate} Hz
                     </p>
                   </div>
@@ -618,7 +618,7 @@ export function VideoEngineXDashboard() {
                           </div>
                           <div>Modo: {shot.generation.mode}</div>
                           <div>Semilla: {shot.generation.seed}</div>
-                          <div>ControlNet: {shot.generation.controlnet.join(", ")}</div>
+                          <div>ControlNet: {shot.generation.controlnet.join(', ')}</div>
                         </div>
 
                         <div>
@@ -626,7 +626,7 @@ export function VideoEngineXDashboard() {
                             Audio & Diálogo:
                           </div>
                           <div className="text-emerald-400">
-                            {shot.audio.dialogue || "Sin diálogo"}
+                            {shot.audio.dialogue || 'Sin diálogo'}
                           </div>
                           <div>Ambiente: {shot.audio.ambience}</div>
                         </div>
@@ -649,20 +649,20 @@ export function VideoEngineXDashboard() {
           )}
 
           {/* TAB 3: SHOT CARDS X */}
-          {activeTab === "shotcards" && (
+          {activeTab === 'shotcards' && (
             <div className="space-y-6">
               <div className="flex items-center gap-2 overflow-x-auto pb-2">
-                {["all", "discovery", "character_reveal", "tension"].map((cat) => (
+                {['all', 'discovery', 'character_reveal', 'tension'].map((cat) => (
                   <button
                     key={cat}
                     onClick={() => setSelectedShotCardCategory(cat)}
                     className={`rounded-xl border px-3 py-1.5 text-xs font-mono transition-colors uppercase ${
                       selectedShotCardCategory === cat
-                        ? "border-electric bg-electric/20 text-electric font-bold"
-                        : "border-border/20 bg-background/40 text-muted-foreground hover:text-foreground"
+                        ? 'border-electric bg-electric/20 text-electric font-bold'
+                        : 'border-border/20 bg-background/40 text-muted-foreground hover:text-foreground'
                     }`}
                   >
-                    {cat.replace("_", " ")}
+                    {cat.replace('_', ' ')}
                   </button>
                 ))}
               </div>
@@ -704,7 +704,7 @@ export function VideoEngineXDashboard() {
           )}
 
           {/* TAB 4: EXECUTION FABRIC */}
-          {activeTab === "fabric" && (
+          {activeTab === 'fabric' && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="space-y-4 rounded-3xl border border-border/20 bg-background/40 p-5 font-mono text-xs">
                 <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 border-b border-border/15 pb-3">
@@ -733,10 +733,10 @@ export function VideoEngineXDashboard() {
 
                 <div className="space-y-2">
                   {[
-                    { name: "VideoWorker_ComfyUI", status: "ONLINE", vram: "18.4 / 24.0 GB" },
-                    { name: "AudioWorker_TTS_Dubbing", status: "ONLINE", vram: "4.2 / 8.0 GB" },
-                    { name: "MattingWorker_RVM", status: "IDLE", vram: "1.1 / 8.0 GB" },
-                    { name: "MultimodalQAWorker", status: "ACTIVE", vram: "6.5 / 16.0 GB" },
+                    { name: 'VideoWorker_ComfyUI', status: 'ONLINE', vram: '18.4 / 24.0 GB' },
+                    { name: 'AudioWorker_TTS_Dubbing', status: 'ONLINE', vram: '4.2 / 8.0 GB' },
+                    { name: 'MattingWorker_RVM', status: 'IDLE', vram: '1.1 / 8.0 GB' },
+                    { name: 'MultimodalQAWorker', status: 'ACTIVE', vram: '6.5 / 16.0 GB' },
                   ].map((w) => (
                     <div
                       key={w.name}
@@ -757,7 +757,7 @@ export function VideoEngineXDashboard() {
           )}
 
           {/* TAB 5: MULTIMODAL QA */}
-          {activeTab === "qa" && (
+          {activeTab === 'qa' && (
             <div className="space-y-6">
               <div className="flex justify-between items-center">
                 <h3 className="text-base font-semibold text-foreground">
@@ -777,14 +777,14 @@ export function VideoEngineXDashboard() {
                   <div className="space-y-3 rounded-3xl border border-border/20 bg-background/40 p-5">
                     <h4 className="text-sm font-bold text-foreground">Score Radar</h4>
                     {[
-                      { label: "Técnico (Codecs/Resolution)", score: qaReport.technical },
-                      { label: "Estética Visual & Composición", score: qaReport.visual },
-                      { label: "Consistencia de Identidad", score: qaReport.identity },
-                      { label: "Estabilidad Temporal", score: qaReport.temporal },
-                      { label: "Sincronía de Audio", score: qaReport.audio },
-                      { label: "OCR & Control de Texto", score: qaReport.text },
-                      { label: "Coherencia Narrativa", score: qaReport.narrative },
-                      { label: "Seguridad & Contenido", score: qaReport.safety },
+                      { label: 'Técnico (Codecs/Resolution)', score: qaReport.technical },
+                      { label: 'Estética Visual & Composición', score: qaReport.visual },
+                      { label: 'Consistencia de Identidad', score: qaReport.identity },
+                      { label: 'Estabilidad Temporal', score: qaReport.temporal },
+                      { label: 'Sincronía de Audio', score: qaReport.audio },
+                      { label: 'OCR & Control de Texto', score: qaReport.text },
+                      { label: 'Coherencia Narrativa', score: qaReport.narrative },
+                      { label: 'Seguridad & Contenido', score: qaReport.safety },
                     ].map((item) => (
                       <div key={item.label} className="space-y-1">
                         <div className="flex justify-between text-muted-foreground text-[11px]">
@@ -810,9 +810,9 @@ export function VideoEngineXDashboard() {
                       </span>
                       <span
                         className={`px-3 py-1 rounded-full font-bold uppercase text-xs ${
-                          qaReport.decision === "pass"
-                            ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                            : "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                          qaReport.decision === 'pass'
+                            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                            : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
                         }`}
                       >
                         {qaReport.decision}
@@ -827,7 +827,7 @@ export function VideoEngineXDashboard() {
                         </div>
                         <div>Fallo Detectado: {qaReport.remediationPlan.failure}</div>
                         <div>
-                          Acción Recomendada:{" "}
+                          Acción Recomendada:{' '}
                           <span className="font-bold text-foreground uppercase">
                             {qaReport.remediationPlan.action}
                           </span>
@@ -847,7 +847,7 @@ export function VideoEngineXDashboard() {
           )}
 
           {/* TAB 6: C2PA PROVENANCE */}
-          {activeTab === "c2pa" && (
+          {activeTab === 'c2pa' && (
             <div className="space-y-6 font-mono text-xs">
               <div className="flex justify-between items-center">
                 <h3 className="text-base font-semibold text-foreground">

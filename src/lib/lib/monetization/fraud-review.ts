@@ -1,5 +1,5 @@
 /**
- * FRAUD REVIEW + PAYOUT GUARD (src/lib/monetization/fraud-review.ts)
+ * FRAUD REVIEW + PAYOUT GUARD (src/lib/lib/monetization/fraud-review.ts)
  * -----------------------------------------------------------------
  * Flujo real de revisión de fraude y controles de payout:
  *
@@ -15,11 +15,11 @@
  * persistencia, el payout se deniega (fail-closed honesto).
  */
 
-import { randomUUID } from "node:crypto";
+import { randomUUID } from 'node:crypto';
 
-export type FraudStatus = "pass" | "hold" | "fraud_detected";
-export type ReviewDecision = "approve" | "deny";
-export type DisputeStatus = "open" | "won" | "lost";
+export type FraudStatus = 'pass' | 'hold' | 'fraud_detected';
+export type ReviewDecision = 'approve' | 'deny';
+export type DisputeStatus = 'open' | 'won' | 'lost';
 
 export interface WithdrawalRiskInput {
   userId: string;
@@ -81,27 +81,27 @@ export function evaluateWithdrawalRisk(input: WithdrawalRiskInput): RiskEvaluati
   const weights: number[] = [];
 
   if (input.sanctioned || input.underFraudReview) {
-    signals.push("account-flagged");
+    signals.push('account-flagged');
     weights.push(0.95);
   }
   if (!input.identityVerified) {
-    signals.push("identity-unverified");
+    signals.push('identity-unverified');
     weights.push(0.5);
   }
   if (input.accountAgeDays < 30 && input.amountCents >= FRAUD_HIGH_AMOUNT_CENTS) {
-    signals.push("new-account-high-amount");
+    signals.push('new-account-high-amount');
     weights.push(0.7);
   }
   if (input.withdrawalsLast24h >= 3) {
-    signals.push("rapid-withdrawals");
+    signals.push('rapid-withdrawals');
     weights.push(0.65);
   }
   if (input.failedAttemptsLast24h >= 3) {
-    signals.push("repeated-failures");
+    signals.push('repeated-failures');
     weights.push(0.6);
   }
   if (input.amountCents >= PAYOUT_DUAL_APPROVAL_CENTS) {
-    signals.push("large-amount");
+    signals.push('large-amount');
     weights.push(0.45);
   }
 
@@ -109,9 +109,9 @@ export function evaluateWithdrawalRisk(input: WithdrawalRiskInput): RiskEvaluati
   for (const weight of weights) complement *= 1 - weight;
   const score = Math.round((1 - complement) * 1000) / 1000;
 
-  const status: FraudStatus = score >= 0.8 ? "fraud_detected" : score >= 0.4 ? "hold" : "pass";
+  const status: FraudStatus = score >= 0.8 ? 'fraud_detected' : score >= 0.4 ? 'hold' : 'pass';
   return {
-    reviewId: `fr_${randomUUID().replace(/-/g, "")}`,
+    reviewId: `fr_${randomUUID().replace(/-/g, '')}`,
     status,
     score,
     signals,
@@ -144,7 +144,7 @@ export function createFraudReviewQueue(opts?: {
         createdAt: new Date().toISOString(),
       };
       cases.set(fraudCase.reviewId, fraudCase);
-      audit?.("fraud.case.opened", {
+      audit?.('fraud.case.opened', {
         reviewId: fraudCase.reviewId,
         userId,
         status: fraudCase.status,
@@ -158,7 +158,7 @@ export function createFraudReviewQueue(opts?: {
       reviewId: string,
       decision: ReviewDecision,
       reviewerId: string,
-      reason: string,
+      reason: string
     ): FraudCase | null {
       const fraudCase = cases.get(reviewId);
       if (!fraudCase || fraudCase.decision) return null;
@@ -167,8 +167,8 @@ export function createFraudReviewQueue(opts?: {
       fraudCase.decidedBy = reviewerId;
       fraudCase.decisionReason = reason;
       fraudCase.decidedAt = new Date().toISOString();
-      fraudCase.status = decision === "approve" ? "pass" : "fraud_detected";
-      audit?.("fraud.case.decided", {
+      fraudCase.status = decision === 'approve' ? 'pass' : 'fraud_detected';
+      audit?.('fraud.case.decided', {
         reviewId,
         decision,
         reviewer: reviewerId,
@@ -182,7 +182,7 @@ export function createFraudReviewQueue(opts?: {
     },
 
     pending(): FraudCase[] {
-      return [...cases.values()].filter((c) => !c.decision && c.status !== "pass");
+      return [...cases.values()].filter((c) => !c.decision && c.status !== 'pass');
     },
 
     /** Disputa (chargeback): congela payouts del tenant hasta el cierre. */
@@ -197,35 +197,35 @@ export function createFraudReviewQueue(opts?: {
       const existing = existingId ? disputes.get(existingId) : undefined;
       if (existing) return existing;
       const dispute: Dispute = {
-        disputeId: `dp_${randomUUID().replace(/-/g, "")}`,
+        disputeId: `dp_${randomUUID().replace(/-/g, '')}`,
         provider: input.provider,
         providerEventId: input.providerEventId,
         tenantId: input.tenantId,
         amountMinor: input.amountMinor,
-        status: "open",
+        status: 'open',
         openedAt: new Date().toISOString(),
       };
       disputes.set(dispute.disputeId, dispute);
       disputeEventIndex.set(eventKey, dispute.disputeId);
-      audit?.("payment.dispute.opened", {
+      audit?.('payment.dispute.opened', {
         ...input,
         disputeId: dispute.disputeId,
       });
       return dispute;
     },
 
-    closeDispute(disputeId: string, status: Exclude<DisputeStatus, "open">): Dispute | null {
+    closeDispute(disputeId: string, status: Exclude<DisputeStatus, 'open'>): Dispute | null {
       const dispute = disputes.get(disputeId);
-      if (!dispute || dispute.status !== "open") return null;
+      if (!dispute || dispute.status !== 'open') return null;
       dispute.status = status;
       dispute.closedAt = new Date().toISOString();
-      audit?.("payment.dispute.closed", { disputeId, status });
+      audit?.('payment.dispute.closed', { disputeId, status });
       return dispute;
     },
 
     openDisputesForTenant(tenantId: string): Dispute[] {
       return [...disputes.values()].filter(
-        (dispute) => dispute.tenantId === tenantId && dispute.status === "open",
+        (dispute) => dispute.tenantId === tenantId && dispute.status === 'open'
       );
     },
   };
@@ -253,41 +253,41 @@ export interface PayoutRequest {
 export function assertPayoutAllowed(
   request: PayoutRequest,
   queue: FraudReviewQueue,
-  opts?: { audit?: AuditSink },
+  opts?: { audit?: AuditSink }
 ): { allowed: boolean; reason: string } {
   if (!opts?.audit) {
-    return { allowed: false, reason: "Sin sink de auditoría no hay payouts." };
+    return { allowed: false, reason: 'Sin sink de auditoría no hay payouts.' };
   }
   const fraudCase = queue.get(request.reviewId);
   if (!fraudCase || fraudCase.userId !== request.userId) {
-    return { allowed: false, reason: "Caso de fraude inexistente o ajeno." };
+    return { allowed: false, reason: 'Caso de fraude inexistente o ajeno.' };
   }
-  if (fraudCase.status !== "pass") {
+  if (fraudCase.status !== 'pass') {
     return {
       allowed: false,
       reason: `Caso en estado '${fraudCase.status}', no aprobado.`,
     };
   }
   if (fraudCase.score >= 0.4 && !fraudCase.decision) {
-    return { allowed: false, reason: "Hold sin decisión humana registrada." };
+    return { allowed: false, reason: 'Hold sin decisión humana registrada.' };
   }
   // Aprobadores: el que decidió el caso + los declarados en la solicitud.
   const approvers = [
     ...new Set(
       [fraudCase.decidedBy, ...request.reviewerIds].filter(
-        (id): id is string => typeof id === "string" && id.length > 0,
-      ),
+        (id): id is string => typeof id === 'string' && id.length > 0
+      )
     ),
   ];
   const needsDual = request.amountCents >= PAYOUT_DUAL_APPROVAL_CENTS;
   if (needsDual && approvers.length < 2) {
     return {
       allowed: false,
-      reason: "Monto alto exige doble aprobación de revisores distintos.",
+      reason: 'Monto alto exige doble aprobación de revisores distintos.',
     };
   }
   if (!needsDual && fraudCase.decision && approvers.length < 1) {
-    return { allowed: false, reason: "Falta aprobador registrado." };
+    return { allowed: false, reason: 'Falta aprobador registrado.' };
   }
   const open = queue.openDisputesForTenant(request.tenantId);
   if (open.length > 0) {
@@ -296,7 +296,7 @@ export function assertPayoutAllowed(
       reason: `Disputas abiertas del tenant (${open.length}): payouts congelados.`,
     };
   }
-  opts.audit("payment.payout.authorized", {
+  opts.audit('payment.payout.authorized', {
     userId: request.userId,
     tenantId: request.tenantId,
     amountCents: request.amountCents,
@@ -305,7 +305,7 @@ export function assertPayoutAllowed(
   });
   return {
     allowed: true,
-    reason: "Payout autorizado con controles completos.",
+    reason: 'Payout autorizado con controles completos.',
   };
 }
 

@@ -1,6 +1,6 @@
 /** ORION SANDBOX — propuestas de cambio (offline, plano paralelo, sin efectos). */
 
-import type { GovernanceTier, RiskTier } from "../authority/method-id";
+import type { GovernanceTier, RiskTier } from '../authority/method-id';
 
 export interface ChangeProposal {
   id: string;
@@ -29,7 +29,7 @@ export interface ProposalParts {
 /** Una propuesta es el único insumo legítimo para el sandbox (esta etapa). */
 export function buildProposal(parts: ProposalParts): ChangeProposal {
   if (!parts.methodId || !parts.domain || !parts.changeBlocks.length) {
-    throw new Error("ORION: la propuesta exige methodId, dominio y al menos un bloque de cambio");
+    throw new Error('ORION: la propuesta exige methodId, dominio y al menos un bloque de cambio');
   }
   return {
     id: crypto.randomUUID(),
@@ -40,7 +40,7 @@ export function buildProposal(parts: ProposalParts): ChangeProposal {
     changeBlocks: parts.changeBlocks,
     riskTier: parts.riskTier,
     governanceTier: parts.governanceTier,
-    rationale: parts.rationale ?? "",
+    rationale: parts.rationale ?? '',
     proposedAt: new Date().toISOString(),
   };
 }

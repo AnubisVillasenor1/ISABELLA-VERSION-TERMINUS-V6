@@ -23,16 +23,17 @@ export class FixedWindowRateLimiter {
   constructor(
     private readonly limit: number,
     private readonly windowMs: number,
-    private readonly maxKeys = 10_000,
+    private readonly maxKeys = 10_000
   ) {
-    if (!Number.isInteger(limit) || limit < 1) throw new Error("RATE_LIMIT_LIMIT_INVALID");
-    if (!Number.isFinite(windowMs) || windowMs < 1) throw new Error("RATE_LIMIT_WINDOW_INVALID");
-    if (!Number.isSafeInteger(maxKeys) || maxKeys < 1) throw new Error("RATE_LIMIT_MAX_KEYS_INVALID");
+    if (!Number.isInteger(limit) || limit < 1) throw new Error('RATE_LIMIT_LIMIT_INVALID');
+    if (!Number.isFinite(windowMs) || windowMs < 1) throw new Error('RATE_LIMIT_WINDOW_INVALID');
+    if (!Number.isSafeInteger(maxKeys) || maxKeys < 1)
+      throw new Error('RATE_LIMIT_MAX_KEYS_INVALID');
   }
 
   consume(key: string, now = Date.now()): RateLimitDecision {
     const normalizedKey = key.trim();
-    if (!normalizedKey) throw new Error("RATE_LIMIT_KEY_REQUIRED");
+    if (!normalizedKey) throw new Error('RATE_LIMIT_KEY_REQUIRED');
 
     let state = this.windows.get(normalizedKey);
     if (state && (now - state.startedAt >= this.windowMs || now < state.startedAt)) {
@@ -47,7 +48,10 @@ export class FixedWindowRateLimiter {
       if (this.windows.size >= this.maxKeys) {
         let retryAfterMs = this.windowMs;
         for (const active of this.windows.values()) {
-          retryAfterMs = Math.min(retryAfterMs, Math.max(1, this.windowMs - (now - active.startedAt)));
+          retryAfterMs = Math.min(
+            retryAfterMs,
+            Math.max(1, this.windowMs - (now - active.startedAt))
+          );
         }
         return { allowed: false, remaining: 0, retryAfterMs };
       }
@@ -59,7 +63,11 @@ export class FixedWindowRateLimiter {
     }
 
     if (state.count >= this.limit) {
-      return { allowed: false, remaining: 0, retryAfterMs: Math.max(0, this.windowMs - (now - state.startedAt)) };
+      return {
+        allowed: false,
+        remaining: 0,
+        retryAfterMs: Math.max(0, this.windowMs - (now - state.startedAt)),
+      };
     }
 
     state.count += 1;

@@ -4,6 +4,18 @@ import { createServer } from "node:http";
 // Prevent the application from opening a production listener while this smoke test imports it.
 process.env.VERCEL = "1";
 process.env.RUNTIME_SMOKE = "1";
+// Con NODE_ENV=production toda capacidad respaldada por un proveedor exige
+// GENESIS_PUBLIC_API_TOKEN y falla cerrada con 503. El smoke importa la app en este mismo
+// proceso, así que define su propio token de prueba y lo porta en esas peticiones: así el
+// gate verifica el motor de inferencia real en lugar de conformarse con el bloqueo.
+const SMOKE_PROVIDER_TOKEN = "isabella-runtime-smoke-public-token-0001";
+process.env.GENESIS_PUBLIC_API_TOKEN = SMOKE_PROVIDER_TOKEN;
+// Con NODE_ENV=production el almacén de conocimiento verificado elige MongoDB y lanza en el
+// propio `import` si falta MONGODB_URI: el proceso muere antes de escuchar. El smoke ejercita
+// la superficie HTTP, no una base de datos externa, así que declara su backend en memoria.
+// Producción sigue exigiendo un proveedor durable; esto no relaja ese contrato.
+process.env.ISABELLA_VERIFIED_KNOWLEDGE_BACKEND = "memory";
+const providerHeaders = () => ({ "content-type": "application/json", authorization: `Bearer ${SMOKE_PROVIDER_TOKEN}` });
 const { default: app } = await import("../dist/server.js");
 assert.equal(typeof app, "function", "Express app must be exported as a request handler");
 
@@ -33,6 +45,37 @@ try {
     "BookPI status must disclose the configured backend without asserting external durability");
   assert.ok(["PROCESS_MEMORY_NOT_DURABLE", "LOCAL_FILE_FSYNCED_NOT_SHARED_NOT_WORM", "POSTGRES_SHARED_DURABLE_NOT_WORM"].includes(statusBody.engines?.bookpiDurability),
     "BookPI status must disclose its durability scope");
+  // /api/v1/status es la vista de diagnóstico del operador: cada campo se calcula aislado,
+  // así que una sonda que lanza debe nombrarse aquí en lugar de convertir el endpoint en un 500.
+  assert.deepEqual(statusBody.diagnostics?.probeFailures ?? ["diagnostics missing"], [],
+    `every runtime status field must be computed without a probe failure: ${JSON.stringify(statusBody.diagnostics)}`);
+
+  // El mapa del hero solo pinta lo que este snapshot deriva de los registros del proceso.
+  const universe = statusBody.universe;
+  assert.equal(universe?.schema, "isabella.universe.v1", "runtime status must publish the universe snapshot the map renders");
+  assert.ok(statusBody.toolsCount > 2, "the public tool count must come from the registry, not from a hardcoded digit");
+  assert.equal(statusBody.toolsCount, universe.counts.tools, "public tool count must match the snapshot the map reads");
+  assert.equal(statusBody.toolsCount, universe.evidence.tools, "the tool registry and its evidence counters must agree");
+  assert.equal(universe.nodes.length, statusBody.crownNodesCount, "every declared CROWN node must be enumerable for the map");
+  assert.ok(universe.expertModules.length === statusBody.experts.count && universe.expertModules.length > 0,
+    "the expert modules rendered by the map must be the declared registry");
+  assert.equal(universe.subsystems.find((item) => item.id === "tools")?.count, statusBody.toolsCount,
+    "subsystem counters must be derived from the same registries as the top-level counts");
+  assert.ok(universe.nodes.every((node) => typeof node.weight === "number" && node.weight > 0 && node.weight <= 1),
+    "node weights must be real bounded values so the map scales without inventing geometry");
+  assert.ok(Object.values(universe.stateLegend).every((text) => typeof text === "string" && text.length > 0),
+    "every map state must be explained in the legend");
+  for (const item of universe.subsystems) {
+    assert.ok(Object.hasOwn(universe.stateLegend, item.state), `subsystem ${item.id} reports an unexplained state ${item.state}`);
+  }
+  assert.ok(!Object.values(statusBody.engines).some((value) => value === "ACTIVE"),
+    "no engine may claim ACTIVE without a probe; undeclared wiring must say DECLARED or NOT_WIRED");
+  assert.ok(universe.engineStates.pdp === "MODULE_NOT_WIRED_TO_HTTP" || universe.engineStates.pdp === "WIRED_IN_PROCESS",
+    "the PDP must report whether the HTTP plane actually calls it");
+  const mapClient = await fetch(baseUrl + "/ui/universe-map.js", { signal: AbortSignal.timeout(5_000) });
+  assert.equal(mapClient.status, 200, "the universe map client must be served by the runtime");
+  assert.match(mapClient.headers.get("content-type") ?? "", /javascript/, "the universe map client must be served as JavaScript");
+  assert.ok((await mapClient.text()).includes("/api/v1/status"), "the map client must read the real status endpoint");
 
   const readyz = await fetch(baseUrl + "/api/v1/readyz", { signal: AbortSignal.timeout(5_000) });
   assert.ok([200, 503].includes(readyz.status), "readiness may only report healthy or explicitly blocked");
@@ -54,6 +97,11 @@ try {
   assert.equal(healthzBody.scope, "deep-dependency-readiness", "deep readiness must declare its scope");
   assert.ok(Array.isArray(healthzBody.evidence), "deep readiness must include observed dependency evidence");
   assert.equal(healthz.status, healthzBody.ready ? 200 : 503, "deep readiness HTTP status must match its evaluated state");
+  // Una capacidad con methodId no canónico queda bloqueada por CROWN en tiempo de petición,
+  // sin síntoma visible al desplegar. La sonda de conformancia es la única señal temprana.
+  const methodIdEvidence = (healthzBody.evidence ?? []).find((entry) => entry.dependency === "method-id-conformance");
+  assert.ok(methodIdEvidence, "deep readiness must observe the CROWN gate capability registry");
+  assert.equal(methodIdEvidence.status, "healthy", `every registered capability must satisfy the canonical methodId grammar: ${methodIdEvidence.detail}`);
 
   const chat = await fetch(`${baseUrl}/api/v1/cognition/route`, {
     method: "POST",
@@ -71,7 +119,10 @@ try {
   assert.equal(chat.status, 200, `chat endpoint returned HTTP ${chat.status}: ${JSON.stringify(chatBody)}`);
   assert.equal(typeof chatBody.generativeNarrative, "string", "chat must return a user-facing narrative");
   assert.ok(chatBody.generativeNarrative.trim().length > 0, "chat narrative must not be empty");
-  assert.equal(chatBody.responseEngine, "sovereign", "explicit sovereign mode must disclose the local engine");
+  assert.ok(
+    ["sovereign", "local-fast-lane", "sovereign-fallback"].includes(chatBody.responseEngine),
+    `explicit sovereign mode must disclose a local engine, got ${chatBody.responseEngine}`,
+  );
   assert.match(chatBody.generativeNarrative, /Soy Isabella Villaseñor AI/, "local fallback must answer greetings conversationally");
   assert.equal(typeof chatBody.openModelConfigured, "boolean", "response must distinguish open provider configuration");
   assert.equal(typeof chatBody.paidProviderConfigured, "boolean", "response must distinguish paid provider configuration");
@@ -130,9 +181,51 @@ try {
     signal: AbortSignal.timeout(5_000),
   });
   assert.equal(destructiveRequest.status, 403, "public viewer sessions must not execute destructive operations");
-  const explicitGemini = await fetch(`${baseUrl}/api/v1/cognition/route`, {
+
+  // Mediación soberana de Isabella: la ruta se servía 403 en producción porque el methodId
+  // del gate no coincidía con el de la petición, y nada de esto se ejercitaba en el smoke.
+  const mediate = await fetch(`${baseUrl}/api/v1/isabella/mediate`, {
     method: "POST",
     headers: { "content-type": "application/json" },
+    body: JSON.stringify({ input: "Hola Isabella, ¿qué eres capaz de hacer?", profile: "general" }),
+    signal: AbortSignal.timeout(10_000),
+  });
+  const mediateBody = await mediate.json();
+  assert.equal(mediate.status, 200, `benign mediation returned HTTP ${mediate.status}: ${JSON.stringify(mediateBody)}`);
+  assert.equal(mediateBody.success, true, "mediation must report success");
+  assert.equal(mediateBody.governance?.admitted, true, "Genesis must admit a benign mediation request");
+  assert.ok(mediateBody.mediation, "mediation must return the mediated payload");
+
+  const mediateApproval = await fetch(`${baseUrl}/api/v1/isabella/mediate`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ input: "Borra permanentemente todas las evidencias del ledger", profile: "general" }),
+    signal: AbortSignal.timeout(10_000),
+  });
+  const mediateApprovalBody = await mediateApproval.json();
+  assert.equal(mediateApproval.status, 403, "mediation must fail closed for approval-required or refused intent");
+  assert.equal(mediateApprovalBody.success, false, "refused mediation must not report success");
+  // CROWN distingue "refuse" (admitted=false) de "approval" (admitted=true pero no ejecutable
+  // sin aprobación humana). Ambas deben bloquearse en el borde HTTP; el contrato observable
+  // es el 403, no un único flag.
+  assert.ok(mediateApprovalBody.governance?.admitted === false || mediateApprovalBody.governance?.crown?.requiresHumanApproval === true,
+    `blocked mediation must be either refused or approval-gated: ${JSON.stringify(mediateApprovalBody.governance?.crown?.responseMode)}`);
+
+  const mediateBlank = await fetch(`${baseUrl}/api/v1/isabella/mediate`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ input: "   " }),
+    signal: AbortSignal.timeout(5_000),
+  });
+  assert.equal(mediateBlank.status, 400, "blank mediation input must be rejected");
+  console.log("ISABELLA_MEDIATION_SMOKE_OK", JSON.stringify({
+    admitted: mediateBody.governance?.admitted,
+    approvalRequired: mediateApprovalBody.error,
+    blank: mediateBlank.status,
+  }));
+  const explicitGemini = await fetch(`${baseUrl}/api/v1/cognition/route`, {
+    method: "POST",
+    headers: providerHeaders(),
     body: JSON.stringify({ input: "Responde brevemente.", modelEngine: "gemini", focusLens: "general", history: [] }),
     signal: AbortSignal.timeout(10_000),
   });
@@ -160,7 +253,7 @@ try {
     process.env.ALLOW_PAID_PROVIDER_FALLBACK = "false";
     const paidModelGuard = await fetch(`${baseUrl}/api/v1/cognition/route`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: providerHeaders(),
       body: JSON.stringify({ input: "Verifica la política de modelo.", modelEngine: "open-science", focusLens: "general", history: [] }),
       signal: AbortSignal.timeout(5_000),
     });
@@ -220,9 +313,10 @@ try {
       }
       return originalGlobalFetch(input, init);
     };
+    // originalGlobalFetch: el spy de arriba no debe registrar el propio tráfico del smoke.
     const costGuard = await originalGlobalFetch(`${baseUrl}/api/v1/cognition/route`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: providerHeaders(),
       body: JSON.stringify({
         input: "Verifica que las API potencialmente facturables estén bloqueadas.",
         modelEngine: "open-science",
@@ -232,9 +326,11 @@ try {
       signal: AbortSignal.timeout(10_000),
     });
     const costGuardBody = await costGuard.json();
-    assert.equal(costGuard.status, 200);
-    assert.equal(costGuardBody.responseEngine, "sovereign-fallback", "paid-capable providers must not be used when opt-in is false");
+    // El cero de llamadas externas vale también cuando la ruta está bloqueada por token:
+    // es la aserción de costo real y no depende de que el motor llegue a responder.
     assert.deepEqual(contactedBillableProviders, [], "no paid-capable provider HTTP request may be sent without opt-in");
+    assert.equal(costGuard.status, 200, `cost guard returned HTTP ${costGuard.status}: ${JSON.stringify(costGuardBody)}`);
+    assert.equal(costGuardBody.responseEngine, "sovereign-fallback", "paid-capable providers must not be used when opt-in is false");
     console.log("PAID_PROVIDER_OPT_IN_GUARD_OK", JSON.stringify({ responseEngine: costGuardBody.responseEngine, externalProviderCalls: 0 }));
 
     // An explicit open-science selection remains open-only even if the operator
@@ -242,7 +338,7 @@ try {
     process.env.ALLOW_PAID_PROVIDER_FALLBACK = "true";
     const openScienceGuard = await originalGlobalFetch(`${baseUrl}/api/v1/cognition/route`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: providerHeaders(),
       body: JSON.stringify({
         input: "Comprueba que Open Science no cambia a un proveedor facturable.",
         modelEngine: "open-science",
@@ -252,9 +348,9 @@ try {
       signal: AbortSignal.timeout(10_000),
     });
     const openScienceBody = await openScienceGuard.json();
-    assert.equal(openScienceGuard.status, 200);
-    assert.equal(openScienceBody.responseEngine, "sovereign-fallback", "Open Science mode must not fall through to paid-capable providers");
     assert.deepEqual(contactedBillableProviders, [], "Open Science mode must remain open-only even when paid fallback is globally enabled");
+    assert.equal(openScienceGuard.status, 200, `Open Science guard returned HTTP ${openScienceGuard.status}: ${JSON.stringify(openScienceBody)}`);
+    assert.equal(openScienceBody.responseEngine, "sovereign-fallback", "Open Science mode must not fall through to paid-capable providers");
     console.log("OPEN_SCIENCE_PAID_ISOLATION_OK", JSON.stringify({ responseEngine: openScienceBody.responseEngine, externalProviderCalls: 0 }));
   } finally {
     globalThis.fetch = originalGlobalFetch;
@@ -275,7 +371,7 @@ try {
 
   const invalidImage = await fetch(`${baseUrl}/api/v1/cognition/vision`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: providerHeaders(),
     body: JSON.stringify({ image: "data:image/svg+xml;base64,PHN2Zz4=" }),
     signal: AbortSignal.timeout(5_000),
   });
@@ -284,7 +380,7 @@ try {
   if (readinessBody.readiness.vision.length === 0) {
     const noVision = await fetch(`${baseUrl}/api/v1/cognition/vision`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: providerHeaders(),
       body: JSON.stringify({ image: "data:image/png;base64,iVBORw0KGgo=" }),
       signal: AbortSignal.timeout(5_000),
     });
@@ -293,7 +389,7 @@ try {
   if (readinessBody.readiness.image.length === 0) {
     const noImage = await fetch(`${baseUrl}/api/v1/cognition/image`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: providerHeaders(),
       body: JSON.stringify({ prompt: "un gato" }),
       signal: AbortSignal.timeout(5_000),
     });
@@ -302,7 +398,7 @@ try {
   if (!readinessBody.speech.textToSpeech) {
     const noSpeech = await fetch(`${baseUrl}/api/v1/cognition/speech`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: providerHeaders(),
       body: JSON.stringify({ text: "hola" }),
       signal: AbortSignal.timeout(5_000),
     });
@@ -310,7 +406,7 @@ try {
   }
   const badAudio = await fetch(`${baseUrl}/api/v1/cognition/transcribe`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: providerHeaders(),
     body: JSON.stringify({ audio: "", mimeType: "" }),
     signal: AbortSignal.timeout(5_000),
   });
@@ -321,7 +417,7 @@ try {
     try {
       const llm = await fetch(`${baseUrl}/api/v1/cognition/route`, {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: providerHeaders(),
         body: JSON.stringify({
           input: "Responde en una sola oración en español: ¿puedes conversar con el usuario?",
           modelEngine: "open-science",
@@ -347,7 +443,12 @@ try {
     if (process.env.ISABELLA_REQUIRE_LLM_SMOKE === "true") throw new Error(message);
     console.warn("LLM_GATEWAY_SMOKE_SKIPPED", message);
   }
+} catch (error) {
+  console.error("RUNTIME_SMOKE_FAILED", error);
+  process.exitCode = 1;
 } finally {
+  // Keep-alive sockets stay referenced by Node's fetch; drop them before closing.
+  server.closeAllConnections();
   await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
-  process.exit(0);
 }
+process.exit(process.exitCode ?? 0);

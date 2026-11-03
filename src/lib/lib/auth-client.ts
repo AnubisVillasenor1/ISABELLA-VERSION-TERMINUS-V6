@@ -7,15 +7,15 @@
  * o IDP OIDC/Supabase en producción).
  */
 
-const SESSION_TOKEN_KEY = "isabella_session_token";
-const SOVEREIGN_USER_ID_KEY = "isabella.sovereign.userId";
+const SESSION_TOKEN_KEY = 'isabella_session_token';
+const SOVEREIGN_USER_ID_KEY = 'isabella.sovereign.userId';
 
 /** Devuelve el token de sesión vigente (si existe). No acuña nada. */
 export function getSessionToken(): string {
   try {
-    return window.sessionStorage.getItem(SESSION_TOKEN_KEY) || "";
+    return window.sessionStorage.getItem(SESSION_TOKEN_KEY) || '';
   } catch {
-    return "";
+    return '';
   }
 }
 
@@ -31,9 +31,9 @@ export function setSessionToken(token: string): void {
 /** Identidad de nodo configurada localmente (provisioning/dev). */
 export function getStoredSovereignUserId(): string {
   try {
-    return window.localStorage.getItem(SOVEREIGN_USER_ID_KEY) || "";
+    return window.localStorage.getItem(SOVEREIGN_USER_ID_KEY) || '';
   } catch {
-    return "";
+    return '';
   }
 }
 
@@ -60,36 +60,36 @@ export async function ensureSessionToken(): Promise<string> {
   if (existing) return existing;
 
   const response = await fetch(
-    `/api/db?action=oauth-url&redirect_uri=${encodeURIComponent(`${window.location.origin}/api/db?action=oauth-callback`)}`,
+    `/api/db?action=oauth-url&redirect_uri=${encodeURIComponent(`${window.location.origin}/api/db?action=oauth-callback`)}`
   );
   const payload = (await response.json().catch(() => ({}))) as {
     url?: string;
     error?: string;
   };
   if (!response.ok || !payload.url)
-    throw new Error(payload.error || "ARGUS requiere una sesión OIDC válida.");
+    throw new Error(payload.error || 'ARGUS requiere una sesión OIDC válida.');
 
   return new Promise((resolve, reject) => {
-    const popup = window.open(payload.url, "isabella-oidc", "width=520,height=720,resizable=yes");
+    const popup = window.open(payload.url, 'isabella-oidc', 'width=520,height=720,resizable=yes');
     if (!popup) {
-      reject(new Error("El navegador bloqueó la ventana de autorización OIDC."));
+      reject(new Error('El navegador bloqueó la ventana de autorización OIDC.'));
       return;
     }
     const timeout = window.setTimeout(() => {
-      window.removeEventListener("message", handleMessage);
-      reject(new Error("La autorización OIDC expiró o fue cancelada."));
+      window.removeEventListener('message', handleMessage);
+      reject(new Error('La autorización OIDC expiró o fue cancelada.'));
     }, 120000);
     const handleMessage = (event: MessageEvent) => {
       if (!isTrustedOAuthEvent(event)) return;
-      const token = typeof event.data?.token === "string" ? event.data.token : "";
+      const token = typeof event.data?.token === 'string' ? event.data.token : '';
       if (!token) return;
       window.clearTimeout(timeout);
-      window.removeEventListener("message", handleMessage);
+      window.removeEventListener('message', handleMessage);
       popup.close();
       setSessionToken(token);
-      if (typeof event.data?.userId === "string") setStoredSovereignUserId(event.data.userId);
+      if (typeof event.data?.userId === 'string') setStoredSovereignUserId(event.data.userId);
       resolve(token);
     };
-    window.addEventListener("message", handleMessage);
+    window.addEventListener('message', handleMessage);
   });
 }

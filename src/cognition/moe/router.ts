@@ -9,8 +9,8 @@
  *   seleccionados (top-k) y aplica capacidad por experto con overflow determinista.
  * ISA-009: pérdida de balance de carga (GShard-style) expuesta para evaluación.
  */
-import { sha256Hex, stableStringify } from "./hash";
-import type { ExpertId } from "./contract";
+import { sha256Hex, stableStringify } from './hash';
+import type { ExpertId } from './contract';
 
 export const GATE_CONTRACT_VERSION = 1;
 
@@ -20,19 +20,23 @@ export interface GateParams {
 }
 
 export function createGateParams(weights: readonly (readonly number[])[]): GateParams {
-  if (weights.length === 0) throw new Error("MOE: gate sin expertos");
+  if (weights.length === 0) throw new Error('MOE: gate sin expertos');
   const dim = weights[0]?.length ?? 0;
-  if (dim === 0) throw new Error("MOE: gate sin features");
+  if (dim === 0) throw new Error('MOE: gate sin features');
   for (const row of weights) {
-    if (row.length !== dim) throw new Error("MOE: filas de weights con dimensionalidad inconsistente");
+    if (row.length !== dim)
+      throw new Error('MOE: filas de weights con dimensionalidad inconsistente');
   }
   return Object.freeze({ weights: Object.freeze(weights.map((row) => Object.freeze([...row]))) });
 }
 
 export function uniformGateParams(expertCount: number, featureDim: number): GateParams {
-  if (!Number.isInteger(expertCount) || expertCount < 1) throw new Error("MOE: expertCount inválido");
-  if (!Number.isInteger(featureDim) || featureDim < 1) throw new Error("MOE: featureDim inválido");
-  return createGateParams(Array.from({ length: expertCount }, () => Array.from({ length: featureDim }, () => 0)));
+  if (!Number.isInteger(expertCount) || expertCount < 1)
+    throw new Error('MOE: expertCount inválido');
+  if (!Number.isInteger(featureDim) || featureDim < 1) throw new Error('MOE: featureDim inválido');
+  return createGateParams(
+    Array.from({ length: expertCount }, () => Array.from({ length: featureDim }, () => 0))
+  );
 }
 
 export function gateParamsDigest(params: GateParams): string {
@@ -44,7 +48,8 @@ function dot(row: readonly number[], features: readonly number[]): number {
   for (let j = 0; j < row.length; j += 1) {
     const w = row[j];
     const f = features[j];
-    if (w === undefined || f === undefined) throw new Error("MOE: característica ausente en el dot product");
+    if (w === undefined || f === undefined)
+      throw new Error('MOE: característica ausente en el dot product');
     acc += w * f;
   }
   return acc;
@@ -52,8 +57,9 @@ function dot(row: readonly number[], features: readonly number[]): number {
 
 export function computeLogits(params: GateParams, features: readonly number[]): readonly number[] {
   const dim = params.weights[0]?.length ?? 0;
-  if (dim === 0) throw new Error("MOE: gate vacío");
-  if (features.length !== dim) throw new Error(`MOE: dimensionalidad features ${features.length} != gate ${dim}`);
+  if (dim === 0) throw new Error('MOE: gate vacío');
+  if (features.length !== dim)
+    throw new Error(`MOE: dimensionalidad features ${features.length} != gate ${dim}`);
   return Object.freeze(params.weights.map((row) => dot(row, features)));
 }
 
@@ -62,13 +68,13 @@ export function softmax(logits: readonly number[]): readonly number[] {
   if (logits.length === 0) return Object.freeze([]);
   let max = Number.NEGATIVE_INFINITY;
   for (const l of logits) {
-    if (!Number.isFinite(l)) throw new Error("MOE: logits no finitos");
+    if (!Number.isFinite(l)) throw new Error('MOE: logits no finitos');
     if (l > max) max = l;
   }
   const exps = logits.map((l) => Math.exp(l - max));
   let sum = 0;
   for (const e of exps) sum += e;
-  if (!Number.isFinite(sum) || sum <= 0) throw new Error("MOE: softmax degenerado");
+  if (!Number.isFinite(sum) || sum <= 0) throw new Error('MOE: softmax degenerado');
   return Object.freeze(exps.map((e) => e / sum));
 }
 
@@ -77,7 +83,7 @@ export function topKIndices(logits: readonly number[], k: number): readonly numb
   if (!Number.isInteger(k) || k < 1) throw new Error(`MOE: topK inválido '${k}'`);
   const order = logits
     .map((logit, i) => ({ i, logit }))
-    .sort((a, b) => (b.logit - a.logit) || (a.i - b.i));
+    .sort((a, b) => b.logit - a.logit || a.i - b.i);
   return Object.freeze(order.slice(0, k).map((entry) => entry.i));
 }
 
@@ -89,7 +95,7 @@ export interface TokenInput {
 export interface MoeOverflow {
   readonly expertId: ExpertId;
   readonly tokenIndex: number;
-  readonly reason: "CAPACITY_EXCEEDED";
+  readonly reason: 'CAPACITY_EXCEEDED';
 }
 
 export interface GateContribution {
@@ -98,7 +104,7 @@ export interface GateContribution {
 }
 
 export interface MoeGateDecision {
-  readonly routing: "experts" | "fallback";
+  readonly routing: 'experts' | 'fallback';
   readonly tokenId: string;
   readonly expertIds: readonly ExpertId[];
   readonly topK: number;
@@ -125,26 +131,27 @@ export interface BatchDecision {
 }
 
 function assertGateOptions(options: GateOptions): void {
-  if (options.expertIds.length === 0) throw new Error("MOE: dispatch sin expertos");
+  if (options.expertIds.length === 0) throw new Error('MOE: dispatch sin expertos');
   const seen = new Set<string>();
   for (const id of options.expertIds) {
-    if (id.trim() === "") throw new Error("MOE: expertId vacío");
+    if (id.trim() === '') throw new Error('MOE: expertId vacío');
     if (seen.has(id)) throw new Error(`MOE: expertId duplicado ${id}`);
     seen.add(id);
   }
-  if (!Number.isInteger(options.topK) || options.topK < 1) throw new Error(`MOE: topK inválido '${options.topK}'`);
+  if (!Number.isInteger(options.topK) || options.topK < 1)
+    throw new Error(`MOE: topK inválido '${options.topK}'`);
   if (!Number.isInteger(options.capacityPerExpert) || options.capacityPerExpert < 1) {
     throw new Error(`MOE: capacityPerExpert inválido '${options.capacityPerExpert}'`);
   }
-  if (options.fallbackExpert.trim() === "") throw new Error("MOE: fallbackExpert vacío");
+  if (options.fallbackExpert.trim() === '') throw new Error('MOE: fallbackExpert vacío');
 }
 
 /** Guard estructural (ISA-002): solo un objeto con logits/weights/top-k es un gate MoE. */
 export function isMoeGateDecision(value: unknown): value is MoeGateDecision {
-  if (value === null || typeof value !== "object") return false;
+  if (value === null || typeof value !== 'object') return false;
   const v = value as Record<string, unknown>;
   const routing = v.routing;
-  if (routing !== "experts" && routing !== "fallback") return false;
+  if (routing !== 'experts' && routing !== 'fallback') return false;
   return Array.isArray(v.logits) && Array.isArray(v.weights) && Array.isArray(v.selectedExpertIds);
 }
 
@@ -157,11 +164,11 @@ export function isMoeGateDecision(value: unknown): value is MoeGateDecision {
 export function dispatchBatch(
   inputs: readonly TokenInput[],
   params: GateParams,
-  options: GateOptions,
+  options: GateOptions
 ): readonly BatchDecision[] {
   assertGateOptions(options);
   if (params.weights.length !== options.expertIds.length) {
-    throw new Error("MOE: el número de filas de gate no coincide con el número de expertos");
+    throw new Error('MOE: el número de filas de gate no coincide con el número de expertos');
   }
   const used = new Map<number, number>();
   const decisions: BatchDecision[] = [];
@@ -177,17 +184,18 @@ export function dispatchBatch(
       if (contributions.length >= options.topK) break;
       const expertId = options.expertIds[index];
       const weight = weights[index];
-      if (expertId === undefined || weight === undefined) throw new Error("MOE: índice de experto fuera de rango");
+      if (expertId === undefined || weight === undefined)
+        throw new Error('MOE: índice de experto fuera de rango');
       const count = used.get(index) ?? 0;
       if (count >= options.capacityPerExpert) {
-        overflow.push({ expertId, tokenIndex, reason: "CAPACITY_EXCEEDED" });
+        overflow.push({ expertId, tokenIndex, reason: 'CAPACITY_EXCEEDED' });
         continue;
       }
       used.set(index, count + 1);
       contributions.push({ expertId, weight });
     }
 
-    const routing = contributions.length > 0 ? "experts" : "fallback";
+    const routing = contributions.length > 0 ? 'experts' : 'fallback';
     const decision: MoeGateDecision = Object.freeze({
       routing,
       tokenId: token.tokenId,
@@ -197,15 +205,15 @@ export function dispatchBatch(
       logits,
       weights,
       contributions: Object.freeze(
-        routing === "experts"
+        routing === 'experts'
           ? contributions
-          : [{ expertId: options.fallbackExpert, weight: 1 } satisfies GateContribution],
+          : [{ expertId: options.fallbackExpert, weight: 1 } satisfies GateContribution]
       ),
       selectedExpertIds: Object.freeze(
-        routing === "experts" ? contributions.map((c) => c.expertId) : [options.fallbackExpert],
+        routing === 'experts' ? contributions.map((c) => c.expertId) : [options.fallbackExpert]
       ),
       overflow: Object.freeze(overflow),
-      fallbackReason: routing === "fallback" ? "NO_EXPERT_CAPACITY_AVAILABLE" : undefined,
+      fallbackReason: routing === 'fallback' ? 'NO_EXPERT_CAPACITY_AVAILABLE' : undefined,
     });
     decisions.push(Object.freeze({ tokenIndex, token, decision }));
   });
@@ -226,10 +234,11 @@ export interface LoadBalanceReport {
  */
 export function computeLoadBalancingLoss(
   decisions: readonly MoeGateDecision[],
-  expertCount: number,
+  expertCount: number
 ): LoadBalanceReport {
-  if (!Number.isInteger(expertCount) || expertCount < 1) throw new Error("MOE: expertCount inválido");
-  const routed = decisions.filter((d) => d.routing === "experts");
+  if (!Number.isInteger(expertCount) || expertCount < 1)
+    throw new Error('MOE: expertCount inválido');
+  const routed = decisions.filter((d) => d.routing === 'experts');
   const counts = new Array<number>(expertCount).fill(0);
   const probSums = new Array<number>(expertCount).fill(0);
 
@@ -237,7 +246,8 @@ export function computeLoadBalancingLoss(
     for (let i = 0; i < expertCount; i += 1) {
       const expertId = decision.expertIds[i];
       const weight = decision.weights[i];
-      if (expertId === undefined || weight === undefined) throw new Error("MOE: índice de experto fuera de rango");
+      if (expertId === undefined || weight === undefined)
+        throw new Error('MOE: índice de experto fuera de rango');
       if (decision.selectedExpertIds.includes(expertId)) counts[i] = (counts[i] ?? 0) + 1;
       probSums[i] = (probSums[i] ?? 0) + weight;
     }

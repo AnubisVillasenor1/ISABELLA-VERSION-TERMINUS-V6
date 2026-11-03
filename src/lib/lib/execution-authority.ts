@@ -20,17 +20,17 @@
  *    no hay ejecución).
  */
 
-import { randomUUID } from "node:crypto";
-import { createHash } from "node:crypto";
-import { evaluateAuthorization } from "./authorization";
-import { evaluatePolicy } from "./policy-engine";
-import { applyDbPolicyGate } from "./db-policy-gate";
-import { createDbPolicyStore, type DbPolicyStore } from "./repositories/policy-repository";
-import { recordDecision, type LedgerStore, type Risk } from "./governance/decision-ledger";
-import { verifyCapabilityToken } from "./capability-tokens";
-import { createToolRegistry, missingToolPermissions, type RegisteredTool } from "./tool-registry";
-import type { MemoryRepository } from "./repositories/memory-repository";
-import type { AuditRepository } from "./repositories/audit-repository";
+import { randomUUID } from 'node:crypto';
+import { createHash } from 'node:crypto';
+import { evaluateAuthorization } from './authorization';
+import { evaluatePolicy } from './policy-engine';
+import { applyDbPolicyGate } from './db-policy-gate';
+import { createDbPolicyStore, type DbPolicyStore } from './repositories/policy-repository';
+import { recordDecision, type LedgerStore, type Risk } from './governance/decision-ledger';
+import { verifyCapabilityToken } from './capability-tokens';
+import { createToolRegistry, missingToolPermissions, type RegisteredTool } from './tool-registry';
+import type { MemoryRepository } from './repositories/memory-repository';
+import type { AuditRepository } from './repositories/audit-repository';
 
 export interface ApprovalGrant {
   approvalId: string;
@@ -69,19 +69,19 @@ export type ExecutionOutcome =
       executed: false;
       reason: string;
       stage:
-        | "decide"
-        | "authorization"
-        | "approval"
-        | "db-policy"
-        | "execution"
-        | "validation"
-        | "audit";
+        | 'decide'
+        | 'authorization'
+        | 'approval'
+        | 'db-policy'
+        | 'execution'
+        | 'validation'
+        | 'audit';
     };
 
 export interface ToolExecutor {
   (
     input: unknown,
-    ctx: { actorId: string; tenantId: string; traceId: string },
+    ctx: { actorId: string; tenantId: string; traceId: string }
   ): Promise<unknown> | unknown;
 }
 
@@ -94,7 +94,7 @@ export function createApprovalLedger() {
     grant(traceId: string, tool: string, actorId: string, tenantId: string): ApprovalGrant {
       const now = Date.now();
       const grant: ApprovalGrant = {
-        approvalId: `apr_${randomUUID().replace(/-/g, "")}`,
+        approvalId: `apr_${randomUUID().replace(/-/g, '')}`,
         traceId,
         tool,
         actorId,
@@ -110,7 +110,7 @@ export function createApprovalLedger() {
       traceId: string,
       tool: string,
       actorId: string,
-      tenantId: string,
+      tenantId: string
     ): ApprovalGrant | null {
       const now = Date.now();
       for (const grant of grants.values()) {
@@ -161,27 +161,27 @@ export type ApprovalLedger = ReturnType<typeof createApprovalLedger>;
 function hashResult(result: unknown): string {
   let rendered: string;
   try {
-    rendered = JSON.stringify(result) ?? "null";
+    rendered = JSON.stringify(result) ?? 'null';
   } catch {
-    rendered = "[unserializable]";
+    rendered = '[unserializable]';
   }
-  return createHash("sha256").update(rendered).digest("hex");
+  return createHash('sha256').update(rendered).digest('hex');
 }
 
 function validateResult(
   tool: RegisteredTool,
-  result: unknown,
+  result: unknown
 ): { valid: boolean; reason?: string } {
-  if (result === undefined) return { valid: false, reason: "Resultado indefinido." };
+  if (result === undefined) return { valid: false, reason: 'Resultado indefinido.' };
   try {
     JSON.stringify(result);
   } catch {
-    return { valid: false, reason: "Resultado no serializable." };
+    return { valid: false, reason: 'Resultado no serializable.' };
   }
-  if (tool.name === "memory.retrieve" && !Array.isArray(result)) {
+  if (tool.name === 'memory.retrieve' && !Array.isArray(result)) {
     return {
       valid: false,
-      reason: "memory.retrieve debe devolver un arreglo.",
+      reason: 'memory.retrieve debe devolver un arreglo.',
     };
   }
   return { valid: true };
@@ -205,7 +205,7 @@ export function createExecutionAuthority(opts?: {
       traceId: string,
       tool: string,
       actorId: string,
-      tenantId: string,
+      tenantId: string
     ): Promise<ApprovalGrant | null>;
   };
   /**
@@ -237,31 +237,31 @@ export function createExecutionAuthority(opts?: {
   function executors(memoryRepository?: MemoryRepository): Map<string, ToolExecutor> {
     const map = new Map<string, ToolExecutor>();
     if (memoryRepository) {
-      map.set("memory.retrieve", (input) => {
+      map.set('memory.retrieve', (input) => {
         const params = (input ?? {}) as {
-          scope?: "turn" | "session" | "project" | "territorial" | "historical";
+          scope?: 'turn' | 'session' | 'project' | 'territorial' | 'historical';
         };
         return memoryRepository.list(
-          (input as { tenantId?: string })?.tenantId ?? "",
-          params.scope,
+          (input as { tenantId?: string })?.tenantId ?? '',
+          params.scope
         );
       });
-      map.set("memory.record", (input, ctx) => {
+      map.set('memory.record', (input, ctx) => {
         const params = (input ?? {}) as {
           content?: string;
-          scope?: "turn" | "session" | "project" | "territorial" | "historical";
-          sensitivity?: "public" | "internal" | "personal" | "restricted";
+          scope?: 'turn' | 'session' | 'project' | 'territorial' | 'historical';
+          sensitivity?: 'public' | 'internal' | 'personal' | 'restricted';
           purpose?: string;
           consentGranted?: boolean;
           ownerId?: string;
         };
         return memoryRepository.add({
           tenantId: ctx.tenantId,
-          content: params.content ?? "",
-          source: "tool",
-          scope: params.scope ?? "turn",
-          sensitivity: params.sensitivity ?? "internal",
-          purpose: params.purpose ?? "tool-execution",
+          content: params.content ?? '',
+          source: 'tool',
+          scope: params.scope ?? 'turn',
+          sensitivity: params.sensitivity ?? 'internal',
+          purpose: params.purpose ?? 'tool-execution',
           consentRequired: false,
           consentGranted: params.consentGranted ?? true,
           ownerId: params.ownerId,
@@ -269,22 +269,22 @@ export function createExecutionAuthority(opts?: {
         });
       });
     }
-    if (opts?.ledgerAppend) map.set("ledger.record", opts.ledgerAppend);
-    if (opts?.storageRead) map.set("storage.read", opts.storageRead);
-    if (opts?.identityResolve) map.set("identity.resolve", opts.identityResolve);
+    if (opts?.ledgerAppend) map.set('ledger.record', opts.ledgerAppend);
+    if (opts?.storageRead) map.set('storage.read', opts.storageRead);
+    if (opts?.identityResolve) map.set('identity.resolve', opts.identityResolve);
     // compute.sandbox: ejecutor inyectado primero; por defecto, VM local
     // (solo JavaScript puro sin I/O). Runtimes no-JS se deniegan en el
     // ejecutor (fail-closed honesto, sin contenedor OS real).
-    map.set("compute.sandbox", async (input, ctx) => {
+    map.set('compute.sandbox', async (input, ctx) => {
       if (opts?.sandboxRun) return opts.sandboxRun(input, ctx);
-      const { runNodeVmTask } = await import("./sandbox/node-vm-executor");
+      const { runNodeVmTask } = await import('./sandbox/node-vm-executor');
       const params = (input ?? {}) as {
         code?: unknown;
         language?: string;
         timeoutMs?: number;
       };
       const result = await runNodeVmTask({
-        code: String(params.code ?? ""),
+        code: String(params.code ?? ''),
         language: params.language,
         timeoutMs: params.timeoutMs,
       });
@@ -306,7 +306,7 @@ export function createExecutionAuthority(opts?: {
       if (opts?.killSwitch) {
         let killed = false;
         try {
-          killed = await opts.killSwitch.isKilled("tool-execution");
+          killed = await opts.killSwitch.isKilled('tool-execution');
         } catch {
           killed = true; // Sin estado legible: fail-closed.
         }
@@ -314,7 +314,7 @@ export function createExecutionAuthority(opts?: {
           return {
             executed: false,
             reason: "Kill switch activo en 'tool-execution' (emergencia).",
-            stage: "decide",
+            stage: 'decide',
           };
         }
       }
@@ -322,14 +322,14 @@ export function createExecutionAuthority(opts?: {
       // ── DECIDE: whitelist Zero Trust ──────────────────────────
       const check = registry.check(request.tool);
       if (!check.allowed) {
-        return { executed: false, reason: check.reason, stage: "decide" };
+        return { executed: false, reason: check.reason, stage: 'decide' };
       }
       const tool = registry.lookup(request.tool);
       if (!tool) {
         return {
           executed: false,
-          reason: "Herramienta no registrada.",
-          stage: "decide",
+          reason: 'Herramienta no registrada.',
+          stage: 'decide',
         };
       }
 
@@ -338,8 +338,8 @@ export function createExecutionAuthority(opts?: {
       if (missingPermissions.length > 0) {
         return {
           executed: false,
-          reason: `Permisos requeridos ausentes para el rol '${request.role}': ${missingPermissions.join(", ")}.`,
-          stage: "decide",
+          reason: `Permisos requeridos ausentes para el rol '${request.role}': ${missingPermissions.join(', ')}.`,
+          stage: 'decide',
         };
       }
 
@@ -347,21 +347,21 @@ export function createExecutionAuthority(opts?: {
       const decision = await evaluateAuthorization({
         tenant_id: request.tenantId,
         subject_id: request.actorId,
-        action: "execute",
+        action: 'execute',
         resource: `tool:${request.tool}`,
         role: request.role,
         authenticated: request.authenticated,
         context: {
           ip_address: request.ip,
-          user_agent: "execution-authority",
+          user_agent: 'execution-authority',
           timestamp: new Date(),
         },
       });
       if (!decision.allow) {
         return {
           executed: false,
-          reason: `PDP denegó: ${decision.obligations.find((o) => o.startsWith("deny:")) ?? "deny"}.`,
-          stage: "authorization",
+          reason: `PDP denegó: ${decision.obligations.find((o) => o.startsWith('deny:')) ?? 'deny'}.`,
+          stage: 'authorization',
         };
       }
 
@@ -385,7 +385,7 @@ export function createExecutionAuthority(opts?: {
               request.traceId,
               request.tool,
               request.actorId,
-              request.tenantId,
+              request.tenantId
             )
           : approvals.has(request.traceId, request.tool, request.actorId, request.tenantId)) ||
         (request.approvals ?? []).some(
@@ -395,7 +395,7 @@ export function createExecutionAuthority(opts?: {
             candidate.tool === request.tool &&
             candidate.actorId === request.actorId &&
             candidate.tenantId === request.tenantId &&
-            candidate.expiresAt > Date.now(),
+            candidate.expiresAt > Date.now()
         );
       // territorialBoundaryEnforced = false: todos los ejecutores registrados
       // son locales (sin egress a terceros). Una herramienta con egress
@@ -404,7 +404,7 @@ export function createExecutionAuthority(opts?: {
         tool,
         territorialBoundaryEnforced: false,
         humanInTheLoop: request.authenticated,
-        approvalThreshold: "medium",
+        approvalThreshold: 'medium',
         consentRequired: tool.requiresApproval,
         consentGranted: hasApproval,
       });
@@ -429,24 +429,24 @@ export function createExecutionAuthority(opts?: {
       // ejecución (fail-closed, §4.2); las denegaciones se registran
       // best-effort porque el efecto ya es la denegación.
       const persistDecision = async (
-        result: "ALLOW" | "DENY" | "REVIEW",
+        result: 'ALLOW' | 'DENY' | 'REVIEW',
         detail: string,
-        strict: boolean,
+        strict: boolean
       ): Promise<string | null> => {
         if (!opts?.decisionStore) return null;
         try {
           await recordDecision(opts.decisionStore, {
-            id: `dec_${randomUUID().replace(/-/g, "")}`,
+            id: `dec_${randomUUID().replace(/-/g, '')}`,
             tenantId: request.tenantId,
             actorId: request.actorId,
-            authority: "execution-authority",
+            authority: 'execution-authority',
             capability: request.tool,
             policy: `argus:${policy.decision}|db:${dbGate.source}:${dbGate.status}`,
             risk: tool.risk.toUpperCase() as Risk,
-            inputHash: createHash("sha3-512")
-              .update(JSON.stringify(request.input ?? null) ?? "null")
-              .digest("hex"),
-            outputHash: createHash("sha3-512").update(detail).digest("hex"),
+            inputHash: createHash('sha3-512')
+              .update(JSON.stringify(request.input ?? null) ?? 'null')
+              .digest('hex'),
+            outputHash: createHash('sha3-512').update(detail).digest('hex'),
             result,
             timestamp: new Date().toISOString(),
             evidenceIds: [request.traceId, detail],
@@ -458,28 +458,28 @@ export function createExecutionAuthority(opts?: {
         }
       };
 
-      if (policy.decision === "denied") {
-        await persistDecision("DENY", policy.reason, false);
+      if (policy.decision === 'denied') {
+        await persistDecision('DENY', policy.reason, false);
         return {
           executed: false,
           reason: `Política denegó: ${policy.reason}.`,
-          stage: "approval",
+          stage: 'approval',
         };
       }
-      if (dbGate.status === "denied") {
+      if (dbGate.status === 'denied') {
         await persistDecision(
-          "DENY",
-          `politica_db:${dbGate.policyKey ?? "sin-key"}:${dbGate.reason}`,
-          false,
+          'DENY',
+          `politica_db:${dbGate.policyKey ?? 'sin-key'}:${dbGate.reason}`,
+          false
         );
         return {
           executed: false,
-          reason: `Política DB denegó (${dbGate.policyKey ?? "sin-key"}): ${dbGate.reason}.`,
-          stage: "db-policy",
+          reason: `Política DB denegó (${dbGate.policyKey ?? 'sin-key'}): ${dbGate.reason}.`,
+          stage: 'db-policy',
         };
       }
 
-      if (effectiveDecision === "requires_approval" || tool.requiresApproval) {
+      if (effectiveDecision === 'requires_approval' || tool.requiresApproval) {
         // El capability token es single-context (ligado a la traza): no se
         // consume, se audita su jti. Ledger/grants sí son de un solo uso.
         if (capability?.valid === true && capability.claims) {
@@ -490,7 +490,7 @@ export function createExecutionAuthority(opts?: {
                 request.traceId,
                 request.tool,
                 request.actorId,
-                request.tenantId,
+                request.tenantId
               )
             : null;
           const grant =
@@ -503,15 +503,15 @@ export function createExecutionAuthority(opts?: {
                 candidate.tool === request.tool &&
                 candidate.actorId === request.actorId &&
                 candidate.tenantId === request.tenantId &&
-                candidate.expiresAt > Date.now(),
+                candidate.expiresAt > Date.now()
             ) ??
             null;
           if (!grant) {
-            await persistDecision("REVIEW", `aprobacion_humana_requerida:${request.tool}`, false);
+            await persistDecision('REVIEW', `aprobacion_humana_requerida:${request.tool}`, false);
             return {
               executed: false,
               reason: `Aprobación humana requerida para '${request.tool}' (un solo uso, TTL 5 min).`,
-              stage: "approval",
+              stage: 'approval',
             };
           }
           grant.consumed = true;
@@ -522,21 +522,21 @@ export function createExecutionAuthority(opts?: {
       // ── EXECUTION: despacho a ejecutor real ───────────────────
       const executor = executors(opts?.memoryRepository).get(request.tool);
       if (!executor) {
-        await persistDecision("DENY", `sin_ejecutor:${request.tool}`, false);
+        await persistDecision('DENY', `sin_ejecutor:${request.tool}`, false);
         return {
           executed: false,
           reason: `Sin ejecutor registrado para '${request.tool}' (fail-closed honesto).`,
-          stage: "execution",
+          stage: 'execution',
         };
       }
       // La decisión se persiste ANTES de tocar el ejecutor: si la cadena de
       // decisiones no puede escribirse, no se ejecuta (fail-closed, §4.2).
-      const persistError = await persistDecision("ALLOW", `dispatch:${request.tool}`, true);
+      const persistError = await persistDecision('ALLOW', `dispatch:${request.tool}`, true);
       if (persistError) {
         return {
           executed: false,
           reason: `No se pudo persistir la decisión en isabella_decisions: ${persistError}`,
-          stage: "audit",
+          stage: 'audit',
         };
       }
       let result: unknown;
@@ -547,11 +547,11 @@ export function createExecutionAuthority(opts?: {
           traceId: request.traceId,
         });
       } catch (error) {
-        const message = error instanceof Error ? error.message : "unknown";
+        const message = error instanceof Error ? error.message : 'unknown';
         return {
           executed: false,
           reason: `Ejecutor falló: ${message}.`,
-          stage: "execution",
+          stage: 'execution',
         };
       }
 
@@ -561,7 +561,7 @@ export function createExecutionAuthority(opts?: {
         return {
           executed: false,
           reason: `Resultado inválido: ${validation.reason}`,
-          stage: "validation",
+          stage: 'validation',
         };
       }
 
@@ -569,8 +569,8 @@ export function createExecutionAuthority(opts?: {
       if (!opts?.auditRepository) {
         return {
           executed: false,
-          reason: "Sin repositorio de auditoría: ejecución denegada.",
-          stage: "audit",
+          reason: 'Sin repositorio de auditoría: ejecución denegada.',
+          stage: 'audit',
         };
       }
       const resultHash = hashResult(result);
@@ -579,7 +579,7 @@ export function createExecutionAuthority(opts?: {
         correlationId: decision.decision_id,
         actorIp: request.ip,
         event: tool.auditEvent,
-        severity: tool.risk === "critical" || tool.risk === "high" ? "S2" : "S3",
+        severity: tool.risk === 'critical' || tool.risk === 'high' ? 'S2' : 'S3',
         details: JSON.stringify({
           tool: request.tool,
           actor: request.actorId,

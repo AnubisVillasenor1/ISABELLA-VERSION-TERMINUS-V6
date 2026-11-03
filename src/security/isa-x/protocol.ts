@@ -17,37 +17,37 @@
  * lower-cased and whitespace-normalised, query/header pairs are sorted, and the
  * body is reduced to a SHA-256 digest (or `-` when absent/empty).
  */
-import { createHash } from "node:crypto";
-import { createPqcSignatureAlgorithm } from "../post-quantum";
+import { createHash } from 'node:crypto';
+import { createPqcSignatureAlgorithm } from '../post-quantum';
 
-export const ISA_X_VERSION = "1.1" as const;
-export const ISA_X_SUPPORTED_VERSIONS = ["1.1", "1.0"] as const;
+export const ISA_X_VERSION = '1.1' as const;
+export const ISA_X_SUPPORTED_VERSIONS = ['1.1', '1.0'] as const;
 export type IsaXProtocolVersion = (typeof ISA_X_SUPPORTED_VERSIONS)[number];
 
 /** The only algorithm ISA-X can actually sign with inside this repository. */
-export type IsaXAlgorithm = "Ed25519";
-export const ISA_X_SIGNING_ALGORITHM: IsaXAlgorithm = "Ed25519";
+export type IsaXAlgorithm = 'Ed25519';
+export const ISA_X_SIGNING_ALGORITHM: IsaXAlgorithm = 'Ed25519';
 
 /** Algorithms ISA-X cannot use here; they require an external HSM/KMS. */
-export const ISA_X_BLOCKED_ALGORITHMS = ["ML-KEM-768", "ML-DSA-65", "SLH-DSA-SHA2-128s"] as const;
+export const ISA_X_BLOCKED_ALGORITHMS = ['ML-KEM-768', 'ML-DSA-65', 'SLH-DSA-SHA2-128s'] as const;
 export type IsaXBlockedAlgorithm = (typeof ISA_X_BLOCKED_ALGORITHMS)[number];
 
 export const ISA_X_ERROR_CODES = [
-  "ISA_X_MALFORMED",
-  "ISA_X_NO_ACTIVE_KEY",
-  "ISA_X_KEY_REVOKED",
-  "ISA_X_KEY_NOT_ACTIVE",
-  "ISA_X_UNKNOWN_KEY",
-  "ISA_X_SCOPE_REJECTED",
-  "ISA_X_TIMESTAMP_SKEW",
-  "ISA_X_NONCE_REUSE",
-  "ISA_X_EXPIRED",
-  "ISA_X_UNKNOWN_CHALLENGE",
-  "ISA_X_BAD_SIGNATURE",
-  "ISA_X_PROTOCOL_MISMATCH",
-  "ISA_X_TOKEN_REVOKED",
-  "ISA_X_PQC_UNAVAILABLE",
-  "ISA_X_CAPACITY",
+  'ISA_X_MALFORMED',
+  'ISA_X_NO_ACTIVE_KEY',
+  'ISA_X_KEY_REVOKED',
+  'ISA_X_KEY_NOT_ACTIVE',
+  'ISA_X_UNKNOWN_KEY',
+  'ISA_X_SCOPE_REJECTED',
+  'ISA_X_TIMESTAMP_SKEW',
+  'ISA_X_NONCE_REUSE',
+  'ISA_X_EXPIRED',
+  'ISA_X_UNKNOWN_CHALLENGE',
+  'ISA_X_BAD_SIGNATURE',
+  'ISA_X_PROTOCOL_MISMATCH',
+  'ISA_X_TOKEN_REVOKED',
+  'ISA_X_PQC_UNAVAILABLE',
+  'ISA_X_CAPACITY',
 ] as const;
 export type IsaXErrorCode = (typeof ISA_X_ERROR_CODES)[number];
 
@@ -56,26 +56,26 @@ export class IsaXError extends Error {
   readonly code: IsaXErrorCode;
   constructor(code: IsaXErrorCode, message: string) {
     super(`${code}: ${message}`);
-    this.name = "IsaXError";
+    this.name = 'IsaXError';
     this.code = code;
   }
 }
 
 export const ISA_X_REASONS = [
-  "OK",
-  "UNKNOWN_KEY",
-  "KEY_REVOKED",
-  "SCOPE_REJECTED",
-  "TIMESTAMP_SKEW",
-  "NONCE_REUSE",
-  "EXPIRED",
-  "UNKNOWN_CHALLENGE",
-  "BAD_SIGNATURE",
-  "MALFORMED",
-  "PROTOCOL_MISMATCH",
+  'OK',
+  'UNKNOWN_KEY',
+  'KEY_REVOKED',
+  'SCOPE_REJECTED',
+  'TIMESTAMP_SKEW',
+  'NONCE_REUSE',
+  'EXPIRED',
+  'UNKNOWN_CHALLENGE',
+  'BAD_SIGNATURE',
+  'MALFORMED',
+  'PROTOCOL_MISMATCH',
 ] as const;
 export type IsaXReason = (typeof ISA_X_REASONS)[number];
-export type IsaXFailureReason = Exclude<IsaXReason, "OK">;
+export type IsaXFailureReason = Exclude<IsaXReason, 'OK'>;
 
 /** Default clock skew tolerated on signed timestamps (30 seconds). */
 export const ISA_X_DEFAULT_CLOCK_SKEW_MS = 30_000;
@@ -89,7 +89,10 @@ export function isSupportedVersion(version: string): boolean {
 
 export function assertSupportedVersion(version: string): void {
   if (!isSupportedVersion(version)) {
-    throw new IsaXError("ISA_X_PROTOCOL_MISMATCH", `unsupported ISA-X protocol version '${version}'`);
+    throw new IsaXError(
+      'ISA_X_PROTOCOL_MISMATCH',
+      `unsupported ISA-X protocol version '${version}'`
+    );
   }
 }
 
@@ -109,12 +112,12 @@ interface NormalizedPair {
 
 function normalizedPairs(
   record: Readonly<Record<string, string>> | undefined,
-  lowerKey: boolean,
+  lowerKey: boolean
 ): NormalizedPair[] {
   if (!record) return [];
   const pairs: NormalizedPair[] = [];
   for (const [rawKey, rawValue] of Object.entries(record)) {
-    const key = (lowerKey ? rawKey.trim().toLowerCase() : rawKey.trim()).replace(/\s+/g, " ");
+    const key = (lowerKey ? rawKey.trim().toLowerCase() : rawKey.trim()).replace(/\s+/g, ' ');
     const value = rawValue.trim();
     if (key.length === 0) continue;
     pairs.push({ key, value });
@@ -128,8 +131,8 @@ function normalizedPairs(
 }
 
 function bodyDigest(body: Uint8Array | undefined): string {
-  if (!body || body.byteLength === 0) return "-";
-  return createHash("sha256").update(body).digest("hex");
+  if (!body || body.byteLength === 0) return '-';
+  return createHash('sha256').update(body).digest('hex');
 }
 
 /**
@@ -141,15 +144,15 @@ export function canonicalRequest(request: IsaXRequest): string {
   const method = request.method.trim().toUpperCase();
   const path = request.path.trim();
   if (method.length === 0 || path.length === 0) {
-    throw new IsaXError("ISA_X_MALFORMED", "request method and path are required");
+    throw new IsaXError('ISA_X_MALFORMED', 'request method and path are required');
   }
   const query = normalizedPairs(request.query, false)
     .map((pair) => `${pair.key}=${pair.value}`)
-    .join("&");
+    .join('&');
   const headers = normalizedPairs(request.headers, true)
     .map((pair) => `${pair.key}: ${pair.value}`)
-    .join("\n");
-  return [ISA_X_VERSION, method, path, query, headers, bodyDigest(request.body)].join("\n");
+    .join('\n');
+  return [ISA_X_VERSION, method, path, query, headers, bodyDigest(request.body)].join('\n');
 }
 
 export function canonicalRequestBytes(request: IsaXRequest): Uint8Array {
@@ -177,9 +180,9 @@ export function isaXSigningInput(parts: IsaXSigningParts): string {
     `scope:${parts.scope}`,
     `ts:${parts.timestamp}`,
     `nonce:${parts.nonce}`,
-    "request:",
+    'request:',
     parts.canonical,
-  ].join("\n");
+  ].join('\n');
 }
 
 export function utf8(value: string): Uint8Array {
@@ -192,7 +195,7 @@ export function utf8(value: string): Uint8Array {
  */
 export function scopeMatches(actual: string, expected: string): boolean {
   if (expected === actual) return true;
-  if (expected.endsWith(":*")) {
+  if (expected.endsWith(':*')) {
     const prefix = expected.slice(0, -1);
     return actual.startsWith(prefix);
   }
@@ -201,14 +204,14 @@ export function scopeMatches(actual: string, expected: string): boolean {
 
 export interface IsaXAlgorithmEntry {
   readonly algorithm: string;
-  readonly status: "implemented" | "blocked_environment";
-  readonly environment: "AVAILABLE" | "BLOCKED_ENVIRONMENT";
+  readonly status: 'implemented' | 'blocked_environment';
+  readonly environment: 'AVAILABLE' | 'BLOCKED_ENVIRONMENT';
   readonly detail: string;
 }
 
 export interface IsaXAlgorithmPolicy {
   readonly version: string;
-  readonly state: "draft";
+  readonly state: 'draft';
   readonly signingAlgorithm: IsaXAlgorithm;
   readonly entries: readonly IsaXAlgorithmEntry[];
 }
@@ -221,32 +224,36 @@ export interface IsaXAlgorithmPolicy {
 export function isaXAlgorithmPolicy(): IsaXAlgorithmPolicy {
   return {
     version: ISA_X_VERSION,
-    state: "draft",
+    state: 'draft',
     signingAlgorithm: ISA_X_SIGNING_ALGORITHM,
     entries: [
       {
-        algorithm: "Ed25519",
-        status: "implemented",
-        environment: "AVAILABLE",
-        detail: "Real signature/verification via node:crypto (FIPS 186-5, classical, not post-quantum).",
+        algorithm: 'Ed25519',
+        status: 'implemented',
+        environment: 'AVAILABLE',
+        detail:
+          'Real signature/verification via node:crypto (FIPS 186-5, classical, not post-quantum).',
       },
       {
-        algorithm: "ML-KEM-768",
-        status: "blocked_environment",
-        environment: "BLOCKED_ENVIRONMENT",
-        detail: "FIPS 203 KEM requires an external HSM/KMS or a vetted native PQC provider; not vendored here.",
+        algorithm: 'ML-KEM-768',
+        status: 'blocked_environment',
+        environment: 'BLOCKED_ENVIRONMENT',
+        detail:
+          'FIPS 203 KEM requires an external HSM/KMS or a vetted native PQC provider; not vendored here.',
       },
       {
-        algorithm: "ML-DSA-65",
-        status: "blocked_environment",
-        environment: "BLOCKED_ENVIRONMENT",
-        detail: "FIPS 204 signatures require an external HSM/KMS or a vetted native PQC provider; not vendored here.",
+        algorithm: 'ML-DSA-65',
+        status: 'blocked_environment',
+        environment: 'BLOCKED_ENVIRONMENT',
+        detail:
+          'FIPS 204 signatures require an external HSM/KMS or a vetted native PQC provider; not vendored here.',
       },
       {
-        algorithm: "SLH-DSA-SHA2-128s",
-        status: "blocked_environment",
-        environment: "BLOCKED_ENVIRONMENT",
-        detail: "FIPS 205 hash-based signatures require an external HSM/KMS or a vetted native PQC provider.",
+        algorithm: 'SLH-DSA-SHA2-128s',
+        status: 'blocked_environment',
+        environment: 'BLOCKED_ENVIRONMENT',
+        detail:
+          'FIPS 205 hash-based signatures require an external HSM/KMS or a vetted native PQC provider.',
       },
     ],
   };
@@ -259,5 +266,5 @@ export function isaXAlgorithmPolicy(): IsaXAlgorithmPolicy {
  */
 export function requireIsaXAlgorithm(algorithm: string): void {
   if (algorithm === ISA_X_SIGNING_ALGORITHM) return;
-  createPqcSignatureAlgorithm(algorithm as "ML-DSA-65");
+  createPqcSignatureAlgorithm(algorithm as 'ML-DSA-65');
 }

@@ -1,5 +1,5 @@
 /**
- * Chat-to-Skill Executor Bridge (src/lib/skills/chat-bridge.ts)
+ * Chat-to-Skill Executor Bridge (src/lib/lib/skills/chat-bridge.ts)
  * -----------------------------------------------------------------
  * Detecta invocaciones de habilidades soberanas (@skill:<nombre> o @<nombre>)
  * en el flujo de conversación de Isabella y las ejecuta a través del pipeline
@@ -11,13 +11,13 @@
  *  5. Capacidad de streaming SSE compatible con OpenAI/Gemini para el chat stream.
  */
 
-import { scanOutput, safeOutputOrBlock } from "@/lib/security/output-gate";
+import { scanOutput, safeOutputOrBlock } from '@/lib/security/output-gate';
 import {
   detectSkillInvocation,
   processSkillInvocation,
   type SkillInvocation,
   type ProcessSkillResult,
-} from "./skill-bridge";
+} from './skill-bridge';
 
 export { detectSkillInvocation, type SkillInvocation };
 
@@ -51,21 +51,21 @@ export interface ChatSkillExecutionResult {
  */
 export async function executeChatSkillBridge(
   invocation: SkillInvocation,
-  context: BridgeContext,
+  context: BridgeContext
 ): Promise<ChatSkillExecutionResult> {
   const result: ProcessSkillResult = await processSkillInvocation({
     text: `@skill:${invocation.canonicalName} ${invocation.rawInput}`,
     actorId: context.userId,
     tenantId: context.tenantId,
     role: context.role,
-    authenticated: context.authenticated ?? context.role !== "Guest",
+    authenticated: context.authenticated ?? context.role !== 'Guest',
     ipAddress: context.ip,
     userAgent: context.userAgent,
     requestId: context.correlationId,
     traceId: context.traceId,
   });
 
-  const gatedContent = safeOutputOrBlock(result.content, "skill-output");
+  const gatedContent = safeOutputOrBlock(result.content, 'skill-output');
 
   return {
     success: result.success,
@@ -91,7 +91,7 @@ export function streamChatSkillAsSse(result: ChatSkillExecutionResult, headers: 
       try {
         // Marco 1: metadatos de auditoría y proveedor
         const initMetadata = {
-          provider: "isabella-skill-runtime",
+          provider: 'isabella-skill-runtime',
           skillId: result.skillId,
           decisionId: result.decisionId ?? null,
           traceId: result.traceId ?? null,
@@ -101,10 +101,10 @@ export function streamChatSkillAsSse(result: ChatSkillExecutionResult, headers: 
 
         // Marco 2: contenido incremental (delta), SIEMPRE tras output gate.
         // (Antes se enrutaba result.content crudo: el gate quedaba anulado.)
-        const gate = scanOutput(result.content, "skill-output");
+        const gate = scanOutput(result.content, 'skill-output');
         const gatedContent = gate.allowed
           ? gate.text
-          : safeOutputOrBlock(result.content, "skill-output");
+          : safeOutputOrBlock(result.content, 'skill-output');
         const chunk = {
           choices: [
             {
@@ -117,7 +117,7 @@ export function streamChatSkillAsSse(result: ChatSkillExecutionResult, headers: 
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
 
         // Marco final: [DONE]
-        controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+        controller.enqueue(encoder.encode('data: [DONE]\n\n'));
         controller.close();
       } catch (err) {
         controller.error(err);
@@ -136,7 +136,7 @@ export function streamChatSkillAsSse(result: ChatSkillExecutionResult, headers: 
 export async function bindChatSkillStream(
   message: string,
   context: BridgeContext,
-  sseHeadersFactory: (provider: string, model: string) => Headers,
+  sseHeadersFactory: (provider: string, model: string) => Headers
 ): Promise<{
   handled: boolean;
   response?: Response;
@@ -150,19 +150,19 @@ export async function bindChatSkillStream(
   const result = await executeChatSkillBridge(invocation, context);
 
   if (!result.success) {
-    if (result.code === "CROWN_POLICY_DENY" || result.code === "IDENTITY_REQUIRED") {
+    if (result.code === 'CROWN_POLICY_DENY' || result.code === 'IDENTITY_REQUIRED') {
       return {
         handled: true,
         error: {
           code: result.code,
-          message: result.error || "Acceso denegado por política de gobernanza CROWN.",
+          message: result.error || 'Acceso denegado por política de gobernanza CROWN.',
           status: 403,
         },
       };
     }
   }
 
-  const headers = sseHeadersFactory("isabella-skill-runtime", invocation.canonicalName);
+  const headers = sseHeadersFactory('isabella-skill-runtime', invocation.canonicalName);
   const response = streamChatSkillAsSse(result, headers);
   return { handled: true, response };
 }

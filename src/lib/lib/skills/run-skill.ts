@@ -1,8 +1,8 @@
-import { randomUUID } from "node:crypto";
-import { isabellaSkills, IsabellaSkillId } from "./registry";
-import { evaluateAuthorization, type AuthorizationContext } from "../authorization";
-import { createBookpiPostgresRepository } from "../repositories/bookpi-postgres-repository";
-import { validateSkillInput, validateSkillOutput, StandardResponse } from "../api-contracts";
+import { randomUUID } from 'node:crypto';
+import { isabellaSkills, IsabellaSkillId } from './registry';
+import { evaluateAuthorization, type AuthorizationContext } from '../authorization';
+import { createBookpiPostgresRepository } from '../repositories/bookpi-postgres-repository';
+import { validateSkillInput, validateSkillOutput, StandardResponse } from '../api-contracts';
 
 /**
  * Canonical hardened skill execution pipeline.
@@ -22,23 +22,23 @@ export async function runIsabellaSkill(
     authenticated?: boolean;
     ipAddress?: string;
     userAgent?: string;
-  } = {},
+  } = {}
 ): Promise<StandardResponse> {
   const requestId = context.requestId || `req_${randomUUID()}`;
   const traceId = `trace_${randomUUID()}`;
-  const apiVersion = "v3.0.0-hardened";
+  const apiVersion = 'v3.0.0-hardened';
   const timestamp = new Date().toISOString();
   const subjectId = context.actorId;
   const tenantId = context.tenantId;
-  const ipAddress = context.ipAddress || "unknown";
-  const userAgent = context.userAgent || "Isabella-Agent-Stack/1.0";
+  const ipAddress = context.ipAddress || 'unknown';
+  const userAgent = context.userAgent || 'Isabella-Agent-Stack/1.0';
   let decisionId: string | null = null;
 
   try {
     if (!subjectId || !tenantId || !context.role || context.authenticated === undefined) {
       throw new SecurityError(
-        "IDENTITY_REQUIRED",
-        "Ejecución denegada: identidad explícita requerida.",
+        'IDENTITY_REQUIRED',
+        'Ejecución denegada: identidad explícita requerida.'
       );
     }
 
@@ -46,7 +46,7 @@ export async function runIsabellaSkill(
     const authContext: AuthorizationContext = {
       tenant_id: tenantId,
       subject_id: subjectId,
-      action: "skill.execute",
+      action: 'skill.execute',
       resource: `skill:${skillId.toLowerCase()}`,
       role: context.role,
       authenticated: context.authenticated,
@@ -60,17 +60,17 @@ export async function runIsabellaSkill(
     const decision = await evaluateAuthorization(authContext);
     decisionId = decision.decision_id;
     if (!decision.allow)
-      throw new SecurityError("CROWN_POLICY_DENY", "Acceso denegado por política centralizada.");
+      throw new SecurityError('CROWN_POLICY_DENY', 'Acceso denegado por política centralizada.');
 
     const skill = isabellaSkills[skillId];
-    if (!skill) throw new SecurityError("TOOL_NOT_FOUND", `Skill '${skillId}' no registrado.`);
+    if (!skill) throw new SecurityError('TOOL_NOT_FOUND', `Skill '${skillId}' no registrado.`);
 
-    const skillContext: import("./contracts").SkillContext = {
+    const skillContext: import('./contracts').SkillContext = {
       actorId: subjectId,
-      federation: (context.federation || skill.federation) as import("./contracts").FederationId,
+      federation: (context.federation || skill.federation) as import('./contracts').FederationId,
       requestId,
-      locale: context.locale || "es",
-      intent: context.intent || "Unknown intent",
+      locale: context.locale || 'es',
+      intent: context.intent || 'Unknown intent',
       evidence: [],
     };
 
@@ -79,8 +79,8 @@ export async function runIsabellaSkill(
       !(skill.canRun as (input: unknown, ctx: unknown) => boolean)(validatedInput, skillContext)
     ) {
       throw new SecurityError(
-        "CROWN_OBLIGATION_FAILURE",
-        "El input no satisface los prerrequisitos del skill.",
+        'CROWN_OBLIGATION_FAILURE',
+        'El input no satisface los prerrequisitos del skill.'
       );
     }
 
@@ -93,7 +93,7 @@ export async function runIsabellaSkill(
     const outputRecord = skillResult.data as Record<string, unknown> | null;
     const billableCostUsd =
       outputRecord &&
-      typeof outputRecord.billableCostUsd === "number" &&
+      typeof outputRecord.billableCostUsd === 'number' &&
       Number.isFinite(outputRecord.billableCostUsd)
         ? Math.max(0, outputRecord.billableCostUsd)
         : 0;
@@ -101,15 +101,15 @@ export async function runIsabellaSkill(
     const blockRes = await bookpiRepo.append({
       tenantId,
       userId: subjectId,
-      operation: `SKILL_EXECUTION: ${skillId} | Decision: ${decisionId} | Intent: ${context.intent || "N/A"}`,
-      category: "skills",
+      operation: `SKILL_EXECUTION: ${skillId} | Decision: ${decisionId} | Intent: ${context.intent || 'N/A'}`,
+      category: 'skills',
       cost: billableCostUsd,
       tokens: 0,
-      status: "settled",
+      status: 'settled',
     });
 
     if (!blockRes.success)
-      throw new SecurityError("AUDIT_WRITE_FAILED", "Fallo al registrar evidencia en BookPI.");
+      throw new SecurityError('AUDIT_WRITE_FAILED', 'Fallo al registrar evidencia en BookPI.');
 
     return {
       meta: {
@@ -125,10 +125,10 @@ export async function runIsabellaSkill(
     };
   } catch (err: unknown) {
     const isSecurityError = err instanceof SecurityError;
-    const errorCode = isSecurityError ? err.code : "SYSTEM_INTERNAL_ERROR";
+    const errorCode = isSecurityError ? err.code : 'SYSTEM_INTERNAL_ERROR';
     const publicMessage = isSecurityError
       ? err.message
-      : "Error interno de procesamiento cognitivo.";
+      : 'Error interno de procesamiento cognitivo.';
     console.error(`[Pipeline Error] [${traceId}]`, err);
     return {
       meta: {
@@ -153,9 +153,9 @@ export async function runIsabellaSkill(
 class SecurityError extends Error {
   constructor(
     public code: string,
-    message: string,
+    message: string
   ) {
     super(message);
-    this.name = "SecurityError";
+    this.name = 'SecurityError';
   }
 }

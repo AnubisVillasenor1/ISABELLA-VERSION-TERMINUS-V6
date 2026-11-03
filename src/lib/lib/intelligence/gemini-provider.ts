@@ -1,13 +1,13 @@
-import { secrets } from "@/lib/secrets";
-import { SecuritySystem } from "@/lib/security";
-import type { IntelligenceProvider, IntelligenceRequest, IntelligenceResponse } from "./contracts";
+import { secrets } from '@/lib/secrets';
+import { SecuritySystem } from '@/lib/security';
+import type { IntelligenceProvider, IntelligenceRequest, IntelligenceResponse } from './contracts';
 
 export class GeminiProvider implements IntelligenceProvider {
-  readonly providerId = "google-gemini";
+  readonly providerId = 'google-gemini';
   readonly modelId: string;
-  readonly capabilities = new Set(["text", "image"] as const);
+  readonly capabilities = new Set(['text', 'image'] as const);
 
-  constructor(modelId = "gemini-3.8-flash") {
+  constructor(modelId = 'gemini-3.8-flash') {
     this.modelId = modelId;
   }
 
@@ -23,19 +23,19 @@ export class GeminiProvider implements IntelligenceProvider {
     const apiKey = secrets.aiGatewayKey();
     const started = performance.now();
     const contents = request.messages
-      .filter((m) => m.role !== "system")
+      .filter((m) => m.role !== 'system')
       .map((m) => ({
-        role: m.role === "assistant" ? "model" : "user",
+        role: m.role === 'assistant' ? 'model' : 'user',
         parts: [{ text: m.content }],
       }));
-    const system = request.messages.find((m) => m.role === "system")?.content;
+    const system = request.messages.find((m) => m.role === 'system')?.content;
     const upstream = await SecuritySystem.fetchSafeUpstream(
       `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(this.modelId)}:generateContent`,
       {
-        method: "POST",
+        method: 'POST',
         headers: {
-          "content-type": "application/json",
-          "x-goog-api-key": apiKey,
+          'content-type': 'application/json',
+          'x-goog-api-key': apiKey,
         },
         body: JSON.stringify({
           ...(system ? { systemInstruction: { parts: [{ text: system }] } } : {}),
@@ -45,17 +45,17 @@ export class GeminiProvider implements IntelligenceProvider {
             maxOutputTokens: request.maxTokens ?? 2048,
           },
         }),
-      },
+      }
     );
     if (!upstream.ok) throw new Error(`Gemini upstream returned ${upstream.status}`);
     const payload = (await upstream.json()) as {
       candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
     };
     const text = payload.candidates?.[0]?.content?.parts
-      ?.map((p) => p.text ?? "")
-      .join("")
+      ?.map((p) => p.text ?? '')
+      .join('')
       .trim();
-    if (!text) throw new Error("Gemini returned no text");
+    if (!text) throw new Error('Gemini returned no text');
     return {
       requestId: request.requestId,
       modelId: this.modelId,
@@ -63,7 +63,7 @@ export class GeminiProvider implements IntelligenceProvider {
       text,
       latencyMs: performance.now() - started,
       degraded: false,
-      risk: "LOW",
+      risk: 'LOW',
     };
   }
 }

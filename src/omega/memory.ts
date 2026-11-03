@@ -3,7 +3,7 @@
 // territorial). Las consultas son deterministas y explicables, sin red ni LLM.
 // Almacenar y consultar no concede autoridad ni ejecuta acciones.
 
-export type MemoryLayer = "episodic" | "semantic" | "procedural" | "territorial";
+export type MemoryLayer = 'episodic' | 'semantic' | 'procedural' | 'territorial';
 
 export interface MemoryRecord {
   id: string;
@@ -20,14 +20,19 @@ export interface MemoryQuery {
   text?: string;
 }
 
-const ALLOWED_LAYERS: readonly MemoryLayer[] = ["episodic", "semantic", "procedural", "territorial"];
+const ALLOWED_LAYERS: readonly MemoryLayer[] = [
+  'episodic',
+  'semantic',
+  'procedural',
+  'territorial',
+];
 
 function round4(value: number): number {
   return Math.round(value * 10000) / 10000;
 }
 
 function isUnit(value: number): boolean {
-  return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 1;
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1;
 }
 
 export class OmniMemory {
@@ -46,13 +51,13 @@ export class OmniMemory {
     createdAt?: string;
   }): MemoryRecord {
     if (!ALLOWED_LAYERS.includes(input.layer)) {
-      throw new Error("MEMORY_LAYER_INVALID");
+      throw new Error('MEMORY_LAYER_INVALID');
     }
     if (!isUnit(input.importance)) {
-      throw new Error("MEMORY_IMPORTANCE_OUT_OF_RANGE");
+      throw new Error('MEMORY_IMPORTANCE_OUT_OF_RANGE');
     }
     if (this.records.has(input.id)) {
-      throw new Error("MEMORY_DUPLICATE_ID");
+      throw new Error('MEMORY_DUPLICATE_ID');
     }
     const record: MemoryRecord = {
       id: input.id,
@@ -73,10 +78,10 @@ export class OmniMemory {
   query(q: MemoryQuery = {}): MemoryRecord[] {
     const minImportance = q.minImportance ?? 0;
     if (!isUnit(minImportance)) {
-      throw new Error("MEMORY_MIN_IMPORTANCE_OUT_OF_RANGE");
+      throw new Error('MEMORY_MIN_IMPORTANCE_OUT_OF_RANGE');
     }
     if (q.limit !== undefined && (!Number.isInteger(q.limit) || q.limit < 0)) {
-      throw new Error("MEMORY_LIMIT_INVALID");
+      throw new Error('MEMORY_LIMIT_INVALID');
     }
     const layers = q.layers;
     const needle = q.text?.toLowerCase();

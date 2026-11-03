@@ -35,7 +35,7 @@ export function matmul(
   b: Float64Array,
   n: number,
   k: number,
-  m: number,
+  m: number
 ): Float64Array {
   const out = new Float64Array(n * m);
   for (let row = 0; row < n; row += 1) {

@@ -6,9 +6,9 @@
  * Incluye header con título y botón de cierre.
  */
 
-import { useRef, useEffect, type ReactNode } from "react";
-import { useNavigation } from "./NavigationStateProvider";
-import { NAVBAR_CONFIGS, type NavbarId } from "./types";
+import { useRef, useEffect, type ReactNode } from 'react';
+import { useNavigation } from './NavigationStateProvider';
+import { NAVBAR_CONFIGS, type NavbarId } from './types';
 
 interface NavigationPanelProps {
   navbarId: NavbarId;
@@ -30,7 +30,7 @@ export function NavigationPanel({ navbarId, children }: NavigationPanelProps) {
       firstInteractive?.focus();
 
       // Anunciar para lectores de pantalla
-      const announcement = document.getElementById("nav-announcement");
+      const announcement = document.getElementById('nav-announcement');
       if (announcement) {
         announcement.textContent = `Navegación de ${config.label} abierta.`;
       }
@@ -49,7 +49,7 @@ export function NavigationPanel({ navbarId, children }: NavigationPanelProps) {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Escape") {
+    if (e.key === 'Escape') {
       handleClose();
     }
   };
@@ -59,7 +59,7 @@ export function NavigationPanel({ navbarId, children }: NavigationPanelProps) {
     if (!isOpen) return;
 
     const handleTab = (e: KeyboardEvent) => {
-      if (e.key !== "Tab" || !panelRef.current) return;
+      if (e.key !== 'Tab' || !panelRef.current) return;
 
       const focusable = panelRef.current.querySelectorAll<HTMLElement>(
         "button, [href], input, select, textarea, [tabindex]:not([tabindex='-1'])"
@@ -78,23 +78,17 @@ export function NavigationPanel({ navbarId, children }: NavigationPanelProps) {
       }
     };
 
-    document.addEventListener("keydown", handleTab);
-    return () => document.removeEventListener("keydown", handleTab);
+    document.addEventListener('keydown', handleTab);
+    return () => document.removeEventListener('keydown', handleTab);
   }, [isOpen]);
 
   const side = config.side;
-  const translateX = isOpen ? "0" : side === "left" ? "-100%" : "100%";
+  const translateX = isOpen ? '0' : side === 'left' ? '-100%' : '100%';
 
   return (
     <>
       {/* Overlay */}
-      {isOpen && (
-        <div
-          className="nav-overlay"
-          onClick={handleClose}
-          aria-hidden="true"
-        />
-      )}
+      {isOpen && <div className="nav-overlay" onClick={handleClose} aria-hidden="true" />}
 
       {/* Panel */}
       <nav
@@ -107,8 +101,8 @@ export function NavigationPanel({ navbarId, children }: NavigationPanelProps) {
         onKeyDown={handleKeyDown}
         style={{
           transform: `translateX(${translateX})`,
-          transition: "transform 220ms cubic-bezier(0.16, 1, 0.3, 1)",
-          visibility: isOpen ? "visible" : "hidden",
+          transition: 'transform 220ms cubic-bezier(0.16, 1, 0.3, 1)',
+          visibility: isOpen ? 'visible' : 'hidden',
         }}
       >
         <div className="nav-panel-header">

@@ -1,11 +1,11 @@
-import { SecuritySystem, TokenClaims } from "./security";
-import { evaluateAuthorization, type AuthorizationContext } from "./authorization";
-import { type Resource, type Action } from "./permission-matrix";
-import { type Role } from "./rbac";
-import { ApiKeyAuthenticator } from "./api-key-authenticator";
-import { repositoryFactory } from "./persistence/repository-factory";
-import { config } from "./config";
-import { runWithIdentity, type RequestIdentity } from "./identity-context";
+import { SecuritySystem, TokenClaims } from './security';
+import { evaluateAuthorization, type AuthorizationContext } from './authorization';
+import { type Resource, type Action } from './permission-matrix';
+import { type Role } from './rbac';
+import { ApiKeyAuthenticator } from './api-key-authenticator';
+import { repositoryFactory } from './persistence/repository-factory';
+import { config } from './config';
+import { runWithIdentity, type RequestIdentity } from './identity-context';
 
 function jsonError(message: string, traceId: string, status: number, headers: Headers): Response {
   return new Response(JSON.stringify({ error: message, traceId }), { status, headers });
@@ -17,8 +17,8 @@ export function isExplicitDevelopmentAuth(cfg: {
   AUTH_DEV_SESSION_ENABLED?: boolean;
 }): boolean {
   return (
-    cfg.NODE_ENV === "development" &&
-    cfg.ISABELLA_RUNTIME_MODE === "development" &&
+    cfg.NODE_ENV === 'development' &&
+    cfg.ISABELLA_RUNTIME_MODE === 'development' &&
     cfg.AUTH_DEV_SESSION_ENABLED === true
   );
 }
@@ -31,16 +31,16 @@ export function canUseGuestChat(cfg: {
 }): boolean {
   // El chat invitado solo existe en desarrollo explícito o en previews aislados.
   // Producción exige siempre una identidad firmada o API key.
-  const isPreview = cfg.VERCEL_ENV === "preview";
+  const isPreview = cfg.VERCEL_ENV === 'preview';
   const isDevelopment =
-    cfg.NODE_ENV === "development" && cfg.ISABELLA_RUNTIME_MODE === "development";
+    cfg.NODE_ENV === 'development' && cfg.ISABELLA_RUNTIME_MODE === 'development';
   return cfg.ALLOW_GUEST_CHAT === true && (isDevelopment || isPreview);
 }
 
 function assertDevelopmentOnly(): void {
   if (!isExplicitDevelopmentAuth(config()))
     throw new Error(
-      "[SovereignGuard Violation] Fallback de desarrollo permitido únicamente con NODE_ENV=development, ISABELLA_RUNTIME_MODE=development y AUTH_DEV_SESSION_ENABLED=true.",
+      '[SovereignGuard Violation] Fallback de desarrollo permitido únicamente con NODE_ENV=development, ISABELLA_RUNTIME_MODE=development y AUTH_DEV_SESSION_ENABLED=true.'
     );
 }
 function guestContext(ip: string, traceId: string, correlationId: string): PrincipalContext {
@@ -50,9 +50,9 @@ function devContext(ip: string, traceId: string, correlationId: string): Princip
   return PrincipalContext.createDevContext(ip, traceId, correlationId);
 }
 function sessionExpiryMillis(value: unknown): number | null {
-  if (typeof value === "number" && Number.isFinite(value))
+  if (typeof value === 'number' && Number.isFinite(value))
     return value < 1e12 ? value * 1000 : value;
-  if (typeof value === "string" && value.trim()) {
+  if (typeof value === 'string' && value.trim()) {
     const parsed = Date.parse(value);
     return Number.isFinite(parsed) ? parsed : null;
   }
@@ -75,7 +75,7 @@ export class PrincipalContext {
     username: string,
     ip: string,
     traceId: string,
-    correlationId: string,
+    correlationId: string
   ) {
     this.userId = claims.sub;
     this.username = username;
@@ -93,71 +93,71 @@ export class PrincipalContext {
   public static createGuestContext(
     ip: string,
     traceId: string,
-    correlationId: string,
+    correlationId: string
   ): PrincipalContext {
     return new PrincipalContext(
       {
-        iss: "isabella.guest",
-        sub: "guest_user",
-        aud: "nodo_cero_rdm",
+        iss: 'isabella.guest',
+        sub: 'guest_user',
+        aud: 'nodo_cero_rdm',
         exp: Math.floor(Date.now() / 1000) + 3600,
-        tenantId: "nodo_cero_rdm",
-        role: "Guest" as Role,
-        scope: "isabella:chat",
+        tenantId: 'nodo_cero_rdm',
+        role: 'Guest' as Role,
+        scope: 'isabella:chat',
       },
-      { id: "nodo_cero_rdm", slug: "nodo-cero", tier: "sovereign", quotaBalance: 0 },
-      "guest_user",
+      { id: 'nodo_cero_rdm', slug: 'nodo-cero', tier: 'sovereign', quotaBalance: 0 },
+      'guest_user',
       ip,
       traceId,
-      correlationId,
+      correlationId
     );
   }
   public static createDevContext(
     ip: string,
     traceId: string,
-    correlationId: string,
+    correlationId: string
   ): PrincipalContext {
     assertDevelopmentOnly();
     return new PrincipalContext(
       {
-        iss: "isabella.dev",
-        sub: "dev_user",
-        aud: "tenant-dev",
+        iss: 'isabella.dev',
+        sub: 'dev_user',
+        aud: 'tenant-dev',
         exp: Math.floor(Date.now() / 1000) + 3600,
-        tenantId: "tenant-dev",
-        role: "SovereignOwner" as Role,
-        scope: "isabella:chat isabella:voice isabella:tools",
+        tenantId: 'tenant-dev',
+        role: 'SovereignOwner' as Role,
+        scope: 'isabella:chat isabella:voice isabella:tools',
       },
-      { id: "tenant-dev", slug: "dev", tier: "sovereign", quotaBalance: 9999 },
-      "dev_user",
+      { id: 'tenant-dev', slug: 'dev', tier: 'sovereign', quotaBalance: 9999 },
+      'dev_user',
       ip,
       traceId,
-      correlationId,
+      correlationId
     );
   }
   public static async authorize(
     request: Request,
-    requiredScope?: string,
+    requiredScope?: string
   ): Promise<
     { success: true; context: PrincipalContext } | { success: false; response: Response }
   > {
     const ip = SecuritySystem.resolveClientIp(request);
-    const telemetry = SecuritySystem.generateTelemetry(ip, "allowed");
+    const telemetry = SecuritySystem.generateTelemetry(ip, 'allowed');
     const headers = SecuritySystem.injectSecureHeaders(
-      new Headers({ "content-type": "application/json" }),
+      new Headers({ 'content-type': 'application/json' })
     );
     const limitCheck = SecuritySystem.checkRateLimit(ip);
     if (!limitCheck.allowed)
       return {
         success: false,
         response: jsonError(
-          "SovereignGate Rate-Limit: Demasiadas solicitudes desde esta IP de origen.",
+          'SovereignGate Rate-Limit: Demasiadas solicitudes desde esta IP de origen.',
           telemetry.traceId,
           429,
-          headers,
+          headers
         ),
       };
-    const hasApiKey = request.headers.has("x-isabella-api-key");
+    const hasApiKey = request.headers.has('x-isabella-api-key');
     if (hasApiKey) {
       const authResult = await ApiKeyAuthenticator.authenticate(request);
       if (!authResult.success)
@@ -167,7 +167,7 @@ export class PrincipalContext {
             `Acceso Denegado API Key: Credencial inválida, expirada o revocada (${authResult.error}).`,
             telemetry.traceId,
             401,
-            headers,
+            headers
           ),
         };
       const principal = authResult.principal;
@@ -178,7 +178,7 @@ export class PrincipalContext {
             `Privilegios Insuficientes: Ámbito '${requiredScope}' requerido para esta API Key.`,
             telemetry.traceId,
             403,
-            headers,
+            headers
           ),
         };
       const tenantRecord = await repositoryFactory
@@ -188,10 +188,10 @@ export class PrincipalContext {
         return {
           success: false,
           response: jsonError(
-            "Aislamiento de Tenant Violado: El Tenant asignado a la API Key no está registrado.",
+            'Aislamiento de Tenant Violado: El Tenant asignado a la API Key no está registrado.',
             telemetry.traceId,
             403,
-            headers,
+            headers
           ),
         };
       const expMillis = principal.expiresAt
@@ -201,26 +201,26 @@ export class PrincipalContext {
         return {
           success: false,
           response: jsonError(
-            "Acceso Denegado: API Key expirada.",
+            'Acceso Denegado: API Key expirada.',
             telemetry.traceId,
             401,
-            headers,
+            headers
           ),
         };
       const claims: TokenClaims = {
-        iss: "isabella.sovereign.api-keys",
+        iss: 'isabella.sovereign.api-keys',
         sub: principal.subject,
         aud: principal.tenantId,
         exp: Math.floor(expMillis / 1000),
         tenantId: principal.tenantId,
         role: principal.role,
-        scope: principal.scopes.join(" "),
+        scope: principal.scopes.join(' '),
       };
       const identity: RequestIdentity = {
         userId: principal.subject,
         role: principal.role,
         tenantId: principal.tenantId,
-        scope: principal.scopes.join(" "),
+        scope: principal.scopes.join(' '),
       };
       const context = new PrincipalContext(
         claims,
@@ -230,18 +230,18 @@ export class PrincipalContext {
           tier: tenantRecord.tier,
           quotaBalance: tenantRecord.quotaBalance,
         },
-        "api_key_session",
+        'api_key_session',
         ip,
         telemetry.traceId,
-        telemetry.correlationId,
+        telemetry.correlationId
       );
       return runWithIdentity(identity, async () => ({ success: true, context }));
     }
-    const authHeader = request.headers.get("authorization");
+    const authHeader = request.headers.get('authorization');
     if (!authHeader) {
       try {
         const cfg = config();
-        if (canUseGuestChat(cfg) && (!requiredScope || requiredScope === "isabella:chat"))
+        if (canUseGuestChat(cfg) && (!requiredScope || requiredScope === 'isabella:chat'))
           return {
             success: true,
             context: guestContext(ip, telemetry.traceId, telemetry.correlationId),
@@ -257,10 +257,10 @@ export class PrincipalContext {
       return {
         success: false,
         response: jsonError(
-          "No Autorizado OIDC: Falta la firma criptográfica Bearer en la cabecera o la cabecera X-Isabella-API-Key.",
+          'No Autorizado OIDC: Falta la firma criptográfica Bearer en la cabecera o la cabecera X-Isabella-API-Key.',
           telemetry.traceId,
           401,
-          headers,
+          headers
         ),
       };
     }
@@ -268,13 +268,13 @@ export class PrincipalContext {
       return {
         success: false,
         response: jsonError(
-          "Acceso Denegado: formato Bearer inválido.",
+          'Acceso Denegado: formato Bearer inválido.',
           telemetry.traceId,
           401,
-          headers,
+          headers
         ),
       };
-    const token = authHeader.replace(/^Bearer\s+/i, "").trim();
+    const token = authHeader.replace(/^Bearer\s+/i, '').trim();
     const verification = await SecuritySystem.verifyToken(token, {
       ip,
       traceId: telemetry.traceId,
@@ -285,15 +285,15 @@ export class PrincipalContext {
       return {
         success: false,
         response: jsonError(
-          `Acceso Denegado: Credencial corrupta o adulterada. ${verification.error || ""}`,
+          `Acceso Denegado: Credencial corrupta o adulterada. ${verification.error || ''}`,
           telemetry.traceId,
           401,
-          headers,
+          headers
         ),
       };
     const claims = { ...verification.claims } as TokenClaims;
-    if (claims.role === "Guest" || (claims.role as string) === "guest")
-      claims.scope = "isabella:chat";
+    if (claims.role === 'Guest' || (claims.role as string) === 'guest')
+      claims.scope = 'isabella:chat';
     if (requiredScope) {
       const scopeCheck = await SecuritySystem.verifyApiScope(token, requiredScope);
       if (!scopeCheck.allowed)
@@ -303,7 +303,7 @@ export class PrincipalContext {
             `Privilegios Insuficientes: Ámbito '${requiredScope}' requerido en el OIDC token.`,
             telemetry.traceId,
             403,
-            headers,
+            headers
           ),
         };
     }
@@ -320,10 +320,10 @@ export class PrincipalContext {
         return {
           success: false,
           response: jsonError(
-            "Aislamiento de Tenant Violado: El token no declara tenant.",
+            'Aislamiento de Tenant Violado: El token no declara tenant.',
             telemetry.traceId,
             403,
-            headers,
+            headers
           ),
         };
       }
@@ -334,21 +334,21 @@ export class PrincipalContext {
         return {
           success: false,
           response: jsonError(
-            "Aislamiento de Tenant Violado: El Tenant asignado al token no está registrado.",
+            'Aislamiento de Tenant Violado: El Tenant asignado al token no está registrado.',
             telemetry.traceId,
             403,
-            headers,
+            headers
           ),
         };
       const jti = (claims as unknown as Record<string, unknown>).jti;
-      if (typeof jti !== "string" || !jti)
+      if (typeof jti !== 'string' || !jti)
         return {
           success: false,
           response: jsonError(
-            "Acceso Denegado: token sin identificador de sesión.",
+            'Acceso Denegado: token sin identificador de sesión.',
             telemetry.traceId,
             401,
-            headers,
+            headers
           ),
         };
       const { items: sessions } = await repositoryFactory
@@ -356,13 +356,13 @@ export class PrincipalContext {
         .list(claims.tenantId, { userId: claims.sub });
       const session = sessions.find((candidate) => {
         const rec = candidate as unknown as Record<string, unknown>;
-        return String(rec.tokenJti ?? rec.token_jti ?? "") === jti;
+        return String(rec.tokenJti ?? rec.token_jti ?? '') === jti;
       });
       if (!session) {
         let allowDevelopmentRecovery = false;
         try {
           allowDevelopmentRecovery =
-            isExplicitDevelopmentAuth(config()) && claims.role === "SovereignOwner";
+            isExplicitDevelopmentAuth(config()) && claims.role === 'SovereignOwner';
         } catch {
           allowDevelopmentRecovery = false;
         }
@@ -370,10 +370,10 @@ export class PrincipalContext {
           return {
             success: false,
             response: jsonError(
-              "Acceso Denegado: La sesión asociada al token ya no se encuentra activa en el nodo.",
+              'Acceso Denegado: La sesión asociada al token ya no se encuentra activa en el nodo.',
               telemetry.traceId,
               401,
-              headers,
+              headers
             ),
           };
       }
@@ -384,10 +384,10 @@ export class PrincipalContext {
           return {
             success: false,
             response: jsonError(
-              "Acceso Denegado: sesión revocada.",
+              'Acceso Denegado: sesión revocada.',
               telemetry.traceId,
               401,
-              headers,
+              headers
             ),
           };
         const expiresRaw = sessionRecord.expiresAt ?? sessionRecord.expires_at ?? sessionRecord.exp;
@@ -397,10 +397,10 @@ export class PrincipalContext {
             return {
               success: false,
               response: jsonError(
-                "Acceso Denegado: sesión expirada o con fecha inválida.",
+                'Acceso Denegado: sesión expirada o con fecha inválida.',
                 telemetry.traceId,
                 401,
-                headers,
+                headers
               ),
             };
         }
@@ -413,10 +413,10 @@ export class PrincipalContext {
           tier: tenantRecord.tier,
           quotaBalance: tenantRecord.quotaBalance,
         },
-        String(sessionRecord?.username ?? ""),
+        String(sessionRecord?.username ?? ''),
         ip,
         telemetry.traceId,
-        telemetry.correlationId,
+        telemetry.correlationId
       );
       return { success: true, context };
     });
@@ -426,15 +426,15 @@ export class PrincipalContext {
 export function withSovereignAuth(
   resource: Resource,
   action: Action,
-  handler: (context: PrincipalContext, request: Request, body?: unknown) => Promise<Response>,
+  handler: (context: PrincipalContext, request: Request, body?: unknown) => Promise<Response>
 ) {
   return async ({ request }: { request: Request }): Promise<Response> => {
     // El turno de chat exige scope de conversación; la ejecución de sistema
     // también (conserva el contrato de scope previo). La lectura de sesión
     // propia no requiere scope adicional: sólo identidad + session:read.
     const requiredScope =
-      resource === "chat" || (resource === "system" && action === "execute")
-        ? "isabella:chat"
+      resource === 'chat' || (resource === 'system' && action === 'execute')
+        ? 'isabella:chat'
         : undefined;
     const authResult = await PrincipalContext.authorize(request, requiredScope);
     if (!authResult.success) return authResult.response;
@@ -448,7 +448,7 @@ export function withSovereignAuth(
       authenticated: true,
       context: {
         ip_address: context.ip,
-        user_agent: request.headers.get("user-agent") ?? "unknown",
+        user_agent: request.headers.get('user-agent') ?? 'unknown',
         timestamp: new Date(),
       },
     };
@@ -460,44 +460,44 @@ export function withSovereignAuth(
         `Acceso Denegado por Política Centralizada: Privilegios insuficientes para la operación (${resource}:${action}).`,
         context.traceId,
         403,
-        SecuritySystem.injectSecureHeaders(new Headers({ "content-type": "application/json" })),
+        SecuritySystem.injectSecureHeaders(new Headers({ 'content-type': 'application/json' }))
       );
-    const { assessIntent, evaluatePolicy, createDefaultContext } = await import("./crown");
+    const { assessIntent, evaluatePolicy, createDefaultContext } = await import('./crown');
     const intent = assessIntent(`API Operation: ${resource}:${action}`);
     const identityAssessment = {
       authenticated: true,
       roles: [context.role],
-      permissions: context.scope ? context.scope.split(" ") : [],
-      dataScopes: ["territorial"] as ["territorial"],
+      permissions: context.scope ? context.scope.split(' ') : [],
+      dataScopes: ['territorial'] as ['territorial'],
     };
     const reqContext = createDefaultContext(`API Operation: ${resource}:${action}`, {
       actorId: context.userId,
       sessionId: context.traceId,
     });
     const policyResult = evaluatePolicy(reqContext, intent, identityAssessment);
-    if (policyResult.status === "denied")
+    if (policyResult.status === 'denied')
       return jsonError(
-        "Acceso Denegado por CROWN (Constitutional Gate): Operación bloqueada por riesgo estructural.",
+        'Acceso Denegado por CROWN (Constitutional Gate): Operación bloqueada por riesgo estructural.',
         context.traceId,
         403,
-        SecuritySystem.injectSecureHeaders(new Headers({ "content-type": "application/json" })),
+        SecuritySystem.injectSecureHeaders(new Headers({ 'content-type': 'application/json' }))
       );
     let body: unknown = null;
-    if (["POST", "PUT", "PATCH"].includes(request.method)) {
-      const contentLength = Number.parseInt(request.headers.get("content-length") || "0", 10);
+    if (['POST', 'PUT', 'PATCH'].includes(request.method)) {
+      const contentLength = Number.parseInt(request.headers.get('content-length') || '0', 10);
       const maxBodyBytes = config().INPUT_MAX_BODY_BYTES;
       if (Number.isFinite(contentLength) && contentLength > maxBodyBytes)
         return jsonError(
-          "Payload too large.",
+          'Payload too large.',
           context.traceId,
           413,
-          SecuritySystem.injectSecureHeaders(new Headers({ "content-type": "application/json" })),
+          SecuritySystem.injectSecureHeaders(new Headers({ 'content-type': 'application/json' }))
         );
-      if (request.headers.get("content-type")?.includes("application/json")) {
+      if (request.headers.get('content-type')?.includes('application/json')) {
         try {
           body = await request.clone().json();
         } catch {
-          return jsonError("JSON body inválido.", context.traceId, 400, headersForJson());
+          return jsonError('JSON body inválido.', context.traceId, 400, headersForJson());
         }
       }
     }
@@ -505,5 +505,5 @@ export function withSovereignAuth(
   };
 }
 function headersForJson(): Headers {
-  return SecuritySystem.injectSecureHeaders(new Headers({ "content-type": "application/json" }));
+  return SecuritySystem.injectSecureHeaders(new Headers({ 'content-type': 'application/json' }));
 }

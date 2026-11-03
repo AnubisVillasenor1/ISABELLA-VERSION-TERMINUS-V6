@@ -2,17 +2,17 @@
  * TINA types + complexity scoring (src/lib/tina/types.ts)
  */
 
-export type TinaExecutionPath = "FAST" | "GROUNDED" | "AGENT" | "HUMAN_REVIEW";
+export type TinaExecutionPath = 'FAST' | 'GROUNDED' | 'AGENT' | 'HUMAN_REVIEW';
 
 export type TinaMode =
-  | "reactive"
-  | "limited_memory"
-  | "social_context"
-  | "generative"
-  | "native_ml"
-  | "federated"
-  | "territorial"
-  | "operational_self_model";
+  | 'reactive'
+  | 'limited_memory'
+  | 'social_context'
+  | 'generative'
+  | 'native_ml'
+  | 'federated'
+  | 'territorial'
+  | 'operational_self_model';
 
 export interface TinaComplexityScore {
   score: number;
@@ -36,14 +36,14 @@ export interface TinaRoute {
 }
 
 export const TINA_MODES: readonly TinaMode[] = [
-  "reactive",
-  "limited_memory",
-  "social_context",
-  "generative",
-  "native_ml",
-  "federated",
-  "territorial",
-  "operational_self_model",
+  'reactive',
+  'limited_memory',
+  'social_context',
+  'generative',
+  'native_ml',
+  'federated',
+  'territorial',
+  'operational_self_model',
 ] as const;
 
 export function clamp01(n: number): number {

@@ -15,19 +15,19 @@
  *    - x402 CHALLENGE: Desafío HTTP 402 (Micro-pago A2A por Token)
  */
 
-import { createHash, randomUUID } from "node:crypto";
-import { getX402PaymentVaultAddress, PrincipalContext } from "./monetization/x402-connector";
+import { createHash, randomUUID } from 'node:crypto';
+import { getX402PaymentVaultAddress, PrincipalContext } from './monetization/x402-connector';
 
-export type EpistemicComplexity = "E0" | "E1" | "E2" | "E3" | "E4";
+export type EpistemicComplexity = 'E0' | 'E1' | 'E2' | 'E3' | 'E4';
 
-export type CrownDecisionType = "ALLOW" | "MODIFY" | "X402_CHALLENGE" | "DENY";
+export type CrownDecisionType = 'ALLOW' | 'MODIFY' | 'X402_CHALLENGE' | 'DENY';
 
 export interface SmartPaywallEvaluationRequest {
   traceId: string;
   requestId: string;
   context: PrincipalContext;
   resourceId: string;
-  resourceType: "API_INFERENCE" | "DATASET" | "MCP_TOOL" | "PREMIUM_CONTENT" | "ADMIN_ACTION";
+  resourceType: 'API_INFERENCE' | 'DATASET' | 'MCP_TOOL' | 'PREMIUM_CONTENT' | 'ADMIN_ACTION';
   epistemicComplexity: EpistemicComplexity;
   currentQuotaUsed: number;
   maxQuotaAllowed: number;
@@ -62,7 +62,7 @@ export interface SmartPaywallDecision {
 }
 
 export class CrownSmartPaywallEngine {
-  private readonly POLICY_VERSION = "v4.2.0-sovereign";
+  private readonly POLICY_VERSION = 'v4.2.0-sovereign';
 
   /**
    * Ejecuta el pipeline completo de 5 pasos del Smart Paywall dinámico de CROWN.
@@ -76,41 +76,41 @@ export class CrownSmartPaywallEngine {
       return this.buildDecision(
         decisionId,
         request.traceId,
-        "DENY",
+        'DENY',
         401,
-        "ARGUS_IDENTITY_UNRESOLVED: Invalid tenant or actor context",
-        "E4_ACTION_REQUIRED",
+        'ARGUS_IDENTITY_UNRESOLVED: Invalid tenant or actor context',
+        'E4_ACTION_REQUIRED'
       );
     }
 
     // PASO 3: CROWN PDP — Verificación de Suscripción Mensual Obligatoria
-    if (context.subscriptionStatus !== "ACTIVE") {
+    if (context.subscriptionStatus !== 'ACTIVE') {
       return this.buildDecision(
         decisionId,
         request.traceId,
-        "DENY",
+        'DENY',
         403,
-        "CROWN_POLICY_DENY: Active monthly subscription required to access and monetize resources",
-        "E4_ACTION_REQUIRED",
+        'CROWN_POLICY_DENY: Active monthly subscription required to access and monetize resources',
+        'E4_ACTION_REQUIRED'
       );
     }
 
     // PASO 4: Evaluador Dinámico de Contexto, Cuotas y Complejidad Epistémica (E0 - E4)
     const isQuotaExceeded = currentQuotaUsed >= maxQuotaAllowed;
     const isSpecializedAgenticResource =
-      request.resourceType === "API_INFERENCE" ||
-      request.resourceType === "MCP_TOOL" ||
-      request.resourceType === "DATASET";
+      request.resourceType === 'API_INFERENCE' ||
+      request.resourceType === 'MCP_TOOL' ||
+      request.resourceType === 'DATASET';
 
     // CASO A: Complejidad Crítica E4 que requiere autorización explícita o firma humana
-    if (epistemicComplexity === "E4" && request.resourceType === "ADMIN_ACTION") {
+    if (epistemicComplexity === 'E4' && request.resourceType === 'ADMIN_ACTION') {
       return this.buildDecision(
         decisionId,
         request.traceId,
-        "MODIFY",
+        'MODIFY',
         422,
-        "CROWN_GOVERNANCE_REQUIREMENT: Epistemic level E4 requires human-in-the-loop consensus signature",
-        "E4_ACTION_REQUIRED",
+        'CROWN_GOVERNANCE_REQUIREMENT: Epistemic level E4 requires human-in-the-loop consensus signature',
+        'E4_ACTION_REQUIRED'
       );
     }
 
@@ -123,22 +123,22 @@ export class CrownSmartPaywallEngine {
       return {
         decisionId,
         traceId: request.traceId,
-        decision: "X402_CHALLENGE",
+        decision: 'X402_CHALLENGE',
         allowed: false,
         httpStatusCode: 402,
         reason:
-          "QUOTA_EXCEEDED_X402_REQUIRED: Metered billing micro-payment challenge issued via x402 protocol",
+          'QUOTA_EXCEEDED_X402_REQUIRED: Metered billing micro-payment challenge issued via x402 protocol',
         policyVersion: this.POLICY_VERSION,
-        evidenceStatus: "E0_CERTAINTY",
+        evidenceStatus: 'E0_CERTAINTY',
         x402Terms: {
           resourceId,
           priceCentsUSD: priceCents,
-          currency: "USDC",
+          currency: 'USDC',
           recipientAddress: getX402PaymentVaultAddress(),
           idempotencyKey,
           expiresAt,
         },
-        auditSignature: this.calculateSignature(decisionId, "X402_CHALLENGE", context.tenantId),
+        auditSignature: this.calculateSignature(decisionId, 'X402_CHALLENGE', context.tenantId),
       };
     }
 
@@ -147,21 +147,21 @@ export class CrownSmartPaywallEngine {
       return {
         decisionId,
         traceId: request.traceId,
-        decision: "MODIFY",
+        decision: 'MODIFY',
         allowed: false,
         httpStatusCode: 402,
         reason:
-          "QUOTA_EXCEEDED_UPGRADE_RECOMMENDED: Base subscription quota exhausted, upgrade plan required",
+          'QUOTA_EXCEEDED_UPGRADE_RECOMMENDED: Base subscription quota exhausted, upgrade plan required',
         policyVersion: this.POLICY_VERSION,
-        evidenceStatus: "E1_HIGH_PROBABILITY",
+        evidenceStatus: 'E1_HIGH_PROBABILITY',
         upgradeRecommendation: {
-          suggestedPlan: "plan-merchant",
+          suggestedPlan: 'plan-merchant',
           message:
-            "Has completado la cuota mensual de tu nivel. Actualiza al Plan Gremial para llamadas ilimitadas.",
+            'Has completado la cuota mensual de tu nivel. Actualiza al Plan Gremial para llamadas ilimitadas.',
           currentQuotaUsed,
           maxQuotaAllowed,
         },
-        auditSignature: this.calculateSignature(decisionId, "MODIFY", context.tenantId),
+        auditSignature: this.calculateSignature(decisionId, 'MODIFY', context.tenantId),
       };
     }
 
@@ -169,13 +169,13 @@ export class CrownSmartPaywallEngine {
     return {
       decisionId,
       traceId: request.traceId,
-      decision: "ALLOW",
+      decision: 'ALLOW',
       allowed: true,
       httpStatusCode: 200,
-      reason: "CROWN_ALLOW: Request authorized under active monthly subscription",
+      reason: 'CROWN_ALLOW: Request authorized under active monthly subscription',
       policyVersion: this.POLICY_VERSION,
-      evidenceStatus: "E0_CERTAINTY",
-      auditSignature: this.calculateSignature(decisionId, "ALLOW", context.tenantId),
+      evidenceStatus: 'E0_CERTAINTY',
+      auditSignature: this.calculateSignature(decisionId, 'ALLOW', context.tenantId),
     };
   }
 
@@ -185,24 +185,24 @@ export class CrownSmartPaywallEngine {
     decision: CrownDecisionType,
     httpStatusCode: number,
     reason: string,
-    evidenceStatus: string,
+    evidenceStatus: string
   ): SmartPaywallDecision {
     return {
       decisionId,
       traceId,
       decision,
-      allowed: decision === "ALLOW",
+      allowed: decision === 'ALLOW',
       httpStatusCode,
       reason,
       policyVersion: this.POLICY_VERSION,
       evidenceStatus,
-      auditSignature: this.calculateSignature(decisionId, decision, "SYSTEM_GATE"),
+      auditSignature: this.calculateSignature(decisionId, decision, 'SYSTEM_GATE'),
     };
   }
 
   private calculateSignature(decisionId: string, decision: string, tenantId: string): string {
     const raw = `${decisionId}|${decision}|${tenantId}|${this.POLICY_VERSION}|${Date.now()}`;
-    return "crown-sig:" + createHash("sha256").update(raw).digest("hex");
+    return 'crown-sig:' + createHash('sha256').update(raw).digest('hex');
   }
 
   public getPolicyVersion(): string {

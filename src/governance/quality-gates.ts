@@ -4,25 +4,25 @@
  *
  * Dependencias: todos los módulos canónicos, CI, BookPI.
  */
-import { assessManifestCompleteness, type EvidenceManifest } from "./evidence-manifest";
-import { isInvariantPreserved } from "../core/invariants";
+import { assessManifestCompleteness, type EvidenceManifest } from './evidence-manifest';
+import { isInvariantPreserved } from '../core/invariants';
 
 export const QUALITY_GATES = [
-  "schema",
-  "truthfulness",
-  "identity",
-  "preservation",
-  "temporal",
-  "security",
-  "tenant",
-  "concurrency",
-  "evidence",
-  "reproducibility",
-  "external_actions",
-  "licensing",
-  "rollback",
-  "no_overclaim",
-  "human_gate",
+  'schema',
+  'truthfulness',
+  'identity',
+  'preservation',
+  'temporal',
+  'security',
+  'tenant',
+  'concurrency',
+  'evidence',
+  'reproducibility',
+  'external_actions',
+  'licensing',
+  'rollback',
+  'no_overclaim',
+  'human_gate',
 ] as const;
 
 export type QualityGate = (typeof QUALITY_GATES)[number];
@@ -85,26 +85,28 @@ export function evaluateQualityGates(input: QualityGateInput): QualityGateReport
     if (!passed) blockers.push(gate);
   };
 
-  record("schema", input.allFilesHaveSchema, "contexto/estado/dependencias presentes");
-  record("truthfulness", input.noMockAsProduction, "sin mocks como producción");
-  record("identity", input.identityMultiSignal, "identidad multi-señal");
-  record("preservation", input.preservationPolicyActive, "PRESERVE → CLASSIFY → LINK → VERSION");
-  record("temporal", input.temporalRetrievalActive, "current/historical por intención");
-  record("security", input.securityPreIndexScan, "escaneo previo a indexar");
-  record("tenant", input.tenantIsolationEnforced, "aislamiento de tenant");
-  record("concurrency", input.concurrencySerialized, "mutación serializada");
-  const evidenceOk = input.evidenceManifest ? assessManifestCompleteness(input.evidenceManifest).complete : false;
-  record("evidence", evidenceOk, input.evidenceManifest ? "manifest de evidencia" : "sin manifest");
-  record("reproducibility", input.reproducibilityDocumented, "reproducibilidad documentada");
-  record("external_actions", input.externalActionsGated, "acciones externas con gate");
-  record("licensing", input.thirdPartyLicensesPreserved, "licencias de terceros");
-  record("rollback", input.rollbackPlanPresent, "plan de rollback");
-  record("no_overclaim", input.noTechnicalOverclaim, "sin sobreclamación");
-  record("human_gate", input.humanGateActive, "gate humano activo");
+  record('schema', input.allFilesHaveSchema, 'contexto/estado/dependencias presentes');
+  record('truthfulness', input.noMockAsProduction, 'sin mocks como producción');
+  record('identity', input.identityMultiSignal, 'identidad multi-señal');
+  record('preservation', input.preservationPolicyActive, 'PRESERVE → CLASSIFY → LINK → VERSION');
+  record('temporal', input.temporalRetrievalActive, 'current/historical por intención');
+  record('security', input.securityPreIndexScan, 'escaneo previo a indexar');
+  record('tenant', input.tenantIsolationEnforced, 'aislamiento de tenant');
+  record('concurrency', input.concurrencySerialized, 'mutación serializada');
+  const evidenceOk = input.evidenceManifest
+    ? assessManifestCompleteness(input.evidenceManifest).complete
+    : false;
+  record('evidence', evidenceOk, input.evidenceManifest ? 'manifest de evidencia' : 'sin manifest');
+  record('reproducibility', input.reproducibilityDocumented, 'reproducibilidad documentada');
+  record('external_actions', input.externalActionsGated, 'acciones externas con gate');
+  record('licensing', input.thirdPartyLicensesPreserved, 'licencias de terceros');
+  record('rollback', input.rollbackPlanPresent, 'plan de rollback');
+  record('no_overclaim', input.noTechnicalOverclaim, 'sin sobreclamación');
+  record('human_gate', input.humanGateActive, 'gate humano activo');
 
   const invariantPreserved = isInvariantPreserved();
   if (!invariantPreserved) {
-    record("schema", false, "invariante operativo no preservado");
+    record('schema', false, 'invariante operativo no preservado');
   }
 
   return {

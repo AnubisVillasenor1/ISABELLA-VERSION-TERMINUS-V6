@@ -12,10 +12,10 @@
  * This keeps a single signing key ACTIVE at any time while old signatures keep
  * verifying for exactly one rotation phase. Revoked keys are rejected.
  */
-import { createHash, generateKeyPairSync } from "node:crypto";
-import type { IsaXAlgorithm } from "./protocol";
+import { createHash, generateKeyPairSync } from 'node:crypto';
+import type { IsaXAlgorithm } from './protocol';
 
-export const ISA_X_KEY_STATES = ["ACTIVE", "PREVIOUS", "REVOKED"] as const;
+export const ISA_X_KEY_STATES = ['ACTIVE', 'PREVIOUS', 'REVOKED'] as const;
 export type IsaXKeyState = (typeof ISA_X_KEY_STATES)[number];
 
 export interface IsaXKeyMaterial {
@@ -38,18 +38,18 @@ export interface IsaXKeyMetadata {
 
 /** SHA-256 fingerprint (hex, 32 chars) of an SPKI PEM. */
 export function isaXKeyFingerprint(publicKeyPem: string): string {
-  const normalized = publicKeyPem.replace(/\r\n/g, "\n").trim();
-  return createHash("sha256").update(normalized, "utf8").digest("hex").slice(0, 32);
+  const normalized = publicKeyPem.replace(/\r\n/g, '\n').trim();
+  return createHash('sha256').update(normalized, 'utf8').digest('hex').slice(0, 32);
 }
 
 /** Generates a fresh Ed25519 key pair and returns its material. */
 export function generateIsaXKeyMaterial(keyId?: string): IsaXKeyMaterial {
-  const { privateKey, publicKey } = generateKeyPairSync("ed25519");
-  const privateKeyPem = privateKey.export({ format: "pem", type: "pkcs8" }).toString();
-  const publicKeyPem = publicKey.export({ format: "pem", type: "spki" }).toString();
+  const { privateKey, publicKey } = generateKeyPairSync('ed25519');
+  const privateKeyPem = privateKey.export({ format: 'pem', type: 'pkcs8' }).toString();
+  const publicKeyPem = publicKey.export({ format: 'pem', type: 'spki' }).toString();
   return {
     keyId: keyId ?? `isa-x-${isaXKeyFingerprint(publicKeyPem).slice(0, 12)}`,
-    algorithm: "Ed25519",
+    algorithm: 'Ed25519',
     privateKeyPem,
     publicKeyPem,
   };
@@ -65,7 +65,10 @@ export interface IsaXKeyRing {
    * Double-phase rotation. Returns the new ACTIVE key plus the demoted
    * (PREVIOUS) and retired (REVOKED) keys, when present.
    */
-  rotate(newKey: IsaXKeyMaterial, now?: number): {
+  rotate(
+    newKey: IsaXKeyMaterial,
+    now?: number
+  ): {
     newActive: IsaXKeyMetadata;
     demoted: IsaXKeyMetadata | undefined;
     retired: IsaXKeyMetadata | undefined;
@@ -101,7 +104,11 @@ function freezeView(key: MutableKey): IsaXKeyMetadata {
   });
 }
 
-function recordFromKeyMaterial(key: IsaXKeyMaterial, state: IsaXKeyState, createdAt: number): MutableKey {
+function recordFromKeyMaterial(
+  key: IsaXKeyMaterial,
+  state: IsaXKeyState,
+  createdAt: number
+): MutableKey {
   return {
     keyId: key.keyId,
     algorithm: key.algorithm,
@@ -122,7 +129,7 @@ export function createIsaXKeyRing(options: IsaXKeyRingOptions = {}): IsaXKeyRing
 
   function activeKey(): MutableKey | undefined {
     for (const key of keys.values()) {
-      if (key.state === "ACTIVE") return key;
+      if (key.state === 'ACTIVE') return key;
     }
     return undefined;
   }
@@ -142,9 +149,9 @@ export function createIsaXKeyRing(options: IsaXKeyRingOptions = {}): IsaXKeyRing
       return [...keys.values()].map(freezeView);
     },
     bootstrap(key, at) {
-      if (keys.size > 0) throw new Error("ISA-X: key ring is already bootstrapped.");
+      if (keys.size > 0) throw new Error('ISA-X: key ring is already bootstrapped.');
       const createdAt = at ?? now();
-      const record = recordFromKeyMaterial(key, "ACTIVE", createdAt);
+      const record = recordFromKeyMaterial(key, 'ACTIVE', createdAt);
       keys.set(record.keyId, record);
       return freezeView(record);
     },
@@ -153,17 +160,17 @@ export function createIsaXKeyRing(options: IsaXKeyRingOptions = {}): IsaXKeyRing
       let retired: MutableKey | undefined;
       let demoted: MutableKey | undefined;
       for (const key of keys.values()) {
-        if (key.state === "PREVIOUS") {
-          key.state = "REVOKED";
+        if (key.state === 'PREVIOUS') {
+          key.state = 'REVOKED';
           key.revokedAt = rotationAt;
-          key.revokedReason = "rotated_out";
+          key.revokedReason = 'rotated_out';
           retired = key;
-        } else if (key.state === "ACTIVE") {
-          key.state = "PREVIOUS";
+        } else if (key.state === 'ACTIVE') {
+          key.state = 'PREVIOUS';
           demoted = key;
         }
       }
-      const record = recordFromKeyMaterial(newKey, "ACTIVE", rotationAt);
+      const record = recordFromKeyMaterial(newKey, 'ACTIVE', rotationAt);
       keys.set(record.keyId, record);
       return {
         newActive: freezeView(record),
@@ -174,17 +181,17 @@ export function createIsaXKeyRing(options: IsaXKeyRingOptions = {}): IsaXKeyRing
     revoke(keyId, reason, at) {
       const key = keys.get(keyId);
       if (!key) throw new Error(`ISA-X: unknown key '${keyId}'`);
-      key.state = "REVOKED";
+      key.state = 'REVOKED';
       key.revokedAt = at ?? now();
       key.revokedReason = reason;
       return freezeView(key);
     },
     canSign(keyId) {
-      return keys.get(keyId)?.state === "ACTIVE";
+      return keys.get(keyId)?.state === 'ACTIVE';
     },
     canVerify(keyId) {
       const state = keys.get(keyId)?.state;
-      return state === "ACTIVE" || state === "PREVIOUS";
+      return state === 'ACTIVE' || state === 'PREVIOUS';
     },
   };
 }

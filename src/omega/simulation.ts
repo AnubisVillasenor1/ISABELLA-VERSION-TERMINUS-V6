@@ -23,14 +23,15 @@ export interface SimulationInput {
 }
 
 function bounded(value: number, name: string, min: number, max: number): number {
-  if (typeof value !== "number" || !Number.isFinite(value) || value < min || value > max) {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < min || value > max) {
     throw new Error(`SIMULATION_${name}_OUT_OF_RANGE`);
   }
   return value;
 }
 
 function finite(value: number, name: string): number {
-  if (typeof value !== "number" || !Number.isFinite(value)) throw new Error(`SIMULATION_${name}_INVALID`);
+  if (typeof value !== 'number' || !Number.isFinite(value))
+    throw new Error(`SIMULATION_${name}_INVALID`);
   return value;
 }
 
@@ -39,13 +40,13 @@ function finite(value: number, name: string): number {
  * `riskResidual` es la volatilidad no mitigada, acotada a [0,1].
  */
 export function runHyperSimulation(input: SimulationInput): HyperSimulationReport {
-  const base = finite(input.base, "BASE");
-  if (base < 0) throw new Error("SIMULATION_BASE_INVALID");
-  const volatility = bounded(input.volatility, "VOLATILITY", 0, 1);
-  const confidence = bounded(input.confidence, "CONFIDENCE", 0, 1);
-  const economicImpact = finite(input.economicImpact ?? 0, "ECONOMIC_IMPACT");
-  const socialImpact = finite(input.socialImpact ?? 0, "SOCIAL_IMPACT");
-  const riskMitigation = bounded(input.riskMitigation ?? 0, "RISK_MITIGATION", 0, 1);
+  const base = finite(input.base, 'BASE');
+  if (base < 0) throw new Error('SIMULATION_BASE_INVALID');
+  const volatility = bounded(input.volatility, 'VOLATILITY', 0, 1);
+  const confidence = bounded(input.confidence, 'CONFIDENCE', 0, 1);
+  const economicImpact = finite(input.economicImpact ?? 0, 'ECONOMIC_IMPACT');
+  const socialImpact = finite(input.socialImpact ?? 0, 'SOCIAL_IMPACT');
+  const riskMitigation = bounded(input.riskMitigation ?? 0, 'RISK_MITIGATION', 0, 1);
 
   const bestCase = Math.max(0, Math.round(base * (1 + volatility)));
   const worstCase = Math.max(0, Math.round(base * (1 - volatility)));

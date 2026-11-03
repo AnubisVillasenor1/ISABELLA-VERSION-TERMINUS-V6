@@ -15,9 +15,9 @@
  * and refuses execution when the required approval is absent.
  */
 
-import type { RegisteredTool, ToolRisk } from "./tool-registry";
+import type { RegisteredTool, ToolRisk } from './tool-registry';
 
-export type PolicyDecision = "allowed" | "requires_approval" | "denied";
+export type PolicyDecision = 'allowed' | 'requires_approval' | 'denied';
 
 export interface PolicyEvaluationRequest {
   tool: RegisteredTool;
@@ -42,7 +42,7 @@ export interface PolicyEvaluationResult {
   approvalRequired: boolean;
 }
 
-const RISK_ORDER: readonly ToolRisk[] = ["low", "medium", "high", "critical"];
+const RISK_ORDER: readonly ToolRisk[] = ['low', 'medium', 'high', 'critical'];
 
 function riskExceeds(tool: ToolRisk, threshold: ToolRisk): boolean {
   const toolIndex = RISK_ORDER.indexOf(tool);
@@ -55,13 +55,13 @@ function result(
   reason: string,
   riskAssessed: ToolRisk,
   approvalRequired: boolean,
-  territorialBoundaryViolation = false,
+  territorialBoundaryViolation = false
 ): PolicyEvaluationResult {
   return {
     decision,
     reason,
     riskAssessed,
-    escalationRequired: decision === "requires_approval",
+    escalationRequired: decision === 'requires_approval',
     territorialBoundaryViolation,
     approvalRequired,
   };
@@ -87,20 +87,20 @@ export function evaluatePolicy(request: PolicyEvaluationRequest): PolicyEvaluati
 
   if (!tool.name || !tool.risk || !tool.category || !tool.auditEvent) {
     return result(
-      "denied",
-      "Herramienta sin metadatos de política completos.",
-      tool.risk ?? "critical",
-      false,
+      'denied',
+      'Herramienta sin metadatos de política completos.',
+      tool.risk ?? 'critical',
+      false
     );
   }
 
   if (territorialBoundaryEnforced && tool.territorialBoundary) {
     return result(
-      "denied",
+      'denied',
       `Frontera territorial violada: la herramienta '${tool.name}' no puede ejecutarse en este contexto.`,
       tool.risk,
       false,
-      true,
+      true
     );
   }
 
@@ -110,35 +110,35 @@ export function evaluatePolicy(request: PolicyEvaluationRequest): PolicyEvaluati
   if (approvalRequired) {
     if (request.consentGranted) {
       return result(
-        "allowed",
+        'allowed',
         `Aprobación válida satisface la política para '${tool.name}' (riesgo ${tool.risk}).`,
         tool.risk,
-        true,
+        true
       );
     }
 
     if (!request.humanInTheLoop) {
       return result(
-        "denied",
+        'denied',
         `Riesgo ${tool.risk} o la herramienta '${tool.name}' requiere aprobación humana, pero no hay humano disponible.`,
         tool.risk,
-        true,
+        true
       );
     }
 
     return result(
-      "requires_approval",
+      'requires_approval',
       `La acción '${tool.name}' requiere aprobación humana antes de ejecutarse.`,
       tool.risk,
-      true,
+      true
     );
   }
 
   return result(
-    "allowed",
+    'allowed',
     `Acción '${tool.name}' permitida bajo política (riesgo ${tool.risk}).`,
     tool.risk,
-    false,
+    false
   );
 }
 

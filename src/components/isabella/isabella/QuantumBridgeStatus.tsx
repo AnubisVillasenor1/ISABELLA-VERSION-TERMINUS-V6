@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Zap, Wifi, WifiOff, RefreshCw, Cpu, Activity, Clock, CircleHelp } from "lucide-react";
+import React, { useState } from 'react';
+import { Zap, Wifi, WifiOff, RefreshCw, Cpu, Activity, Clock, CircleHelp } from 'lucide-react';
 
 export interface QuantumBridgeStatusProps {
   connected?: boolean;
@@ -36,7 +36,7 @@ export function QuantumBridgeStatus({
   };
 
   const connectionLabel =
-    connected === true ? "CONECTADO" : connected === false ? "DESCONECTADO" : "NO VERIFICADO";
+    connected === true ? 'CONECTADO' : connected === false ? 'DESCONECTADO' : 'NO VERIFICADO';
   const ConnectionIcon = connected === true ? Wifi : connected === false ? WifiOff : CircleHelp;
 
   return (
@@ -73,7 +73,7 @@ export function QuantumBridgeStatus({
             className="self-start sm:self-auto px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 text-xs font-mono text-slate-200 flex items-center gap-1.5 transition-all disabled:opacity-50"
           >
             <RefreshCw
-              className={`size-3.5 ${isRefreshing ? "animate-spin text-purple-400" : ""}`}
+              className={`size-3.5 ${isRefreshing ? 'animate-spin text-purple-400' : ''}`}
             />
             <span>Verificar Estado</span>
           </button>
@@ -82,16 +82,16 @@ export function QuantumBridgeStatus({
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3 font-mono text-xs">
         <Metric icon={<Activity className="size-3 text-purple-400" />} label="Ejecuciones Totales">
-          {executionCount == null ? "No disponible" : `${executionCount.toLocaleString()} QNodes`}
+          {executionCount == null ? 'No disponible' : `${executionCount.toLocaleString()} QNodes`}
         </Metric>
         <Metric icon={<Clock className="size-3 text-sky-400" />} label="Latencia de Enlace">
-          {latencyMs == null ? "No disponible" : `${latencyMs} ms`}
+          {latencyMs == null ? 'No disponible' : `${latencyMs} ms`}
         </Metric>
         <Metric icon={<Cpu className="size-3 text-emerald-400" />} label="Qubits / Wires">
-          {activeQubits == null ? "No disponible" : `${activeQubits} asignados`}
+          {activeQubits == null ? 'No disponible' : `${activeQubits} asignados`}
         </Metric>
         <Metric icon={<Clock className="size-3 text-amber-400" />} label="Última Evidencia">
-          {lastExecutionTime ?? "No disponible"}
+          {lastExecutionTime ?? 'No disponible'}
         </Metric>
       </div>
     </div>

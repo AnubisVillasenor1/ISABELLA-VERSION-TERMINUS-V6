@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef } from 'react';
 
 export function Waveform({ active, height = 64 }: { active: boolean; height?: number }) {
   const ref = useRef<HTMLCanvasElement | null>(null);
@@ -9,7 +9,7 @@ export function Waveform({ active, height = 64 }: { active: boolean; height?: nu
   useEffect(() => {
     const canvas = ref.current;
     if (!canvas) return;
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
     const draw = () => {
@@ -28,9 +28,9 @@ export function Waveform({ active, height = 64 }: { active: boolean; height?: nu
       t.current += active ? 0.055 : 0.016;
 
       const layers = [
-        { color: "rgba(90,160,255,0.85)", amp: 1, freq: 0.017, width: 1.6 },
-        { color: "rgba(190,150,255,0.5)", amp: 0.68, freq: 0.026, width: 1.1 },
-        { color: "rgba(235,240,255,0.4)", amp: 0.42, freq: 0.038, width: 0.9 },
+        { color: 'rgba(90,160,255,0.85)', amp: 1, freq: 0.017, width: 1.6 },
+        { color: 'rgba(190,150,255,0.5)', amp: 0.68, freq: 0.026, width: 1.1 },
+        { color: 'rgba(235,240,255,0.4)', amp: 0.42, freq: 0.038, width: 0.9 },
       ];
 
       layers.forEach((layer, li) => {

@@ -22,12 +22,12 @@
  * y el I/O queda en `repositories/policy-repository.ts`.
  */
 
-import type { RegisteredTool } from "./tool-registry";
-import type { DbPolicyRule, DbPolicyStatus, StoredPolicy } from "./repositories/policy-repository";
+import type { RegisteredTool } from './tool-registry';
+import type { DbPolicyRule, DbPolicyStatus, StoredPolicy } from './repositories/policy-repository';
 
 export type CodeDecision = DbPolicyStatus;
 
-export type DbRuleStatus = CodeDecision | "no_override";
+export type DbRuleStatus = CodeDecision | 'no_override';
 
 export interface DbRuleOutcome {
   status: DbRuleStatus;
@@ -36,11 +36,11 @@ export interface DbRuleOutcome {
 }
 
 export interface DbPolicyEvaluationInput {
-  tool: Pick<RegisteredTool, "name" | "risk" | "category" | "territorialBoundary">;
+  tool: Pick<RegisteredTool, 'name' | 'risk' | 'category' | 'territorialBoundary'>;
   authenticated: boolean;
 }
 
-export type DbGateSource = "db" | "no_override" | "unavailable" | "not_configured";
+export type DbGateSource = 'db' | 'no_override' | 'unavailable' | 'not_configured';
 
 export interface DbGateResult {
   status: CodeDecision;
@@ -57,7 +57,7 @@ const SEVERITY: Record<CodeDecision, number> = {
   denied: 3,
 };
 
-function ruleMatches(when: DbPolicyRule["when"], input: DbPolicyEvaluationInput): boolean {
+function ruleMatches(when: DbPolicyRule['when'], input: DbPolicyEvaluationInput): boolean {
   // Sin `when` (o vacío) = la regla aplica a todo (patrón nodo-cero).
   if (!when || Object.keys(when).length === 0) return true;
   if (when.tool !== undefined && when.tool !== input.tool.name) return false;
@@ -78,16 +78,16 @@ function ruleMatches(when: DbPolicyRule["when"], input: DbPolicyEvaluationInput)
  */
 export function evaluateDbPolicyRules(
   policies: readonly StoredPolicy[],
-  input: DbPolicyEvaluationInput,
+  input: DbPolicyEvaluationInput
 ): DbRuleOutcome {
   const ordered = [...policies].sort(
-    (a, b) => a.priority - b.priority || a.policyKey.localeCompare(b.policyKey),
+    (a, b) => a.priority - b.priority || a.policyKey.localeCompare(b.policyKey)
   );
   for (const policy of ordered) {
     if (!Array.isArray(policy.rules)) continue;
     for (const rule of policy.rules) {
       if (!ruleMatches(rule.when, input)) continue;
-      const status: DbRuleStatus = rule.then?.status ?? "allowed";
+      const status: DbRuleStatus = rule.then?.status ?? 'allowed';
       return {
         status,
         reason: rule.then?.reason ?? `politica_${policy.policyKey}`,
@@ -95,7 +95,7 @@ export function evaluateDbPolicyRules(
       };
     }
   }
-  return { status: "no_override", reason: "sin_regla_que_coincida" };
+  return { status: 'no_override', reason: 'sin_regla_que_coincida' };
 }
 
 /**
@@ -104,13 +104,13 @@ export function evaluateDbPolicyRules(
  */
 export function overlayDbDecision(
   codeDecision: CodeDecision,
-  outcome: DbRuleOutcome,
+  outcome: DbRuleOutcome
 ): DbGateResult {
-  if (outcome.status === "no_override") {
+  if (outcome.status === 'no_override') {
     return {
       status: codeDecision,
-      reason: "sin_override_db",
-      source: "no_override",
+      reason: 'sin_override_db',
+      source: 'no_override',
       degraded: false,
     };
   }
@@ -121,36 +121,36 @@ export function overlayDbDecision(
     status,
     reason: tightened ? `${outcome.reason}` : `no_refuerza:${codeDecision}`,
     policyKey: outcome.policyKey,
-    source: "db",
+    source: 'db',
     degraded: false,
   };
 }
 /** Mapeo de indisponibilidad: fail-closed para herramientas sensibles. */
-const SENSITIVE_CATEGORIES = new Set(["identity", "ledger", "network"]);
+const SENSITIVE_CATEGORIES = new Set(['identity', 'ledger', 'network']);
 
 export function unavailableDbGate(
   codeDecision: CodeDecision,
-  tool: Pick<RegisteredTool, "name" | "risk" | "category" | "requiresApproval">,
-  error: unknown,
+  tool: Pick<RegisteredTool, 'name' | 'risk' | 'category' | 'requiresApproval'>,
+  error: unknown
 ): DbGateResult {
   const detail = error instanceof Error ? error.message : String(error);
   const sensitive =
     tool.requiresApproval ||
-    tool.risk === "high" ||
-    tool.risk === "critical" ||
+    tool.risk === 'high' ||
+    tool.risk === 'critical' ||
     SENSITIVE_CATEGORIES.has(tool.category);
   if (sensitive) {
     return {
-      status: "requires_approval",
+      status: 'requires_approval',
       reason: `db-policy-unavailable:${detail}`,
-      source: "unavailable",
+      source: 'unavailable',
       degraded: true,
     };
   }
   return {
     status: codeDecision,
     reason: `db-policy-unavailable:degradado:${detail}`,
-    source: "unavailable",
+    source: 'unavailable',
     degraded: true,
   };
 }
@@ -172,8 +172,8 @@ export async function applyDbPolicyGate(params: ApplyDbPolicyGateParams): Promis
   if (!params.store) {
     return {
       status: codeDecision,
-      reason: "db-policy-store-no-inyectado",
-      source: "not_configured",
+      reason: 'db-policy-store-no-inyectado',
+      source: 'not_configured',
       degraded: false,
     };
   }
@@ -186,8 +186,8 @@ export async function applyDbPolicyGate(params: ApplyDbPolicyGateParams): Promis
   if (policies === null) {
     return {
       status: codeDecision,
-      reason: "db-policy-sin-database-url",
-      source: "not_configured",
+      reason: 'db-policy-sin-database-url',
+      source: 'not_configured',
       degraded: false,
     };
   }

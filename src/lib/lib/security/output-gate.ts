@@ -5,8 +5,8 @@
  * fail-closed. Se conserva la API (`scanOutput`/`safeOutputOrBlock`) que usan
  * las pruebas de seguridad (output-gate, tina-output-gate, pii-egress).
  */
-import { analyzeAegisSemantic, type AegisAnalysis } from "@/lib/aegis-semantic";
-import { evaluateOutputSecurity } from "@/lib/output-security-gate";
+import { analyzeAegisSemantic, type AegisAnalysis } from '@/lib/aegis-semantic';
+import { evaluateOutputSecurity } from '@/lib/output-security-gate';
 
 export interface OutputGateResult {
   allowed: boolean;
@@ -15,19 +15,19 @@ export interface OutputGateResult {
   reasons: string[];
 }
 
-export function scanOutput(text: string, source = "model-output"): OutputGateResult {
+export function scanOutput(text: string, source = 'model-output'): OutputGateResult {
   const decision = evaluateOutputSecurity(text);
   const analysis = analyzeAegisSemantic(text, { untrustedData: [{ text, source }] });
-  const allowed = decision.verdict === "allow";
+  const allowed = decision.verdict === 'allow';
   const reasons = [...new Set(decision.findings.map((finding) => finding.code))];
   return allowed
     ? { allowed, text, analysis, reasons: [] }
-    : { allowed, text: "", analysis, reasons };
+    : { allowed, text: '', analysis, reasons };
 }
 
-export function safeOutputOrBlock(text: string, source = "model-output"): string {
+export function safeOutputOrBlock(text: string, source = 'model-output'): string {
   const result = scanOutput(text, source);
   return result.allowed
     ? result.text
-    : "La salida fue retenida por el gate de seguridad de Isabella.";
+    : 'La salida fue retenida por el gate de seguridad de Isabella.';
 }

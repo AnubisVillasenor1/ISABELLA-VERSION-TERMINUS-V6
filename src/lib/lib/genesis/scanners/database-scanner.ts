@@ -1,5 +1,5 @@
-import * as fs from "node:fs";
-import * as path from "node:path";
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 
 export interface DatabaseScannerConfig {
   rootDir?: string;
@@ -19,13 +19,13 @@ export interface DatabaseScanResult {
 
 export interface DetectedEngine {
   type:
-    | "postgresql"
-    | "supabase"
-    | "neon"
-    | "firebase_firestore"
-    | "redis"
-    | "json_files"
-    | "in_memory";
+    | 'postgresql'
+    | 'supabase'
+    | 'neon'
+    | 'firebase_firestore'
+    | 'redis'
+    | 'json_files'
+    | 'in_memory';
   detected: boolean;
   connectionInfo?: string;
   tables?: string[];
@@ -44,27 +44,27 @@ export interface AuthorityGraph {
 export interface AuthorityNode {
   id: string;
   type: string;
-  criticality: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
+  criticality: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
 }
 
 export interface AuthorityEdge {
   source: string;
   target: string;
-  relationship: "PRIMARY" | "REPLICA" | "CACHE" | "FALLBACK";
-  consistencyModel: "STRONG" | "EVENTUAL" | "WEAK";
+  relationship: 'PRIMARY' | 'REPLICA' | 'CACHE' | 'FALLBACK';
+  consistencyModel: 'STRONG' | 'EVENTUAL' | 'WEAK';
 }
 
 export interface CriticalFinding {
   type:
-    | "MULTIPLE_PRIMARY_AUTHORITIES"
-    | "AUTHORITY_AMBIGUITY"
-    | "CIRCULAR_DEPENDENCIES"
-    | "MISSING_AUTHORITY";
+    | 'MULTIPLE_PRIMARY_AUTHORITIES'
+    | 'AUTHORITY_AMBIGUITY'
+    | 'CIRCULAR_DEPENDENCIES'
+    | 'MISSING_AUTHORITY';
   state: string;
   authorities?: string[];
   possibleAuthorities?: string[];
   cycle?: string[];
-  risk: "CRITICAL" | "HIGH";
+  risk: 'CRITICAL' | 'HIGH';
   description: string;
 }
 
@@ -140,7 +140,7 @@ export class DatabaseScanner {
 
     for (const file of files) {
       try {
-        const content = fs.readFileSync(file, "utf8");
+        const content = fs.readFileSync(file, 'utf8');
         allContent.set(file, content);
       } catch {
         /* intentional empty: skip unreadable files */
@@ -157,11 +157,11 @@ export class DatabaseScanner {
       criticalFindings,
       statistics: {
         totalEngines: engines.filter((e) => e.detected).length,
-        primaryAuthorities: authorityGraph.nodes.filter((n) => n.criticality === "CRITICAL").length,
+        primaryAuthorities: authorityGraph.nodes.filter((n) => n.criticality === 'CRITICAL').length,
         cacheLayers: engines.filter(
-          (e) => e.detected && e.isAuthorityFor.some((s) => s.includes("cache")),
+          (e) => e.detected && e.isAuthorityFor.some((s) => s.includes('cache'))
         ).length,
-        ambiguousStates: criticalFindings.filter((f) => f.type === "AUTHORITY_AMBIGUITY").length,
+        ambiguousStates: criticalFindings.filter((f) => f.type === 'AUTHORITY_AMBIGUITY').length,
       },
     };
   }
@@ -188,17 +188,17 @@ export class DatabaseScanner {
 
       if (detected) {
         for (const file of files) {
-          const content = allContent.get(file) ?? "";
+          const content = allContent.get(file) ?? '';
 
-          if (engineType === "postgresql" || engineType === "neon") {
+          if (engineType === 'postgresql' || engineType === 'neon') {
             const urlMatch = content.match(
-              /(?:DATABASE_URL|NEON_DATABASE_URL)\s*[:=]\s*['"]([^'"]+)['"]/,
+              /(?:DATABASE_URL|NEON_DATABASE_URL)\s*[:=]\s*['"]([^'"]+)['"]/
             );
             if (urlMatch) connectionInfo = urlMatch[1];
-          } else if (engineType === "supabase") {
+          } else if (engineType === 'supabase') {
             const urlMatch = content.match(/SUPABASE_URL\s*[:=]\s*['"]([^'"]+)['"]/);
             if (urlMatch) connectionInfo = urlMatch[1];
-          } else if (engineType === "redis") {
+          } else if (engineType === 'redis') {
             const urlMatch = content.match(/(?:REDIS_URL|KV_URL)\s*[:=]\s*['"]([^'"]+)['"]/);
             if (urlMatch) connectionInfo = urlMatch[1];
           }
@@ -213,15 +213,15 @@ export class DatabaseScanner {
       }
 
       engines.push({
-        type: engineType as DetectedEngine["type"],
+        type: engineType as DetectedEngine['type'],
         detected,
         connectionInfo,
         tables: [...new Set(tables)],
         isAuthorityFor: this.inferAuthority(engineType, tables),
         files: detected ? files : undefined,
-        collections: engineType === "firebase_firestore" ? tables : undefined,
-        keysPatterns: engineType === "redis" ? tables : undefined,
-        variables: engineType === "in_memory" ? tables : undefined,
+        collections: engineType === 'firebase_firestore' ? tables : undefined,
+        keysPatterns: engineType === 'redis' ? tables : undefined,
+        variables: engineType === 'in_memory' ? tables : undefined,
       });
     }
 
@@ -230,13 +230,13 @@ export class DatabaseScanner {
 
   private inferAuthority(engineType: string, _tables: string[]): string[] {
     const authorityMap: Record<string, string[]> = {
-      postgresql: ["EconomicState", "UserState", "AuditState", "SessionState", "LedgerState"],
-      neon: ["EconomicState", "UserState", "AuditState", "SessionState", "LedgerState"],
-      supabase: ["IdentityState", "AuthState", "RLSPolicies"],
-      firebase_firestore: ["DocumentState", "RealTimeState"],
-      redis: ["CacheState", "SessionCache", "RateLimitState"],
-      json_files: ["DevState", "TestState", "ConfigState"],
-      in_memory: ["HotCache", "TransientState"],
+      postgresql: ['EconomicState', 'UserState', 'AuditState', 'SessionState', 'LedgerState'],
+      neon: ['EconomicState', 'UserState', 'AuditState', 'SessionState', 'LedgerState'],
+      supabase: ['IdentityState', 'AuthState', 'RLSPolicies'],
+      firebase_firestore: ['DocumentState', 'RealTimeState'],
+      redis: ['CacheState', 'SessionCache', 'RateLimitState'],
+      json_files: ['DevState', 'TestState', 'ConfigState'],
+      in_memory: ['HotCache', 'TransientState'],
     };
 
     return authorityMap[engineType] ?? [];
@@ -244,7 +244,7 @@ export class DatabaseScanner {
 
   private buildAuthorityGraph(
     engines: DetectedEngine[],
-    _allContent: Map<string, string>,
+    _allContent: Map<string, string>
   ): AuthorityGraph {
     const nodes: AuthorityNode[] = [];
     const edges: AuthorityEdge[] = [];
@@ -263,7 +263,7 @@ export class DatabaseScanner {
     for (const [state, authorities] of stateToAuthorities) {
       nodes.push({
         id: state,
-        type: "state",
+        type: 'state',
         criticality: this.getStateCriticality(state),
       });
 
@@ -271,16 +271,16 @@ export class DatabaseScanner {
         edges.push({
           source: state,
           target: authorities[0],
-          relationship: "PRIMARY",
-          consistencyModel: "STRONG",
+          relationship: 'PRIMARY',
+          consistencyModel: 'STRONG',
         });
       } else if (authorities.length > 1) {
         for (const auth of authorities) {
           edges.push({
             source: state,
             target: auth,
-            relationship: auth === "postgresql" || auth === "neon" ? "PRIMARY" : "REPLICA",
-            consistencyModel: auth === "postgresql" || auth === "neon" ? "STRONG" : "EVENTUAL",
+            relationship: auth === 'postgresql' || auth === 'neon' ? 'PRIMARY' : 'REPLICA',
+            consistencyModel: auth === 'postgresql' || auth === 'neon' ? 'STRONG' : 'EVENTUAL',
           });
         }
       }
@@ -290,45 +290,45 @@ export class DatabaseScanner {
       if (!engine.detected) continue;
       nodes.push({
         id: engine.type,
-        type: "engine",
+        type: 'engine',
         criticality:
-          engine.type === "postgresql" || engine.type === "neon"
-            ? "CRITICAL"
-            : engine.type === "supabase"
-              ? "HIGH"
-              : "MEDIUM",
+          engine.type === 'postgresql' || engine.type === 'neon'
+            ? 'CRITICAL'
+            : engine.type === 'supabase'
+              ? 'HIGH'
+              : 'MEDIUM',
       });
     }
 
     return { nodes, edges };
   }
 
-  private getStateCriticality(state: string): "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" {
+  private getStateCriticality(state: string): 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' {
     const criticalStates = [
-      "EconomicState",
-      "UserState",
-      "AuditState",
-      "LedgerState",
-      "SessionState",
+      'EconomicState',
+      'UserState',
+      'AuditState',
+      'LedgerState',
+      'SessionState',
     ];
-    const highStates = ["IdentityState", "AuthState", "ConfigState"];
+    const highStates = ['IdentityState', 'AuthState', 'ConfigState'];
     const mediumStates = [
-      "CacheState",
-      "SessionCache",
-      "RateLimitState",
-      "DocumentState",
-      "RealTimeState",
+      'CacheState',
+      'SessionCache',
+      'RateLimitState',
+      'DocumentState',
+      'RealTimeState',
     ];
 
-    if (criticalStates.includes(state)) return "CRITICAL";
-    if (highStates.includes(state)) return "HIGH";
-    if (mediumStates.includes(state)) return "MEDIUM";
-    return "LOW";
+    if (criticalStates.includes(state)) return 'CRITICAL';
+    if (highStates.includes(state)) return 'HIGH';
+    if (mediumStates.includes(state)) return 'MEDIUM';
+    return 'LOW';
   }
 
   private findCriticalIssues(
     engines: DetectedEngine[],
-    _authorityGraph: AuthorityGraph,
+    _authorityGraph: AuthorityGraph
   ): CriticalFinding[] {
     const findings: CriticalFinding[] = [];
     const stateToAuthorities = new Map<string, string[]>();
@@ -344,40 +344,40 @@ export class DatabaseScanner {
 
     for (const [state, authorities] of stateToAuthorities) {
       if (authorities.length > 1) {
-        const primaryAuthorities = authorities.filter((a) => a === "postgresql" || a === "neon");
+        const primaryAuthorities = authorities.filter((a) => a === 'postgresql' || a === 'neon');
         if (primaryAuthorities.length > 1) {
           findings.push({
-            type: "MULTIPLE_PRIMARY_AUTHORITIES",
+            type: 'MULTIPLE_PRIMARY_AUTHORITIES',
             state,
             authorities,
-            risk: "CRITICAL",
-            description: `Múltiples autoridades primarias para el mismo estado: ${authorities.join(", ")}`,
+            risk: 'CRITICAL',
+            description: `Múltiples autoridades primarias para el mismo estado: ${authorities.join(', ')}`,
           });
         } else {
           findings.push({
-            type: "AUTHORITY_AMBIGUITY",
+            type: 'AUTHORITY_AMBIGUITY',
             state,
             possibleAuthorities: authorities,
-            risk: "HIGH",
-            description: `No está claro cuál es la autoridad para ${state}: ${authorities.join(", ")}`,
+            risk: 'HIGH',
+            description: `No está claro cuál es la autoridad para ${state}: ${authorities.join(', ')}`,
           });
         }
       }
     }
 
     const missingAuthorityStates = [
-      "EconomicState",
-      "UserState",
-      "AuditState",
-      "LedgerState",
-      "SessionState",
+      'EconomicState',
+      'UserState',
+      'AuditState',
+      'LedgerState',
+      'SessionState',
     ];
     for (const state of missingAuthorityStates) {
       if (!stateToAuthorities.has(state)) {
         findings.push({
-          type: "MISSING_AUTHORITY",
+          type: 'MISSING_AUTHORITY',
           state,
-          risk: "CRITICAL",
+          risk: 'CRITICAL',
           description: `Estado crítico sin autoridad definida: ${state}`,
         });
       }
@@ -389,22 +389,22 @@ export class DatabaseScanner {
   private collectFiles(dir: string): string[] {
     const files: string[] = [];
     const includePatterns = [
-      "**/*.ts",
-      "**/*.tsx",
-      "**/*.js",
-      "**/*.jsx",
-      "**/*.sql",
-      "**/*.prisma",
+      '**/*.ts',
+      '**/*.tsx',
+      '**/*.js',
+      '**/*.jsx',
+      '**/*.sql',
+      '**/*.prisma',
     ];
     const excludePatterns = [
-      "**/node_modules/**",
-      "**/dist/**",
-      "**/build/**",
-      "**/.git/**",
-      "**/coverage/**",
-      "**/genesis/**",
-      "**/*.test.ts",
-      "**/*.spec.ts",
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/build/**',
+      '**/.git/**',
+      '**/coverage/**',
+      '**/genesis/**',
+      '**/*.test.ts',
+      '**/*.spec.ts',
     ];
 
     const walk = (currentDir: string): void => {
@@ -435,7 +435,7 @@ export class DatabaseScanner {
   }
 
   private matchPattern(filePath: string, pattern: string): boolean {
-    const regexPattern = pattern.replace(/\*\*/g, ".*").replace(/\*/g, "[^/]*").replace(/\?/g, ".");
+    const regexPattern = pattern.replace(/\*\*/g, '.*').replace(/\*/g, '[^/]*').replace(/\?/g, '.');
     const regex = new RegExp(`^${regexPattern}$`);
     return regex.test(filePath);
   }

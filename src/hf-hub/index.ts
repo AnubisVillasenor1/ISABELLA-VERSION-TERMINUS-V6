@@ -7,13 +7,13 @@
  * concede autoridad: los documentos salen como PENDING_REVIEW.
  * CAPABILITY ≠ AUTHORITY ≠ EVIDENCE.
  */
-export * from "./client";
-export * from "./catalog";
-export * from "./ingest";
+export * from './client';
+export * from './catalog';
+export * from './ingest';
 
-import type { HfHubClient, HfDatasetQuery, HfModelQuery } from "./client";
-import { HF_HUB_DISCLAIMER } from "./catalog";
-import { datasetCardToKnowledge, type HfKnowledgeDocument } from "./ingest";
+import type { HfHubClient, HfDatasetQuery, HfModelQuery } from './client';
+import { HF_HUB_DISCLAIMER } from './catalog';
+import { datasetCardToKnowledge, type HfKnowledgeDocument } from './ingest';
 
 export interface HfCatalogInput {
   readonly task?: string;
@@ -22,13 +22,16 @@ export interface HfCatalogInput {
 }
 
 export interface HfCatalogResult {
-  readonly models: Awaited<ReturnType<HfHubClient["listModels"]>>;
-  readonly datasets: Awaited<ReturnType<HfHubClient["listDatasets"]>>;
+  readonly models: Awaited<ReturnType<HfHubClient['listModels']>>;
+  readonly datasets: Awaited<ReturnType<HfHubClient['listDatasets']>>;
   readonly disclaimer: string;
 }
 
 /** Reúne modelos y datasets del Hub en una sola lectura de catálogo (paralela). */
-export async function queryHfHubCatalog(client: HfHubClient, input: HfCatalogInput = {}): Promise<HfCatalogResult> {
+export async function queryHfHubCatalog(
+  client: HfHubClient,
+  input: HfCatalogInput = {}
+): Promise<HfCatalogResult> {
   const modelQuery: HfModelQuery = {
     ...(input.task?.trim() ? { task: input.task.trim() } : {}),
     ...(input.search?.trim() ? { search: input.search.trim() } : {}),
@@ -51,12 +54,15 @@ export interface HfIngestInput {
 }
 
 /** Lee la model card de un dataset y la propone como conocimiento PENDING_REVIEW. */
-export async function ingestHfDataset(client: HfHubClient, input: HfIngestInput): Promise<HfKnowledgeDocument> {
+export async function ingestHfDataset(
+  client: HfHubClient,
+  input: HfIngestInput
+): Promise<HfKnowledgeDocument> {
   const dataset = await client.getDataset(input.datasetId);
   const readme = await client.getFileText({
     repo: dataset.id,
-    repoType: "datasets",
-    path: "README.md",
+    repoType: 'datasets',
+    path: 'README.md',
     ...(input.revision ? { revision: input.revision } : {}),
   });
   return datasetCardToKnowledge(dataset, readme);

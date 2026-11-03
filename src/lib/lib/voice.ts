@@ -20,7 +20,7 @@ export async function speakIsabella(text: string): Promise<void> {
 
   const ctx = new AudioContext({ sampleRate: 24000 });
   currentCtx = ctx;
-  if (ctx.state === "suspended") await ctx.resume().catch(() => {});
+  if (ctx.state === 'suspended') await ctx.resume().catch(() => {});
 
   let playhead = 0;
   let pending = new Uint8Array(0);
@@ -45,17 +45,17 @@ export async function speakIsabella(text: string): Promise<void> {
     playhead += buffer.duration;
   };
 
-  const { getSessionToken } = await import("@/lib/auth-client");
+  const { getSessionToken } = await import('@/lib/auth-client');
   const token = getSessionToken();
   if (!token) {
     stopVoice();
-    throw new Error("ARGUS requiere una sesión autorizada para activar la voz.");
+    throw new Error('ARGUS requiere una sesión autorizada para activar la voz.');
   }
 
-  const res = await fetch("/api/isabella-voice", {
-    method: "POST",
+  const res = await fetch('/api/isabella-voice', {
+    method: 'POST',
     headers: {
-      "content-type": "application/json",
+      'content-type': 'application/json',
       Authorization: `Bearer ${token}`,
     },
     signal: controller.signal,
@@ -63,29 +63,29 @@ export async function speakIsabella(text: string): Promise<void> {
   });
 
   if (!res.ok || !res.body) {
-    const detail = await res.json().catch(() => ({ error: "Fallo de síntesis vocal." }));
+    const detail = await res.json().catch(() => ({ error: 'Fallo de síntesis vocal.' }));
     stopVoice();
-    throw new Error(detail.error ?? "Fallo de síntesis vocal.");
+    throw new Error(detail.error ?? 'Fallo de síntesis vocal.');
   }
 
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
-  let buffer = "";
+  let buffer = '';
 
   for (;;) {
     const { done, value } = await reader.read();
     if (done) break;
     buffer += decoder.decode(value, { stream: true });
     let nl: number;
-    while ((nl = buffer.indexOf("\n")) !== -1) {
+    while ((nl = buffer.indexOf('\n')) !== -1) {
       const line = buffer.slice(0, nl).trim();
       buffer = buffer.slice(nl + 1);
-      if (!line.startsWith("data:")) continue;
+      if (!line.startsWith('data:')) continue;
       const payload = line.slice(5).trim();
-      if (!payload || payload === "[DONE]") continue;
+      if (!payload || payload === '[DONE]') continue;
       try {
         const json = JSON.parse(payload) as { type?: string; audio?: string };
-        if (json.type !== "speech.audio.delta" || !json.audio) continue;
+        if (json.type !== 'speech.audio.delta' || !json.audio) continue;
         const binary = atob(json.audio);
         const bytes = new Uint8Array(binary.length);
         for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);

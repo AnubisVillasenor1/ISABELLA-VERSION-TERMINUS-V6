@@ -11,7 +11,7 @@ import type {
   RiskClass,
   VeritasVerdict,
   VeritasVerdictCode,
-} from "./types";
+} from './types';
 
 const REQUIRED_BY_RISK: Record<RiskClass, number> = {
   low: 2,
@@ -21,9 +21,9 @@ const REQUIRED_BY_RISK: Record<RiskClass, number> = {
 };
 
 export function consideredVerifiers(risk: RiskClass): readonly HyperCoreVerifierName[] {
-  const names: HyperCoreVerifierName[] = ["safety", "policy", "security", "provenance"];
-  if (risk === "medium" || risk === "high" || risk === "critical") names.push("factuality");
-  if (risk === "high" || risk === "critical") names.push("financial");
+  const names: HyperCoreVerifierName[] = ['safety', 'policy', 'security', 'provenance'];
+  if (risk === 'medium' || risk === 'high' || risk === 'critical') names.push('factuality');
+  if (risk === 'high' || risk === 'critical') names.push('financial');
   return Object.freeze(names);
 }
 
@@ -33,20 +33,20 @@ export function requiredApprovals(risk: RiskClass): number {
 
 export function deriveChecks(
   candidate: Record<string, unknown>,
-  risk: RiskClass,
+  risk: RiskClass
 ): readonly HyperCoreVerifierCheck[] {
   const evidence = Array.isArray(candidate.evidence) ? candidate.evidence : [];
   const checks: HyperCoreVerifierCheck[] = [
-    { name: "safety", passed: candidate.safety === "pass" },
-    { name: "policy", passed: candidate.policy === "pass" },
-    { name: "security", passed: candidate.security === "pass" },
-    { name: "provenance", passed: evidence.length > 0 },
+    { name: 'safety', passed: candidate.safety === 'pass' },
+    { name: 'policy', passed: candidate.policy === 'pass' },
+    { name: 'security', passed: candidate.security === 'pass' },
+    { name: 'provenance', passed: evidence.length > 0 },
   ];
-  if (risk === "medium" || risk === "high" || risk === "critical") {
-    checks.push({ name: "factuality", passed: candidate.factuality === "pass" });
+  if (risk === 'medium' || risk === 'high' || risk === 'critical') {
+    checks.push({ name: 'factuality', passed: candidate.factuality === 'pass' });
   }
-  if (risk === "high" || risk === "critical") {
-    checks.push({ name: "financial", passed: candidate.financialExecution === false });
+  if (risk === 'high' || risk === 'critical') {
+    checks.push({ name: 'financial', passed: candidate.financialExecution === false });
   }
   return Object.freeze(checks);
 }
@@ -62,9 +62,16 @@ function freezeVerdict(
   required: number,
   checks: readonly HyperCoreVerifierCheck[],
   failed: readonly HyperCoreVerifierName[],
-  reason: string,
+  reason: string
 ): VeritasVerdict {
-  return Object.freeze({ verdict, approvals, required, checks, failed: Object.freeze([...failed]), reason });
+  return Object.freeze({
+    verdict,
+    approvals,
+    required,
+    checks,
+    failed: Object.freeze([...failed]),
+    reason,
+  });
 }
 
 export function verifyCandidate(input: VerifyInput): VeritasVerdict {
@@ -79,30 +86,44 @@ export function verifyCandidate(input: VerifyInput): VeritasVerdict {
   const hardFailures = checks.filter(
     (check) =>
       !check.passed &&
-      (check.name === "safety" || check.name === "policy" || check.name === "financial"),
+      (check.name === 'safety' || check.name === 'policy' || check.name === 'financial')
   );
 
   if (hardFailures.length > 0) {
-    return freezeVerdict("DENY", approvals, required, checks, failed, `HARD_VERIFIER_FAILED:${hardFailures.map((c) => c.name).join(",")}`);
+    return freezeVerdict(
+      'DENY',
+      approvals,
+      required,
+      checks,
+      failed,
+      `HARD_VERIFIER_FAILED:${hardFailures.map((c) => c.name).join(',')}`
+    );
   }
 
   let verdict: VeritasVerdictCode;
   let reason: string;
   if (approvals >= required) {
-    verdict = "ALLOW";
-    reason = "CONSENSUS_REACHED";
+    verdict = 'ALLOW';
+    reason = 'CONSENSUS_REACHED';
   } else if (approvals >= required - 1) {
-    verdict = "ESCALATE";
-    reason = "PARTIAL_CONSENSUS";
+    verdict = 'ESCALATE';
+    reason = 'PARTIAL_CONSENSUS';
   } else if (missing.length > 0) {
-    verdict = "RETRY_SAFE";
-    reason = `VERIFIERS_MISSING:${missing.join(",")}`;
+    verdict = 'RETRY_SAFE';
+    reason = `VERIFIERS_MISSING:${missing.join(',')}`;
   } else {
-    verdict = "DENY";
-    reason = "CONSENSUS_NOT_REACHED";
+    verdict = 'DENY';
+    reason = 'CONSENSUS_NOT_REACHED';
   }
 
-  return Object.freeze({ verdict, approvals, required, checks, failed: Object.freeze(failed), reason });
+  return Object.freeze({
+    verdict,
+    approvals,
+    required,
+    checks,
+    failed: Object.freeze(failed),
+    reason,
+  });
 }
 
 export function consensusLabel(verdict: VeritasVerdict): string {
@@ -110,5 +131,5 @@ export function consensusLabel(verdict: VeritasVerdict): string {
 }
 
 export function isDeliverable(verdict: VeritasVerdictCode): boolean {
-  return verdict === "ALLOW";
+  return verdict === 'ALLOW';
 }

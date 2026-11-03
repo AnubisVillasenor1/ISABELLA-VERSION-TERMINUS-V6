@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect } from 'react';
 import {
   ShieldCheck,
   FileText,
@@ -8,20 +8,20 @@ import {
   Search,
   CheckCircle,
   AlertTriangle,
-} from "lucide-react";
-import { CentralizedTelemetryService, TelemetryLog } from "@/lib/latam-aegis-x";
-import { exportSecurityCompliancePdf } from "@/lib/audit-export";
-import { runIsabellaSkill } from "@/lib/skills/run-skill";
+} from 'lucide-react';
+import { CentralizedTelemetryService, TelemetryLog } from '@/lib/latam-aegis-x';
+import { exportSecurityCompliancePdf } from '@/lib/audit-export';
+import { runIsabellaSkill } from '@/lib/skills/run-skill';
 
 export function SovereignCompliancePanel() {
   const [logs, setLogs] = useState<TelemetryLog[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [targetHash, setTargetHash] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
+  const [targetHash, setTargetHash] = useState('');
   const [verifyResult, setVerifyResult] = useState<{
-    status: "idle" | "verifying" | "success" | "mismatch";
+    status: 'idle' | 'verifying' | 'success' | 'mismatch';
     sha256?: string;
     message?: string;
-  }>({ status: "idle" });
+  }>({ status: 'idle' });
 
   useEffect(() => {
     setLogs(CentralizedTelemetryService.getLogs());
@@ -38,7 +38,7 @@ export function SovereignCompliancePanel() {
 
   const handleVerifyWithAnubis = async () => {
     if (!targetHash.trim()) return;
-    setVerifyResult({ status: "verifying" });
+    setVerifyResult({ status: 'verifying' });
 
     setTimeout(async () => {
       try {
@@ -48,44 +48,44 @@ export function SovereignCompliancePanel() {
         const reportContent = JSON.stringify(logs.slice(0, 10));
         // Run unpatched ANUBIS skill with safety pipeline
         const result = await runIsabellaSkill(
-          "ANUBIS",
+          'ANUBIS',
           {
-            artifactId: "COMPLIANCE-REPORT-001",
+            artifactId: 'COMPLIANCE-REPORT-001',
             content: reportContent,
             expectedHash: targetHash.trim(),
           },
           {
             requestId: crypto.randomUUID(),
-            locale: "es",
-            federation: "SOVEREIGNTY",
-            intent: "Verificar reporte de cumplimiento",
+            locale: 'es',
+            federation: 'SOVEREIGNTY',
+            intent: 'Verificar reporte de cumplimiento',
             // Consola sin sesión: identidad Guest explícita. El PDP decide de
             // verdad; sin tool:execute la respuesta es denegación firmada.
-            actorId: "ui_compliance_console",
-            tenantId: "tenant_public_console",
-            role: "Guest",
+            actorId: 'ui_compliance_console',
+            tenantId: 'tenant_public_console',
+            role: 'Guest',
             authenticated: false,
-          },
+          }
         );
 
         if (!result.error) {
           setVerifyResult({
-            status: "success",
+            status: 'success',
             sha256: (result.data as { sha256: string }).sha256,
             message:
-              "Hash recalculado del reporte coincide con la referencia provista. Verificación de integridad local, sin firma en Ledger.",
+              'Hash recalculado del reporte coincide con la referencia provista. Verificación de integridad local, sin firma en Ledger.',
           });
         } else {
           setVerifyResult({
-            status: "mismatch",
+            status: 'mismatch',
             sha256: (result.data as { sha256: string })?.sha256,
-            message: "El hash provisto no coincide con la referencia esperada.",
+            message: 'El hash provisto no coincide con la referencia esperada.',
           });
         }
       } catch {
         setVerifyResult({
-          status: "mismatch",
-          message: "Error ejecutando verificación criptográfica ANUBIS.",
+          status: 'mismatch',
+          message: 'Error ejecutando verificación criptográfica ANUBIS.',
         });
       }
     }, 1000);
@@ -95,7 +95,7 @@ export function SovereignCompliancePanel() {
     (log) =>
       log.eventName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       log.coreId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      log.moduleId.toLowerCase().includes(searchQuery.toLowerCase()),
+      log.moduleId.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -129,10 +129,10 @@ export function SovereignCompliancePanel() {
             </h4>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 font-mono text-xs">
               {[
-                "Arquitectura",
-                "Seguridad / Identidad",
-                "IA Segura / CROWN",
-                "BookPI / DB / Pagos",
+                'Arquitectura',
+                'Seguridad / Identidad',
+                'IA Segura / CROWN',
+                'BookPI / DB / Pagos',
               ].map((label) => (
                 <div key={label} className="space-y-1">
                   <span className="text-muted-foreground block text-[10px] uppercase">{label}</span>
@@ -145,7 +145,7 @@ export function SovereignCompliancePanel() {
             </div>
             <p className="mt-3 text-[10px] leading-relaxed text-muted-foreground">
               Porcentajes retirados: no existe telemetría que los sustente en este entorno. La única
-              cifra verificable es la auditoría ISA-500 registrada en{" "}
+              cifra verificable es la auditoría ISA-500 registrada en{' '}
               <span className="font-mono">production-capabilities.json</span> y en el README.
             </p>
             <div className="mt-4 flex gap-2">
@@ -206,25 +206,25 @@ export function SovereignCompliancePanel() {
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-muted-foreground">
                       <div>
-                        <span>Trace:</span>{" "}
+                        <span>Trace:</span>{' '}
                         <span className="text-platinum font-semibold truncate block">
                           {log.traceId}
                         </span>
                       </div>
                       <div>
-                        <span>Core:</span>{" "}
+                        <span>Core:</span>{' '}
                         <span className="text-platinum font-semibold truncate block">
                           {log.coreId}
                         </span>
                       </div>
                       <div>
-                        <span>Origen:</span>{" "}
+                        <span>Origen:</span>{' '}
                         <span className="text-platinum font-semibold truncate block">
                           {log.moduleId}
                         </span>
                       </div>
                       <div>
-                        <span>Nivel:</span>{" "}
+                        <span>Nivel:</span>{' '}
                         <span className="text-platinum font-semibold truncate block">
                           {log.level}
                         </span>
@@ -270,16 +270,16 @@ export function SovereignCompliancePanel() {
             </div>
 
             {/* Verification Result Display */}
-            {verifyResult.status !== "idle" && (
+            {verifyResult.status !== 'idle' && (
               <div className="mt-4 pt-3 border-t border-border/10 space-y-2 animate-rise font-mono text-[10px]">
-                {verifyResult.status === "verifying" && (
+                {verifyResult.status === 'verifying' && (
                   <div className="flex items-center gap-2 text-muted-foreground p-3 rounded-xl bg-black/20 border border-border/10">
                     <RefreshCw className="size-4 animate-spin text-amber-400" />
                     <span>Llamando a Sentinel & Evaluando políticas...</span>
                   </div>
                 )}
 
-                {verifyResult.status === "success" && (
+                {verifyResult.status === 'success' && (
                   <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 space-y-1">
                     <div className="flex items-center gap-1.5 font-bold">
                       <CheckCircle className="size-4 text-emerald-400" />
@@ -292,7 +292,7 @@ export function SovereignCompliancePanel() {
                   </div>
                 )}
 
-                {verifyResult.status === "mismatch" && (
+                {verifyResult.status === 'mismatch' && (
                   <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 space-y-1">
                     <div className="flex items-center gap-1.5 font-bold">
                       <AlertTriangle className="size-4 text-rose-400" />
@@ -320,17 +320,17 @@ export function SovereignCompliancePanel() {
               </p>
               <div className="p-3 bg-black/45 rounded-xl border border-border/5 text-[9.5px] text-platinum space-y-1">
                 <p>
-                  <span className="text-muted-foreground">DOI:</span>{" "}
+                  <span className="text-muted-foreground">DOI:</span>{' '}
                   <span className="font-bold underline text-indigo-400">
                     10.5281/zenodo.isabella
                   </span>
                 </p>
                 <p>
-                  <span className="text-muted-foreground">Licencia:</span>{" "}
+                  <span className="text-muted-foreground">Licencia:</span>{' '}
                   <span className="font-bold">CC BY 4.0 International</span>
                 </p>
                 <p>
-                  <span className="text-muted-foreground">Autor:</span>{" "}
+                  <span className="text-muted-foreground">Autor:</span>{' '}
                   <span className="font-bold">Edwin O. Castillo Trejo (Anubis)</span>
                 </p>
               </div>

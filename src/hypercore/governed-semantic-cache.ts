@@ -7,14 +7,14 @@
  * Jaccard), not embedding-based, and only ever surfaces candidates for reuse —
  * the orchestrator re-verifies before delivering anything.
  */
-import { canonicalJson, normalizeText, sha3Hex, tokenize } from "./canonical";
+import { canonicalJson, normalizeText, sha3Hex, tokenize } from './canonical';
 import type {
   HyperCoreCacheEntry,
   HyperCoreTask,
   RiskClass,
   SemanticMatch,
   VerifiedResponse,
-} from "./types";
+} from './types';
 
 export interface CacheVersions {
   readonly policyVersion: string;
@@ -36,7 +36,7 @@ export interface GovernedSemanticCache {
     response: VerifiedResponse,
     versions: CacheVersions,
     ttlSeconds: number,
-    energyKwh: number,
+    energyKwh: number
   ): HyperCoreCacheEntry;
   size(): number;
   clear(): void;
@@ -57,7 +57,7 @@ function jaccard(a: readonly string[], b: readonly string[]): number {
 }
 
 export function createGovernedSemanticCache(
-  options: GovernedSemanticCacheOptions = {},
+  options: GovernedSemanticCacheOptions = {}
 ): GovernedSemanticCache {
   const now = options.now ?? (() => Date.now());
   const similarityThreshold = options.similarityThreshold ?? 0.93;
@@ -71,9 +71,9 @@ export function createGovernedSemanticCache(
         riskClass: task.risk,
         modelVersion: versions.modelVersion,
         dataVersion: versions.dataVersion,
-        userScope: task.userScope ?? "global",
-        territoryScope: task.territoryScope ?? "global",
-      }),
+        userScope: task.userScope ?? 'global',
+        territoryScope: task.territoryScope ?? 'global',
+      })
     );
   }
 
@@ -113,7 +113,7 @@ export function createGovernedSemanticCache(
     response: VerifiedResponse,
     versions: CacheVersions,
     ttlSeconds: number,
-    energyKwh: number,
+    energyKwh: number
   ): HyperCoreCacheEntry {
     const key = buildKey(task, versions);
     const createdAt = now();

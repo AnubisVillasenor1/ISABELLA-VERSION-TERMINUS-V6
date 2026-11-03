@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { randomUUID } from 'node:crypto';
 
 export interface ProtocolContext {
   requestId?: string;
@@ -17,7 +17,8 @@ export class ProtocolRegistry {
   private readonly protocols = new Map<string, ProtocolDescriptor>();
 
   register(protocol: ProtocolDescriptor): void {
-    if (this.protocols.has(protocol.id)) throw new Error(`PROTOCOLS: duplicate protocol ${protocol.id}`);
+    if (this.protocols.has(protocol.id))
+      throw new Error(`PROTOCOLS: duplicate protocol ${protocol.id}`);
     this.protocols.set(protocol.id, Object.freeze({ ...protocol }));
   }
 

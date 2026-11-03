@@ -6,13 +6,13 @@
 // Nexus (Ω∞-22) y Territorial Civilization Fabric (Ω∞-23).
 // Ninguna función mueve dinero ni concede autoridad.
 
-export * from "./constitution";
-export * from "./simulation";
-export * from "./capital";
-export * from "./civilization";
-export * from "./twins";
-export * from "./memory";
-export * from "./trust";
-export * from "./research";
-export * from "./territory";
-export * from "./nexus";
+export * from './constitution';
+export * from './simulation';
+export * from './capital';
+export * from './civilization';
+export * from './twins';
+export * from './memory';
+export * from './trust';
+export * from './research';
+export * from './territory';
+export * from './nexus';

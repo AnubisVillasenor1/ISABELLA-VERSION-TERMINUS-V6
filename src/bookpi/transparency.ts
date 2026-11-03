@@ -13,13 +13,13 @@
  * Nota: `bookpi/merkle.ts` (chunking de manuscritos) se mantiene intacto por
  * compatibilidad; este módulo es el log de evidencia con semántica CT.
  */
-import { createHash, sign as edSign, verify as edVerify, type KeyObject } from "node:crypto";
+import { createHash, sign as edSign, verify as edVerify, type KeyObject } from 'node:crypto';
 
 const LEAF_PREFIX = Buffer.from([0x00]);
 const NODE_PREFIX = Buffer.from([0x01]);
 
 function sha256(...parts: Buffer[]): Buffer {
-  const h = createHash("sha256");
+  const h = createHash('sha256');
   for (const p of parts) h.update(p);
   return h.digest();
 }
@@ -55,7 +55,7 @@ export interface SignedTreeHead {
 }
 
 export function treeHeadMessage(treeSize: number, rootHash: string, timestamp: string): Buffer {
-  return Buffer.from(`TAMV-STH-v1\n${treeSize}\n${rootHash}\n${timestamp}`, "utf8");
+  return Buffer.from(`TAMV-STH-v1\n${treeSize}\n${rootHash}\n${timestamp}`, 'utf8');
 }
 
 export class TransparencyLog {
@@ -67,15 +67,15 @@ export class TransparencyLog {
 
   /** Añade una entrada (bytes o texto UTF-8) y devuelve su índice. Append-only: no hay update/delete. */
   append(entry: Uint8Array | string): number {
-    const data = typeof entry === "string" ? Buffer.from(entry, "utf8") : entry;
+    const data = typeof entry === 'string' ? Buffer.from(entry, 'utf8') : entry;
     this.leaves.push(hashLeaf(data));
     return this.leaves.length - 1;
   }
 
   leafHash(index: number): string {
     const leaf = this.leaves[index];
-    if (leaf === undefined) throw new RangeError("TRANSPARENCY: leaf index out of range");
-    return leaf.toString("hex");
+    if (leaf === undefined) throw new RangeError('TRANSPARENCY: leaf index out of range');
+    return leaf.toString('hex');
   }
 
   private mth(lo: number, hi: number): Buffer {
@@ -83,7 +83,7 @@ export class TransparencyLog {
     if (n === 0) return emptyTreeHash();
     if (n === 1) {
       const leaf = this.leaves[lo];
-      if (leaf === undefined) throw new RangeError("TRANSPARENCY: leaf index out of range");
+      if (leaf === undefined) throw new RangeError('TRANSPARENCY: leaf index out of range');
       return leaf;
     }
     const k = splitPoint(n);
@@ -93,12 +93,12 @@ export class TransparencyLog {
   /** Raíz del árbol de los primeros `size` elementos (por defecto, el log completo). */
   rootHash(size: number = this.leaves.length): string {
     this.assertSize(size);
-    return this.mth(0, size).toString("hex");
+    return this.mth(0, size).toString('hex');
   }
 
   private assertSize(size: number): void {
     if (!Number.isInteger(size) || size < 0 || size > this.leaves.length) {
-      throw new RangeError("TRANSPARENCY: tree size out of range");
+      throw new RangeError('TRANSPARENCY: tree size out of range');
     }
   }
 
@@ -106,22 +106,24 @@ export class TransparencyLog {
   inclusionProof(index: number, size: number = this.leaves.length): string[] {
     this.assertSize(size);
     if (!Number.isInteger(index) || index < 0 || index >= size) {
-      throw new RangeError("TRANSPARENCY: leaf index out of range for tree size");
+      throw new RangeError('TRANSPARENCY: leaf index out of range for tree size');
     }
     const path = (m: number, lo: number, hi: number): Buffer[] => {
       const n = hi - lo;
       if (n === 1) return [];
       const k = splitPoint(n);
-      return m < k ? [...path(m, lo, lo + k), this.mth(lo + k, hi)] : [...path(m - k, lo + k, hi), this.mth(lo, lo + k)];
+      return m < k
+        ? [...path(m, lo, lo + k), this.mth(lo + k, hi)]
+        : [...path(m - k, lo + k, hi), this.mth(lo, lo + k)];
     };
-    return path(index, 0, size).map((b) => b.toString("hex"));
+    return path(index, 0, size).map((b) => b.toString('hex'));
   }
 
   /** Prueba de consistencia entre los árboles de tamaño `first` y `second` (RFC 9162 §2.1.4.1). */
   consistencyProof(first: number, second: number = this.leaves.length): string[] {
     this.assertSize(second);
     if (!Number.isInteger(first) || first < 1 || first > second) {
-      throw new RangeError("TRANSPARENCY: first tree size must satisfy 1 <= first <= second");
+      throw new RangeError('TRANSPARENCY: first tree size must satisfy 1 <= first <= second');
     }
     if (first === second) return [];
     const subproof = (m: number, lo: number, hi: number, complete: boolean): Buffer[] => {
@@ -132,7 +134,7 @@ export class TransparencyLog {
         ? [...subproof(m, lo, lo + k, complete), this.mth(lo + k, hi)]
         : [...subproof(m - k, lo + k, hi, false), this.mth(lo, lo + k)];
     };
-    return subproof(first, 0, second, true).map((b) => b.toString("hex"));
+    return subproof(first, 0, second, true).map((b) => b.toString('hex'));
   }
 
   /** Emite un Signed Tree Head Ed25519 sobre el estado actual. */
@@ -140,7 +142,11 @@ export class TransparencyLog {
     const treeSize = this.leaves.length;
     const rootHash = this.rootHash(treeSize);
     const timestamp = now.toISOString();
-    const signature = edSign(null, treeHeadMessage(treeSize, rootHash, timestamp), privateKey).toString("base64");
+    const signature = edSign(
+      null,
+      treeHeadMessage(treeSize, rootHash, timestamp),
+      privateKey
+    ).toString('base64');
     return { treeSize, rootHash, timestamp, signature };
   }
 }
@@ -148,7 +154,7 @@ export class TransparencyLog {
 const HEX64 = /^[0-9a-f]{64}$/;
 
 function toHash(hex: string): Buffer | null {
-  return HEX64.test(hex) ? Buffer.from(hex, "hex") : null;
+  return HEX64.test(hex) ? Buffer.from(hex, 'hex') : null;
 }
 
 /** Verificación independiente de una prueba de inclusión (RFC 9162 §2.1.3.2). Fail-closed. */
@@ -160,7 +166,8 @@ export function verifyInclusion(params: {
   rootHash: string;
 }): boolean {
   const { index, treeSize } = params;
-  if (!Number.isInteger(index) || !Number.isInteger(treeSize) || index < 0 || index >= treeSize) return false;
+  if (!Number.isInteger(index) || !Number.isInteger(treeSize) || index < 0 || index >= treeSize)
+    return false;
   let r = toHash(params.leafHash);
   const root = toHash(params.rootHash);
   if (r === null || root === null) return false;
@@ -195,7 +202,13 @@ export function verifyConsistency(params: {
   proof: readonly string[];
 }): boolean {
   const { firstSize, secondSize } = params;
-  if (!Number.isInteger(firstSize) || !Number.isInteger(secondSize) || firstSize < 1 || firstSize > secondSize) return false;
+  if (
+    !Number.isInteger(firstSize) ||
+    !Number.isInteger(secondSize) ||
+    firstSize < 1 ||
+    firstSize > secondSize
+  )
+    return false;
   const firstRoot = toHash(params.firstRoot);
   const secondRoot = toHash(params.secondRoot);
   if (firstRoot === null || secondRoot === null) return false;
@@ -239,9 +252,15 @@ export function verifyConsistency(params: {
 
 /** Verifica la firma Ed25519 de un STH con la clave pública del operador del log. */
 export function verifySignedTreeHead(head: SignedTreeHead, publicKey: KeyObject): boolean {
-  if (!HEX64.test(head.rootHash) || !Number.isInteger(head.treeSize) || head.treeSize < 0) return false;
+  if (!HEX64.test(head.rootHash) || !Number.isInteger(head.treeSize) || head.treeSize < 0)
+    return false;
   try {
-    return edVerify(null, treeHeadMessage(head.treeSize, head.rootHash, head.timestamp), publicKey, Buffer.from(head.signature, "base64"));
+    return edVerify(
+      null,
+      treeHeadMessage(head.treeSize, head.rootHash, head.timestamp),
+      publicKey,
+      Buffer.from(head.signature, 'base64')
+    );
   } catch {
     return false;
   }

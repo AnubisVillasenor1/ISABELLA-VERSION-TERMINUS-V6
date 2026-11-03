@@ -11,7 +11,7 @@ export class TtlSingleFlight<T> {
   private inFlight: { generation: number; promise: Promise<T> } | undefined;
 
   constructor(private readonly ttlMs: number) {
-    if (!Number.isFinite(ttlMs) || ttlMs < 1) throw new Error("TTL_CACHE_TTL_INVALID");
+    if (!Number.isFinite(ttlMs) || ttlMs < 1) throw new Error('TTL_CACHE_TTL_INVALID');
   }
 
   async get(loader: () => Promise<T>, now = Date.now()): Promise<T> {

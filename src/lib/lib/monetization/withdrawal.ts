@@ -1,13 +1,13 @@
-import { randomUUID } from "node:crypto";
+import { randomUUID } from 'node:crypto';
 import {
   MINIMUM_WITHDRAWAL_CENTS,
   type MonetizationEligibility,
   type WithdrawalRequest,
-} from "./types";
-import { evaluateEligibility } from "./eligibility";
+} from './types';
+import { evaluateEligibility } from './eligibility';
 
 /**
- * WITHDRAWAL & ZERO-LOSS SETTLEMENT (src/lib/monetization/withdrawal.ts)
+ * WITHDRAWAL & ZERO-LOSS SETTLEMENT (src/lib/lib/monetization/withdrawal.ts)
  * -----------------------------------------------------------------
  * Manages the withdrawal requests. Enforces the 90-day escrow maturation
  * and checks the territorial node's liquidity pool. If the platform lacks
@@ -17,7 +17,7 @@ import { evaluateEligibility } from "./eligibility";
 
 export interface WithdrawalRiskReview {
   reviewId: string;
-  status: "pass" | "hold" | "fraud_detected";
+  status: 'pass' | 'hold' | 'fraud_detected';
   score: number;
   signals: string[];
 }
@@ -40,7 +40,7 @@ export interface WithdrawalDependencies {
     userId: string;
     amountCents: number;
     idempotencyKey: string;
-  }): Promise<{ payoutId: string; status: "scheduled" | "paid" }>;
+  }): Promise<{ payoutId: string; status: 'scheduled' | 'paid' }>;
 }
 
 export class WithdrawalService {
@@ -49,9 +49,9 @@ export class WithdrawalService {
   async request(
     userId: string,
     territoryId: string,
-    opts?: { idempotencyKey?: string },
+    opts?: { idempotencyKey?: string }
   ): Promise<
-    | { ok: true; payoutId: string; status: "scheduled" | "paid" }
+    | { ok: true; payoutId: string; status: 'scheduled' | 'paid' }
     | {
         ok: false;
         code: string;
@@ -65,7 +65,7 @@ export class WithdrawalService {
 
     const isIdem = await this.deps.isIdempotent(idempotencyKey);
     if (isIdem) {
-      return { ok: false, code: "IDEMPOTENCY_REPLAY" };
+      return { ok: false, code: 'IDEMPOTENCY_REPLAY' };
     }
     await this.deps.markIdempotent(idempotencyKey);
 
@@ -73,7 +73,7 @@ export class WithdrawalService {
     if (!eligibility.eligible) {
       return {
         ok: false,
-        code: "MONETIZATION_NOT_ELIGIBLE",
+        code: 'MONETIZATION_NOT_ELIGIBLE',
         reasons: eligibility.blockedReasons,
       };
     }
@@ -82,7 +82,7 @@ export class WithdrawalService {
     if (eligibility.availableBalanceCents < MINIMUM_WITHDRAWAL_CENTS) {
       return {
         ok: false,
-        code: "MINIMUM_WITHDRAWAL_NOT_REACHED_OR_FUNDS_IN_ESCROW",
+        code: 'MINIMUM_WITHDRAWAL_NOT_REACHED_OR_FUNDS_IN_ESCROW',
         minimumCents: MINIMUM_WITHDRAWAL_CENTS,
         availableCents: eligibility.availableBalanceCents,
       };
@@ -91,28 +91,28 @@ export class WithdrawalService {
     // Zero-Loss Check: Does the territorial pool have actual cash liquidity?
     const hasLiquidity = await this.deps.checkLiquidityPool(
       territoryId,
-      eligibility.availableBalanceCents,
+      eligibility.availableBalanceCents
     );
     if (!hasLiquidity) {
       return {
         ok: false,
-        code: "INSUFFICIENT_LIQUIDITY_POOL",
-        reasons: ["TERRITORIAL_FUNDS_PENDING_CLEARANCE"],
+        code: 'INSUFFICIENT_LIQUIDITY_POOL',
+        reasons: ['TERRITORIAL_FUNDS_PENDING_CLEARANCE'],
       };
     }
 
     const review = await this.deps.runRiskReview(userId);
     await this.deps.appendBookPI({
-      type: review.status === "pass" ? "withdrawal.review.passed" : "withdrawal.held",
+      type: review.status === 'pass' ? 'withdrawal.review.passed' : 'withdrawal.held',
       userId,
       riskScore: review.score,
       idempotencyKey,
     });
 
-    if (review.status === "hold" || review.status === "fraud_detected") {
+    if (review.status === 'hold' || review.status === 'fraud_detected') {
       return {
         ok: false,
-        code: "WITHDRAWAL_UNDER_REVIEW",
+        code: 'WITHDRAWAL_UNDER_REVIEW',
         reviewId: review.reviewId,
       };
     }
@@ -124,7 +124,7 @@ export class WithdrawalService {
     });
 
     await this.deps.appendBookPI({
-      type: "withdrawal.requested",
+      type: 'withdrawal.requested',
       userId,
       payoutId: payout.payoutId,
       amountCents: eligibility.availableBalanceCents,
@@ -138,9 +138,9 @@ export class WithdrawalService {
 export function buildWithdrawalRequest(partial: Partial<WithdrawalRequest>): WithdrawalRequest {
   return {
     payoutId: partial.payoutId ?? randomUUID(),
-    userId: partial.userId ?? "",
+    userId: partial.userId ?? '',
     amountCents: partial.amountCents ?? 0,
-    status: partial.status ?? "scheduled",
+    status: partial.status ?? 'scheduled',
     idempotencyKey: partial.idempotencyKey ?? randomUUID(),
     createdAt: partial.createdAt ?? new Date().toISOString(),
   };

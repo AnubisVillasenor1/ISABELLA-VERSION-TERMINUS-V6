@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import {
   AlertTriangle,
   BrainCircuit,
@@ -11,20 +11,20 @@ import {
   Square,
   Trash2,
   Wrench,
-} from "lucide-react";
-import { Waveform } from "./Waveform";
-import { fileToDataUrl, humanSize, MAX_ATTACHMENT_BYTES, type Attachment } from "@/lib/attachments";
-import { usePerformanceMonitor } from "@/hooks/usePerformanceMonitor";
+} from 'lucide-react';
+import { Waveform } from './Waveform';
+import { fileToDataUrl, humanSize, MAX_ATTACHMENT_BYTES, type Attachment } from '@/lib/attachments';
+import { usePerformanceMonitor } from '@/hooks/usePerformanceMonitor';
 const uid = () => crypto.randomUUID();
-const THEME_KEY = "isabella.cognitive-theme.v1";
+const THEME_KEY = 'isabella.cognitive-theme.v1';
 const themes = {
-  abyss: { label: "Abyss", accent: "electric" },
-  arctic: { label: "Arctic", accent: "cyan" },
-  aurora: { label: "Aurora", accent: "violet" },
-  ember: { label: "Ember", accent: "amber" },
+  abyss: { label: 'Abyss', accent: 'electric' },
+  arctic: { label: 'Arctic', accent: 'cyan' },
+  aurora: { label: 'Aurora', accent: 'violet' },
+  ember: { label: 'Ember', accent: 'amber' },
 } as const;
 type ThemeId = keyof typeof themes;
-export type ExecutionMode = "fast" | "deep_reasoning" | "web_research" | "agent_tools";
+export type ExecutionMode = 'fast' | 'deep_reasoning' | 'web_research' | 'agent_tools';
 export interface ExtendedAttachment extends Attachment {
   tokenEstimate?: number;
 }
@@ -32,7 +32,7 @@ export interface CommandLineProps {
   onSend: (
     value: string,
     attachments: ExtendedAttachment[],
-    config: { mode: ExecutionMode; webSearch: boolean; toolsEnabled: boolean },
+    config: { mode: ExecutionMode; webSearch: boolean; toolsEnabled: boolean }
   ) => void;
   onStop: () => void;
   onReset: () => void;
@@ -71,40 +71,40 @@ function applyTheme(theme: ThemeId) {
 function readTheme(): ThemeId {
   try {
     const stored = localStorage.getItem(THEME_KEY) as ThemeId | null;
-    return stored && stored in themes ? stored : "abyss";
+    return stored && stored in themes ? stored : 'abyss';
   } catch {
-    return "abyss";
+    return 'abyss';
   }
 }
 function sentimentFromText(text: string): { label: string; glyph: string } {
-  const normalized = text.toLocaleLowerCase("es-MX");
-  if (!normalized.trim()) return { label: "EN ESPERA", glyph: "·" };
+  const normalized = text.toLocaleLowerCase('es-MX');
+  if (!normalized.trim()) return { label: 'EN ESPERA', glyph: '·' };
   const risk =
     /\b(error|fallo|riesgo|amenaza|bloquead|peligro|crítico|critico|rechaz|violencia)\b/.test(
-      normalized,
+      normalized
     );
   const positive =
     /\b(listo|correcto|éxito|exito|estable|seguro|avance|resuelto|gracias|excelente)\b/.test(
-      normalized,
+      normalized
     );
-  if (risk) return { label: "ALERTA", glyph: "!" };
-  if (positive) return { label: "ESTABLE", glyph: "+" };
-  return { label: "ANALIZANDO", glyph: "~" };
+  if (risk) return { label: 'ALERTA', glyph: '!' };
+  if (positive) return { label: 'ESTABLE', glyph: '+' };
+  return { label: 'ANALIZANDO', glyph: '~' };
 }
 export function CommandLine({ onSend, onStop, onReset, isProcessing }: CommandLineProps) {
-  const { startTrack } = usePerformanceMonitor("CommandLine");
-  const [value, setValue] = useState("");
+  const { startTrack } = usePerformanceMonitor('CommandLine');
+  const [value, setValue] = useState('');
   const [attachments, setAttachments] = useState<ExtendedAttachment[]>([]);
   const [recording, setRecording] = useState(false);
   const [recSeconds, setRecSeconds] = useState(0);
   const [notice, setNotice] = useState<string | null>(null);
-  const [theme, setTheme] = useState<ThemeId>("abyss");
+  const [theme, setTheme] = useState<ThemeId>('abyss');
   const [showSettings, setShowSettings] = useState(false);
-  const [executionMode, setExecutionMode] = useState<ExecutionMode>("fast");
+  const [executionMode, setExecutionMode] = useState<ExecutionMode>('fast');
   const [webSearchEnabled, setWebSearchEnabled] = useState(true);
   const [toolsEnabled, setToolsEnabled] = useState(true);
   const [showCommandsMenu, setShowCommandsMenu] = useState(false);
-  const [cognitiveText, setCognitiveText] = useState("");
+  const [cognitiveText, setCognitiveText] = useState('');
   const ref = useRef<HTMLTextAreaElement | null>(null);
   const photoRef = useRef<HTMLInputElement | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -117,11 +117,11 @@ export function CommandLine({ onSend, onStop, onReset, isProcessing }: CommandLi
     applyTheme(initial);
     const onStream = (event: Event) => {
       const custom = event as CustomEvent<{ text?: string }>;
-      if (typeof custom.detail?.text === "string")
+      if (typeof custom.detail?.text === 'string')
         setCognitiveText(custom.detail.text.slice(-5000));
     };
-    window.addEventListener("isabella:cognitive-stream", onStream);
-    return () => window.removeEventListener("isabella:cognitive-stream", onStream);
+    window.addEventListener('isabella:cognitive-stream', onStream);
+    return () => window.removeEventListener('isabella:cognitive-stream', onStream);
   }, []);
   useEffect(() => {
     const updateFromStream = () => {
@@ -137,7 +137,7 @@ export function CommandLine({ onSend, onStop, onReset, isProcessing }: CommandLi
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    el.style.height = "0px";
+    el.style.height = '0px';
     el.style.height = `${Math.min(el.scrollHeight, 220)}px`;
   }, [value]);
   useEffect(() => {
@@ -150,7 +150,7 @@ export function CommandLine({ onSend, onStop, onReset, isProcessing }: CommandLi
     if ((!text && attachments.length === 0) || isProcessing) return;
     const stopTrack = startTrack(`Transmit Prompt (${executionMode})`);
     onSend(text, attachments, { mode: executionMode, webSearch: webSearchEnabled, toolsEnabled });
-    setValue("");
+    setValue('');
     setAttachments([]);
     setShowCommandsMenu(false);
     stopTrack();
@@ -167,15 +167,15 @@ export function CommandLine({ onSend, onStop, onReset, isProcessing }: CommandLi
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       const modifier = event.metaKey || event.ctrlKey;
-      if (modifier && event.key.toLowerCase() === "k") {
+      if (modifier && event.key.toLowerCase() === 'k') {
         event.preventDefault();
         ref.current?.focus();
       }
-      if (modifier && event.key === "Enter") {
+      if (modifier && event.key === 'Enter') {
         event.preventDefault();
         submit();
       }
-      if (event.key === "Escape") {
+      if (event.key === 'Escape') {
         if (showSettings) {
           setShowSettings(false);
           return;
@@ -183,13 +183,13 @@ export function CommandLine({ onSend, onStop, onReset, isProcessing }: CommandLi
         if (isProcessing) onStop();
       }
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
   }, [isProcessing, onStop, showSettings, submit]);
   const handleInputChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
     const next = event.target.value;
     setValue(next);
-    setShowCommandsMenu(next.startsWith("/"));
+    setShowCommandsMenu(next.startsWith('/'));
   };
   const addPhotos = async (files: FileList | null) => {
     if (!files) return;
@@ -201,9 +201,9 @@ export function CommandLine({ onSend, onStop, onReset, isProcessing }: CommandLi
       }
       next.push({
         id: uid(),
-        kind: "image",
+        kind: 'image',
         dataUrl: await fileToDataUrl(file),
-        mime: file.type || "image/jpeg",
+        mime: file.type || 'image/jpeg',
         name: file.name,
         size: file.size,
         tokenEstimate: 256,
@@ -213,8 +213,8 @@ export function CommandLine({ onSend, onStop, onReset, isProcessing }: CommandLi
   };
   const startVoiceToText = () => {
     setNotice(null);
-    if (typeof window === "undefined" || !navigator.mediaDevices?.getUserMedia) {
-      setNotice("Este navegador no expone acceso al micrófono.");
+    if (typeof window === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+      setNotice('Este navegador no expone acceso al micrófono.');
       return;
     }
     const Recognition = window.SpeechRecognition ?? window.webkitSpeechRecognition;
@@ -224,25 +224,25 @@ export function CommandLine({ onSend, onStop, onReset, isProcessing }: CommandLi
     }
     try {
       const recognition = new Recognition();
-      recognition.lang = "es-MX";
+      recognition.lang = 'es-MX';
       recognition.continuous = true;
       recognition.interimResults = true;
       let finalText = value;
       recognition.onresult = (event) => {
-        let interim = "";
+        let interim = '';
         for (let i = event.resultIndex; i < event.results.length; i += 1) {
           const result = event.results[i];
-          const transcript = result?.[0]?.transcript ?? "";
+          const transcript = result?.[0]?.transcript ?? '';
           if (result?.[0]?.isFinal) finalText = `${finalText} ${transcript}`.trim();
           else interim += transcript;
         }
-        setValue(`${finalText}${interim ? ` ${interim}` : ""}`.trim());
+        setValue(`${finalText}${interim ? ` ${interim}` : ''}`.trim());
       };
       recognition.onerror = (event) =>
         setNotice(
-          event.error === "not-allowed"
-            ? "Permiso de micrófono denegado."
-            : "No fue posible transcribir la voz.",
+          event.error === 'not-allowed'
+            ? 'Permiso de micrófono denegado.'
+            : 'No fue posible transcribir la voz.'
         );
       recognition.onend = () => {
         setRecording(false);
@@ -253,7 +253,7 @@ export function CommandLine({ onSend, onStop, onReset, isProcessing }: CommandLi
       recognition.start();
     } catch {
       setRecording(false);
-      setNotice("No fue posible iniciar la transcripción de voz.");
+      setNotice('No fue posible iniciar la transcripción de voz.');
     }
   };
   const stopVoiceToText = () => {
@@ -274,15 +274,15 @@ export function CommandLine({ onSend, onStop, onReset, isProcessing }: CommandLi
         stream.getTracks().forEach((track) => track.stop());
         const blob = new Blob(chunksRef.current, { type: recorder.mimeType });
         if (blob.size > MAX_ATTACHMENT_BYTES) {
-          setNotice("La grabación excede el límite de 8 MB.");
+          setNotice('La grabación excede el límite de 8 MB.');
           return;
         }
         const dataUrl = await fileToDataUrl(blob);
         const item: ExtendedAttachment = {
           id: uid(),
-          kind: "audio",
+          kind: 'audio',
           dataUrl,
-          mime: recorder.mimeType || "audio/webm",
+          mime: recorder.mimeType || 'audio/webm',
           name: `nota-voz-${new Date().toISOString().slice(11, 19)}`,
           size: blob.size,
           tokenEstimate: 512,
@@ -294,7 +294,7 @@ export function CommandLine({ onSend, onStop, onReset, isProcessing }: CommandLi
       setRecSeconds(0);
       setRecording(true);
     } catch {
-      setNotice("No se pudo acceder al micrófono. Revisa los permisos.");
+      setNotice('No se pudo acceder al micrófono. Revisa los permisos.');
     }
   };
   const stopAudioNote = () => {
@@ -305,7 +305,7 @@ export function CommandLine({ onSend, onStop, onReset, isProcessing }: CommandLi
   const sentiment = sentimentFromText(cognitiveText);
   const estimatedTokens =
     Math.ceil(value.length / 4) +
-    attachments.reduce((sum, item) => sum + (item.kind === "image" ? 256 : 512), 0);
+    attachments.reduce((sum, item) => sum + (item.kind === 'image' ? 256 : 512), 0);
   return (
     <div className="glass-strong relative flex flex-col gap-3 rounded-3xl border border-border/40 p-4 shadow-glass transition-all sm:p-6">
       {showCommandsMenu && (
@@ -315,16 +315,16 @@ export function CommandLine({ onSend, onStop, onReset, isProcessing }: CommandLi
           </div>
           {(
             [
-              ["/think", "deep_reasoning", BrainCircuit, "Razonamiento profundo"],
-              ["/research", "web_research", Globe, "Investigación web"],
-              ["/agent", "agent_tools", Wrench, "Herramientas y agentes"],
+              ['/think', 'deep_reasoning', BrainCircuit, 'Razonamiento profundo'],
+              ['/research', 'web_research', Globe, 'Investigación web'],
+              ['/agent', 'agent_tools', Wrench, 'Herramientas y agentes'],
             ] as const
           ).map(([command, mode, Icon, label]) => (
             <button
               key={command}
               type="button"
               onClick={() => {
-                setValue("");
+                setValue('');
                 setExecutionMode(mode);
                 setShowCommandsMenu(false);
               }}
@@ -362,7 +362,7 @@ export function CommandLine({ onSend, onStop, onReset, isProcessing }: CommandLi
                   setTheme(id);
                   applyTheme(id);
                 }}
-                className={`rounded-xl border px-3 py-2 text-left transition-all ${theme === id ? "border-electric/60 bg-electric/10 text-electric" : "border-border/30 text-muted-foreground hover:bg-secondary/30"}`}
+                className={`rounded-xl border px-3 py-2 text-left transition-all ${theme === id ? 'border-electric/60 bg-electric/10 text-electric' : 'border-border/30 text-muted-foreground hover:bg-secondary/30'}`}
               >
                 <span className="block font-semibold">{themes[id].label}</span>
                 <span className="text-[8px] uppercase tracking-wider">{themes[id].accent}</span>
@@ -374,7 +374,7 @@ export function CommandLine({ onSend, onStop, onReset, isProcessing }: CommandLi
       <div className="flex items-center justify-between border-b border-border/30 pb-2">
         <div className="flex items-center gap-2">
           <span
-            className={`size-2 rounded-full ${isProcessing ? "animate-ping bg-electric" : recording ? "animate-pulse bg-rose-500" : "bg-emerald-400"}`}
+            className={`size-2 rounded-full ${isProcessing ? 'animate-ping bg-electric' : recording ? 'animate-pulse bg-rose-500' : 'bg-emerald-400'}`}
           />
           <span
             className="font-mono text-[10px] uppercase tracking-[.22em] text-muted-foreground"
@@ -413,7 +413,7 @@ export function CommandLine({ onSend, onStop, onReset, isProcessing }: CommandLi
           onChange={handleInputChange}
           onKeyDown={(event) => {
             if (
-              event.key === "Enter" &&
+              event.key === 'Enter' &&
               !event.shiftKey &&
               !event.nativeEvent.isComposing &&
               event.keyCode !== 229
@@ -435,7 +435,7 @@ export function CommandLine({ onSend, onStop, onReset, isProcessing }: CommandLi
               key={item.id}
               className="glass relative flex items-center gap-2.5 rounded-2xl border border-border/40 bg-secondary/20 px-3 py-2"
             >
-              {item.kind === "image" ? (
+              {item.kind === 'image' ? (
                 <img
                   src={item.dataUrl}
                   alt={`Adjunto ${item.name}`}
@@ -449,7 +449,7 @@ export function CommandLine({ onSend, onStop, onReset, isProcessing }: CommandLi
                   {item.name}
                 </p>
                 <p className="font-mono text-[8.5px] text-muted-foreground">
-                  {item.kind === "image" ? "IMAGEN" : "AUDIO"} · {humanSize(item.size)}
+                  {item.kind === 'image' ? 'IMAGEN' : 'AUDIO'} · {humanSize(item.size)}
                 </p>
               </div>
               <button
@@ -485,7 +485,7 @@ export function CommandLine({ onSend, onStop, onReset, isProcessing }: CommandLi
             className="sr-only"
             onChange={(event) => {
               void addPhotos(event.target.files);
-              event.target.value = "";
+              event.target.value = '';
             }}
           />
           <button
@@ -507,30 +507,30 @@ export function CommandLine({ onSend, onStop, onReset, isProcessing }: CommandLi
             }
             aria-pressed={recording}
             title="Dictado por voz en español mexicano"
-            className={`flex items-center gap-1.5 rounded-xl border p-2 font-mono text-[10px] transition-all ${recording ? "border-rose-500/50 bg-rose-500/15 text-rose-400" : "border-border/30 text-muted-foreground hover:bg-secondary/30 hover:text-platinum"}`}
+            className={`flex items-center gap-1.5 rounded-xl border p-2 font-mono text-[10px] transition-all ${recording ? 'border-rose-500/50 bg-rose-500/15 text-rose-400' : 'border-border/30 text-muted-foreground hover:bg-secondary/30 hover:text-platinum'}`}
           >
             {recording ? (
               <MicOff className="size-3.5" />
             ) : (
               <Mic className="size-3.5 text-electric" />
             )}
-            <span className="hidden sm:inline">{recording ? "Detener" : "Dictar"}</span>
+            <span className="hidden sm:inline">{recording ? 'Detener' : 'Dictar'}</span>
             {recording && <span>{recSeconds}s</span>}
           </button>
           <button
             type="button"
             onClick={() => {
-              setExecutionMode("fast");
+              setExecutionMode('fast');
               setWebSearchEnabled((enabled) => !enabled);
             }}
-            className={`rounded-xl border px-2 py-2 font-mono text-[9px] ${webSearchEnabled ? "border-electric/30 text-electric" : "border-border/30 text-muted-foreground"}`}
+            className={`rounded-xl border px-2 py-2 font-mono text-[9px] ${webSearchEnabled ? 'border-electric/30 text-electric' : 'border-border/30 text-muted-foreground'}`}
           >
             Web
           </button>
           <button
             type="button"
             onClick={() => setToolsEnabled((enabled) => !enabled)}
-            className={`rounded-xl border px-2 py-2 font-mono text-[9px] ${toolsEnabled ? "border-electric/30 text-electric" : "border-border/30 text-muted-foreground"}`}
+            className={`rounded-xl border px-2 py-2 font-mono text-[9px] ${toolsEnabled ? 'border-electric/30 text-electric' : 'border-border/30 text-muted-foreground'}`}
           >
             Tools
           </button>

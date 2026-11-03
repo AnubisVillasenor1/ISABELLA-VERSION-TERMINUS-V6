@@ -22,7 +22,7 @@ export interface FederationEdge {
   toTwin: string;
   scope: string;
   authorized: boolean;
-  reason: "authorized" | "human_approval_required" | "expired" | "unknown_twin";
+  reason: 'authorized' | 'human_approval_required' | 'expired' | 'unknown_twin';
 }
 
 export interface FederationView {
@@ -57,7 +57,7 @@ export function federateDigitalTwins(input: {
 
   for (const node of input.nodes) {
     if (ids.has(node.id)) {
-      throw new Error("FEDERATION_DUPLICATE_TWIN");
+      throw new Error('FEDERATION_DUPLICATE_TWIN');
     }
     ids.add(node.id);
   }
@@ -70,30 +70,28 @@ export function federateDigitalTwins(input: {
   nodes.sort((a, b) => compare(a.id, b.id));
 
   const edges: FederationEdge[] = input.grants.map((grant) => {
-    let reason: FederationEdge["reason"];
+    let reason: FederationEdge['reason'];
     if (!ids.has(grant.fromTwin) || !ids.has(grant.toTwin)) {
-      reason = "unknown_twin";
+      reason = 'unknown_twin';
     } else if (grant.expiresAt !== undefined && grant.expiresAt <= now) {
-      reason = "expired";
+      reason = 'expired';
     } else if (!grant.approvedByHuman) {
-      reason = "human_approval_required";
+      reason = 'human_approval_required';
     } else {
-      reason = "authorized";
+      reason = 'authorized';
     }
     return {
       fromTwin: grant.fromTwin,
       toTwin: grant.toTwin,
       scope: grant.scope,
-      authorized: reason === "authorized",
+      authorized: reason === 'authorized',
       reason,
     };
   });
 
   edges.sort(
     (a, b) =>
-      compare(a.fromTwin, b.fromTwin) ||
-      compare(a.toTwin, b.toTwin) ||
-      compare(a.scope, b.scope),
+      compare(a.fromTwin, b.fromTwin) || compare(a.toTwin, b.toTwin) || compare(a.scope, b.scope)
   );
 
   return { nodes, edges };

@@ -96,11 +96,14 @@ add("RA-022", "BLOCKER",
   "Startup does not seed IKES with the audited placeholder source IDs/hashes.",
   ["src/server.ts"]);
 add("RA-023", "BLOCKER",
-  !!server && /\(req\.url \?\? ""\)\.split\("\?"\)\[0\] === "\/api\/v1\/connectors\/ingest"/.test(server),
-  "Raw webhook bodies are retained only for the signed connector-ingestion route.",
+  !!server &&
+  /\(req\.url \?\? ['"]['"]\)\.split\(['"]\?['"]\)\[0\]/.test(server) &&
+  /pathname === ['"]\/api\/v1\/connectors\/ingest['"]/.test(server) &&
+  /pathname\??\.startsWith\(['"]\/api\/v1\/federation\/webhooks\/['"]\)/.test(server),
+  "Raw webhook bodies are retained only for the signed connector-ingestion and federation webhook routes (never globally).",
   ["src/server.ts"]);
 add("RA-024", "WARN",
-  !!server && /coordinates: null/.test(server) && /coordinatesStatus: "UNVERIFIED"/.test(server),
+  !!server && /coordinates: null/.test(server) && /coordinatesStatus: ['"]UNVERIFIED['"]/.test(server),
   "Territorial skill does not present unverified coordinates as established facts.",
   ["src/server.ts"]);
 const rustLock = await exists("ige-omega/Cargo.lock");
@@ -123,7 +126,7 @@ add("RA-027", "BLOCKER",
   "HTML identifiers are unique so navigation and ARIA references stay deterministic.",
   ["src/ui/index.html"]);
 add("RA-028", "WARN",
-  !!uiJs && /(cinematicDisabled|reducedMotion)/.test(uiJs) && /Copiar respuesta de Isabella/.test(uiJs),
+  !!uiJs && /(cinematicDisabled|reducedMotion)/.test(uiJs) && /copyLastAssistant/.test(uiJs),
   "The workspace is immediately accessible and assistant replies expose a copy action.",
   ["src/ui/app.js"]);
 add("RA-029", "WARN",
@@ -151,7 +154,7 @@ const pipelineRoute = await read("src/routes/pipeline.ts");
 add("RA-032", "BLOCKER",
   !!server && /createRuntimeBookPiStorage\(process\.env\)/.test(server) &&
     /bookpi: pipelineBookPi\.storage/.test(server) &&
-    !!bookPiRuntime && /createPostgresStorage\(pool, "bookpi_events"/.test(bookPiRuntime) &&
+    !!bookPiRuntime && /createPostgresStorage\(pool, ['"]bookpi_events['"]/.test(bookPiRuntime) &&
     /POSTGRES_URL/.test(bookPiRuntime) &&
     /BOOKPI_INTEGRITY_SECRET/.test(bookPiRuntime) &&
     /integritySecret\.length < 32/.test(bookPiRuntime) &&
@@ -183,7 +186,7 @@ add("RA-033", "BLOCKER",
 
 add("RA-034", "BLOCKER",
   !!server && /\/api\/v1\/integrations\/graph/.test(server) &&
-    /authorizeApiToken\(req, res, "GENESIS_ADMIN_API_TOKEN"\)/.test(server) &&
+    /authorizeApiToken\(req, res, ['"]GENESIS_ADMIN_API_TOKEN['"]\)/.test(server) &&
     /readinessEvidence/.test(server) &&
     /legacy ledger; not yet unified/.test(server) &&
     /WIRED describes a code path/.test(server),
@@ -257,10 +260,10 @@ const integrationGraphTests = await read("test/deployment/integration-graph.test
 add("RA-040", "BLOCKER",
   !!server &&
     /\/api\/v1\/integrations\/graph/.test(server) &&
-    /authorizeApiToken\(req, res, "GENESIS_ADMIN_API_TOKEN"\)/.test(server) &&
+    /authorizeApiToken\(req, res, ['"]GENESIS_ADMIN_API_TOKEN['"]\)/.test(server) &&
     /const igeOmegaProbe = await probeIgeOmegaGateway\(process\.env\)/.test(server) &&
-    /id: "ige-omega-rust", state: igeOmegaProbe\.status/.test(server) &&
-    /to: "ige-omega-rust", state: igeOmegaProbe\.status/.test(server) &&
+    /id: ['"]ige-omega-rust['"],\s*state: igeOmegaProbe\.status/.test(server) &&
+    /to: ['"]ige-omega-rust['"],\s*state: igeOmegaProbe\.status/.test(server) &&
     !!integrationGraphTests && /runtime integration graph contract/.test(integrationGraphTests),
   "The authenticated integration graph enumerates connected route surfaces and explicitly labels the Rust workspace as not runtime-linked.",
   ["src/server.ts", "test/deployment/integration-graph.test.ts"]);
@@ -268,9 +271,9 @@ add("RA-040", "BLOCKER",
 const graphSourceTests = await read("test/deployment/integration-graph.test.ts");
 add("RA-041", "BLOCKER",
   !!server &&
-    /const legacyBookpiEvidence = evidenceByName\.get\("bookpi-ledger"\)/.test(server) &&
-    /id: "bookpi-legacy", state: legacyBookpiEvidence\?\.status/.test(server) &&
-    /to: "bookpi-legacy", state: legacyBookpiEvidence\?\.status\?\.toUpperCase/.test(server) &&
+    /const legacyBookpiEvidence = evidenceByName\.get\(['"]bookpi-ledger['"]\)/.test(server) &&
+    /id: ['"]bookpi-legacy['"],\s*state: legacyBookpiEvidence\?\.status/.test(server) &&
+    /to: ['"]bookpi-legacy['"],\s*state: legacyBookpiEvidence\?\.status\?\.toUpperCase/.test(server) &&
     !!graphSourceTests && /uses dependency evidence in edges without leaking out-of-scope state/.test(graphSourceTests),
   "The legacy BookPI node and edge consume the legacy ledger's own readiness evidence, not the pipeline adapter's state.",
   ["src/server.ts", "test/deployment/integration-graph.test.ts"]);
@@ -280,8 +283,8 @@ const igeOmegaGatewayProbeTests = await read("test/ige-omega/gateway-probe.test.
 add("RA-042", "BLOCKER",
   !!igeOmegaGatewayProbe &&
     /IGE_OMEGA_GATEWAY_URL/.test(igeOmegaGatewayProbe) &&
-    /new URL\("health", baseUrl\)/.test(igeOmegaGatewayProbe) &&
-    /new URL\("ready", baseUrl\)/.test(igeOmegaGatewayProbe) &&
+    /new URL\(['"]health['"], baseUrl\)/.test(igeOmegaGatewayProbe) &&
+    /new URL\(['"]ready['"], baseUrl\)/.test(igeOmegaGatewayProbe) &&
     /health-readiness-probe-only/.test(igeOmegaGatewayProbe) &&
     !!igeOmegaGatewayProbeTests && /requires both the public health contract and database readiness/.test(igeOmegaGatewayProbeTests) &&
     /rejects insecure non-local HTTP URLs in production/.test(igeOmegaGatewayProbeTests),

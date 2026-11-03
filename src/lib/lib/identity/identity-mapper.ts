@@ -1,4 +1,4 @@
-import type { Role } from "../rbac";
+import type { Role } from '../rbac';
 
 // ============================================================================
 // IDENTITY MAPPER (src/lib/identity/identity-mapper.ts)
@@ -30,7 +30,7 @@ export interface Principal {
 export function mapToPrincipal(claims: SupabaseClaims): Principal {
   const principal: Principal = {
     userId: claims.sub,
-    tenantId: claims.tenantId ?? "",
+    tenantId: claims.tenantId ?? '',
     role: normalizeRole(claims.role),
     scopes: claims.scope ?? [],
   };
@@ -41,14 +41,14 @@ export function mapToPrincipal(claims: SupabaseClaims): Principal {
 /** Normalización segura de rol (fail-safe a Guest). */
 export function normalizeRole(role?: string): Role {
   switch (role) {
-    case "SovereignOwner":
-    case "Operator":
-    case "Auditor":
-    case "Guest":
-    case "System":
-    case "governance_admin":
+    case 'SovereignOwner':
+    case 'Operator':
+    case 'Auditor':
+    case 'Guest':
+    case 'System':
+    case 'governance_admin':
       return role;
     default:
-      return "Guest";
+      return 'Guest';
   }
 }

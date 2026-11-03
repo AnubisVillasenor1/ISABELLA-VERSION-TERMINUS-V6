@@ -12,20 +12,20 @@ claimRequirements:
   PLANNED:
     minEvidence: 0
     requiredEvidenceTypes: []
-    
+
   DESIGNED:
     minEvidence: 1
     requiredEvidenceTypes:
       - 'ARCHITECTURE_DOCUMENT'
       - 'ADR'
-      
+
   IMPLEMENTED:
     minEvidence: 2
     requiredEvidenceTypes:
       - 'SOURCE_CODE'
       - 'UNIT_TEST'
     minCodeCoverage: 0.80
-    
+
   TESTED:
     minEvidence: 4
     requiredEvidenceTypes:
@@ -35,7 +35,7 @@ claimRequirements:
       - 'SECURITY_TEST'
     minCodeCoverage: 0.90
     stabilityDays: 30
-    
+
   VERIFIED:
     minEvidence: 6
     requiredEvidenceTypes:
@@ -48,7 +48,7 @@ claimRequirements:
     minCodeCoverage: 0.95
     stabilityDays: 90
     externalReviewRequired: true
-    
+
   PRODUCTION-VERIFIED:
     minEvidence: 10
     requiredEvidenceTypes:
@@ -72,7 +72,7 @@ releaseThresholds:
   critical:
     maxOpen: 0
     maxAccepted: 0
-    
+
   high:
     maxOpen: 0
     maxAccepted: 3
@@ -80,11 +80,11 @@ releaseThresholds:
       - 'risk_assessment'
       - 'mitigation_plan'
       - 'owner_approval'
-      
+
   medium:
     maxOpen: 5
     maxAccepted: 10
-    
+
   low:
     maxOpen: 20
     maxAccepted: 50
@@ -94,13 +94,13 @@ requiredGates:
     - 'secret_scan'
     - 'lint'
     - 'typecheck'
-    
+
   preMerge:
     - 'build'
     - 'unit_test'
     - 'integration_test'
     - 'security_scan'
-    
+
   preRelease:
     - 'build'
     - 'unit_test'
@@ -112,7 +112,7 @@ requiredGates:
     - 'security_audit'
     - 'dependency_scan'
     - 'sbom_generation'
-    
+
   postRelease:
     - 'health_check'
     - 'smoke_test'
@@ -127,7 +127,7 @@ claims:
       - 'GIT_HISTORY'
       - 'DESIGN_RECORDS'
       - 'DATED_ARTIFACTS'
-      
+
   CLAIM-002:
     id: 'CLAIM-002'
     title: 'HITL for high-risk operations'
@@ -136,7 +136,7 @@ claims:
       - 'SOURCE_CODE'
       - 'TEST_HITL'
       - 'POLICY_DOCUMENT'
-      
+
   CLAIM-003:
     id: 'CLAIM-003'
     title: 'Tamper-evident audit'
@@ -146,7 +146,7 @@ claims:
       - 'TEST_AUDIT_CHAIN'
       - 'TEST_CONCURRENCY'
       - 'WORM_CONFIG'
-      
+
   CLAIM-004:
     id: 'CLAIM-004'
     title: 'Privacy compliance'

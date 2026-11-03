@@ -1,19 +1,33 @@
-import { createHash, randomUUID } from "node:crypto";
-import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, readFileSync, renameSync, unlinkSync, writeSync } from "node:fs";
-import { dirname } from "node:path";
-import type { RetentionPlan } from "./retention";
+import { createHash, randomUUID } from 'node:crypto';
+import {
+  closeSync,
+  existsSync,
+  fsyncSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  renameSync,
+  unlinkSync,
+  writeSync,
+} from 'node:fs';
+import { dirname } from 'node:path';
+import type { RetentionPlan } from './retention';
 
 function syncDirectory(path: string): void {
-  if (process.platform === "win32") return;
-  const fd = openSync(path, "r");
-  try { fsyncSync(fd); } finally { closeSync(fd); }
+  if (process.platform === 'win32') return;
+  const fd = openSync(path, 'r');
+  try {
+    fsyncSync(fd);
+  } finally {
+    closeSync(fd);
+  }
 }
 
 function writeAll(fd: number, bytes: Buffer): void {
   let offset = 0;
   while (offset < bytes.length) {
     const written = writeSync(fd, bytes, offset, bytes.length - offset, null);
-    if (written <= 0) throw new Error("BOOKPI_WRITE_ZERO_PROGRESS");
+    if (written <= 0) throw new Error('BOOKPI_WRITE_ZERO_PROGRESS');
     offset += written;
   }
 }
@@ -22,11 +36,11 @@ function writeAll(fd: number, bytes: Buffer): void {
 function atomicDurableWrite(path: string, content: string | Uint8Array): void {
   const directory = dirname(path);
   mkdirSync(directory, { recursive: true });
-  const tempPath = path + ".tmp-" + randomUUID();
-  const bytes = typeof content === "string" ? Buffer.from(content, "utf8") : Buffer.from(content);
+  const tempPath = path + '.tmp-' + randomUUID();
+  const bytes = typeof content === 'string' ? Buffer.from(content, 'utf8') : Buffer.from(content);
   let fd: number | null = null;
   try {
-    fd = openSync(tempPath, "wx", 0o600);
+    fd = openSync(tempPath, 'wx', 0o600);
     writeAll(fd, bytes);
     fsyncSync(fd);
     closeSync(fd);
@@ -35,11 +49,21 @@ function atomicDurableWrite(path: string, content: string | Uint8Array): void {
     syncDirectory(directory);
   } catch (error) {
     if (fd !== null) {
-      try { closeSync(fd); } catch { /* preserve the original failure */ }
+      try {
+        closeSync(fd);
+      } catch {
+        /* preserve the original failure */
+      }
     }
-    try { if (existsSync(tempPath)) unlinkSync(tempPath); } catch { /* fail closed on next open */ }
+    try {
+      if (existsSync(tempPath)) unlinkSync(tempPath);
+    } catch {
+      /* fail closed on next open */
+    }
     throw error;
-  } finally { bytes.fill(0); }
+  } finally {
+    bytes.fill(0);
+  }
 }
 
 /** Append one JSONL row and fsync it before the event is published in memory. */
@@ -47,8 +71,8 @@ function appendDurableLine(path: string, line: string): void {
   const directory = dirname(path);
   mkdirSync(directory, { recursive: true });
   const existed = existsSync(path);
-  const fd = openSync(path, "a", 0o600);
-  const bytes = Buffer.from(line, "utf8");
+  const fd = openSync(path, 'a', 0o600);
+  const bytes = Buffer.from(line, 'utf8');
   try {
     writeAll(fd, bytes);
     fsyncSync(fd);
@@ -58,8 +82,6 @@ function appendDurableLine(path: string, line: string): void {
   }
   if (!existed) syncDirectory(directory);
 }
-
-
 
 export interface BookPiEventInput {
   id: string;
@@ -77,10 +99,11 @@ export interface BookPiEvent extends BookPiEventInput {
   sequence: number;
 }
 
-export type BookPiStorageKind = "VOLATILE_IN_MEMORY" | "DURABLE_APPEND_ONLY_JSONL";
+export type BookPiStorageKind = 'VOLATILE_IN_MEMORY' | 'DURABLE_APPEND_ONLY_JSONL';
 
 export interface BookPiVerification {
-  status: "EMPTY_CHAIN" | "VERIFIED_IN_MEMORY_CHAIN" | "VERIFIED_DURABLE_CHAIN" | "INTEGRITY_FAILURE";
+  status:
+    'EMPTY_CHAIN' | 'VERIFIED_IN_MEMORY_CHAIN' | 'VERIFIED_DURABLE_CHAIN' | 'INTEGRITY_FAILURE';
   valid: boolean;
   blocksValidated: number;
   chainHead: string | null;
@@ -107,7 +130,7 @@ export interface BookPiSnapshot extends BookPiVerification {
   count: number;
   events: readonly BookPiEvent[];
   summary: BookPiSummary;
-  ledgerType: "VOLATILE_IN_MEMORY_HASH_CHAIN" | "DURABLE_APPEND_ONLY_JSONL";
+  ledgerType: 'VOLATILE_IN_MEMORY_HASH_CHAIN' | 'DURABLE_APPEND_ONLY_JSONL';
   merkleRoot: null;
 }
 
@@ -121,8 +144,7 @@ export interface BookPiLedgerPort {
   snapshot(): BookPiSnapshot;
 }
 
-const GENESIS_HASH = "0000000000000000000000000000000000000000000000000000000000000000";
-
+const GENESIS_HASH = '0000000000000000000000000000000000000000000000000000000000000000';
 
 function eventPayload(input: BookPiEventInput, previousHash: string) {
   return {
@@ -138,14 +160,25 @@ function eventPayload(input: BookPiEventInput, previousHash: string) {
 }
 
 function hashPayload(payload: ReturnType<typeof eventPayload>): string {
-  return createHash("sha256").update(JSON.stringify(payload)).digest("hex");
+  return createHash('sha256').update(JSON.stringify(payload)).digest('hex');
 }
 
 function assertAppendInput(input: BookPiEventInput): void {
-  if (![input.id, input.timestamp, input.type, input.methodId, input.principal, input.riskTier, input.status].every((value) => value.trim())) {
-    throw new Error("BOOKPI_EVENT_FIELDS_REQUIRED");
+  if (
+    ![
+      input.id,
+      input.timestamp,
+      input.type,
+      input.methodId,
+      input.principal,
+      input.riskTier,
+      input.status,
+    ].every((value) => value.trim())
+  ) {
+    throw new Error('BOOKPI_EVENT_FIELDS_REQUIRED');
   }
-  if (!Number.isFinite(Date.parse(input.timestamp))) throw new Error("BOOKPI_EVENT_TIMESTAMP_INVALID");
+  if (!Number.isFinite(Date.parse(input.timestamp)))
+    throw new Error('BOOKPI_EVENT_TIMESTAMP_INVALID');
 }
 
 function seal(input: BookPiEventInput, sequence: number, previousHash: string): BookPiEvent {
@@ -178,7 +211,7 @@ function verifyEvents(
   events: readonly BookPiEvent[],
   startPrevHash: string,
   storage: BookPiStorageKind,
-  durable: boolean,
+  durable: boolean
 ): BookPiVerification {
   const verifiedAt = new Date().toISOString();
   const diagnostics: string[] = [];
@@ -190,18 +223,45 @@ function verifyEvents(
     const expectedHash = hashPayload(eventPayload(event, event.previousHash));
     if (event.previousHash !== previousHash) {
       diagnostics.push(`Chain broken at block #${index + 1} (${event.id}): previousHash mismatch`);
-      return { status: "INTEGRITY_FAILURE", valid: false, blocksValidated: index, chainHead: events.at(-1)?.hash ?? null, storage, wormEnforced: false, durable, verifiedAt, brokenIndex: index, diagnostics: Object.freeze(diagnostics) };
+      return {
+        status: 'INTEGRITY_FAILURE',
+        valid: false,
+        blocksValidated: index,
+        chainHead: events.at(-1)?.hash ?? null,
+        storage,
+        wormEnforced: false,
+        durable,
+        verifiedAt,
+        brokenIndex: index,
+        diagnostics: Object.freeze(diagnostics),
+      };
     }
     if (event.hash !== expectedHash) {
       diagnostics.push(`Integrity failure at block #${index + 1} (${event.id}): hash mismatch`);
-      return { status: "INTEGRITY_FAILURE", valid: false, blocksValidated: index, chainHead: events.at(-1)?.hash ?? null, storage, wormEnforced: false, durable, verifiedAt, brokenIndex: index, diagnostics: Object.freeze(diagnostics) };
+      return {
+        status: 'INTEGRITY_FAILURE',
+        valid: false,
+        blocksValidated: index,
+        chainHead: events.at(-1)?.hash ?? null,
+        storage,
+        wormEnforced: false,
+        durable,
+        verifiedAt,
+        brokenIndex: index,
+        diagnostics: Object.freeze(diagnostics),
+      };
     }
     previousHash = event.hash;
   }
 
   diagnostics.push(`Chain intact: ${events.length} block(s) validated sequentially`);
   return {
-    status: events.length === 0 ? "EMPTY_CHAIN" : durable ? "VERIFIED_DURABLE_CHAIN" : "VERIFIED_IN_MEMORY_CHAIN",
+    status:
+      events.length === 0
+        ? 'EMPTY_CHAIN'
+        : durable
+          ? 'VERIFIED_DURABLE_CHAIN'
+          : 'VERIFIED_IN_MEMORY_CHAIN',
     valid: true,
     blocksValidated: events.length,
     chainHead: events.at(-1)?.hash ?? null,
@@ -241,7 +301,7 @@ export class InMemoryBookPiLedger {
   }
 
   verify(): BookPiVerification {
-    return verifyEvents(this.events, GENESIS_HASH, "VOLATILE_IN_MEMORY", false);
+    return verifyEvents(this.events, GENESIS_HASH, 'VOLATILE_IN_MEMORY', false);
   }
 
   getSummary(): BookPiSummary {
@@ -254,7 +314,7 @@ export class InMemoryBookPiLedger {
       events: this.list(),
       ...this.verify(),
       summary: this.getSummary(),
-      ledgerType: "VOLATILE_IN_MEMORY_HASH_CHAIN",
+      ledgerType: 'VOLATILE_IN_MEMORY_HASH_CHAIN',
       merkleRoot: null,
     };
   }
@@ -267,15 +327,15 @@ export interface DurableLedgerCheckpoint {
 }
 
 function isRecordLine(value: unknown): value is BookPiEvent {
-  if (typeof value !== "object" || value === null) return false;
+  if (typeof value !== 'object' || value === null) return false;
   const rec = value as Record<string, unknown>;
   return (
-    typeof rec.id === "string" &&
-    typeof rec.timestamp === "string" &&
-    typeof rec.type === "string" &&
-    typeof rec.hash === "string" &&
-    typeof rec.previousHash === "string" &&
-    typeof rec.sequence === "number"
+    typeof rec.id === 'string' &&
+    typeof rec.timestamp === 'string' &&
+    typeof rec.type === 'string' &&
+    typeof rec.hash === 'string' &&
+    typeof rec.previousHash === 'string' &&
+    typeof rec.sequence === 'number'
   );
 }
 
@@ -299,7 +359,7 @@ export class DurableBookPiLedger {
   private checkpoint: DurableLedgerCheckpoint | null = null;
 
   constructor(filePath: string) {
-    if (!filePath.trim()) throw new Error("BOOKPI_LEDGER_PATH_REQUIRED");
+    if (!filePath.trim()) throw new Error('BOOKPI_LEDGER_PATH_REQUIRED');
     this.filePath = filePath;
     this.checkpointPath = `${filePath}.checkpoint.json`;
     this.maintenancePath = `${filePath}.maintenance.pending.json`;
@@ -310,19 +370,25 @@ export class DurableBookPiLedger {
   }
 
   private assertHealthy(): void {
-    if (this.poisoned || existsSync(this.maintenancePath)) throw new Error("BOOKPI_MAINTENANCE_RECOVERY_REQUIRED");
+    if (this.poisoned || existsSync(this.maintenancePath))
+      throw new Error('BOOKPI_MAINTENANCE_RECOVERY_REQUIRED');
   }
 
   private load(): void {
-    if (existsSync(this.maintenancePath)) throw new Error("BOOKPI_MAINTENANCE_RECOVERY_REQUIRED");
+    if (existsSync(this.maintenancePath)) throw new Error('BOOKPI_MAINTENANCE_RECOVERY_REQUIRED');
     if (existsSync(this.checkpointPath)) {
-      const raw = readFileSync(this.checkpointPath, "utf8");
+      const raw = readFileSync(this.checkpointPath, 'utf8');
       const parsed = JSON.parse(raw) as DurableLedgerCheckpoint;
-      if (!Number.isSafeInteger(parsed.archivedCount) || parsed.archivedCount < 0
-        || (parsed.archivedCount === 0 && parsed.lastArchivedHash !== null)
-        || (parsed.archivedCount > 0 && (typeof parsed.lastArchivedHash !== "string" || !/^[a-f0-9]{64}$/i.test(parsed.lastArchivedHash)))
-        || !Number.isFinite(Date.parse(parsed.updatedAt))) {
-        throw new Error("BOOKPI_CHECKPOINT_INVALID");
+      if (
+        !Number.isSafeInteger(parsed.archivedCount) ||
+        parsed.archivedCount < 0 ||
+        (parsed.archivedCount === 0 && parsed.lastArchivedHash !== null) ||
+        (parsed.archivedCount > 0 &&
+          (typeof parsed.lastArchivedHash !== 'string' ||
+            !/^[a-f0-9]{64}$/i.test(parsed.lastArchivedHash))) ||
+        !Number.isFinite(Date.parse(parsed.updatedAt))
+      ) {
+        throw new Error('BOOKPI_CHECKPOINT_INVALID');
       }
       this.checkpoint = parsed;
     }
@@ -331,26 +397,31 @@ export class DurableBookPiLedger {
 
   private readFile(): BookPiEvent[] {
     if (!existsSync(this.filePath)) return [];
-    const raw = readFileSync(this.filePath, "utf8");
+    const raw = readFileSync(this.filePath, 'utf8');
     const events: BookPiEvent[] = [];
-    for (const line of raw.split("\n")) {
+    for (const line of raw.split('\n')) {
       if (!line.trim()) continue;
       const parsed: unknown = JSON.parse(line);
-      if (!isRecordLine(parsed)) throw new Error("BOOKPI_LEDGER_CORRUPT");
+      if (!isRecordLine(parsed)) throw new Error('BOOKPI_LEDGER_CORRUPT');
       events.push(Object.freeze(parsed));
     }
     return events;
   }
 
   private persist(entry: BookPiEvent): void {
-    try { appendDurableLine(this.filePath, JSON.stringify(entry) + "\n"); }
-    catch (error) { this.poisoned = true; throw error; }
+    try {
+      appendDurableLine(this.filePath, JSON.stringify(entry) + '\n');
+    } catch (error) {
+      this.poisoned = true;
+      throw error;
+    }
   }
 
   append(input: BookPiEventInput): BookPiEvent {
     this.assertHealthy();
     assertAppendInput(input);
-    const previousHash = this.events.at(-1)?.hash ?? this.checkpoint?.lastArchivedHash ?? GENESIS_HASH;
+    const previousHash =
+      this.events.at(-1)?.hash ?? this.checkpoint?.lastArchivedHash ?? GENESIS_HASH;
     const sequence = (this.checkpoint?.archivedCount ?? 0) + this.events.length + 1;
     const entry = seal(input, sequence, previousHash);
     this.persist(entry);
@@ -373,18 +444,18 @@ export class DurableBookPiLedger {
   verify(): BookPiVerification {
     this.assertHealthy();
     const startPrevHash = this.checkpoint?.lastArchivedHash ?? GENESIS_HASH;
-    const result = verifyEvents(this.events, startPrevHash, "DURABLE_APPEND_ONLY_JSONL", true);
+    const result = verifyEvents(this.events, startPrevHash, 'DURABLE_APPEND_ONLY_JSONL', true);
     if (!result.valid) return result;
     const baseSequence = this.checkpoint?.archivedCount ?? 0;
     for (let index = 0; index < this.events.length; index += 1) {
       if (this.events[index]?.sequence !== baseSequence + index + 1) {
         return {
           ...result,
-          status: "INTEGRITY_FAILURE",
+          status: 'INTEGRITY_FAILURE',
           valid: false,
           blocksValidated: index,
           brokenIndex: index,
-          diagnostics: Object.freeze(["Sequence discontinuity at retained block #" + (index + 1)]),
+          diagnostics: Object.freeze(['Sequence discontinuity at retained block #' + (index + 1)]),
         };
       }
     }
@@ -403,7 +474,7 @@ export class DurableBookPiLedger {
       events: this.list(),
       ...this.verify(),
       summary: this.getSummary(),
-      ledgerType: "DURABLE_APPEND_ONLY_JSONL",
+      ledgerType: 'DURABLE_APPEND_ONLY_JSONL',
       merkleRoot: null,
     };
   }
@@ -411,19 +482,30 @@ export class DurableBookPiLedger {
   /** Copy the current ledger file to `destPath`. Returns bytes and event count. */
   backup(destPath: string): { path: string; bytes: number; events: number } {
     this.assertHealthy();
-    if (!this.verify().valid) throw new Error("BOOKPI_BACKUP_SOURCE_CORRUPT");
-    const ledgerContents = existsSync(this.filePath) ? readFileSync(this.filePath) : Buffer.alloc(0);
-    try { atomicDurableWrite(destPath, ledgerContents); } finally { ledgerContents.fill(0); }
-    const checkpointBackup = destPath + ".checkpoint.json";
+    if (!this.verify().valid) throw new Error('BOOKPI_BACKUP_SOURCE_CORRUPT');
+    const ledgerContents = existsSync(this.filePath)
+      ? readFileSync(this.filePath)
+      : Buffer.alloc(0);
+    try {
+      atomicDurableWrite(destPath, ledgerContents);
+    } finally {
+      ledgerContents.fill(0);
+    }
+    const checkpointBackup = destPath + '.checkpoint.json';
     if (existsSync(this.checkpointPath)) {
       const checkpointContents = readFileSync(this.checkpointPath);
-      try { atomicDurableWrite(checkpointBackup, checkpointContents); } finally { checkpointContents.fill(0); }
+      try {
+        atomicDurableWrite(checkpointBackup, checkpointContents);
+      } finally {
+        checkpointContents.fill(0);
+      }
     } else if (existsSync(checkpointBackup)) {
       unlinkSync(checkpointBackup);
       syncDirectory(dirname(checkpointBackup));
     }
-    const bytes = readFileSync(destPath).byteLength
-      + (existsSync(checkpointBackup) ? readFileSync(checkpointBackup).byteLength : 0);
+    const bytes =
+      readFileSync(destPath).byteLength +
+      (existsSync(checkpointBackup) ? readFileSync(checkpointBackup).byteLength : 0);
     return { path: destPath, bytes, events: this.events.length };
   }
 
@@ -433,40 +515,49 @@ export class DurableBookPiLedger {
    */
   restore(srcPath: string): { restored: number; valid: boolean } {
     this.assertHealthy();
-    if (!existsSync(srcPath)) throw new Error("BOOKPI_RESTORE_SOURCE_MISSING");
-    const raw = readFileSync(srcPath, "utf8");
+    if (!existsSync(srcPath)) throw new Error('BOOKPI_RESTORE_SOURCE_MISSING');
+    const raw = readFileSync(srcPath, 'utf8');
     const incoming: BookPiEvent[] = [];
-    for (const line of raw.split("\n")) {
+    for (const line of raw.split('\n')) {
       if (!line.trim()) continue;
       const parsed: unknown = JSON.parse(line);
-      if (!isRecordLine(parsed)) throw new Error("BOOKPI_RESTORE_SOURCE_INVALID");
+      if (!isRecordLine(parsed)) throw new Error('BOOKPI_RESTORE_SOURCE_INVALID');
       incoming.push(parsed);
     }
 
     let incomingCheckpoint: DurableLedgerCheckpoint | null = null;
-    const sourceCheckpointPath = srcPath + ".checkpoint.json";
-    const checkpointRaw = existsSync(sourceCheckpointPath) ? readFileSync(sourceCheckpointPath, "utf8") : null;
+    const sourceCheckpointPath = srcPath + '.checkpoint.json';
+    const checkpointRaw = existsSync(sourceCheckpointPath)
+      ? readFileSync(sourceCheckpointPath, 'utf8')
+      : null;
     if (checkpointRaw !== null) {
       const parsed = JSON.parse(checkpointRaw) as DurableLedgerCheckpoint;
-      if (!Number.isSafeInteger(parsed.archivedCount) || parsed.archivedCount < 0
-        || (parsed.archivedCount === 0 && parsed.lastArchivedHash !== null)
-        || (parsed.archivedCount > 0 && (typeof parsed.lastArchivedHash !== "string" || !/^[a-f0-9]{64}$/i.test(parsed.lastArchivedHash)))
-        || !Number.isFinite(Date.parse(parsed.updatedAt))) throw new Error("BOOKPI_RESTORE_CHECKPOINT_INVALID");
+      if (
+        !Number.isSafeInteger(parsed.archivedCount) ||
+        parsed.archivedCount < 0 ||
+        (parsed.archivedCount === 0 && parsed.lastArchivedHash !== null) ||
+        (parsed.archivedCount > 0 &&
+          (typeof parsed.lastArchivedHash !== 'string' ||
+            !/^[a-f0-9]{64}$/i.test(parsed.lastArchivedHash))) ||
+        !Number.isFinite(Date.parse(parsed.updatedAt))
+      )
+        throw new Error('BOOKPI_RESTORE_CHECKPOINT_INVALID');
       incomingCheckpoint = parsed;
     }
     const startHash = incomingCheckpoint?.lastArchivedHash ?? GENESIS_HASH;
-    const verdict = verifyEvents(incoming, startHash, "DURABLE_APPEND_ONLY_JSONL", true);
-    if (!verdict.valid) throw new Error("BOOKPI_RESTORE_SOURCE_CORRUPT");
+    const verdict = verifyEvents(incoming, startHash, 'DURABLE_APPEND_ONLY_JSONL', true);
+    if (!verdict.valid) throw new Error('BOOKPI_RESTORE_SOURCE_CORRUPT');
     const baseSequence = incomingCheckpoint?.archivedCount ?? 0;
     if (incoming.some((event, index) => event.sequence !== baseSequence + index + 1)) {
-      throw new Error("BOOKPI_RESTORE_SEQUENCE_INVALID");
+      throw new Error('BOOKPI_RESTORE_SEQUENCE_INVALID');
     }
 
     const transaction = {
-      operation: "restore",
+      operation: 'restore',
       startedAt: new Date().toISOString(),
-      sourceDigest: createHash("sha256").update(raw).digest("hex"),
-      sourceCheckpointDigest: checkpointRaw === null ? null : createHash("sha256").update(checkpointRaw).digest("hex"),
+      sourceDigest: createHash('sha256').update(raw).digest('hex'),
+      sourceCheckpointDigest:
+        checkpointRaw === null ? null : createHash('sha256').update(checkpointRaw).digest('hex'),
       targetLedger: this.filePath,
       targetCheckpoint: this.checkpointPath,
     };
@@ -492,31 +583,38 @@ export class DurableBookPiLedger {
 
   prune(plan: RetentionPlan): { pruned: number; remaining: number } {
     this.assertHealthy();
-    if (!this.verify().valid) throw new Error("BOOKPI_PRUNE_SOURCE_CORRUPT");
+    if (!this.verify().valid) throw new Error('BOOKPI_PRUNE_SOURCE_CORRUPT');
     if (plan.archived.length === 0) return { pruned: 0, remaining: this.events.length };
-    if (plan.archived.length + plan.kept.length !== this.events.length) throw new Error("BOOKPI_PRUNE_PLAN_MISMATCH");
+    if (plan.archived.length + plan.kept.length !== this.events.length)
+      throw new Error('BOOKPI_PRUNE_PLAN_MISMATCH');
 
     const planned = [...plan.archived, ...plan.kept];
     for (let index = 0; index < this.events.length; index += 1) {
       const actual = this.events[index]!;
       const proposed = planned[index]!;
-      if (!proposed || proposed.id !== actual.id || proposed.sequence !== actual.sequence || proposed.hash !== actual.hash) {
-        throw new Error("BOOKPI_PRUNE_PLAN_MISMATCH");
+      if (
+        !proposed ||
+        proposed.id !== actual.id ||
+        proposed.sequence !== actual.sequence ||
+        proposed.hash !== actual.hash
+      ) {
+        throw new Error('BOOKPI_PRUNE_PLAN_MISMATCH');
       }
     }
     const headArchived = plan.archived.at(-1);
-    if (!headArchived) throw new Error("BOOKPI_PRUNE_PLAN_MISMATCH");
+    if (!headArchived) throw new Error('BOOKPI_PRUNE_PLAN_MISMATCH');
     const firstKept = plan.kept.at(0);
-    if (firstKept && firstKept.previousHash !== headArchived.hash) throw new Error("BOOKPI_PRUNE_PLAN_MISMATCH");
+    if (firstKept && firstKept.previousHash !== headArchived.hash)
+      throw new Error('BOOKPI_PRUNE_PLAN_MISMATCH');
 
-    const body = plan.kept.map((event) => JSON.stringify(event)).join("\n");
+    const body = plan.kept.map((event) => JSON.stringify(event)).join('\n');
     const checkpoint: DurableLedgerCheckpoint = {
       archivedCount: (this.checkpoint?.archivedCount ?? 0) + plan.archived.length,
       lastArchivedHash: headArchived.hash,
       updatedAt: new Date().toISOString(),
     };
     const transaction = {
-      operation: "prune",
+      operation: 'prune',
       startedAt: new Date().toISOString(),
       previousCheckpoint: this.checkpoint,
       nextCheckpoint: checkpoint,
@@ -530,7 +628,7 @@ export class DurableBookPiLedger {
     this.poisoned = true;
     atomicDurableWrite(this.maintenancePath, JSON.stringify(transaction));
     try {
-      atomicDurableWrite(this.filePath, body ? body + "\n" : "");
+      atomicDurableWrite(this.filePath, body ? body + '\n' : '');
       atomicDurableWrite(this.checkpointPath, JSON.stringify(checkpoint));
       unlinkSync(this.maintenancePath);
       syncDirectory(dirname(this.maintenancePath));
@@ -557,7 +655,7 @@ export class DurableBookPiLedger {
  * volatile in-memory chain (documented, not silent).
  */
 export function createAuditLedger(ledgerPath?: string): InMemoryBookPiLedger | DurableBookPiLedger {
-  const path = (ledgerPath ?? process.env.BOOKPI_LEDGER_PATH ?? "").trim();
+  const path = (ledgerPath ?? process.env.BOOKPI_LEDGER_PATH ?? '').trim();
   if (path) return new DurableBookPiLedger(path);
   return new InMemoryBookPiLedger();
 }

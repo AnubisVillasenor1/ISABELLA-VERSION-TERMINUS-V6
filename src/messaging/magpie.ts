@@ -12,10 +12,10 @@
  * Alcance honesto: es un bus **en proceso**. No ofrece durabilidad, reparto
  * distribuido, ni garantías de entrega exactamente-una-vez entre procesos.
  */
-import { sha256 } from "../skills/canonical-json";
+import { sha256 } from '../skills/canonical-json';
 
-export const MAGPIE_SCHEMA_VERSION = "MAGPIE-X-v1";
-export const MAGPIE_WILDCARD = "*";
+export const MAGPIE_SCHEMA_VERSION = 'MAGPIE-X-v1';
+export const MAGPIE_WILDCARD = '*';
 
 export interface MagpieEvent<T = unknown> {
   readonly id: string;
@@ -52,7 +52,8 @@ export class MagpieBus {
   private readonly log: MagpieEvent[] = [];
 
   constructor(private readonly historyLimit = 1_000) {
-    if (!Number.isSafeInteger(historyLimit) || historyLimit < 1) throw new Error("MAGPIE_HISTORY_LIMIT_INVALID");
+    if (!Number.isSafeInteger(historyLimit) || historyLimit < 1)
+      throw new Error('MAGPIE_HISTORY_LIMIT_INVALID');
   }
 
   subscribe<T>(topic: string, handler: MagpieHandler<T>): () => void {
@@ -70,7 +71,7 @@ export class MagpieBus {
 
   publish<T>(input: MagpiePublishInput<T>): MagpieDeliveryReport {
     const topic = this.normalizeTopic(input.topic);
-    if (!input.type.trim()) throw new Error("MAGPIE_TYPE_REQUIRED");
+    if (!input.type.trim()) throw new Error('MAGPIE_TYPE_REQUIRED');
     this.seq += 1;
     const event: MagpieEvent<T> = Object.freeze({
       id: `mpe-${sha256({ topic, type: input.type, seq: this.seq }).slice(0, 24)}`,
@@ -84,7 +85,8 @@ export class MagpieBus {
     });
 
     this.log.push(event);
-    if (this.log.length > this.historyLimit) this.log.splice(0, this.log.length - this.historyLimit);
+    if (this.log.length > this.historyLimit)
+      this.log.splice(0, this.log.length - this.historyLimit);
 
     const targets = new Set<MagpieHandler>([
       ...(this.handlers.get(topic) ?? []),
@@ -122,7 +124,7 @@ export class MagpieBus {
 
   private normalizeTopic(topic: string): string {
     const normalized = topic.trim();
-    if (!normalized) throw new Error("MAGPIE_TOPIC_REQUIRED");
+    if (!normalized) throw new Error('MAGPIE_TOPIC_REQUIRED');
     return normalized;
   }
 }

@@ -1,16 +1,16 @@
-import * as fs from "node:fs";
-import * as path from "node:path";
-import * as crypto from "node:crypto";
-import { Pool } from "pg";
-import { config } from "./config";
-import { SecuritySystem } from "./security";
-import type { ApiKeyRecord } from "./credential-types";
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import * as crypto from 'node:crypto';
+import { Pool } from 'pg';
+import { config } from './config';
+import { SecuritySystem } from './security';
+import type { ApiKeyRecord } from './credential-types';
 
 // ============================================================================
 // CANONICAL SOVEREIGN COGNITIVE & DATA ENGINE - ISABELLA v4.2.0
 // ============================================================================
 
-const PERSISTENCE_FILE_PATH = path.join(process.cwd(), "isabella_sovereign_db.json");
+const PERSISTENCE_FILE_PATH = path.join(process.cwd(), 'isabella_sovereign_db.json');
 
 /**
  * FASE 7 — fail-closed: la persistencia JSON soberana es un mock de archivos.
@@ -23,10 +23,10 @@ const PERSISTENCE_FILE_PATH = path.join(process.cwd(), "isabella_sovereign_db.js
 function assertJsonPersistenceAllowed(): void {
   const cfg = config();
   const isProdLike =
-    cfg.ISABELLA_RUNTIME_MODE === "production" || cfg.ISABELLA_RUNTIME_MODE === "staging";
+    cfg.ISABELLA_RUNTIME_MODE === 'production' || cfg.ISABELLA_RUNTIME_MODE === 'staging';
   if (isProdLike && cfg.DURABLE_JSON_ALLOWED !== true) {
     throw new Error(
-      "JSON SovereignDB persistence is disabled in staging and production (FASE 7). Use the PostgreSQL/Supabase repository as source of truth.",
+      'JSON SovereignDB persistence is disabled in staging and production (FASE 7). Use the PostgreSQL/Supabase repository as source of truth.'
     );
   }
 }
@@ -38,25 +38,25 @@ export interface BookPILedgerBlock {
   tenantId: string;
   userId: string;
   operation: string;
-  category: "inference" | "processing" | "apis" | "skills" | "other" | "REFUND_EVENT";
+  category: 'inference' | 'processing' | 'apis' | 'skills' | 'other' | 'REFUND_EVENT';
   costDecimal: string;
   tokensConsumed: number;
   previousHash: string;
   blockHash: string;
   pqcSignature: string | null;
-  signatureAlgorithm: "ECDSA-P384" | "UNSIGNED_DEV";
-  status: "settled" | "pending" | "refunded";
+  signatureAlgorithm: 'ECDSA-P384' | 'UNSIGNED_DEV';
+  status: 'settled' | 'pending' | 'refunded';
 }
 
 // 2. Multi-Tenancy & Identity Schema (OIDC & RBAC)
-export type UserRole = "SovereignOwner" | "Auditor" | "Operator" | "Guest";
+export type UserRole = 'SovereignOwner' | 'Auditor' | 'Operator' | 'Guest';
 
 export interface Tenant {
   id: string;
   name: string;
   region: string;
   quotaBalance: number; // Real billing credits
-  tier: "Free" | "Enterprise" | "Sovereign";
+  tier: 'Free' | 'Enterprise' | 'Sovereign';
 }
 
 export interface UserSession {
@@ -75,7 +75,7 @@ export interface AuditLog {
   correlationId: string;
   actorIp: string;
   event: string;
-  severity: "S0" | "S1" | "S2" | "S3";
+  severity: 'S0' | 'S1' | 'S2' | 'S3';
   details: string;
   remediated: boolean;
   verificationHash: string; // Cryptographic SHA-256 validation of the event payload
@@ -89,10 +89,10 @@ export interface CognitiveHead {
   domain: string;
   nucleusAlphaCount: number;
   nucleusBetaCount: number;
-  status: "implemented" | "verified" | "experimental" | "shadow";
+  status: 'implemented' | 'verified' | 'experimental' | 'shadow';
   alphaLoad: number; // Carga en tiempo real del núcleo Alpha (Epistémico)
   betaLoad: number; // Carga en tiempo real del núcleo Beta (Cibernético)
-  consensusState: "synchronized" | "evaluating" | "locked" | "idle";
+  consensusState: 'synchronized' | 'evaluating' | 'locked' | 'idle';
 }
 
 // Full Database Schema
@@ -118,7 +118,7 @@ export interface DatabaseSchema {
       withdrawals: {
         payoutId: string;
         amountCents: number;
-        status: "scheduled" | "processed" | "held" | "rejected";
+        status: 'scheduled' | 'processed' | 'held' | 'rejected';
         idempotencyKey: string;
         createdAt: string;
       }[];
@@ -149,7 +149,7 @@ function emptyDatabase(): DatabaseSchema {
 }
 
 /** Hash previo canónico de génesis (bloque raíz). */
-const GENESIS_PREVIOUS_HASH = "0000000000000000000000000000000000000000000000000000000000000000";
+const GENESIS_PREVIOUS_HASH = '0000000000000000000000000000000000000000000000000000000000000000';
 
 // ============================================================================
 // HELPER METHODS: PERSISTENT STORAGE CONTROLLER
@@ -163,8 +163,8 @@ function getPgPool(): Pool | null {
     if (!url) return null;
     if (!pgPool) {
       pgPool = new Pool({ connectionString: url, max: 5 });
-      pgPool.on("error", (err) => {
-        console.error("Unexpected error on idle Sovereign State pool", err);
+      pgPool.on('error', (err) => {
+        console.error('Unexpected error on idle Sovereign State pool', err);
       });
     }
     return pgPool;
@@ -199,9 +199,9 @@ function isProductionRuntime(): boolean {
   try {
     const cfg = config();
     return (
-      cfg.NODE_ENV === "production" ||
-      cfg.ISABELLA_RUNTIME_MODE === "production" ||
-      cfg.ISABELLA_RUNTIME_MODE === "staging"
+      cfg.NODE_ENV === 'production' ||
+      cfg.ISABELLA_RUNTIME_MODE === 'production' ||
+      cfg.ISABELLA_RUNTIME_MODE === 'staging'
     );
   } catch {
     // Sin configuración válida: asumir producción (fail-closed).
@@ -215,10 +215,10 @@ function isProductionRuntime(): boolean {
  * acepta una escritura que no será persistida. Server.ts lo mapea a 503.
  */
 export class DurableStateUnavailableError extends Error {
-  readonly code = "SOVEREIGN_STATE_UNAVAILABLE";
+  readonly code = 'SOVEREIGN_STATE_UNAVAILABLE';
   constructor(message: string, cause?: unknown) {
     super(message, cause === undefined ? undefined : { cause });
-    this.name = "DurableStateUnavailableError";
+    this.name = 'DurableStateUnavailableError';
   }
 }
 
@@ -242,8 +242,8 @@ export class SovereignDB {
     // Fail-closed: si la persistencia anterior falló, no servir estado obsoleto.
     if (isProductionRuntime() && sovereignPersistError) {
       throw new DurableStateUnavailableError(
-        "Sovereign state persistence failed previously; refusing to serve stale/empty state.",
-        sovereignPersistError,
+        'Sovereign state persistence failed previously; refusing to serve stale/empty state.',
+        sovereignPersistError
       );
     }
     if (memoryDb && maxAgeMs > 0 && Date.now() - lastHydratedAt < maxAgeMs) {
@@ -270,13 +270,13 @@ export class SovereignDB {
     const pool = getPgPool();
     if (!pool) {
       throw new DurableStateUnavailableError(
-        "DATABASE_URL missing in production — Sovereign state cannot be durable (fail-closed).",
+        'DATABASE_URL missing in production — Sovereign state cannot be durable (fail-closed).'
       );
     }
     try {
       await ensureStateTable(pool);
       const { rows } = await pool.query(
-        "SELECT payload FROM public.sovereign_state WHERE id = 'canonical' LIMIT 1",
+        "SELECT payload FROM public.sovereign_state WHERE id = 'canonical' LIMIT 1"
       );
       if (rows[0]?.payload) {
         memoryDb = rows[0].payload as DatabaseSchema;
@@ -285,8 +285,8 @@ export class SovereignDB {
       }
     } catch (e) {
       throw new DurableStateUnavailableError(
-        "Failed to hydrate Sovereign state from PostgreSQL in production (fail-closed).",
-        e,
+        'Failed to hydrate Sovereign state from PostgreSQL in production (fail-closed).',
+        e
       );
     }
     // Sin fila: despliegue reciente legítimo. Estado vacío, no un error.
@@ -315,15 +315,15 @@ export class SovereignDB {
       assertJsonPersistenceAllowed();
       try {
         if (fs.existsSync(PERSISTENCE_FILE_PATH)) {
-          const raw = fs.readFileSync(PERSISTENCE_FILE_PATH, "utf8");
+          const raw = fs.readFileSync(PERSISTENCE_FILE_PATH, 'utf8');
           const db = JSON.parse(raw) as DatabaseSchema;
           memoryDb = db;
           return db;
         }
       } catch (e) {
         console.error(
-          "No se pudo cargar la base de datos persistente. Restableciendo estado vacío:",
-          e,
+          'No se pudo cargar la base de datos persistente. Restableciendo estado vacío:',
+          e
         );
       }
       const db = emptyDatabase();
@@ -352,9 +352,9 @@ export class SovereignDB {
         if (!fs.existsSync(dir)) {
           fs.mkdirSync(dir, { recursive: true });
         }
-        fs.writeFileSync(PERSISTENCE_FILE_PATH, JSON.stringify(db, null, 2), "utf8");
+        fs.writeFileSync(PERSISTENCE_FILE_PATH, JSON.stringify(db, null, 2), 'utf8');
       } catch (e) {
-        console.error("Fallo crítico al escribir en la base de datos persistente:", e);
+        console.error('Fallo crítico al escribir en la base de datos persistente:', e);
       }
       return;
     }
@@ -365,7 +365,7 @@ export class SovereignDB {
     const pool = getPgPool();
     if (!pool) {
       throw new DurableStateUnavailableError(
-        "DATABASE_URL missing in production — sovereign state write refused (NOT durable).",
+        'DATABASE_URL missing in production — sovereign state write refused (NOT durable).'
       );
     }
     const payload = JSON.stringify(db);
@@ -375,7 +375,7 @@ export class SovereignDB {
         `INSERT INTO public.sovereign_state (id, payload, version, updated_at)
          VALUES ('canonical', $1::jsonb, 'v1', now())
          ON CONFLICT (id) DO UPDATE SET payload = EXCLUDED.payload, version = 'v1', updated_at = now()`,
-        [payload],
+        [payload]
       );
     };
     persist()
@@ -385,8 +385,8 @@ export class SovereignDB {
       .catch((e) => {
         sovereignPersistError = e instanceof Error ? e : new Error(String(e));
         console.error(
-          "[SovereignDB] Failed to persist sovereign state to Postgres (fail-closed on next op):",
-          sovereignPersistError,
+          '[SovereignDB] Failed to persist sovereign state to Postgres (fail-closed on next op):',
+          sovereignPersistError
         );
       });
   }
@@ -406,7 +406,7 @@ export class SovereignDB {
       `INSERT INTO public.sovereign_state (id, payload, version, updated_at)
        VALUES ('canonical', $1::jsonb, 'v1', now())
        ON CONFLICT (id) DO UPDATE SET payload = EXCLUDED.payload, version = 'v1', updated_at = now()`,
-      [JSON.stringify(db)],
+      [JSON.stringify(db)]
     );
   }
 
@@ -448,9 +448,9 @@ export class SovereignDB {
 
     // Find all refunded indexes via append-only refund event blocks
     for (const item of db.ledger) {
-      if (item.operation.startsWith("REFUND_EVENT: Reembolso de transacción index ")) {
-        const parts = item.operation.split("index ");
-        const idx = parseInt(parts[1] || "", 10);
+      if (item.operation.startsWith('REFUND_EVENT: Reembolso de transacción index ')) {
+        const parts = item.operation.split('index ');
+        const idx = parseInt(parts[1] || '', 10);
         if (!isNaN(idx)) {
           refundedIndexes.add(idx);
         }
@@ -460,8 +460,8 @@ export class SovereignDB {
     return db.ledger
       .filter((item) => item.tenantId === tenantId)
       .map((item) => {
-        if (refundedIndexes.has(item.index) || item.status === "refunded") {
-          return { ...item, status: "refunded" as const };
+        if (refundedIndexes.has(item.index) || item.status === 'refunded') {
+          return { ...item, status: 'refunded' as const };
         }
         return item;
       });
@@ -473,9 +473,9 @@ export class SovereignDB {
 
     // Find all refunded indexes via append-only refund event blocks
     for (const item of db.ledger) {
-      if (item.operation.startsWith("REFUND_EVENT: Reembolso de transacción index ")) {
-        const parts = item.operation.split("index ");
-        const idx = parseInt(parts[1] || "", 10);
+      if (item.operation.startsWith('REFUND_EVENT: Reembolso de transacción index ')) {
+        const parts = item.operation.split('index ');
+        const idx = parseInt(parts[1] || '', 10);
         if (!isNaN(idx)) {
           refundedIndexes.add(idx);
         }
@@ -483,8 +483,8 @@ export class SovereignDB {
     }
 
     return db.ledger.map((item) => {
-      if (refundedIndexes.has(item.index) || item.status === "refunded") {
-        return { ...item, status: "refunded" as const };
+      if (refundedIndexes.has(item.index) || item.status === 'refunded') {
+        return { ...item, status: 'refunded' as const };
       }
       return item;
     });
@@ -495,9 +495,9 @@ export class SovereignDB {
     tenantId: string,
     userId: string,
     operation: string,
-    category: "inference" | "processing" | "apis" | "skills" | "other" | "REFUND_EVENT",
+    category: 'inference' | 'processing' | 'apis' | 'skills' | 'other' | 'REFUND_EVENT',
     cost: number,
-    tokens: number,
+    tokens: number
   ): BookPILedgerBlock {
     const db = this.load();
     const lastBlock = db.ledger[db.ledger.length - 1];
@@ -513,10 +513,10 @@ export class SovereignDB {
     const signingKey = config().BOOKPI_SIGNING_KEY;
     const isProduction = isProductionRuntime();
     if (isProduction && !signingKey) {
-      throw new Error("BookPI requiere BOOKPI_SIGNING_KEY en producción.");
+      throw new Error('BookPI requiere BOOKPI_SIGNING_KEY en producción.');
     }
     const pqcSignature = signingKey
-      ? crypto.sign("sha384", Buffer.from(blockContent), signingKey).toString("base64url")
+      ? crypto.sign('sha384', Buffer.from(blockContent), signingKey).toString('base64url')
       : null;
 
     const newBlock: BookPILedgerBlock = {
@@ -531,8 +531,8 @@ export class SovereignDB {
       previousHash: prevHash,
       blockHash,
       pqcSignature,
-      signatureAlgorithm: signingKey ? "ECDSA-P384" : "UNSIGNED_DEV",
-      status: "settled",
+      signatureAlgorithm: signingKey ? 'ECDSA-P384' : 'UNSIGNED_DEV',
+      status: 'settled',
     };
 
     // Deduct Tenant Credits (Real Billing / Multi-tenancy isolation)
@@ -549,25 +549,25 @@ export class SovereignDB {
   // Safe Refund Process with ledger updates (Append-only transaction event)
   public static appendRefundEvent(
     index: number,
-    tenantId: string,
+    tenantId: string
   ): { success: boolean; error?: string } {
     const db = this.load();
     const block = db.ledger.find((b) => b.index === index);
-    if (!block) return { success: false, error: "Transacción no encontrada." };
+    if (!block) return { success: false, error: 'Transacción no encontrada.' };
     if (block.tenantId !== tenantId)
       return {
         success: false,
-        error: "Violación de tenencia cruzada (Cross-Tenant violation).",
+        error: 'Violación de tenencia cruzada (Cross-Tenant violation).',
       };
 
     // Check if already refunded by checking for the REFUND_EVENT block
     const isAlreadyRefunded = db.ledger.some(
-      (b) => b.operation === `REFUND_EVENT: Reembolso de transacción index ${index}`,
+      (b) => b.operation === `REFUND_EVENT: Reembolso de transacción index ${index}`
     );
-    if (isAlreadyRefunded || block.status === "refunded") {
+    if (isAlreadyRefunded || block.status === 'refunded') {
       return {
         success: false,
-        error: "Esta transacción ya ha sido reembolsada.",
+        error: 'Esta transacción ya ha sido reembolsada.',
       };
     }
 
@@ -587,11 +587,11 @@ export class SovereignDB {
     if (isProduction && !signingKey) {
       return {
         success: false,
-        error: "BookPI requiere BOOKPI_SIGNING_KEY en producción.",
+        error: 'BookPI requiere BOOKPI_SIGNING_KEY en producción.',
       };
     }
     const pqcSignature = signingKey
-      ? crypto.sign("sha384", Buffer.from(blockData), signingKey).toString("base64url")
+      ? crypto.sign('sha384', Buffer.from(blockData), signingKey).toString('base64url')
       : null;
 
     const refundBlock: BookPILedgerBlock = {
@@ -600,14 +600,14 @@ export class SovereignDB {
       tenantId,
       userId: block.userId,
       operation: `REFUND_EVENT: Reembolso de transacción index ${index}`,
-      category: "REFUND_EVENT",
+      category: 'REFUND_EVENT',
       costDecimal,
       tokensConsumed: 0,
       previousHash: prevHash,
       blockHash,
       pqcSignature,
-      signatureAlgorithm: signingKey ? "ECDSA-P384" : "UNSIGNED_DEV",
-      status: "settled",
+      signatureAlgorithm: signingKey ? 'ECDSA-P384' : 'UNSIGNED_DEV',
+      status: 'settled',
     };
 
     db.ledger.push(refundBlock);
@@ -690,7 +690,7 @@ export class SovereignDB {
         if (block.previousHash !== GENESIS_PREVIOUS_HASH) {
           return {
             success: false,
-            error: "Bloque Génesis inválido: Hash previo corrupto.",
+            error: 'Bloque Génesis inválido: Hash previo corrupto.',
             corruptedIndex: 0,
           };
         }
@@ -708,7 +708,7 @@ export class SovereignDB {
       }
 
       // 4. Validate signing policy. Production never accepts unsigned BookPI blocks.
-      if (block.signatureAlgorithm === "UNSIGNED_DEV" || block.pqcSignature === null) {
+      if (block.signatureAlgorithm === 'UNSIGNED_DEV' || block.pqcSignature === null) {
         if (isProductionRuntime()) {
           return {
             success: false,
@@ -720,7 +720,7 @@ export class SovereignDB {
       }
 
       const signingKey = config().BOOKPI_SIGNING_KEY;
-      if (block.signatureAlgorithm !== "ECDSA-P384" || !signingKey) {
+      if (block.signatureAlgorithm !== 'ECDSA-P384' || !signingKey) {
         return {
           success: false,
           error: `Algoritmo o clave BookPI inválidos en bloque ${i}.`,
@@ -730,10 +730,10 @@ export class SovereignDB {
 
       if (
         !crypto.verify(
-          "sha384",
+          'sha384',
           Buffer.from(blockContent),
           signingKey,
-          Buffer.from(block.pqcSignature, "base64url"),
+          Buffer.from(block.pqcSignature, 'base64url')
         )
       ) {
         return {
@@ -753,8 +753,8 @@ export class SovereignDB {
     correlationId: string,
     ip: string,
     event: string,
-    severity: "S0" | "S1" | "S2" | "S3",
-    details: string,
+    severity: 'S0' | 'S1' | 'S2' | 'S3',
+    details: string
   ): AuditLog {
     const db = this.load();
 
@@ -762,9 +762,9 @@ export class SovereignDB {
 
     const id = `evt_${crypto.randomUUID()}`;
     const timestamp = new Date().toISOString();
-    const remediated = severity === "S3" || severity === "S2";
+    const remediated = severity === 'S3' || severity === 'S2';
 
-    const payload = `${id}|${timestamp}|${traceId}|${correlationId}|${ip}|${event}|${severity}|${details}|${remediated ? "true" : "false"}|${previousLogHash}`;
+    const payload = `${id}|${timestamp}|${traceId}|${correlationId}|${ip}|${event}|${severity}|${details}|${remediated ? 'true' : 'false'}|${previousLogHash}`;
     const verificationHash = this.sha256(payload);
 
     const newLog: AuditLog = {
@@ -808,11 +808,11 @@ export class SovereignDB {
         return {
           success: false,
           error: `Evento ausente en la cadena (índice ${i}).`,
-          corruptedId: "unknown",
+          corruptedId: 'unknown',
         };
       }
       const prevLog = logs[i - 1];
-      const expectedPrevHash = i === 0 ? GENESIS_PREVIOUS_HASH : (prevLog?.verificationHash ?? "");
+      const expectedPrevHash = i === 0 ? GENESIS_PREVIOUS_HASH : (prevLog?.verificationHash ?? '');
 
       if (log.previousLogHash !== expectedPrevHash) {
         return {
@@ -822,7 +822,7 @@ export class SovereignDB {
         };
       }
 
-      const payload = `${log.id}|${log.timestamp}|${log.traceId}|${log.correlationId}|${log.actorIp}|${log.event}|${log.severity}|${log.details}|${log.remediated ? "true" : "false"}|${log.previousLogHash}`;
+      const payload = `${log.id}|${log.timestamp}|${log.traceId}|${log.correlationId}|${log.actorIp}|${log.event}|${log.severity}|${log.details}|${log.remediated ? 'true' : 'false'}|${log.previousLogHash}`;
       const recalculatedHash = this.sha256(payload);
 
       if (log.verificationHash !== recalculatedHash) {
@@ -839,7 +839,7 @@ export class SovereignDB {
 
   // SHA-256 string generator helper (Real cryptographic hash)
   private static sha256(input: string): string {
-    return crypto.createHash("sha256").update(input).digest("hex");
+    return crypto.createHash('sha256').update(input).digest('hex');
   }
 
   public static getApiKeys(): ApiKeyRecord[] {
@@ -907,136 +907,136 @@ export class SovereignDB {
 
 export const COGNITIVE_HEADS: CognitiveHead[] = [
   {
-    name: "CROWN Gateway",
-    description: "Orquestación soberana, ruteo ético y arbitraje.",
-    domain: "Sovereign Routing",
+    name: 'CROWN Gateway',
+    description: 'Orquestación soberana, ruteo ético y arbitraje.',
+    domain: 'Sovereign Routing',
     nucleusAlphaCount: 2,
     nucleusBetaCount: 2,
-    status: "implemented",
+    status: 'implemented',
     alphaLoad: 42,
     betaLoad: 38,
-    consensusState: "synchronized",
+    consensusState: 'synchronized',
   },
   {
-    name: "ISA Core",
-    description: "Presencia, empatía, tono y síntesis de audio.",
-    domain: "Emotional Interface",
+    name: 'ISA Core',
+    description: 'Presencia, empatía, tono y síntesis de audio.',
+    domain: 'Emotional Interface',
     nucleusAlphaCount: 2,
     nucleusBetaCount: 2,
-    status: "implemented",
+    status: 'implemented',
     alphaLoad: 88,
     betaLoad: 75,
-    consensusState: "synchronized",
+    consensusState: 'synchronized',
   },
   {
-    name: "SOPHIA Engine",
-    description: "Razonamiento profundo, epistemología y lógica.",
-    domain: "Analytical Logic",
+    name: 'SOPHIA Engine',
+    description: 'Razonamiento profundo, epistemología y lógica.',
+    domain: 'Analytical Logic',
     nucleusAlphaCount: 2,
     nucleusBetaCount: 2,
-    status: "implemented",
+    status: 'implemented',
     alphaLoad: 61,
     betaLoad: 54,
-    consensusState: "synchronized",
+    consensusState: 'synchronized',
   },
   {
-    name: "ORION Engine",
-    description: "Generador operativo, ejecución de herramientas.",
-    domain: "Operational Generation",
+    name: 'ORION Engine',
+    description: 'Generador operativo, ejecución de herramientas.',
+    domain: 'Operational Generation',
     nucleusAlphaCount: 2,
     nucleusBetaCount: 2,
-    status: "implemented",
+    status: 'implemented',
     alphaLoad: 30,
     betaLoad: 82,
-    consensusState: "synchronized",
+    consensusState: 'synchronized',
   },
   {
-    name: "ARGUS Sentinel",
-    description: "Gobernanza, filtros OWASP y veto sistémico.",
-    domain: "Cybersecurity Gate",
+    name: 'ARGUS Sentinel',
+    description: 'Gobernanza, filtros OWASP y veto sistémico.',
+    domain: 'Cybersecurity Gate',
     nucleusAlphaCount: 2,
     nucleusBetaCount: 2,
-    status: "implemented",
+    status: 'implemented',
     alphaLoad: 95,
     betaLoad: 92,
-    consensusState: "synchronized",
+    consensusState: 'synchronized',
   },
   {
-    name: "CHRONOS Index",
-    description: "Preservación del tiempo e indexación cronológica.",
-    domain: "Chronology Indexing",
+    name: 'CHRONOS Index',
+    description: 'Preservación del tiempo e indexación cronológica.',
+    domain: 'Chronology Indexing',
     nucleusAlphaCount: 1,
     nucleusBetaCount: 1,
-    status: "verified",
+    status: 'verified',
     alphaLoad: 12,
     betaLoad: 18,
-    consensusState: "synchronized",
+    consensusState: 'synchronized',
   },
   {
-    name: "ASTRAEA Justice",
-    description: "Cumplimiento del Marco Legal, GDPR y AI Act.",
-    domain: "Compliance Engine",
+    name: 'ASTRAEA Justice',
+    description: 'Cumplimiento del Marco Legal, GDPR y AI Act.',
+    domain: 'Compliance Engine',
     nucleusAlphaCount: 1,
     nucleusBetaCount: 1,
-    status: "verified",
+    status: 'verified',
     alphaLoad: 45,
     betaLoad: 20,
-    consensusState: "synchronized",
+    consensusState: 'synchronized',
   },
   {
-    name: "PYTHIA Forecast",
-    description: "Predicción, tendencias territoriales y GIS.",
-    domain: "Spatial Predictions",
+    name: 'PYTHIA Forecast',
+    description: 'Predicción, tendencias territoriales y GIS.',
+    domain: 'Spatial Predictions',
     nucleusAlphaCount: 1,
     nucleusBetaCount: 1,
-    status: "experimental",
+    status: 'experimental',
     alphaLoad: 15,
     betaLoad: 8,
-    consensusState: "idle",
+    consensusState: 'idle',
   },
   {
-    name: "KRONOS Ledger",
-    description: "Consistencia inmutable del libro de transacciones.",
-    domain: "Cryptographic Ledger",
+    name: 'KRONOS Ledger',
+    description: 'Consistencia inmutable del libro de transacciones.',
+    domain: 'Cryptographic Ledger',
     nucleusAlphaCount: 1,
     nucleusBetaCount: 1,
-    status: "verified",
+    status: 'verified',
     alphaLoad: 74,
     betaLoad: 88,
-    consensusState: "synchronized",
+    consensusState: 'synchronized',
   },
   {
-    name: "HELIOS Power",
-    description: "Gestión de cuotas, límites e infraestructura.",
-    domain: "Telemetry Monitoring",
+    name: 'HELIOS Power',
+    description: 'Gestión de cuotas, límites e infraestructura.',
+    domain: 'Telemetry Monitoring',
     nucleusAlphaCount: 1,
     nucleusBetaCount: 1,
-    status: "experimental",
+    status: 'experimental',
     alphaLoad: 50,
     betaLoad: 45,
-    consensusState: "evaluating",
+    consensusState: 'evaluating',
   },
   {
-    name: "HERMES Canal",
-    description: "Seguridad en canales, tunelización y TLS.",
-    domain: "Secure Communication",
+    name: 'HERMES Canal',
+    description: 'Seguridad en canales, tunelización y TLS.',
+    domain: 'Secure Communication',
     nucleusAlphaCount: 1,
     nucleusBetaCount: 1,
-    status: "experimental",
+    status: 'experimental',
     alphaLoad: 28,
     betaLoad: 31,
-    consensusState: "idle",
+    consensusState: 'idle',
   },
   {
-    name: "DEMETER Soil",
-    description: "Cultura, patrimonio, historia y memorias locales.",
-    domain: "Territorial Heritage",
+    name: 'DEMETER Soil',
+    description: 'Cultura, patrimonio, historia y memorias locales.',
+    domain: 'Territorial Heritage',
     nucleusAlphaCount: 1,
     nucleusBetaCount: 1,
-    status: "experimental",
+    status: 'experimental',
     alphaLoad: 35,
     betaLoad: 15,
-    consensusState: "idle",
+    consensusState: 'idle',
   },
 ];
 
@@ -1049,60 +1049,60 @@ export class CognitiveOrchestrator {
     syntheticResolution: string;
   } {
     const inputLower = input.toLowerCase();
-    let primaryHead = "CROWN Gateway";
+    let primaryHead = 'CROWN Gateway';
     let riskScore = 0.1;
-    const activeCells: string[] = ["Alpha-01", "Alpha-02"];
+    const activeCells: string[] = ['Alpha-01', 'Alpha-02'];
 
     if (
-      inputLower.includes("dinero") ||
-      inputLower.includes("pago") ||
-      inputLower.includes("ledger") ||
-      inputLower.includes("factura") ||
-      inputLower.includes("cuota")
+      inputLower.includes('dinero') ||
+      inputLower.includes('pago') ||
+      inputLower.includes('ledger') ||
+      inputLower.includes('factura') ||
+      inputLower.includes('cuota')
     ) {
-      primaryHead = "KRONOS Ledger";
+      primaryHead = 'KRONOS Ledger';
       riskScore = 0.72;
-      activeCells.push("Beta-03", "Beta-04");
+      activeCells.push('Beta-03', 'Beta-04');
     } else if (
-      inputLower.includes("legal") ||
-      inputLower.includes("ley") ||
-      inputLower.includes("art") ||
-      inputLower.includes("reglamento") ||
-      inputLower.includes("act")
+      inputLower.includes('legal') ||
+      inputLower.includes('ley') ||
+      inputLower.includes('art') ||
+      inputLower.includes('reglamento') ||
+      inputLower.includes('act')
     ) {
-      primaryHead = "ASTRAEA Justice";
+      primaryHead = 'ASTRAEA Justice';
       riskScore = 0.58;
-      activeCells.push("Alpha-05", "Beta-06");
+      activeCells.push('Alpha-05', 'Beta-06');
     } else if (
-      inputLower.includes("hack") ||
-      inputLower.includes("inyectar") ||
-      inputLower.includes("seguridad") ||
-      inputLower.includes("ataque")
+      inputLower.includes('hack') ||
+      inputLower.includes('inyectar') ||
+      inputLower.includes('seguridad') ||
+      inputLower.includes('ataque')
     ) {
-      primaryHead = "ARGUS Sentinel";
+      primaryHead = 'ARGUS Sentinel';
       riskScore = 0.95;
-      activeCells.push("Beta-01", "Beta-02", "Alpha-24");
+      activeCells.push('Beta-01', 'Beta-02', 'Alpha-24');
     } else if (
-      inputLower.includes("territorio") ||
-      inputLower.includes("hidalgo") ||
-      inputLower.includes("monte") ||
-      inputLower.includes("pueblo")
+      inputLower.includes('territorio') ||
+      inputLower.includes('hidalgo') ||
+      inputLower.includes('monte') ||
+      inputLower.includes('pueblo')
     ) {
-      primaryHead = "DEMETER Soil";
+      primaryHead = 'DEMETER Soil';
       riskScore = 0.25;
-      activeCells.push("Alpha-12", "Beta-12");
+      activeCells.push('Alpha-12', 'Beta-12');
     } else if (
-      inputLower.includes("analiza") ||
-      inputLower.includes("calcula") ||
-      inputLower.includes("razona")
+      inputLower.includes('analiza') ||
+      inputLower.includes('calcula') ||
+      inputLower.includes('razona')
     ) {
-      primaryHead = "SOPHIA Engine";
+      primaryHead = 'SOPHIA Engine';
       riskScore = 0.35;
-      activeCells.push("Alpha-03", "Beta-03");
+      activeCells.push('Alpha-03', 'Beta-03');
     }
 
     // Determine synthetic resolution of heads
-    const syntheticResolution = `[Orquestador Cognitivo v4.2.0] Transmitiendo a cabeza primaria: **${primaryHead}** activa. Petición analizada en células: ${activeCells.join(", ")}.`;
+    const syntheticResolution = `[Orquestador Cognitivo v4.2.0] Transmitiendo a cabeza primaria: **${primaryHead}** activa. Petición analizada en células: ${activeCells.join(', ')}.`;
 
     return {
       primaryHead,
@@ -1130,7 +1130,7 @@ const MAX_EXPRESSION_DEPTH = 40;
 type SandboxValue = number | boolean;
 
 interface SandboxToken {
-  kind: "number" | "ident" | "op";
+  kind: 'number' | 'ident' | 'op';
   value: string;
 }
 
@@ -1139,56 +1139,56 @@ function tokenizeExpression(input: string): SandboxToken[] {
   let i = 0;
   while (i < input.length) {
     const ch = input[i]!;
-    if (ch === " " || ch === "\t" || ch === "\r" || ch === "\n") {
+    if (ch === ' ' || ch === '\t' || ch === '\r' || ch === '\n') {
       i += 1;
       continue;
     }
     if (
-      (ch >= "0" && ch <= "9") ||
-      (ch === "." && (input[i + 1] ?? "") >= "0" && (input[i + 1] ?? "") <= "9")
+      (ch >= '0' && ch <= '9') ||
+      (ch === '.' && (input[i + 1] ?? '') >= '0' && (input[i + 1] ?? '') <= '9')
     ) {
       let j = i + 1;
-      while (j < input.length && ((input[j]! >= "0" && input[j]! <= "9") || input[j] === "."))
+      while (j < input.length && ((input[j]! >= '0' && input[j]! <= '9') || input[j] === '.'))
         j += 1;
       const raw = input.slice(i, j);
       if (!Number.isFinite(Number(raw))) {
         throw new Error(`Literal numérico inválido [${raw}].`);
       }
-      tokens.push({ kind: "number", value: raw });
+      tokens.push({ kind: 'number', value: raw });
       i = j;
       continue;
     }
-    if ((ch >= "a" && ch <= "z") || (ch >= "A" && ch <= "Z") || ch === "_" || ch === "$") {
+    if ((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || ch === '_' || ch === '$') {
       let j = i + 1;
       while (
         j < input.length &&
-        ((input[j]! >= "a" && input[j]! <= "z") ||
-          (input[j]! >= "A" && input[j]! <= "Z") ||
-          (input[j]! >= "0" && input[j]! <= "9") ||
-          input[j] === "_" ||
-          input[j] === "$")
+        ((input[j]! >= 'a' && input[j]! <= 'z') ||
+          (input[j]! >= 'A' && input[j]! <= 'Z') ||
+          (input[j]! >= '0' && input[j]! <= '9') ||
+          input[j] === '_' ||
+          input[j] === '$')
       ) {
         j += 1;
       }
-      tokens.push({ kind: "ident", value: input.slice(i, j) });
+      tokens.push({ kind: 'ident', value: input.slice(i, j) });
       i = j;
       continue;
     }
-    if (".+-*/%^(),<>=".includes(ch)) {
+    if ('.+-*/%^(),<>='.includes(ch)) {
       const two = input.slice(i, i + 2);
       if (
-        two === "<=" ||
-        two === ">=" ||
-        two === "==" ||
-        two === "!=" ||
-        two === "&&" ||
-        two === "||"
+        two === '<=' ||
+        two === '>=' ||
+        two === '==' ||
+        two === '!=' ||
+        two === '&&' ||
+        two === '||'
       ) {
-        tokens.push({ kind: "op", value: two });
+        tokens.push({ kind: 'op', value: two });
         i += 2;
         continue;
       }
-      tokens.push({ kind: "op", value: ch });
+      tokens.push({ kind: 'op', value: ch });
       i += 1;
       continue;
     }
@@ -1222,7 +1222,7 @@ class ExpressionEvaluator {
 
   private matchOp(op: string): boolean {
     const t = this.peek();
-    if (t?.kind === "op" && t.value === op) {
+    if (t?.kind === 'op' && t.value === op) {
       this.pos += 1;
       return true;
     }
@@ -1231,7 +1231,7 @@ class ExpressionEvaluator {
 
   private expectOp(op: string): void {
     const t = this.peek();
-    if (t?.kind === "op" && t.value === op) {
+    if (t?.kind === 'op' && t.value === op) {
       this.pos += 1;
       return;
     }
@@ -1244,14 +1244,14 @@ class ExpressionEvaluator {
   }
 
   private toNumber(value: SandboxValue | undefined): number {
-    if (typeof value !== "number") throw new Error("Operación aritmética con valor no numérico.");
+    if (typeof value !== 'number') throw new Error('Operación aritmética con valor no numérico.');
     return value;
   }
 
   private parseOr(depth: number, variables: Record<string, number>): SandboxValue {
     let left = this.parseAnd(depth, variables);
     for (;;) {
-      if (this.matchOp("||")) {
+      if (this.matchOp('||')) {
         const right = this.parseAnd(depth, variables);
         left = this.toNumber(left) !== 0 || this.toNumber(right) !== 0;
       } else break;
@@ -1262,7 +1262,7 @@ class ExpressionEvaluator {
   private parseAnd(depth: number, variables: Record<string, number>): SandboxValue {
     let left = this.parseComparison(depth, variables);
     for (;;) {
-      if (this.matchOp("&&")) {
+      if (this.matchOp('&&')) {
         const right = this.parseComparison(depth, variables);
         left = this.toNumber(left) !== 0 && this.toNumber(right) !== 0;
       } else break;
@@ -1273,28 +1273,28 @@ class ExpressionEvaluator {
   private parseComparison(depth: number, variables: Record<string, number>): SandboxValue {
     const left = this.parseSum(depth, variables);
     const t = this.peek();
-    if (t?.kind === "op") {
-      if (t.value === "<") {
+    if (t?.kind === 'op') {
+      if (t.value === '<') {
         this.pos += 1;
         return this.toNumber(left) < this.toNumber(this.parseSum(depth, variables));
       }
-      if (t.value === "<=") {
+      if (t.value === '<=') {
         this.pos += 1;
         return this.toNumber(left) <= this.toNumber(this.parseSum(depth, variables));
       }
-      if (t.value === ">") {
+      if (t.value === '>') {
         this.pos += 1;
         return this.toNumber(left) > this.toNumber(this.parseSum(depth, variables));
       }
-      if (t.value === ">=") {
+      if (t.value === '>=') {
         this.pos += 1;
         return this.toNumber(left) >= this.toNumber(this.parseSum(depth, variables));
       }
-      if (t.value === "==") {
+      if (t.value === '==') {
         this.pos += 1;
         return this.toNumber(left) === this.toNumber(this.parseSum(depth, variables));
       }
-      if (t.value === "!=") {
+      if (t.value === '!=') {
         this.pos += 1;
         return this.toNumber(left) !== this.toNumber(this.parseSum(depth, variables));
       }
@@ -1305,9 +1305,9 @@ class ExpressionEvaluator {
   private parseSum(depth: number, variables: Record<string, number>): SandboxValue {
     let left = this.toNumber(this.parseProduct(depth, variables));
     for (;;) {
-      if (this.matchOp("+")) {
+      if (this.matchOp('+')) {
         left = left + this.toNumber(this.parseProduct(depth, variables));
-      } else if (this.matchOp("-")) {
+      } else if (this.matchOp('-')) {
         left = left - this.toNumber(this.parseProduct(depth, variables));
       } else break;
     }
@@ -1317,15 +1317,15 @@ class ExpressionEvaluator {
   private parseProduct(depth: number, variables: Record<string, number>): SandboxValue {
     let left = this.toNumber(this.parseUnary(depth, variables));
     for (;;) {
-      if (this.matchOp("*")) {
+      if (this.matchOp('*')) {
         left = left * this.toNumber(this.parseUnary(depth, variables));
-      } else if (this.matchOp("/")) {
+      } else if (this.matchOp('/')) {
         const right = this.toNumber(this.parseUnary(depth, variables));
-        if (right === 0) throw new Error("División por cero no permitida.");
+        if (right === 0) throw new Error('División por cero no permitida.');
         left = left / right;
-      } else if (this.matchOp("%")) {
+      } else if (this.matchOp('%')) {
         const right = this.toNumber(this.parseUnary(depth, variables));
-        if (right === 0) throw new Error("Módulo por cero no permitido.");
+        if (right === 0) throw new Error('Módulo por cero no permitido.');
         left = left % right;
       } else break;
     }
@@ -1333,14 +1333,14 @@ class ExpressionEvaluator {
   }
 
   private parseUnary(depth: number, variables: Record<string, number>): SandboxValue {
-    if (this.matchOp("+")) return this.parseUnary(depth, variables);
-    if (this.matchOp("-")) return -this.toNumber(this.parseUnary(depth, variables));
+    if (this.matchOp('+')) return this.parseUnary(depth, variables);
+    if (this.matchOp('-')) return -this.toNumber(this.parseUnary(depth, variables));
     return this.parsePower(depth, variables);
   }
 
   private parsePower(depth: number, variables: Record<string, number>): SandboxValue {
     const base = this.toNumber(this.parsePrimary(depth, variables));
-    if (this.matchOp("^")) {
+    if (this.matchOp('^')) {
       const exponent = this.toNumber(this.parseUnary(depth, variables));
       return Math.pow(base, exponent);
     }
@@ -1349,39 +1349,39 @@ class ExpressionEvaluator {
 
   private parsePrimary(depth: number, variables: Record<string, number>): SandboxValue {
     if (depth > MAX_EXPRESSION_DEPTH) {
-      throw new Error("Profundidad máxima de expresión excedida.");
+      throw new Error('Profundidad máxima de expresión excedida.');
     }
     const token = this.next();
-    if (!token) throw new Error("Expresión incompleta.");
-    if (token.kind === "number") {
+    if (!token) throw new Error('Expresión incompleta.');
+    if (token.kind === 'number') {
       const value = Number(token.value);
-      if (!Number.isFinite(value)) throw new Error("Literal numérico fuera de rango.");
+      if (!Number.isFinite(value)) throw new Error('Literal numérico fuera de rango.');
       return value;
     }
-    if (token.kind === "op") {
-      if (token.value === "(") {
+    if (token.kind === 'op') {
+      if (token.value === '(') {
         const inner = this.parseOr(depth + 1, variables);
-        this.expectOp(")");
+        this.expectOp(')');
         return inner;
       }
       throw new Error(`Operador no permitido en esta posición [${token.value}].`);
     }
 
     const name = token.value;
-    if (name === "PI") return Math.PI;
+    if (name === 'PI') return Math.PI;
     if (Object.prototype.hasOwnProperty.call(variables, name)) {
       const value = variables[name]!;
-      if (typeof value !== "number" || !Number.isFinite(value)) {
+      if (typeof value !== 'number' || !Number.isFinite(value)) {
         throw new Error(`Variable no numérica [${name}].`);
       }
       return value;
     }
     const next = this.peek();
-    if (next?.kind === "op" && next.value === "." && name === "Math") {
+    if (next?.kind === 'op' && next.value === '.' && name === 'Math') {
       this.pos += 1;
       const fnToken = this.next();
-      if (!fnToken || fnToken.kind !== "ident" || !MATH_FN_NAMES.has(fnToken.value)) {
-        throw new Error("Función Math no autorizada.");
+      if (!fnToken || fnToken.kind !== 'ident' || !MATH_FN_NAMES.has(fnToken.value)) {
+        throw new Error('Función Math no autorizada.');
       }
       return this.callFunction(fnToken.value, depth, variables);
     }
@@ -1394,15 +1394,15 @@ class ExpressionEvaluator {
   private callFunction(
     name: string,
     depth: number,
-    variables: Record<string, number>,
+    variables: Record<string, number>
   ): SandboxValue {
-    this.expectOp("(");
+    this.expectOp('(');
     const args: number[] = [];
-    if (!this.matchOp(")")) {
+    if (!this.matchOp(')')) {
       for (;;) {
         args.push(this.toNumber(this.parseOr(depth + 1, variables)));
-        if (this.matchOp(")")) break;
-        this.expectOp(",");
+        if (this.matchOp(')')) break;
+        this.expectOp(',');
       }
     }
     const single = (): number => {
@@ -1412,33 +1412,33 @@ class ExpressionEvaluator {
       return args[0]!;
     };
     switch (name) {
-      case "abs":
+      case 'abs':
         return Math.abs(single());
-      case "round":
+      case 'round':
         return Math.round(single());
-      case "floor":
+      case 'floor':
         return Math.floor(single());
-      case "ceil":
+      case 'ceil':
         return Math.ceil(single());
-      case "sqrt":
+      case 'sqrt':
         return Math.sqrt(single());
-      case "log":
+      case 'log':
         return Math.log(single());
-      case "exp":
+      case 'exp':
         return Math.exp(single());
-      case "sin":
+      case 'sin':
         return Math.sin(single());
-      case "cos":
+      case 'cos':
         return Math.cos(single());
-      case "tan":
+      case 'tan':
         return Math.tan(single());
-      case "min":
+      case 'min':
         if (args.length < 1) throw new Error(`Función [${name}] requiere al menos 1 argumento.`);
         return Math.min(...args);
-      case "max":
+      case 'max':
         if (args.length < 1) throw new Error(`Función [${name}] requiere al menos 1 argumento.`);
         return Math.max(...args);
-      case "pow":
+      case 'pow':
         if (args.length !== 2)
           throw new Error(`Función [${name}] requiere exactamente 2 argumentos.`);
         return Math.pow(args[0]!, args[1]!);
@@ -1449,26 +1449,26 @@ class ExpressionEvaluator {
 }
 
 const MATH_FN_NAMES = new Set<string>([
-  "abs",
-  "round",
-  "floor",
-  "ceil",
-  "sqrt",
-  "log",
-  "exp",
-  "sin",
-  "cos",
-  "tan",
-  "min",
-  "max",
-  "pow",
+  'abs',
+  'round',
+  'floor',
+  'ceil',
+  'sqrt',
+  'log',
+  'exp',
+  'sin',
+  'cos',
+  'tan',
+  'min',
+  'max',
+  'pow',
 ]);
 
 export class SovereignSandbox {
   // Executes mathematical expressions and simple data mappings in a safe sandboxed context
   public static executeTool(
     codeExpression: string,
-    variables: Record<string, unknown> = {},
+    variables: Record<string, unknown> = {}
   ): {
     success: boolean;
     output?: unknown;
@@ -1481,7 +1481,7 @@ export class SovereignSandbox {
         if (charCode < 32 || charCode > 126) {
           return {
             success: false,
-            error: "Violación de sandbox: Caracteres de control o no-ASCII prohibidos.",
+            error: 'Violación de sandbox: Caracteres de control o no-ASCII prohibidos.',
           };
         }
       }
@@ -1489,7 +1489,7 @@ export class SovereignSandbox {
       if (codeExpression.length === 0 || codeExpression.length > 1000) {
         return {
           success: false,
-          error: "Violación de sandbox: Longitud de expresión no permitida.",
+          error: 'Violación de sandbox: Longitud de expresión no permitida.',
         };
       }
 
@@ -1502,7 +1502,7 @@ export class SovereignSandbox {
             error: `Violación de sandbox: Nombre de variable no autorizado [${key}].`,
           };
         }
-        if (typeof value !== "number" || !Number.isFinite(value)) {
+        if (typeof value !== 'number' || !Number.isFinite(value)) {
           return {
             success: false,
             error: `Violación de sandbox: Variable no numérica [${key}].`,

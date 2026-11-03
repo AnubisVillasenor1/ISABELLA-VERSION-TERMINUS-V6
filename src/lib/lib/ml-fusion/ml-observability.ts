@@ -3,14 +3,14 @@
  * ═════════════════════════════════════════════════════════════════════
  */
 
-import type { CopilotMLSignal, NCUASignal } from "./copilot-ml-engine";
+import type { CopilotMLSignal, NCUASignal } from './copilot-ml-engine';
 
 export interface MLMetrics {
   totalRequests: number;
   copilotAverageConfidence: number;
   ncuaAverageConfidence: number;
   fusionAverageConfidence: number;
-  decisionDistribution: Record<"allow" | "requires_approval" | "deny", number>;
+  decisionDistribution: Record<'allow' | 'requires_approval' | 'deny', number>;
   categoryDistribution: Record<string, number>;
   lastUpdated: Date;
 }
@@ -30,8 +30,8 @@ export class MLObservabilityEngine {
     copilotSignal: CopilotMLSignal,
     ncuaSignal: NCUASignal,
     fusedConfidence: number,
-    decision: "allow" | "requires_approval" | "deny",
-    category: string,
+    decision: 'allow' | 'requires_approval' | 'deny',
+    category: string
   ): void {
     const n = this.metrics.totalRequests;
 

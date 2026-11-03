@@ -1,4 +1,4 @@
-import { MODULES, MODULE_ORDER, type ModuleId, type RoutingDecision } from "@/lib/crown-ui";
+import { MODULES, MODULE_ORDER, type ModuleId, type RoutingDecision } from '@/lib/crown-ui';
 
 export function ModuleRail({
   decision,
@@ -25,7 +25,7 @@ export function ModuleRail({
             <div className="flex items-baseline justify-between gap-2">
               <div className="flex items-center gap-2">
                 <span
-                  className={`size-1.5 rounded-full ${active && isPrimary ? "animate-breathe" : ""}`}
+                  className={`size-1.5 rounded-full ${active && isPrimary ? 'animate-breathe' : ''}`}
                   style={{ background: mod.color }}
                 />
                 <span

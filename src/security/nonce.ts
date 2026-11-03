@@ -6,7 +6,7 @@
  * and compared with `timingSafeEqual`. Nonces are public anti-replay values,
  * not secrets, so constant-time comparison is defence-in-depth only.
  */
-import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
+import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 
 export interface NonceRegistryOptions {
   /** Time-to-live for each claimed nonce, in milliseconds. */
@@ -35,19 +35,20 @@ interface NonceEntry {
 
 /** Cryptographically random nonce (256 bits, base64url). */
 export function nonce(): string {
-  return randomBytes(32).toString("base64url");
+  return randomBytes(32).toString('base64url');
 }
 
 function digestOf(value: string): Buffer {
-  return createHash("sha256").update(value, "utf8").digest();
+  return createHash('sha256').update(value, 'utf8').digest();
 }
 
 export function createNonceRegistry(options: NonceRegistryOptions): NonceRegistry {
   const { ttlMs } = options;
-  if (!Number.isFinite(ttlMs) || ttlMs <= 0) throw new Error("NONCE: ttlMs must be a positive number.");
+  if (!Number.isFinite(ttlMs) || ttlMs <= 0)
+    throw new Error('NONCE: ttlMs must be a positive number.');
   const maxEntries = options.maxEntries ?? 100_000;
   if (!Number.isInteger(maxEntries) || maxEntries < 1) {
-    throw new Error("NONCE: maxEntries must be a positive integer.");
+    throw new Error('NONCE: maxEntries must be a positive integer.');
   }
   const now = options.now ?? Date.now;
   const entries = new Map<string, NonceEntry>();
@@ -65,24 +66,24 @@ export function createNonceRegistry(options: NonceRegistryOptions): NonceRegistr
   }
 
   function has(value: string): boolean {
-    if (typeof value !== "string" || value.length === 0) return false;
+    if (typeof value !== 'string' || value.length === 0) return false;
     const digest = digestOf(value);
-    const entry = entries.get(digest.toString("hex"));
+    const entry = entries.get(digest.toString('hex'));
     if (!entry) return false;
     if (entry.expiresAt <= now()) {
-      entries.delete(digest.toString("hex"));
+      entries.delete(digest.toString('hex'));
       return false;
     }
     return timingSafeEqual(entry.digest, digest);
   }
 
   function claim(value: string): boolean {
-    if (typeof value !== "string" || value.length === 0) {
-      throw new Error("NONCE: nonce must be a non-empty string.");
+    if (typeof value !== 'string' || value.length === 0) {
+      throw new Error('NONCE: nonce must be a non-empty string.');
     }
     const current = now();
     const digest = digestOf(value);
-    const key = digest.toString("hex");
+    const key = digest.toString('hex');
     const entry = entries.get(key);
     if (entry) {
       if (entry.expiresAt > current && timingSafeEqual(entry.digest, digest)) {
@@ -91,7 +92,7 @@ export function createNonceRegistry(options: NonceRegistryOptions): NonceRegistr
       entries.delete(key);
     }
     prune();
-    if (entries.size >= maxEntries) throw new Error("NONCE: registry capacity exceeded.");
+    if (entries.size >= maxEntries) throw new Error('NONCE: registry capacity exceeded.');
     entries.set(key, { expiresAt: current + ttlMs, digest });
     return true;
   }

@@ -1,9 +1,9 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Activity, Radio, Sparkles, Volume2, Waves, type LucideIcon } from "lucide-react";
-import { useCrown } from "../../context/CrownContext";
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Activity, Radio, Sparkles, Volume2, Waves, type LucideIcon } from 'lucide-react';
+import { useCrown } from '../../context/CrownContext';
 
-export type OscilloscopeMode = "beam" | "spectrum" | "harmonic" | "particles";
-export type OscilloscopeVariant = "terminal" | "footer" | "standalone";
+export type OscilloscopeMode = 'beam' | 'spectrum' | 'harmonic' | 'particles';
+export type OscilloscopeVariant = 'terminal' | 'footer' | 'standalone';
 
 interface OscilloscopeWaveformProps {
   height?: number;
@@ -31,7 +31,7 @@ type StateProfile = {
   energy: number;
   speed: number;
   active: boolean;
-  tone: "idle" | "processing" | "speaking" | "listening";
+  tone: 'idle' | 'processing' | 'speaking' | 'listening';
 };
 
 type CanvasRuntime = {
@@ -51,10 +51,10 @@ const MODE_OPTIONS: ReadonlyArray<{
   label: string;
   Icon: LucideIcon;
 }> = [
-  { mode: "harmonic", label: "Ondas armónicas", Icon: Waves },
-  { mode: "beam", label: "Haz de osciloscopio", Icon: Activity },
-  { mode: "spectrum", label: "Espectro de frecuencia", Icon: Radio },
-  { mode: "particles", label: "Campo de partículas", Icon: Sparkles },
+  { mode: 'harmonic', label: 'Ondas armónicas', Icon: Waves },
+  { mode: 'beam', label: 'Haz de osciloscopio', Icon: Activity },
+  { mode: 'spectrum', label: 'Espectro de frecuencia', Icon: Radio },
+  { mode: 'particles', label: 'Campo de partículas', Icon: Sparkles },
 ];
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
@@ -80,18 +80,18 @@ const getProfile = (
   isProcessing: boolean,
   isSpeaking: boolean,
   isListening: boolean,
-  activeModuleId?: string | null,
+  activeModuleId?: string | null
 ): StateProfile => {
   if (isSpeaking) {
     return {
-      label: "SÍNTESIS DE AUDIO · VOZ DE ISABELLA",
-      shortLabel: "TTS · 48 kHz",
+      label: 'SÍNTESIS DE AUDIO · VOZ DE ISABELLA',
+      shortLabel: 'TTS · 48 kHz',
       primary: { hue: 334, saturation: 92, lightness: 68 },
       secondary: { hue: 42, saturation: 92, lightness: 62 },
       energy: 1.85,
       speed: 0.105,
       active: true,
-      tone: "speaking",
+      tone: 'speaking',
     };
   }
 
@@ -114,51 +114,51 @@ const getProfile = (
         { hue: 175, saturation: 80, lightness: 58 },
       ],
     };
-    const [primary, secondary] = modulePalette[activeModuleId ?? ""] ?? [
+    const [primary, secondary] = modulePalette[activeModuleId ?? ''] ?? [
       { hue: 215, saturation: 92, lightness: 65 },
       { hue: 45, saturation: 90, lightness: 62 },
     ];
 
     return {
-      label: `PROCESAMIENTO COGNITIVO · ${activeModuleId || "CROWN"}`,
-      shortLabel: "NEURAL · 120 Hz",
+      label: `PROCESAMIENTO COGNITIVO · ${activeModuleId || 'CROWN'}`,
+      shortLabel: 'NEURAL · 120 Hz',
       primary,
       secondary,
       energy: 1.5,
       speed: 0.087,
       active: true,
-      tone: "processing",
+      tone: 'processing',
     };
   }
 
   if (isListening) {
     return {
-      label: "RECEPTOR ACÚSTICO · ESCUCHANDO",
-      shortLabel: "MIC · ACTIVE",
+      label: 'RECEPTOR ACÚSTICO · ESCUCHANDO',
+      shortLabel: 'MIC · ACTIVE',
       primary: { hue: 12, saturation: 94, lightness: 62 },
       secondary: { hue: 38, saturation: 92, lightness: 60 },
       energy: 1.3,
       speed: 0.068,
       active: true,
-      tone: "listening",
+      tone: 'listening',
     };
   }
 
   return {
-    label: "OSCILOSCOPIO CROWN · PORTADORA EN FASE",
-    shortLabel: "STANDBY",
+    label: 'OSCILOSCOPIO CROWN · PORTADORA EN FASE',
+    shortLabel: 'STANDBY',
     primary: { hue: 215, saturation: 88, lightness: 63 },
     secondary: { hue: 45, saturation: 82, lightness: 58 },
     energy: 0.4,
     speed: 0.024,
     active: false,
-    tone: "idle",
+    tone: 'idle',
   };
 };
 
 const drawGrid = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
   ctx.save();
-  ctx.strokeStyle = "rgba(255,255,255,0.035)";
+  ctx.strokeStyle = 'rgba(255,255,255,0.035)';
   ctx.lineWidth = 1;
 
   for (let x = 0; x <= width; x += 32) {
@@ -179,7 +179,7 @@ const drawGrid = (ctx: CanvasRenderingContext2D, width: number, height: number) 
 
 const drawBaseline = (ctx: CanvasRenderingContext2D, width: number, centerY: number) => {
   ctx.save();
-  ctx.strokeStyle = "rgba(255,255,255,0.11)";
+  ctx.strokeStyle = 'rgba(255,255,255,0.11)';
   ctx.lineWidth = 1;
   ctx.setLineDash([4, 5]);
   ctx.beginPath();
@@ -196,8 +196,8 @@ const drawWave = (
   centerY: number,
   profile: StateProfile,
   phase: number,
-  mode: "beam" | "harmonic",
-  reducedMotion: boolean,
+  mode: 'beam' | 'harmonic',
+  reducedMotion: boolean
 ) => {
   const step = width < 420 ? 3 : 2;
   const envelope = (x: number) => Math.sin((x / width) * Math.PI);
@@ -208,7 +208,7 @@ const drawWave = (
     alpha: number,
     amplitude: number,
     equation: (normalizedX: number) => number,
-    glow = 0,
+    glow = 0
   ) => {
     ctx.save();
     ctx.strokeStyle = rgba(color, alpha);
@@ -233,7 +233,7 @@ const drawWave = (
     ctx.restore();
   };
 
-  if (mode === "beam") {
+  if (mode === 'beam') {
     trace(
       profile.primary,
       6,
@@ -242,10 +242,10 @@ const drawWave = (
       (x) => {
         const f1 = Math.sin(x * 24 + phase * 2.2);
         const f2 = Math.sin(x * 48 - phase * 3.1) * 0.4;
-        const f3 = profile.tone === "speaking" ? Math.sin(x * 96 + phase * 4.5) * 0.2 : 0;
+        const f3 = profile.tone === 'speaking' ? Math.sin(x * 96 + phase * 4.5) * 0.2 : 0;
         return f1 + f2 + f3;
       },
-      profile.active ? 18 : 6,
+      profile.active ? 18 : 6
     );
     trace(
       profile.primary,
@@ -255,10 +255,10 @@ const drawWave = (
       (x) => {
         const f1 = Math.sin(x * 24 + phase * 2.2);
         const f2 = Math.sin(x * 48 - phase * 3.1) * 0.4;
-        const f3 = profile.tone === "speaking" ? Math.sin(x * 96 + phase * 4.5) * 0.2 : 0;
+        const f3 = profile.tone === 'speaking' ? Math.sin(x * 96 + phase * 4.5) * 0.2 : 0;
         return f1 + f2 + f3;
       },
-      6,
+      6
     );
     trace(
       profile.primary,
@@ -268,10 +268,10 @@ const drawWave = (
       (x) => {
         const f1 = Math.sin(x * 24 + phase * 2.2);
         const f2 = Math.sin(x * 48 - phase * 3.1) * 0.4;
-        const f3 = profile.tone === "speaking" ? Math.sin(x * 96 + phase * 4.5) * 0.2 : 0;
+        const f3 = profile.tone === 'speaking' ? Math.sin(x * 96 + phase * 4.5) * 0.2 : 0;
         return f1 + f2 + f3;
       },
-      2,
+      2
     );
     return;
   }
@@ -281,7 +281,7 @@ const drawWave = (
     1.6,
     profile.active ? 0.62 : 0.22,
     height * 0.29,
-    (x) => Math.sin(x * 14 + phase) * Math.cos(x * 8 - phase * 0.6),
+    (x) => Math.sin(x * 14 + phase) * Math.cos(x * 8 - phase * 0.6)
   );
 
   trace(
@@ -289,7 +289,7 @@ const drawWave = (
     1.1,
     profile.active ? 0.4 : 0.13,
     height * 0.23,
-    (x) => Math.cos(x * 20 - phase * 1.4) * Math.sin(x * 6 + phase * 0.4),
+    (x) => Math.cos(x * 20 - phase * 1.4) * Math.sin(x * 6 + phase * 0.4)
   );
 
   trace(
@@ -299,11 +299,11 @@ const drawWave = (
     height * 0.33,
     (x) => {
       const carrier = Math.sin(x * 18 + phase * 1.6);
-      const harmonic = Math.sin(x * 36 - phase * 2.4) * (profile.tone === "speaking" ? 0.45 : 0.3);
-      const overtone = profile.tone === "speaking" ? Math.sin(x * 72 + phase * 3.8) * 0.2 : 0;
+      const harmonic = Math.sin(x * 36 - phase * 2.4) * (profile.tone === 'speaking' ? 0.45 : 0.3);
+      const overtone = profile.tone === 'speaking' ? Math.sin(x * 72 + phase * 3.8) * 0.2 : 0;
       return carrier + harmonic + overtone;
     },
-    profile.active ? 14 : 5,
+    profile.active ? 14 : 5
   );
 };
 
@@ -313,7 +313,7 @@ const drawSpectrum = (
   height: number,
   profile: StateProfile,
   phase: number,
-  bars: Float32Array,
+  bars: Float32Array
 ) => {
   const gap = 2;
   const barWidth = Math.max(1, width / BAR_COUNT - gap);
@@ -334,12 +334,12 @@ const drawSpectrum = (
 
     gradient.addColorStop(
       0,
-      rgba({ hue, saturation: 92, lightness: 70 }, profile.active ? 0.92 : 0.38),
+      rgba({ hue, saturation: 92, lightness: 70 }, profile.active ? 0.92 : 0.38)
     );
     gradient.addColorStop(0.5, rgba(profile.secondary, profile.active ? 0.68 : 0.24));
     gradient.addColorStop(
       1,
-      rgba({ hue, saturation: 92, lightness: 70 }, profile.active ? 0.92 : 0.38),
+      rgba({ hue, saturation: 92, lightness: 70 }, profile.active ? 0.92 : 0.38)
     );
 
     ctx.fillStyle = gradient;
@@ -359,7 +359,7 @@ const drawParticles = (
   height: number,
   profile: StateProfile,
   phase: number,
-  particles: Particle[],
+  particles: Particle[]
 ) => {
   const centerY = height / 2;
 
@@ -397,7 +397,7 @@ const drawParticles = (
     ctx.arc(particle.x, particle.y, particle.radius * (profile.active ? 1.45 : 1), 0, TAU);
     ctx.fillStyle = rgba(
       { hue, saturation: 92, lightness: 72 },
-      particle.alpha * (profile.active ? 0.9 : 0.42),
+      particle.alpha * (profile.active ? 0.9 : 0.42)
     );
     ctx.shadowColor = rgba(profile.primary, 0.65);
     ctx.shadowBlur = 8;
@@ -408,10 +408,10 @@ const drawParticles = (
 
 export const OscilloscopeWaveform: React.FC<OscilloscopeWaveformProps> = ({
   height = 54,
-  className = "",
+  className = '',
   showControls = true,
   compact = false,
-  variant = "terminal",
+  variant = 'terminal',
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const runtimeRef = useRef<CanvasRuntime>({
@@ -420,28 +420,28 @@ export const OscilloscopeWaveform: React.FC<OscilloscopeWaveformProps> = ({
     bars: new Float32Array(BAR_COUNT).fill(0.1),
     particles: createParticles(DEFAULT_WIDTH, height),
   });
-  const [visualMode, setVisualMode] = useState<OscilloscopeMode>("harmonic");
+  const [visualMode, setVisualMode] = useState<OscilloscopeMode>('harmonic');
   const [reducedMotion, setReducedMotion] = useState(false);
   const { state, activeModuleId } = useCrown();
   const { isProcessing, isSpeaking, isListening, speechSynthesisEnabled } = state;
 
   const profile = useMemo(
     () => getProfile(isProcessing, isSpeaking, isListening, activeModuleId),
-    [isProcessing, isSpeaking, isListening, activeModuleId],
+    [isProcessing, isSpeaking, isListening, activeModuleId]
   );
 
   useEffect(() => {
-    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
     const update = () => setReducedMotion(media.matches);
     update();
-    media.addEventListener("change", update);
-    return () => media.removeEventListener("change", update);
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
   }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const context = canvas.getContext("2d", { alpha: true });
+    const context = canvas.getContext('2d', { alpha: true });
     if (!context) return;
 
     let frameId = 0;
@@ -492,9 +492,9 @@ export const OscilloscopeWaveform: React.FC<OscilloscopeWaveformProps> = ({
       context.clearRect(0, 0, width, logicalHeight);
       drawGrid(context, width, logicalHeight);
 
-      if (visualMode === "spectrum") {
+      if (visualMode === 'spectrum') {
         drawSpectrum(context, width, logicalHeight, profile, runtime.phase, runtime.bars);
-      } else if (visualMode === "particles") {
+      } else if (visualMode === 'particles') {
         drawParticles(context, width, logicalHeight, profile, runtime.phase, runtime.particles);
       } else {
         drawWave(
@@ -505,7 +505,7 @@ export const OscilloscopeWaveform: React.FC<OscilloscopeWaveformProps> = ({
           profile,
           runtime.phase,
           visualMode,
-          reducedMotion,
+          reducedMotion
         );
       }
 
@@ -523,24 +523,24 @@ export const OscilloscopeWaveform: React.FC<OscilloscopeWaveformProps> = ({
   }, [height, profile, reducedMotion, visualMode]);
 
   const statusColor = {
-    speaking: "bg-pink-500",
-    processing: "bg-purple-500",
-    listening: "bg-amber-500",
-    idle: "bg-emerald-500",
+    speaking: 'bg-pink-500',
+    processing: 'bg-purple-500',
+    listening: 'bg-amber-500',
+    idle: 'bg-emerald-500',
   }[profile.tone];
 
   const borderColor = {
-    speaking: "border-pink-500/50 shadow-pink-500/10 ring-pink-500/30",
-    processing: "border-purple-500/50 shadow-purple-500/10 ring-purple-500/30",
-    listening: "border-amber-500/50 shadow-amber-500/10 ring-amber-500/30",
-    idle: "border-slate-800/80 shadow-transparent ring-transparent",
+    speaking: 'border-pink-500/50 shadow-pink-500/10 ring-pink-500/30',
+    processing: 'border-purple-500/50 shadow-purple-500/10 ring-purple-500/30',
+    listening: 'border-amber-500/50 shadow-amber-500/10 ring-amber-500/30',
+    idle: 'border-slate-800/80 shadow-transparent ring-transparent',
   }[profile.tone];
 
   return (
     <section
       aria-label="Telemetría visual del núcleo CROWN"
       data-variant={variant}
-      className={`relative w-full overflow-hidden rounded-2xl border bg-slate-950/75 shadow-lg backdrop-blur-xl transition-all duration-500 ${borderColor} ${profile.active ? "ring-1" : ""} ${className}`}
+      className={`relative w-full overflow-hidden rounded-2xl border bg-slate-950/75 shadow-lg backdrop-blur-xl transition-all duration-500 ${borderColor} ${profile.active ? 'ring-1' : ''} ${className}`}
     >
       <header className="flex min-h-9 items-center justify-between gap-3 border-b border-slate-900/90 px-3 py-1.5 font-mono text-[10px]">
         <div className="flex min-w-0 items-center gap-2">
@@ -553,7 +553,7 @@ export const OscilloscopeWaveform: React.FC<OscilloscopeWaveformProps> = ({
             <span className={`relative inline-flex h-2.5 w-2.5 rounded-full ${statusColor}`} />
           </span>
           <span
-            className={`truncate font-semibold uppercase tracking-[0.16em] ${profile.active ? "text-slate-100" : "text-slate-400"}`}
+            className={`truncate font-semibold uppercase tracking-[0.16em] ${profile.active ? 'text-slate-100' : 'text-slate-400'}`}
           >
             {profile.label}
           </span>
@@ -562,7 +562,7 @@ export const OscilloscopeWaveform: React.FC<OscilloscopeWaveformProps> = ({
         <div className="flex shrink-0 items-center gap-2">
           {!compact && (
             <span className="hidden rounded border border-slate-800 bg-slate-900/80 px-1.5 py-0.5 text-slate-400 sm:inline-flex">
-              {isSpeaking && speechSynthesisEnabled ? "TTS · 48 kHz" : profile.shortLabel}
+              {isSpeaking && speechSynthesisEnabled ? 'TTS · 48 kHz' : profile.shortLabel}
             </span>
           )}
 
@@ -582,7 +582,7 @@ export const OscilloscopeWaveform: React.FC<OscilloscopeWaveformProps> = ({
                     aria-label={label}
                     aria-pressed={selected}
                     title={label}
-                    className={`rounded-md p-1.5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 ${selected ? "bg-blue-600 text-white shadow-md shadow-blue-600/20" : "text-slate-500 hover:bg-slate-800 hover:text-slate-200"}`}
+                    className={`rounded-md p-1.5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 ${selected ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'text-slate-500 hover:bg-slate-800 hover:text-slate-200'}`}
                   >
                     <Icon className="h-3.5 w-3.5" aria-hidden="true" />
                   </button>
@@ -612,7 +612,7 @@ export const OscilloscopeWaveform: React.FC<OscilloscopeWaveformProps> = ({
         <span>NODE · CROWN</span>
         <span className="flex items-center gap-1">
           <Volume2 className="h-3 w-3" aria-hidden="true" />
-          {profile.active ? "LIVE TELEMETRY" : "IDLE RESONANCE"}
+          {profile.active ? 'LIVE TELEMETRY' : 'IDLE RESONANCE'}
         </span>
       </footer>
     </section>

@@ -5,7 +5,7 @@
  * express identity, authority, evidence, limits and rollback so that execution,
  * verification and audit are inseparable.
  */
-import type { RiskTier } from "../authority/method-id";
+import type { RiskTier } from '../authority/method-id';
 
 export type { RiskTier };
 
@@ -30,7 +30,7 @@ export interface SkillLimits {
   readonly maxEnergyUnits: number;
 }
 
-export type RollbackStrategy = "none" | "compensating-action" | "state-restore" | "manual-approval";
+export type RollbackStrategy = 'none' | 'compensating-action' | 'state-restore' | 'manual-approval';
 
 export interface RollbackPlan {
   readonly supported: boolean;

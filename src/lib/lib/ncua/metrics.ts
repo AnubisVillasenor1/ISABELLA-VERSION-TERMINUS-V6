@@ -7,9 +7,9 @@
  * coincidencia exacta de bytes en el índice.
  */
 
-import { SimHashLshIndex, buildIndex } from "./lsh";
-import { compressToLatent } from "./embed";
-import { encodeUtf8, decodeUtf8 } from "./bytes";
+import { SimHashLshIndex, buildIndex } from './lsh';
+import { compressToLatent } from './embed';
+import { encodeUtf8, decodeUtf8 } from './bytes';
 
 export interface MeasuredMetrics {
   corpusSize: number;
@@ -30,7 +30,7 @@ export interface MeasuredMetrics {
 
 export function measureOnCorpus(
   corpus: Array<{ id: string; text: string }>,
-  options: { chunkSize?: number; dim?: number } = {},
+  options: { chunkSize?: number; dim?: number } = {}
 ): MeasuredMetrics {
   const chunkSize = options.chunkSize ?? 32;
   const dim = options.dim ?? 192;

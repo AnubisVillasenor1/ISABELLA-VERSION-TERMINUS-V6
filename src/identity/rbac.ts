@@ -1,6 +1,6 @@
 /** RBAC — control de acceso basado en roles. */
 
-import type { Principal } from "./principal";
+import type { Principal } from './principal';
 
 export interface RolePolicy {
   name: string;
@@ -60,13 +60,17 @@ export function principalPermissions(policy: RbacPolicy, principal: Principal): 
 
 /** Un "*" cubre toda acción; un "ns:*" cubre todas las acciones de un namespace. */
 export function permissionGranted(set: ReadonlySet<string>, permission: string): boolean {
-  if (set.has(permission) || set.has("*")) {
+  if (set.has(permission) || set.has('*')) {
     return true;
   }
-  const namespace = permission.slice(0, permission.indexOf(":"));
+  const namespace = permission.slice(0, permission.indexOf(':'));
   return namespace.length > 0 && set.has(`${namespace}:*`);
 }
 
-export function hasPermission(policy: RbacPolicy, principal: Principal, permission: string): boolean {
+export function hasPermission(
+  policy: RbacPolicy,
+  principal: Principal,
+  permission: string
+): boolean {
   return permissionGranted(principalPermissions(policy, principal), permission);
 }

@@ -13,8 +13,8 @@
  * ofrece el mapeo id ↔ código YUN. No sustituye la autoridad de CROWN; sólo
  * canonicaliza la identidad de las federaciones.
  */
-import { sha256 } from "../skills/canonical-json";
-import { YUN_FEDERATIONS, type YunFederation, type GovernanceTier } from "../authority/method-id";
+import { sha256 } from '../skills/canonical-json';
+import { YUN_FEDERATIONS, type YunFederation, type GovernanceTier } from '../authority/method-id';
 
 export interface TamvFederation {
   /** Id estable 1..7. */
@@ -31,17 +31,57 @@ export interface TamvFederation {
 
 export const TAMV_FEDERATION_COUNT = 7;
 
-export const TAMV_FEDERATIONS: readonly TamvFederation[] = Object.freeze(
-  [
-    { id: 1, yun: "IDENTITY", name: "Identidad", domain: "soberanía de identidad y consentimiento", governanceTier: "CONSTITUTIONAL" },
-    { id: 2, yun: "PATRIMONY", name: "Patrimonio", domain: "acervo cultural y ledger patrimonial", governanceTier: "TERRITORIAL" },
-    { id: 3, yun: "TOURISM", name: "Turismo", domain: "experiencia territorial y rutas", governanceTier: "TERRITORIAL" },
-    { id: 4, yun: "ECONOMY", name: "Economía", domain: "economía y créditos MDD-TAMV", governanceTier: "INSTITUTIONAL" },
-    { id: 5, yun: "TWINS", name: "Gemelos Digitales", domain: "gemelos digitales (YUN)", governanceTier: "INSTITUTIONAL" },
-    { id: 6, yun: "COLLECTIVE_INTELLIGENCE", name: "Inteligencia Colectiva", domain: "cognición federada y consenso", governanceTier: "OPERATIONAL" },
-    { id: 7, yun: "RESILIENCE", name: "Resiliencia", domain: "resiliencia y continuidad", governanceTier: "CONSTITUTIONAL" },
-  ] satisfies readonly TamvFederation[],
-);
+export const TAMV_FEDERATIONS: readonly TamvFederation[] = Object.freeze([
+  {
+    id: 1,
+    yun: 'IDENTITY',
+    name: 'Identidad',
+    domain: 'soberanía de identidad y consentimiento',
+    governanceTier: 'CONSTITUTIONAL',
+  },
+  {
+    id: 2,
+    yun: 'PATRIMONY',
+    name: 'Patrimonio',
+    domain: 'acervo cultural y ledger patrimonial',
+    governanceTier: 'TERRITORIAL',
+  },
+  {
+    id: 3,
+    yun: 'TOURISM',
+    name: 'Turismo',
+    domain: 'experiencia territorial y rutas',
+    governanceTier: 'TERRITORIAL',
+  },
+  {
+    id: 4,
+    yun: 'ECONOMY',
+    name: 'Economía',
+    domain: 'economía y créditos MDD-TAMV',
+    governanceTier: 'INSTITUTIONAL',
+  },
+  {
+    id: 5,
+    yun: 'TWINS',
+    name: 'Gemelos Digitales',
+    domain: 'gemelos digitales (YUN)',
+    governanceTier: 'INSTITUTIONAL',
+  },
+  {
+    id: 6,
+    yun: 'COLLECTIVE_INTELLIGENCE',
+    name: 'Inteligencia Colectiva',
+    domain: 'cognición federada y consenso',
+    governanceTier: 'OPERATIONAL',
+  },
+  {
+    id: 7,
+    yun: 'RESILIENCE',
+    name: 'Resiliencia',
+    domain: 'resiliencia y continuidad',
+    governanceTier: 'CONSTITUTIONAL',
+  },
+] satisfies readonly TamvFederation[]);
 
 const BY_ID = new Map(TAMV_FEDERATIONS.map((federation) => [federation.id, federation]));
 const BY_YUN = new Map(YUN_FEDERATIONS.map((yun, index) => [yun, TAMV_FEDERATIONS[index]]));
@@ -68,16 +108,16 @@ export function listFederations(): readonly TamvFederation[] {
 
 /** Digest determinista del registro (detección de deriva del canon). */
 export const FEDERATION_MANIFEST_DIGEST: string = sha256(
-  TAMV_FEDERATIONS.map((federation) => ({ id: federation.id, yun: federation.yun })),
+  TAMV_FEDERATIONS.map((federation) => ({ id: federation.id, yun: federation.yun }))
 );
 
 /** Divergencia documentada: nombres alternativos en `src/isabella/engine.ts`. */
 export const ISABELLA_ENGINE_FEDERATION_LABELS: readonly string[] = [
-  "Sociologica",
-  "Identidad",
-  "Gobernanza",
-  "Territorial",
-  "Educativa",
-  "Tecnologica",
-  "Economica",
+  'Sociologica',
+  'Identidad',
+  'Gobernanza',
+  'Territorial',
+  'Educativa',
+  'Tecnologica',
+  'Economica',
 ];

@@ -18,13 +18,13 @@ import type {
   C2PAManifest,
   VideoProject,
   ITSGTimeline,
-} from "./types";
+} from './types';
 
 /* RATIONAL TIME HELPERS */
 
 export function createRationalTime(
   numerator: bigint | number,
-  denominator: bigint | number = 1n,
+  denominator: bigint | number = 1n
 ): RationalTime {
   return {
     numerator: BigInt(numerator),
@@ -45,7 +45,7 @@ export function frameToRationalTime(frameIndex: number, fps: number = 24): Ratio
 
 export function calculateNarrativeImpact(
   graph: NarrativeGraph,
-  modifiedNodeId: string,
+  modifiedNodeId: string
 ): ImpactAnalysisResult {
   const node = graph.nodes.find((n) => n.id === modifiedNodeId);
   const affectedShotsSet = new Set<string>();
@@ -79,9 +79,9 @@ export function calculateNarrativeImpact(
         queue.push(neighborId);
         const neighborNode = graph.nodes.find((n) => n.id === neighborId);
         if (neighborNode) {
-          if (neighborNode.type === "Shot") {
+          if (neighborNode.type === 'Shot') {
             affectedShotsSet.add(neighborNode.id);
-          } else if (neighborNode.type === "Asset") {
+          } else if (neighborNode.type === 'Asset') {
             invalidAssetsSet.add(neighborNode.id);
           }
         }
@@ -90,17 +90,17 @@ export function calculateNarrativeImpact(
   }
 
   // Determine required workers and estimated cost
-  if (node.type === "Character" || node.type === "StoryWorld") {
-    requiredWorkersSet.add("VideoWorker_ComfyUI");
-    requiredWorkersSet.add("MattingWorker");
-    requiredWorkersSet.add("MultimodalQAWorker");
-  } else if (node.type === "Dialogue" || node.type === "Emotion") {
-    requiredWorkersSet.add("AudioWorker_TTS");
-    requiredWorkersSet.add("AudioWorker_Dubbing");
-    requiredWorkersSet.add("RenderWorker_FFmpeg");
+  if (node.type === 'Character' || node.type === 'StoryWorld') {
+    requiredWorkersSet.add('VideoWorker_ComfyUI');
+    requiredWorkersSet.add('MattingWorker');
+    requiredWorkersSet.add('MultimodalQAWorker');
+  } else if (node.type === 'Dialogue' || node.type === 'Emotion') {
+    requiredWorkersSet.add('AudioWorker_TTS');
+    requiredWorkersSet.add('AudioWorker_Dubbing');
+    requiredWorkersSet.add('RenderWorker_FFmpeg');
   } else {
-    requiredWorkersSet.add("VideoWorker_ComfyUI");
-    requiredWorkersSet.add("RenderWorker_FFmpeg");
+    requiredWorkersSet.add('VideoWorker_ComfyUI');
+    requiredWorkersSet.add('RenderWorker_FFmpeg');
   }
 
   const shotCount = affectedShotsSet.size || 1;
@@ -115,7 +115,7 @@ export function calculateNarrativeImpact(
     estimatedGpuSeconds,
     estimatedCostUsd,
     requiresApproval:
-      node.type === "Character" || node.type === "StoryWorld" || estimatedCostUsd > 2.5,
+      node.type === 'Character' || node.type === 'StoryWorld' || estimatedCostUsd > 2.5,
   };
 }
 
@@ -123,95 +123,95 @@ export function calculateNarrativeImpact(
 
 export const DEFAULT_SHOT_CARDS: ShotCardX[] = [
   {
-    id: "sc-discovery-01",
-    name: "Revelación Panorámica en Humo Azulado",
-    category: "discovery",
-    semanticTags: ["blue_hour", "fog", "revelation", "historical"],
-    emotionalUse: ["wonder", "mystery", "contemplation"],
-    narrativeFunctions: ["introduce_location", "reveal_secret"],
-    compatibleSubjects: ["architecture", "landscape", "avatar"],
+    id: 'sc-discovery-01',
+    name: 'Revelación Panorámica en Humo Azulado',
+    category: 'discovery',
+    semanticTags: ['blue_hour', 'fog', 'revelation', 'historical'],
+    emotionalUse: ['wonder', 'mystery', 'contemplation'],
+    narrativeFunctions: ['introduce_location', 'reveal_secret'],
+    compatibleSubjects: ['architecture', 'landscape', 'avatar'],
     cameraModel: {
-      shotSize: "wide",
+      shotSize: 'wide',
       lensMm: 35,
       heightM: 2.1,
-      movement: "slow_dolly_in",
-      angle: "eye_level",
-      composition: "leading_lines",
+      movement: 'slow_dolly_in',
+      angle: 'eye_level',
+      composition: 'leading_lines',
     },
-    blockingModel: { actorPosition: "center_background", movementVector: "forward_slow" },
+    blockingModel: { actorPosition: 'center_background', movementVector: 'forward_slow' },
     lightingModel: {
-      keyLight: "blue_hour_ambient",
+      keyLight: 'blue_hour_ambient',
       colorTemperatureK: 6500,
-      mood: "cinematic_cool",
+      mood: 'cinematic_cool',
     },
     editModel: {
-      transitionIn: "cross_fade",
-      transitionOut: "hard_cut",
-      beatAlignment: "music_bar_4",
+      transitionIn: 'cross_fade',
+      transitionOut: 'hard_cut',
+      beatAlignment: 'music_bar_4',
     },
     generationPrompt:
-      "High detailed cinematic shot, Mineral del Monte at blue hour with light fog, lantern glowing warmly",
-    negativePrompt: "deformed, noise, modern signs, neon, text watermark",
-    continuityRequirements: ["location_token_loc-8f91", "weather_light_fog"],
-    qualityTests: ["identity >= 0.85", "no_unmasked_text = true"],
+      'High detailed cinematic shot, Mineral del Monte at blue hour with light fog, lantern glowing warmly',
+    negativePrompt: 'deformed, noise, modern signs, neon, text watermark',
+    continuityRequirements: ['location_token_loc-8f91', 'weather_light_fog'],
+    qualityTests: ['identity >= 0.85', 'no_unmasked_text = true'],
   },
   {
-    id: "sc-character-entrance-02",
-    name: "Entrada Heroica de Personaje Mediano-Cerca",
-    category: "character_reveal",
-    semanticTags: ["character_focus", "medium_close_up", "heroic"],
-    emotionalUse: ["confidence", "revelation", "dignity"],
-    narrativeFunctions: ["introduce_character", "dramatic_shift"],
-    compatibleSubjects: ["avatar", "protagonist"],
+    id: 'sc-character-entrance-02',
+    name: 'Entrada Heroica de Personaje Mediano-Cerca',
+    category: 'character_reveal',
+    semanticTags: ['character_focus', 'medium_close_up', 'heroic'],
+    emotionalUse: ['confidence', 'revelation', 'dignity'],
+    narrativeFunctions: ['introduce_character', 'dramatic_shift'],
+    compatibleSubjects: ['avatar', 'protagonist'],
     cameraModel: {
-      shotSize: "medium_close_up",
+      shotSize: 'medium_close_up',
       lensMm: 85,
       heightM: 1.6,
-      movement: "handheld_subtle",
-      angle: "low_angle",
-      composition: "rule_of_thirds_left",
+      movement: 'handheld_subtle',
+      angle: 'low_angle',
+      composition: 'rule_of_thirds_left',
     },
-    blockingModel: { actorPosition: "foreground_left", movementVector: "turn_head_to_camera" },
-    lightingModel: { keyLight: "warm_rim_light", colorTemperatureK: 3200, mood: "dramatic_warm" },
-    editModel: { transitionIn: "hard_cut", transitionOut: "match_cut", beatAlignment: null },
+    blockingModel: { actorPosition: 'foreground_left', movementVector: 'turn_head_to_camera' },
+    lightingModel: { keyLight: 'warm_rim_light', colorTemperatureK: 3200, mood: 'dramatic_warm' },
+    editModel: { transitionIn: 'hard_cut', transitionOut: 'match_cut', beatAlignment: null },
     generationPrompt:
-      "Close-up portrait of character looking towards camera, soft backlight, realistic facial texture",
-    negativePrompt: "blur, face distortion, extra limbs",
-    continuityRequirements: ["character_identity_pack_v3", "wardrobe_state_locked"],
-    qualityTests: ["face_similarity >= 0.88"],
+      'Close-up portrait of character looking towards camera, soft backlight, realistic facial texture',
+    negativePrompt: 'blur, face distortion, extra limbs',
+    continuityRequirements: ['character_identity_pack_v3', 'wardrobe_state_locked'],
+    qualityTests: ['face_similarity >= 0.88'],
   },
   {
-    id: "sc-tension-close-03",
-    name: "Primer Plano de Tensión Dramática",
-    category: "tension",
-    semanticTags: ["extreme_close_up", "eyes", "suspense"],
-    emotionalUse: ["fear", "suspense", "determination"],
-    narrativeFunctions: ["conflict_peak", "internal_monologue"],
-    compatibleSubjects: ["avatar", "antagonist"],
+    id: 'sc-tension-close-03',
+    name: 'Primer Plano de Tensión Dramática',
+    category: 'tension',
+    semanticTags: ['extreme_close_up', 'eyes', 'suspense'],
+    emotionalUse: ['fear', 'suspense', 'determination'],
+    narrativeFunctions: ['conflict_peak', 'internal_monologue'],
+    compatibleSubjects: ['avatar', 'antagonist'],
     cameraModel: {
-      shotSize: "extreme_close_up",
+      shotSize: 'extreme_close_up',
       lensMm: 100,
       heightM: 1.5,
-      movement: "static",
-      angle: "eye_level",
-      composition: "centered",
+      movement: 'static',
+      angle: 'eye_level',
+      composition: 'centered',
     },
-    blockingModel: { actorPosition: "centered", movementVector: "micro_expression" },
-    lightingModel: { keyLight: "high_contrast_side", colorTemperatureK: 4500, mood: "intense" },
-    editModel: { transitionIn: "hard_cut", transitionOut: "hard_cut", beatAlignment: null },
+    blockingModel: { actorPosition: 'centered', movementVector: 'micro_expression' },
+    lightingModel: { keyLight: 'high_contrast_side', colorTemperatureK: 4500, mood: 'intense' },
+    editModel: { transitionIn: 'hard_cut', transitionOut: 'hard_cut', beatAlignment: null },
     generationPrompt:
-      "Macro shot of eyes reflecting flickering lantern light, high detail skin, dramatic shadows",
-    negativePrompt: "out of focus, plastic skin",
-    continuityRequirements: ["character_identity_pack_v3"],
-    qualityTests: ["sharpness >= 0.85"],
+      'Macro shot of eyes reflecting flickering lantern light, high detail skin, dramatic shadows',
+    negativePrompt: 'out of focus, plastic skin',
+    continuityRequirements: ['character_identity_pack_v3'],
+    qualityTests: ['sharpness >= 0.85'],
   },
 ];
 
 export function selectShotCard(
-  category: ShotCardX["category"],
+  category: ShotCardX['category'],
   _emotionalIntensity: number,
   _format: TargetFormat,
-  _maxCostUsd: number,
+  _maxCostUsd: number
 ): ShotCardX {
   const matches = DEFAULT_SHOT_CARDS.filter((c) => c.category === category);
   if (matches.length > 0) {
@@ -223,10 +223,10 @@ export function selectShotCard(
 /* MODEL ROUTER */
 
 export function routeModel(request: InferenceRequest): ModelRouteChoice {
-  if (request.privacy === "restricted" || request.task === "matting") {
+  if (request.privacy === 'restricted' || request.task === 'matting') {
     return {
-      modelId: "isabella-comfyui-local-v3",
-      provider: "comfyui_local",
+      modelId: 'isabella-comfyui-local-v3',
+      provider: 'comfyui_local',
       estimatedLatencyMs: 12000,
       estimatedCostUsd: 0.05,
       privacyMatch: true,
@@ -234,10 +234,10 @@ export function routeModel(request: InferenceRequest): ModelRouteChoice {
     };
   }
 
-  if (request.quality === "master" || request.task === "t2v") {
+  if (request.quality === 'master' || request.task === 't2v') {
     return {
-      modelId: "cloud-veo2-master-v1",
-      provider: "cloud_farm",
+      modelId: 'cloud-veo2-master-v1',
+      provider: 'cloud_farm',
       estimatedLatencyMs: 28000,
       estimatedCostUsd: 0.35,
       privacyMatch: true,
@@ -246,8 +246,8 @@ export function routeModel(request: InferenceRequest): ModelRouteChoice {
   }
 
   return {
-    modelId: "isabella-fast-i2v-v2",
-    provider: "partner_api",
+    modelId: 'isabella-fast-i2v-v2',
+    provider: 'partner_api',
     estimatedLatencyMs: 8000,
     estimatedCostUsd: 0.12,
     privacyMatch: true,
@@ -290,35 +290,35 @@ export function evaluateMultimodalQA(params: {
     narrative * 0.1 +
     safety * 0.05;
 
-  let decision: QualityReport["decision"] = "pass";
+  let decision: QualityReport['decision'] = 'pass';
   let remediationPlan: RemediationPlan | undefined = undefined;
 
   if (safety < 0.9) {
-    decision = "block";
+    decision = 'block';
   } else if (identity < 0.85) {
-    decision = "regenerate";
+    decision = 'regenerate';
     remediationPlan = {
-      failure: "identity_drift",
-      severity: "high",
+      failure: 'identity_drift',
+      severity: 'high',
       range: [0, 5],
-      action: "regenerate_shot",
+      action: 'regenerate_shot',
       preserveOriginal: false,
       requiresApproval: true,
       estimatedCost: { gpuSeconds: 45, usd: 0.36 },
     };
   } else if (detectedUnexpectedText || text < 0.9) {
-    decision = "review";
+    decision = 'review';
     remediationPlan = {
-      failure: "unexpected_text_watermark",
-      severity: "medium",
+      failure: 'unexpected_text_watermark',
+      severity: 'medium',
       range: [2.5, 4.0],
-      action: "inpaint_region",
+      action: 'inpaint_region',
       preserveOriginal: true,
       requiresApproval: true,
       estimatedCost: { gpuSeconds: 15, usd: 0.12 },
     };
   } else if (totalScore < 0.8) {
-    decision = "review";
+    decision = 'review';
   }
 
   return {
@@ -340,28 +340,28 @@ export function evaluateMultimodalQA(params: {
 export function buildC2PAManifest(
   project: VideoProject,
   timeline: ITSGTimeline,
-  inputAssets: Array<{ assetId: string; role: string; sha256: string }>,
+  inputAssets: Array<{ assetId: string; role: string; sha256: string }>
 ): C2PAManifest {
   const manifestId = `c2pa-${project.id}-${Date.now()}`;
   const workflowDigest = `sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`;
   const timestamp = new Date().toISOString();
 
   // Create cryptographic simulation signature
-  const signature = `SIG_HMAC_SHA3_512_C2PA_${manifestId.slice(-8)}_${project.version.replace(/\./g, "")}`;
+  const signature = `SIG_HMAC_SHA3_512_C2PA_${manifestId.slice(-8)}_${project.version.replace(/\./g, '')}`;
 
   return {
     manifestId,
     projectId: project.id,
     title: project.title,
     timelineVersion: timeline.version,
-    rendererVersion: "isabella-renderer-2.1.3",
+    rendererVersion: 'isabella-renderer-2.1.3',
     video: {
       width: 3840,
       height: 2160,
       fpsNum: timeline.timebase.fps,
       fpsDen: 1,
-      pixelFormat: "yuv420p10le",
-      colorPrimaries: "bt2020",
+      pixelFormat: 'yuv420p10le',
+      colorPrimaries: 'bt2020',
     },
     audio: {
       sampleRate: timeline.timebase.audioSampleRate,
@@ -375,8 +375,8 @@ export function buildC2PAManifest(
     determinism: {
       seed: 412903,
       workflowHash: workflowDigest,
-      modelHashes: ["sha256:9a8b7c6d...", "sha256:1f2e3d4c..."],
-      containerDigest: "sha256:container_isabella_video_x_v2",
+      modelHashes: ['sha256:9a8b7c6d...', 'sha256:1f2e3d4c...'],
+      containerDigest: 'sha256:container_isabella_video_x_v2',
     },
     signature,
     signedAt: timestamp,

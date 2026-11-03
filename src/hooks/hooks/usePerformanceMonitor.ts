@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from 'react';
 
 export interface ComponentMetric {
   componentName: string;
@@ -58,10 +58,10 @@ class PerformanceRegistry {
     this.eventMetrics.push({
       eventName,
       durationMs,
-      timestamp: new Date().toLocaleTimeString("es-MX", {
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
+      timestamp: new Date().toLocaleTimeString('es-MX', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
       }),
     });
     // Keep last 100 events
@@ -104,12 +104,12 @@ export function usePerformanceMonitor(componentName: string) {
     perfRegistry.recordRender(componentName, duration);
 
     // Styled console logs following Isabella's aesthetic
-    const color = isMount ? "#00FFC2" : "#6E66F9";
+    const color = isMount ? '#00FFC2' : '#6E66F9';
     console.log(
-      `%c[PERF] ${componentName} %c| ${isMount ? "MOUNT" : "RENDER #" + renderCountRef.current} | %c${duration.toFixed(2)}ms`,
+      `%c[PERF] ${componentName} %c| ${isMount ? 'MOUNT' : 'RENDER #' + renderCountRef.current} | %c${duration.toFixed(2)}ms`,
       `color: ${color}; font-weight: bold; font-family: monospace;`,
-      "color: #888888; font-family: monospace;",
-      "color: #FFF; font-weight: bold; font-family: monospace;",
+      'color: #888888; font-family: monospace;',
+      'color: #FFF; font-weight: bold; font-family: monospace;'
     );
   });
 
@@ -120,9 +120,9 @@ export function usePerformanceMonitor(componentName: string) {
       perfRegistry.recordEvent(eventName, duration);
       console.log(
         `%c[PERF-EVENT] ${eventName} %c| DURATION | %c${duration.toFixed(2)}ms`,
-        "color: #FBBF24; font-weight: bold; font-family: monospace;",
-        "color: #888888; font-family: monospace;",
-        "color: #FFF; font-weight: bold; font-family: monospace;",
+        'color: #FBBF24; font-weight: bold; font-family: monospace;',
+        'color: #888888; font-family: monospace;',
+        'color: #FFF; font-weight: bold; font-family: monospace;'
       );
     };
   }, []);

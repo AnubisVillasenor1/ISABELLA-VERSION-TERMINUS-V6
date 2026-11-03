@@ -170,9 +170,11 @@ wait_for_services() {
             healthy=false
         fi
 
-        # Check ollama
-        if ! curl -sf "http://localhost:11434/api/tags" >/dev/null 2>&1; then
-            healthy=false
+        # Check ollama only when the optional local-inference profile is running.
+        if docker compose ps --status running --services 2>/dev/null | grep -qx ollama; then
+            if ! curl -sf "http://localhost:11434/api/tags" >/dev/null 2>&1; then
+                healthy=false
+            fi
         fi
 
         # Check isabella-core health endpoint
@@ -198,7 +200,9 @@ wait_for_services() {
 
 run_migrations() {
     log_info "Running database migrations..."
-    if docker compose exec -T postgres psql -U isabella_admin -d isabella_db -f /docker-entrypoint-initdb.d/schema.sql; then
+    # The image ships schema.sql + infra/db/migrations and psql; the entrypoint already tries this
+    # at startup. Re-running is idempotent (schema_migrations records applied versions/checksums).
+    if docker compose exec -T app bash scripts/migrate.sh migrate; then
         log_success "Migrations applied"
     else
         log_error "Migration failed"
@@ -207,6 +211,10 @@ run_migrations() {
 }
 
 pull_models() {
+    if ! docker compose ps --status running --services 2>/dev/null | grep -qx ollama; then
+        log_info "Ollama is not running (optional profile); skipping model pull"
+        return 0
+    fi
     log_info "Pulling Ollama models..."
     local models=("llama3.3:8b" "qwen2.5-coder:14b" "deepseek-r1:32b")
 
@@ -223,29 +231,29 @@ pull_models() {
 verify_deployment() {
     log_info "Verifying deployment..."
 
-    # Test health endpoint
-    if curl -sf "http://localhost:8080/api/v1/health" | grep -q "healthy"; then
+    # Test health endpoint (liveness). /api/v1/health answers {"status":"ok",...}
+    if curl -sf "http://localhost:8080/api/v1/health" | grep -q '"status":"ok"'; then
         log_success "Health endpoint OK"
     else
         log_error "Health endpoint failed"
         return 1
     fi
 
-    # Test readiness endpoint
-    if curl -sf "http://localhost:8080/api/v1/readyz" | grep -q "ready"; then
+    # Test readiness endpoint (dependency readiness; 503 while degraded)
+    if curl -sf "http://localhost:8080/api/v1/readyz" | grep -q '"success":true'; then
         log_success "Readiness endpoint OK"
     else
-        log_warning "Readiness endpoint not ready (may need DB/models)"
+        log_warning "Readiness endpoint not ready (check /api/v1/healthz blockers)"
     fi
 
-    # Test chat endpoint
-    local chat_response=$(curl -sf -X POST "http://localhost:8080/api/v1/chat" \
+    # Test the real cognition route (there is no /api/v1/chat endpoint).
+    local chat_response=$(curl -sf -X POST "http://localhost:8080/api/v1/cognition/route" \
         -H "Content-Type: application/json" \
-        -d '{"prompt":"Hello, test message"}' | head -c 200)
+        -d '{"input":"Hello, test message","modelEngine":"auto","focusLens":"general","history":[]}' | head -c 200)
     if [[ -n "$chat_response" ]]; then
-        log_success "Chat endpoint responding"
+        log_success "Cognition endpoint responding"
     else
-        log_warning "Chat endpoint not responding (models may still be loading)"
+        log_warning "Cognition endpoint not responding (models may still be loading)"
     fi
 
     # Check metrics endpoint

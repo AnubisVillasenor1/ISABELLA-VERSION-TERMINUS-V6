@@ -3,7 +3,7 @@ import type {
   IKESEngineSnapshot,
   KnowledgeClaim,
   KnowledgeSource,
-} from "./ikes";
+} from './ikes';
 
 export interface SupabaseIkesConfig {
   supabaseUrl: string;
@@ -12,15 +12,50 @@ export interface SupabaseIkesConfig {
   pageSize?: number;
 }
 
+/**
+ * A Supabase REST cold start (TLS + DNS + edge routing) regularly exceeds two
+ * seconds. A short timeout aborted the IKES hydration request and the engine
+ * stayed process-local until the next instance. Keep the default aligned with
+ * the Atlas adapter and allow an operator override in a bounded range.
+ */
+const DEFAULT_REQUEST_TIMEOUT_MS = 10_000;
+const MIN_REQUEST_TIMEOUT_MS = 250;
+const MAX_REQUEST_TIMEOUT_MS = 30_000;
+
+export function resolveIkesRequestTimeoutMs(
+  env: Readonly<Record<string, string | undefined>> = process.env
+): number {
+  const raw = env.ISABELLA_IKES_REQUEST_TIMEOUT_MS;
+  const configured = raw && raw.trim() !== '' ? Number(raw) : Number.NaN;
+  if (!Number.isFinite(configured)) return DEFAULT_REQUEST_TIMEOUT_MS;
+  return Math.min(MAX_REQUEST_TIMEOUT_MS, Math.max(MIN_REQUEST_TIMEOUT_MS, Math.floor(configured)));
+}
+
 interface SourceRow {
-  source_id: string; uri: string; title: string; publisher: string | null;
-  published_at: string | null; retrieved_at: string; content_hash: string; license: string | null;
+  source_id: string;
+  uri: string;
+  title: string;
+  publisher: string | null;
+  published_at: string | null;
+  retrieved_at: string;
+  content_hash: string;
+  license: string | null;
 }
 interface ClaimRow {
-  claim_id: string; subject: string; predicate: string; object_value: string;
-  source_ids: string[]; evidence_ids: string[]; epistemic_state: KnowledgeClaim["epistemicState"];
-  temporal_state: KnowledgeClaim["temporalState"]; valid_from: string | null; valid_until: string | null;
-  license: string | null; provenance: Record<string, string>; content_hash: string; version: number;
+  claim_id: string;
+  subject: string;
+  predicate: string;
+  object_value: string;
+  source_ids: string[];
+  evidence_ids: string[];
+  epistemic_state: KnowledgeClaim['epistemicState'];
+  temporal_state: KnowledgeClaim['temporalState'];
+  valid_from: string | null;
+  valid_until: string | null;
+  license: string | null;
+  provenance: Record<string, string>;
+  content_hash: string;
+  version: number;
 }
 
 function safeHttpError(status: number): Error {
@@ -34,18 +69,22 @@ export class SupabaseIkesPersistence implements IKESEnginePersistencePort {
   private readonly pageSize: number;
 
   constructor(config: SupabaseIkesConfig) {
-    const baseUrl = config.supabaseUrl.trim().replace(/\/+$/, "");
+    const baseUrl = config.supabaseUrl.trim().replace(/\/+$/, '');
     const key = config.serviceRoleKey.trim();
-    if (!/^https:\/\//i.test(baseUrl) || !key) throw new Error("IKES_SUPABASE_CONFIG_INVALID");
+    if (!/^https:\/\//i.test(baseUrl) || !key) throw new Error('IKES_SUPABASE_CONFIG_INVALID');
     this.baseUrl = baseUrl;
     this.key = key;
-    this.timeoutMs = config.requestTimeoutMs ?? 2_000;
+    this.timeoutMs = config.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
     this.pageSize = config.pageSize ?? 500;
-    if (!Number.isInteger(this.timeoutMs) || this.timeoutMs < 250 || this.timeoutMs > 30_000) {
-      throw new Error("IKES_SUPABASE_TIMEOUT_INVALID");
+    if (
+      !Number.isInteger(this.timeoutMs) ||
+      this.timeoutMs < MIN_REQUEST_TIMEOUT_MS ||
+      this.timeoutMs > MAX_REQUEST_TIMEOUT_MS
+    ) {
+      throw new Error('IKES_SUPABASE_TIMEOUT_INVALID');
     }
     if (!Number.isInteger(this.pageSize) || this.pageSize < 1 || this.pageSize > 1000) {
-      throw new Error("IKES_SUPABASE_PAGE_SIZE_INVALID");
+      throw new Error('IKES_SUPABASE_PAGE_SIZE_INVALID');
     }
   }
 
@@ -54,19 +93,22 @@ export class SupabaseIkesPersistence implements IKESEnginePersistencePort {
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
     try {
       const headers = new Headers(init.headers);
-      headers.set("apikey", this.key);
-      headers.set("authorization", `Bearer ${this.key}`);
-      if (!headers.has("content-type")) headers.set("content-type", "application/json");
+      headers.set('apikey', this.key);
+      headers.set('authorization', `Bearer ${this.key}`);
+      if (!headers.has('content-type')) headers.set('content-type', 'application/json');
       const response = await fetch(`${this.baseUrl}/rest/v1/${table}${query}`, {
         ...init,
         signal: controller.signal,
         headers,
       });
       if (!response.ok) throw safeHttpError(response.status);
-      if (response.status === 204 || (init.method === "POST" && /return=minimal/iu.test(headers.get("prefer") ?? ""))) {
+      if (
+        response.status === 204 ||
+        (init.method === 'POST' && /return=minimal/iu.test(headers.get('prefer') ?? ''))
+      ) {
         return undefined as T;
       }
-      return await response.json() as T;
+      return (await response.json()) as T;
     } finally {
       clearTimeout(timeout);
     }
@@ -78,26 +120,26 @@ export class SupabaseIkesPersistence implements IKESEnginePersistencePort {
       const rows = await this.request<T[]>(
         table,
         `?select=${select}&order=${order}&limit=${this.pageSize}`,
-        { headers: { Range: `${offset}-${offset + this.pageSize - 1}`, "Range-Unit": "items" } },
+        { headers: { Range: `${offset}-${offset + this.pageSize - 1}`, 'Range-Unit': 'items' } }
       );
-      if (!Array.isArray(rows)) throw new Error("IKES_SUPABASE_RESPONSE_INVALID");
+      if (!Array.isArray(rows)) throw new Error('IKES_SUPABASE_RESPONSE_INVALID');
       all.push(...rows);
       if (rows.length < this.pageSize) return all;
-      if (all.length >= 100_000) throw new Error("IKES_SUPABASE_SNAPSHOT_LIMIT_EXCEEDED");
+      if (all.length >= 100_000) throw new Error('IKES_SUPABASE_SNAPSHOT_LIMIT_EXCEEDED');
     }
   }
 
   async load(): Promise<IKESEngineSnapshot> {
     const [sourceRows, claimRows] = await Promise.all([
       this.allRows<SourceRow>(
-        "atlas_knowledge_sources",
-        "source_id,uri,title,publisher,published_at,retrieved_at,content_hash,license",
-        "source_id.asc",
+        'atlas_knowledge_sources',
+        'source_id,uri,title,publisher,published_at,retrieved_at,content_hash,license',
+        'source_id.asc'
       ),
       this.allRows<ClaimRow>(
-        "atlas_knowledge_claims",
-        "claim_id,subject,predicate,object_value,source_ids,evidence_ids,epistemic_state,temporal_state,valid_from,valid_until,license,provenance,content_hash,version",
-        "claim_id.asc",
+        'atlas_knowledge_claims',
+        'claim_id,subject,predicate,object_value,source_ids,evidence_ids,epistemic_state,temporal_state,valid_from,valid_until,license,provenance,content_hash,version',
+        'claim_id.asc'
       ),
     ]);
     return {
@@ -131,68 +173,78 @@ export class SupabaseIkesPersistence implements IKESEnginePersistencePort {
   }
 
   async saveSource(source: KnowledgeSource): Promise<void> {
-    await this.request("atlas_knowledge_sources", "?on_conflict=source_id", {
-      method: "POST",
-      headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
-      body: JSON.stringify([{
-        source_id: source.sourceId,
-        uri: source.uri,
-        title: source.title,
-        publisher: source.publisher ?? null,
-        published_at: source.publishedAt ?? null,
-        retrieved_at: source.retrievedAt,
-        content_hash: source.contentHash,
-        license: source.license ?? null,
-      }]),
+    await this.request('atlas_knowledge_sources', '?on_conflict=source_id', {
+      method: 'POST',
+      headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify([
+        {
+          source_id: source.sourceId,
+          uri: source.uri,
+          title: source.title,
+          publisher: source.publisher ?? null,
+          published_at: source.publishedAt ?? null,
+          retrieved_at: source.retrievedAt,
+          content_hash: source.contentHash,
+          license: source.license ?? null,
+        },
+      ]),
     });
   }
 
   async saveClaim(claim: KnowledgeClaim): Promise<void> {
-    await this.request("atlas_knowledge_claims", "?on_conflict=claim_id", {
-      method: "POST",
-      headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
-      body: JSON.stringify([{
-        claim_id: claim.claimId,
-        subject: claim.subject,
-        predicate: claim.predicate,
-        object_value: claim.object,
-        source_ids: claim.sourceIds,
-        evidence_ids: claim.evidenceIds,
-        epistemic_state: claim.epistemicState,
-        temporal_state: claim.temporalState,
-        valid_from: claim.validFrom ?? null,
-        valid_until: claim.validUntil ?? null,
-        license: claim.license ?? null,
-        provenance: claim.provenance,
-        content_hash: claim.contentHash,
-        version: claim.version,
-      }]),
+    await this.request('atlas_knowledge_claims', '?on_conflict=claim_id', {
+      method: 'POST',
+      headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify([
+        {
+          claim_id: claim.claimId,
+          subject: claim.subject,
+          predicate: claim.predicate,
+          object_value: claim.object,
+          source_ids: claim.sourceIds,
+          evidence_ids: claim.evidenceIds,
+          epistemic_state: claim.epistemicState,
+          temporal_state: claim.temporalState,
+          valid_from: claim.validFrom ?? null,
+          valid_until: claim.validUntil ?? null,
+          license: claim.license ?? null,
+          provenance: claim.provenance,
+          content_hash: claim.contentHash,
+          version: claim.version,
+        },
+      ]),
     });
   }
 
   async health(): Promise<{ healthy: boolean; reason: string }> {
     try {
       await Promise.all([
-        this.request<unknown[]>("atlas_knowledge_sources", "?select=source_id&limit=1"),
-        this.request<unknown[]>("atlas_knowledge_claims", "?select=claim_id&limit=1"),
+        this.request<unknown[]>('atlas_knowledge_sources', '?select=source_id&limit=1'),
+        this.request<unknown[]>('atlas_knowledge_claims', '?select=claim_id&limit=1'),
       ]);
-      return { healthy: true, reason: "IKES source and claim tables are reachable." };
+      return { healthy: true, reason: 'IKES source and claim tables are reachable.' };
     } catch (error) {
-      const message = error instanceof Error ? error.message : "";
+      const message = error instanceof Error ? error.message : '';
       const status = message.match(/IKES_SUPABASE_HTTP_(\d{3})/u)?.[1];
       return {
         healthy: false,
         reason: status
           ? `IKES persistence tables returned HTTP ${status}.`
-          : "IKES persistence health probe failed; inspect restricted server logs.",
+          : 'IKES persistence health probe failed; inspect restricted server logs.',
       };
     }
   }
 }
 
-export function createSupabaseIkesPersistence(env: NodeJS.ProcessEnv = process.env): SupabaseIkesPersistence | undefined {
+export function createSupabaseIkesPersistence(
+  env: NodeJS.ProcessEnv = process.env
+): SupabaseIkesPersistence | undefined {
   const supabaseUrl = env.SUPABASE_URL?.trim();
   const serviceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY?.trim();
   if (!supabaseUrl || !serviceRoleKey) return undefined;
-  return new SupabaseIkesPersistence({ supabaseUrl, serviceRoleKey });
+  return new SupabaseIkesPersistence({
+    supabaseUrl,
+    serviceRoleKey,
+    requestTimeoutMs: resolveIkesRequestTimeoutMs(env),
+  });
 }

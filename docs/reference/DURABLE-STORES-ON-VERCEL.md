@@ -1,0 +1,150 @@
+# Almacenes durables en Vercel: claves de API y federación
+
+> `state: draft | engine-generated` — revisión humana pendiente (invariante operativo de AGENTS.md).
+
+## 1. Qué resuelve
+
+En serverless el sistema de archivos es efímero y la memoria del proceso muere en cada
+*cold start*. Sin un backend durable, `IsabellaApiKeyStore` y `FederationRegistry` perdían
+claves, conectores y bandeja de entrada entre instancias. La solución deja el camino
+caliente **con la misma semántica**:
+
+- **Lectura síncrona.** `verify()`, `listConnectors()`, `getConnector()` y
+  `hasRemoteMessage()` siguen siendo síncronos: nunca hacen `await` ni tocan la red.
+- **Hidratación una sola vez.** `hydrate()` lee las filas al construir el almacén
+  (una vez por instancia, memoizada y sin propagar rechazos).
+- **Escritura por fila.** `issue`, `rotate`, `revoke`, `createConnector`,
+  `removeConnector` e `ingest` ahora devuelven `Promise` y escriben **solo la fila
+  afectada** (INSERT/UPDATE/DELETE parametrizado); ya no se reescribe toda la colección.
+  Si la escritura falla, el estado en memoria se revierte y la operación falla: nunca se
+  entrega un secreto cuya fila no quedó persistida.
+- **Fallo cerrado al comportamiento anterior.** Si no hay una URL utilizable o la base no
+  responde, el adaptador se abandona con `console.warn` y el almacén queda
+  *process-local* (`degradationReason` lo documenta). Ningún módulo lanza en el arranque.
+
+## 2. Invariantes de seguridad que no cambian
+
+- Solo se persiste el **digest** (HMAC-SHA256 con `ISABELLA_API_KEY_PEPPER`, o SHA-256 sin
+  pepper). El secreto `isa_live_...` se muestra una sola vez y jamás llega a la base.
+- `timingSafeEqual` sigue comparando los digests; `MAX_KEYS` y `MAX_INBOX` se conservan.
+- La validación de scopes es doble: el adaptador descarta filas con scope desconocido o
+  digest de longitud inválida, y la migración lo refuerza con `CHECK`.
+- `lastUsedAt` es telemetría: no autentica nada. Se acumula en memoria y se escribe en
+  lotes (`UPDATE ... UNNEST`), nunca por verificación.
+- El índice único `(connector_id, remote_message_id)` extiende la detección de
+  repetición entre instancias; la ruta responde `409 FEDERATION_REPLAY_DETECTED`.
+- Las rutas traducen el fallo del backend a un código fijo con `503`: nunca devuelven
+  el texto del controlador (host, puerto, SQL) al cliente.
+
+## 3. Variables de entorno (Vercel)
+
+**Nunca** se escriben valores en el repositorio ni en `vercel.json`. Se agregan con la CLI,
+que pide el valor de forma interactiva:
+
+```bash
+vercel env add ISABELLA_API_KEY_STORE production
+vercel env add ISABELLA_FEDERATION_STORE production
+vercel env add DATABASE_URL production      # secreto: el valor se pega en el prompt
+vercel env add ISABELLA_API_KEY_PEPPER production
+vercel env add BOOKPI_INTEGRITY_SECRET production
+```
+
+| Variable | Valores | Nota |
+|---|---|---|
+| `ISABELLA_API_KEY_STORE` | `postgres`, `postgresql`, `neon` | Sin URL utilizable el almacén degrada a memoria, con aviso. |
+| `ISABELLA_FEDERATION_STORE` | `postgres`, `postgresql`, `neon` | Mismo criterio de degradación. |
+| `DATABASE_URL` / `POSTGRES_URL` | `postgres://` o `postgresql://` | Precedencia: `DATABASE_URL`, `POSTGRES_URL`, `POSTGRES_PRISMA_URL`, `POSTGRES_URL_NON_POOLING`. |
+| `ISABELLA_API_KEY_PEPPER` | cadena estable | Debe coincidir en todas las instancias; cambiarlo invalida los digests existentes. |
+| `ISABELLA_API_KEY_LAST_USED_FLUSH_ROWS` | entero ≥ 0 | Umbral del lote de telemetría; por omisión 32; `0` deshabilita toda escritura desde `verify()`. |
+| `ISABELLA_POSTGRES_CONNECT_TIMEOUT_MS` | entero 1000–30000 | Tiempo máximo para abrir conexión; por omisión **10000**. Si un *cold start* del pooler lo supera, la hidratación queda degradada pero se reintenta; no se abandona el backend. |
+| `ISABELLA_VERIFIED_KNOWLEDGE_BACKEND` | `mongodb` o `supabase` | En producción el backend `memory` queda bloqueado por readiness. El valor por omisión es `mongodb`. |
+| `MONGODB_URI` | `mongodb://` o `mongodb+srv://` | Requerido cuando se selecciona MongoDB para conocimiento verificado. El URI nunca se incluye en los informes. |
+| `ALLOWED_ORIGINS` | orígenes HTTPS exactos, separados por coma | Requerido para producción; sin `localhost`, rutas ni `*`. Incluye el origen público de la interfaz. |
+| `STRIPE_WEBHOOK_SECRET` | secreto de webhook | Si existe `STRIPE_SECRET_KEY`, debe estar configurado y la clave de producción no puede ser `sk_test_…`. |
+
+### 3.1 Auto-reparación tras un timeout de hidratación
+
+Un arranque en frío puede agotar el tiempo de conexión. Antes, el primer fallo cerraba el
+pool y el almacén quedaba en memoria durante toda la vida de la instancia. Ahora:
+
+- la degradación se marca y se registra (`Federation hydration failed; state stays
+  process-local until retry` o `API key hydration failed; keys stay process-local until
+  retry`, con el intento y sin datos del proveedor);
+- la hidratación se reintenta con retroceso exponencial: 5 s, 10 s, 20 s, 40 s y tope 60 s;
+- las escrituras siguen intentando la base: si sigue caída, `issue()`/`createConnector()`
+  fallan de forma visible y revierten; no se crean credenciales que solo existan en memoria;
+- al recuperarse se registra `hydration recovered` con el número de intentos, se limpian la
+  degradación y el contador, y las filas persistidas se incorporan sin pisar el estado local;
+- el temporizador es `unref`, no retiene el proceso. En serverless solo avanza mientras la
+  instancia está activa; una instancia congelada se recupera en la siguiente invocación.
+
+Las pruebas cubren fallo, reintento con recuperación y escritura fallida. La recuperación
+completa en una instancia real de producción aún no se ha observado.
+
+Al retirar el bloque `env` inerte de `vercel.json`, los valores que declaraba
+(`APP_PUBLIC_URL`, `PUBLIC_URL`, `ISABELLA_PUBLIC_URL`, `ALLOWED_ORIGINS`,
+`WEBAUTHN_RP_ID`, `WEBAUTHN_ORIGIN`, `ISABELLA_KEYLESS_FREE_PROVIDER`,
+`KEYLESS_FREE_PROVIDER_TIMEOUT_MS`, `CHAT_CHAIN_BUDGET_MS`, `ISABELLA_KEYLESS_TTS`,
+`ISABELLA_KEYLESS_TTS_MAX_CHARS`, `ISABELLA_API_KEY_STORE`, `ISABELLA_FEDERATION_STORE`)
+pasaran a definirse en el proyecto con `vercel env add`. `maxDuration` sube a 300 para
+dar margen a la hidratación y a las escrituras por fila.
+
+## 4. Pasos del operador
+
+1. Aprovisionar Postgres (Neon, Supabase o autoalojado) con TLS explícito
+   (`?sslmode=require`).
+2. Aplicar las migraciones, en este orden:
+   `supabase/migrations/20261030000000_isabella_api_keys.sql`,
+   `supabase/migrations/20261030000001_isabella_federation.sql`,
+   `infra/db/migrations/001_create_bookpi_events.sql` y
+   `infra/db/migrations/002_bookpi_canonical_immutability.sql`. Las dos primeras
+   habilitan RLS y revocan el acceso directo: solo el rol del servidor lee o
+   escribe. Las de BookPI crean el plano durable de evidencia del pipeline y
+   fallan si se ejecutan sin la corrección de `REVOKE ALL PRIVILEGES ON SEQUENCE`.
+3. Definir las variables de la sección 3 con `vercel env add`.
+4. Ejecutar `pnpm deploy:readiness` contra el archivo de ambiente del entorno: una
+   selección `postgres` sin URL utilizable bloquea
+   (`DR-SERVERLESS-API_KEYS_DB_MISSING`, `DR-SERVERLESS-FEDERATION_DB_MISSING`) y un modo
+   no reconocido también bloquea.
+5. Desplegar y confirmar `/api/v1/readyz` y el humo de la interfaz.
+6. Verificar la durabilidad con una prueba real contra el alias de producción:
+   emitir una clave, comprobar su fila, revocarla y confirmar `401`; crear un
+   conector, comprobar su fila y eliminarlo; revisar los logs de runtime para
+   descartar `hydration failed` o, si aparece, confirmar el `hydration recovered`
+   posterior con el número de intentos.
+
+## 5. Límites conocidos
+
+- **Revalidación entre instancias.** Una revocación se ve en las demás instancias en su
+  próxima hidratación; mientras una instancia siga viva, su copia en memoria puede aceptar
+  la clave hasta que sea reemplazada. Para un corte inmediato hace falta un canal de
+  invalidación explícito (fuera de alcance aquí).
+- **Telemetría eventual.** `lastUsedAt` puede quedar sin escribir si la instancia se
+  congela antes de alcanzar el umbral del lote; no afecta la autentificación.
+- **Emisión concurrente.** Dos instancias pueden emitir la misma clave en la misma
+  milésima; el índice único sobre `digest` hace que la segunda escritura falle y la
+  emisión se revierta en memoria.
+- **`BOOKPI_INTEGRITY_SECRET` y una `DATABASE_URL` alcanzable siguen siendo requisitos**
+  independientes de este cambio: el libro mayor y la durabilidad comparten la base.
+- Este documento describe el diseño en este repositorio; no demuestra comportamiento en
+  producción. La verificación la hacen CI y la prueba del paso 6.
+
+## 6. Verificación observada el 2026-10-31
+
+Sobre el despliegue de producción `dpl_EVczyonXW8WsGCuK3FWw73U95FgE` (commit `3da3f71`):
+
+| Almacén | Operación | Resultado observado |
+|---|---|---|
+| API keys | crear + autenticar | `201`, fila en `public.isabella_api_keys`, `200` en `/api/v1/developer/me` |
+| API keys | revocar | `200`, `revoked_at` establecido, la misma clave responde `401` |
+| Federación | crear conector `webhook` | `201`, una fila en `public.federation_connectors` |
+| Federación | eliminar conector | `200`, `0` filas restantes |
+| BookPI pipeline | probe de readiness | `healthy`, backend `POSTGRES`, cadena verificada, `eventCount: 0` |
+
+Las filas de sonda se eliminaron. Los logs de ese despliegue no mostraron
+degradación de los almacenes durables. Antes del arreglo aparecían por el
+timeout de conexión descrito en la sección 3. En una invocación posterior aislada
+sí se observó un `Federation hydration failed ... until retry` tras un timeout
+simultáneo de Supabase y Postgres; el nuevo camino conserva el backend y programa
+el reintento, en lugar de abandonarlo (ver sección 3.1).
+

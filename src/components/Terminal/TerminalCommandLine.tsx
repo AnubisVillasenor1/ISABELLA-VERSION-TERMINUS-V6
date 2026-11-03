@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect, KeyboardEvent } from "react";
-import { useCrown } from "../../context/CrownContext";
+import React, { useState, useRef, useEffect, KeyboardEvent } from 'react';
+import { useCrown } from '../../context/CrownContext';
 import {
   Send,
   Terminal as TerminalIcon,
@@ -9,11 +9,11 @@ import {
   Palette,
   Shield,
   Keyboard,
-} from "lucide-react";
-import { soundManager } from "../../utils/soundEffects";
+} from 'lucide-react';
+import { soundManager } from '../../utils/soundEffects';
 
 export const TerminalCommandLine: React.FC = () => {
-  const [input, setInput] = useState("");
+  const [input, setInput] = useState('');
   const [history, setHistory] = useState<string[]>([]);
   const [historyIdx, setHistoryIdx] = useState<number>(-1);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
@@ -31,12 +31,12 @@ export const TerminalCommandLine: React.FC = () => {
   const isProcessing = state.isProcessing;
 
   const QUICK_COMMANDS = [
-    { label: "Hola Isabella, ¿cómo estás?", desc: "Saludar", icon: "🌸" },
-    { label: "Pinta un atardecer sobre un mar cuántico", desc: "Crear Arte", icon: "🎨" },
-    { label: "¿Cuál es tu propósito y esencia?", desc: "Conocerla", icon: "✨" },
-    { label: "Necesito un momento de reflexión serena", desc: "Calma", icon: "💭" },
-    { label: "¿Cómo interactúan la lógica y la empatía?", desc: "Filosofía", icon: "🧠" },
-    { label: "/status", desc: "Diagnóstico", icon: "⚡" },
+    { label: 'Hola Isabella, ¿cómo estás?', desc: 'Saludar', icon: '🌸' },
+    { label: 'Pinta un atardecer sobre un mar cuántico', desc: 'Crear Arte', icon: '🎨' },
+    { label: '¿Cuál es tu propósito y esencia?', desc: 'Conocerla', icon: '✨' },
+    { label: 'Necesito un momento de reflexión serena', desc: 'Calma', icon: '💭' },
+    { label: '¿Cómo interactúan la lógica y la empatía?', desc: 'Filosofía', icon: '🧠' },
+    { label: '/status', desc: 'Diagnóstico', icon: '⚡' },
   ];
 
   useEffect(() => {
@@ -47,41 +47,41 @@ export const TerminalCommandLine: React.FC = () => {
       inputRef.current?.select();
     };
 
-    window.addEventListener("isabella-focus-prompt", handleFocusPrompt);
+    window.addEventListener('isabella-focus-prompt', handleFocusPrompt);
     return () => {
-      window.removeEventListener("isabella-focus-prompt", handleFocusPrompt);
+      window.removeEventListener('isabella-focus-prompt', handleFocusPrompt);
     };
   }, []);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     // Ctrl+Enter or Cmd+Enter: Instant submit even if multi-line
-    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
       e.preventDefault();
       handleSubmit();
       return;
     }
 
     // Standard Enter without Shift submits
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
-    } else if (e.key === "ArrowUp") {
+    } else if (e.key === 'ArrowUp') {
       if (history.length > 0) {
         e.preventDefault();
         const nextIdx = historyIdx < history.length - 1 ? historyIdx + 1 : historyIdx;
         setHistoryIdx(nextIdx);
-        setInput(history[history.length - 1 - nextIdx] || "");
+        setInput(history[history.length - 1 - nextIdx] || '');
       }
-    } else if (e.key === "ArrowDown") {
+    } else if (e.key === 'ArrowDown') {
       if (historyIdx > 0) {
         e.preventDefault();
         const nextIdx = historyIdx - 1;
         setHistoryIdx(nextIdx);
-        setInput(history[history.length - 1 - nextIdx] || "");
+        setInput(history[history.length - 1 - nextIdx] || '');
       } else if (historyIdx === 0) {
         e.preventDefault();
         setHistoryIdx(-1);
-        setInput("");
+        setInput('');
       }
     }
   };
@@ -94,18 +94,18 @@ export const TerminalCommandLine: React.FC = () => {
     setHistory((prev) => [...prev, trimmed]);
     setHistoryIdx(-1);
 
-    if (trimmed.startsWith("/")) {
+    if (trimmed.startsWith('/')) {
       executeCommand(trimmed);
     } else {
       sendMessage(trimmed);
     }
 
-    setInput("");
+    setInput('');
   };
 
   const handleQuickCommand = (cmd: string) => {
     soundManager.playBeep(750, 0.03);
-    if (cmd.startsWith("/")) {
+    if (cmd.startsWith('/')) {
       executeCommand(cmd);
     } else {
       sendMessage(cmd);
@@ -170,10 +170,10 @@ export const TerminalCommandLine: React.FC = () => {
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           disabled={isProcessing}
-          rows={Math.min(4, Math.max(1, input.split("\n").length))}
+          rows={Math.min(4, Math.max(1, input.split('\n').length))}
           placeholder={
             isProcessing
-              ? "Isabella y la arquitectura CROWN están sintetizando pensamiento..."
+              ? 'Isabella y la arquitectura CROWN están sintetizando pensamiento...'
               : "Escribe a Isabella (ej. 'Genera una reflexión filosófica' o '/image arquitectura cuántica')..."
           }
           className="w-full resize-none bg-transparent font-mono text-sm text-[#F8FAFC] placeholder:text-slate-500 focus:outline-none leading-relaxed min-h-[38px] max-h-[140px] py-1.5"
@@ -186,13 +186,13 @@ export const TerminalCommandLine: React.FC = () => {
             onClick={toggleMic}
             className={`p-2 rounded-xl border transition-all ${
               state.isListening
-                ? "bg-red-600 border-red-400 text-white animate-pulse shadow-lg shadow-red-600/40"
-                : "bg-[#0B1728] hover:bg-[#10223A] text-slate-400 hover:text-sky-300 border-slate-800"
+                ? 'bg-red-600 border-red-400 text-white animate-pulse shadow-lg shadow-red-600/40'
+                : 'bg-[#0B1728] hover:bg-[#10223A] text-slate-400 hover:text-sky-300 border-slate-800'
             }`}
             title={
               state.isListening
-                ? "Detener grabación de voz"
-                : "Hablar con Isabella por micrófono (Ctrl+M)"
+                ? 'Detener grabación de voz'
+                : 'Hablar con Isabella por micrófono (Ctrl+M)'
             }
           >
             {state.isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
@@ -201,7 +201,7 @@ export const TerminalCommandLine: React.FC = () => {
           {/* Quick Image studio shortcut */}
           <button
             type="button"
-            onClick={() => setActiveView("image_studio")}
+            onClick={() => setActiveView('image_studio')}
             className="p-2 rounded-xl bg-[#0B1728] hover:bg-[#10223A] text-slate-400 hover:text-amber-300 border border-slate-800 transition-all hidden sm:flex"
             title="Abrir Estudio Visual"
           >

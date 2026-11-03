@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from 'react';
 import {
   Activity,
   Cpu,
@@ -13,7 +13,7 @@ import {
   Gauge,
   Thermometer,
   RotateCcw,
-} from "lucide-react";
+} from 'lucide-react';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -23,15 +23,15 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-} from "recharts";
+} from 'recharts';
 
-import { ObservabilityService, ObservabilitySnapshot } from "@/lib/telemetry/observability";
-import { HealthMonitorService, HealthEvent } from "@/lib/telemetry/health";
-import { EntropyService, EntropyReport } from "@/lib/security/entropy";
-import { CentralizedTelemetryService, IsabellaCoreId } from "@/lib/latam-aegis-x";
-import { exportSecurityCompliancePdf } from "@/lib/audit-export";
-import { DoublePipelineMetricsPanel } from "./DoublePipelineMetricsPanel";
-import { MetricsDashboard } from "./MetricsDashboard";
+import { ObservabilityService, ObservabilitySnapshot } from '@/lib/telemetry/observability';
+import { HealthMonitorService, HealthEvent } from '@/lib/telemetry/health';
+import { EntropyService, EntropyReport } from '@/lib/security/entropy';
+import { CentralizedTelemetryService, IsabellaCoreId } from '@/lib/latam-aegis-x';
+import { exportSecurityCompliancePdf } from '@/lib/audit-export';
+import { DoublePipelineMetricsPanel } from './DoublePipelineMetricsPanel';
+import { MetricsDashboard } from './MetricsDashboard';
 
 interface ChartPoint {
   time: string;
@@ -44,7 +44,7 @@ export function ObservabilityPanel() {
   const [history, setHistory] = useState<ChartPoint[]>([]);
   const [healthLogs, setHealthLogs] = useState<HealthEvent[]>([]);
   const [entropy, setEntropy] = useState<EntropyReport | null>(null);
-  const [activeCoreFilter, setActiveCoreFilter] = useState<string>("ALL");
+  const [activeCoreFilter, setActiveCoreFilter] = useState<string>('ALL');
 
   // Subscribe to real-time telemetry stream
   useEffect(() => {
@@ -53,9 +53,9 @@ export function ObservabilityPanel() {
 
       // Append data point to Recharts history
       const timeString = new Date(newSnapshot.timestamp).toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
       });
 
       setHistory((prev) => {
@@ -101,7 +101,7 @@ export function ObservabilityPanel() {
 
   const injectSimulationAnomaly = (
     coreId: IsabellaCoreId,
-    type: "stack_overflow" | "memory_leak",
+    type: 'stack_overflow' | 'memory_leak'
   ) => {
     HealthMonitorService.injectDiagnosticAnomaly(coreId, type);
   };
@@ -118,10 +118,10 @@ export function ObservabilityPanel() {
     const values = Object.values(snapshot.cores);
     return {
       total: values.length,
-      active: values.filter((c) => c.status === "active").length,
-      warning: values.filter((c) => c.status === "warning").length,
-      error: values.filter((c) => c.status === "error").length,
-      restarting: values.filter((c) => c.status === "restarting").length,
+      active: values.filter((c) => c.status === 'active').length,
+      warning: values.filter((c) => c.status === 'warning').length,
+      error: values.filter((c) => c.status === 'error').length,
+      restarting: values.filter((c) => c.status === 'restarting').length,
     };
   }, [snapshot]);
 
@@ -129,7 +129,7 @@ export function ObservabilityPanel() {
   const filteredCores = useMemo(() => {
     if (!snapshot) return [];
     return Object.values(snapshot.cores).filter((c) => {
-      if (activeCoreFilter === "ALL") return true;
+      if (activeCoreFilter === 'ALL') return true;
       return c.status === activeCoreFilter.toLowerCase();
     });
   }, [snapshot, activeCoreFilter]);
@@ -144,13 +144,13 @@ export function ObservabilityPanel() {
   }
 
   const systemState =
-    coreStats.error > 0 ? "requires_attention" : coreStats.warning > 0 ? "degraded" : "operational";
+    coreStats.error > 0 ? 'requires_attention' : coreStats.warning > 0 ? 'degraded' : 'operational';
   const systemStateLabel =
-    systemState === "operational"
-      ? "Operativo"
-      : systemState === "degraded"
-        ? "Degradado"
-        : "Requiere atención";
+    systemState === 'operational'
+      ? 'Operativo'
+      : systemState === 'degraded'
+        ? 'Degradado'
+        : 'Requiere atención';
 
   return (
     <div className="space-y-6 text-foreground font-sans">
@@ -162,7 +162,7 @@ export function ObservabilityPanel() {
         <div className="flex items-center gap-3">
           <span
             aria-hidden="true"
-            className={`size-2.5 rounded-full ${systemState === "operational" ? "bg-emerald-500" : systemState === "degraded" ? "bg-amber-400" : "bg-rose-500"}`}
+            className={`size-2.5 rounded-full ${systemState === 'operational' ? 'bg-emerald-500' : systemState === 'degraded' ? 'bg-amber-400' : 'bg-rose-500'}`}
           />
           <div>
             <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
@@ -185,7 +185,7 @@ export function ObservabilityPanel() {
               Tasa de Procesamiento
             </span>
             <span className="block text-2xl font-bold text-platinum font-mono">
-              {snapshot.throughput.toFixed(2)}{" "}
+              {snapshot.throughput.toFixed(2)}{' '}
               <span className="text-[11px] font-normal text-muted-foreground">req/s</span>
             </span>
           </div>
@@ -276,12 +276,12 @@ export function ObservabilityPanel() {
               <YAxis stroke="#94a3b8" />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "#0d1117",
-                  borderColor: "rgba(255,255,255,0.1)",
-                  borderRadius: "12px",
-                  color: "#f8fafc",
-                  fontFamily: "monospace",
-                  fontSize: "11px",
+                  backgroundColor: '#0d1117',
+                  borderColor: 'rgba(255,255,255,0.1)',
+                  borderRadius: '12px',
+                  color: '#f8fafc',
+                  fontFamily: 'monospace',
+                  fontSize: '11px',
                 }}
               />
               <Legend />
@@ -321,14 +321,14 @@ export function ObservabilityPanel() {
             </div>
             {/* Status filters */}
             <div className="flex flex-wrap gap-1">
-              {["ALL", "ACTIVE", "WARNING", "ERROR", "RESTARTING"].map((status) => (
+              {['ALL', 'ACTIVE', 'WARNING', 'ERROR', 'RESTARTING'].map((status) => (
                 <button
                   key={status}
                   onClick={() => setActiveCoreFilter(status)}
                   className={`px-2 py-1 rounded font-mono text-[9px] font-bold transition-all uppercase cursor-pointer ${
                     activeCoreFilter === status
-                      ? "bg-electric text-platinum border border-electric"
-                      : "bg-secondary/20 hover:bg-secondary/40 text-muted-foreground border border-border/10"
+                      ? 'bg-electric text-platinum border border-electric'
+                      : 'bg-secondary/20 hover:bg-secondary/40 text-muted-foreground border border-border/10'
                   }`}
                 >
                   {status}
@@ -344,17 +344,17 @@ export function ObservabilityPanel() {
             </span>
             <div className="grid grid-cols-4 sm:grid-cols-8 md:grid-cols-12 gap-2 pb-1">
               {Object.values(snapshot.cores).map((core) => {
-                const isWarning = core.status === "warning";
-                const isError = core.status === "error";
-                const isRestarting = core.status === "restarting";
+                const isWarning = core.status === 'warning';
+                const isError = core.status === 'error';
+                const isRestarting = core.status === 'restarting';
 
                 const pulseColor = isError
-                  ? "bg-rose-500 shadow-[0_0_12px_rgba(244,63,94,0.6)] animate-pulse"
+                  ? 'bg-rose-500 shadow-[0_0_12px_rgba(244,63,94,0.6)] animate-pulse'
                   : isWarning
-                    ? "bg-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.5)]"
+                    ? 'bg-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.5)]'
                     : isRestarting
-                      ? "bg-blue-400 shadow-[0_0_12px_rgba(96,165,250,0.6)] animate-ping"
-                      : "bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.5)] animate-pulse";
+                      ? 'bg-blue-400 shadow-[0_0_12px_rgba(96,165,250,0.6)] animate-ping'
+                      : 'bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.5)] animate-pulse';
 
                 return (
                   <button
@@ -362,8 +362,8 @@ export function ObservabilityPanel() {
                     onClick={() =>
                       setActiveCoreFilter(
                         core.status.toUpperCase() === activeCoreFilter
-                          ? "ALL"
-                          : core.status.toUpperCase(),
+                          ? 'ALL'
+                          : core.status.toUpperCase()
                       )
                     }
                     className="p-1.5 rounded-lg bg-secondary/10 border border-border/10 hover:border-border/30 hover:bg-secondary/20 transition-all flex flex-col items-center gap-1 cursor-pointer select-none shrink-0"
@@ -371,7 +371,7 @@ export function ObservabilityPanel() {
                   >
                     <div className={`size-3 rounded-full ${pulseColor}`} />
                     <span className="text-[7.5px] font-mono text-muted-foreground font-bold leading-none">
-                      {core.id.replace("core_", "")}
+                      {core.id.replace('core_', '')}
                     </span>
                   </button>
                 );
@@ -399,13 +399,13 @@ export function ObservabilityPanel() {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 max-h-[460px] overflow-y-auto pr-1">
             {filteredCores.map((core) => {
               const statusColor =
-                core.status === "active"
-                  ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/20"
-                  : core.status === "warning"
-                    ? "text-amber-400 bg-amber-500/10 border-amber-500/20"
-                    : core.status === "error"
-                      ? "text-rose-400 bg-rose-500/10 border-rose-500/20"
-                      : "text-blue-400 bg-blue-500/10 border-blue-500/20 animate-pulse";
+                core.status === 'active'
+                  ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+                  : core.status === 'warning'
+                    ? 'text-amber-400 bg-amber-500/10 border-amber-500/20'
+                    : core.status === 'error'
+                      ? 'text-rose-400 bg-rose-500/10 border-rose-500/20'
+                      : 'text-blue-400 bg-blue-500/10 border-blue-500/20 animate-pulse';
 
               return (
                 <div
@@ -441,7 +441,7 @@ export function ObservabilityPanel() {
                       <div className="flex justify-between">
                         <span>Temperature:</span>
                         <span
-                          className={`flex items-center gap-0.5 ${core.temperatureCelsius > 52 ? "text-amber-400" : "text-platinum"}`}
+                          className={`flex items-center gap-0.5 ${core.temperatureCelsius > 52 ? 'text-amber-400' : 'text-platinum'}`}
                         >
                           <Thermometer className="size-3 text-red-400" />
                           {core.temperatureCelsius.toFixed(1)}°C
@@ -450,7 +450,7 @@ export function ObservabilityPanel() {
                       <div className="flex justify-between">
                         <span>Stack Depth:</span>
                         <span
-                          className={`font-semibold ${core.stackDepth > 140 ? "text-rose-400" : "text-platinum"}`}
+                          className={`font-semibold ${core.stackDepth > 140 ? 'text-rose-400' : 'text-platinum'}`}
                         >
                           {core.stackDepth}
                         </span>
@@ -469,7 +469,7 @@ export function ObservabilityPanel() {
                     </button>
 
                     <button
-                      onClick={() => injectSimulationAnomaly(core.id, "stack_overflow")}
+                      onClick={() => injectSimulationAnomaly(core.id, 'stack_overflow')}
                       className="px-1.5 py-1 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-[9px] font-bold uppercase transition-all cursor-pointer"
                       title="Inject Stack Overflow"
                     >
@@ -477,7 +477,7 @@ export function ObservabilityPanel() {
                     </button>
 
                     <button
-                      onClick={() => injectSimulationAnomaly(core.id, "memory_leak")}
+                      onClick={() => injectSimulationAnomaly(core.id, 'memory_leak')}
                       className="px-1.5 py-1 rounded bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 text-[9px] font-bold uppercase transition-all cursor-pointer"
                       title="Inject Memory Leak"
                     >
@@ -512,11 +512,11 @@ export function ObservabilityPanel() {
               ) : (
                 healthLogs.map((log, idx) => {
                   const sevColor =
-                    log.severity === "critical"
-                      ? "text-rose-400"
-                      : log.severity === "high"
-                        ? "text-amber-400"
-                        : "text-platinum";
+                    log.severity === 'critical'
+                      ? 'text-rose-400'
+                      : log.severity === 'high'
+                        ? 'text-amber-400'
+                        : 'text-platinum';
 
                   return (
                     <div

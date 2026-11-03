@@ -1,4 +1,4 @@
-import type { NativeMLHooks } from "./types";
+import type { NativeMLHooks } from './types';
 
 export interface TextMLSignal {
   features: number[];
@@ -10,12 +10,12 @@ export interface TextMLSignal {
   modelHash: string;
 }
 
-const MODEL_VERSION = "native-text-risk-1.0.0";
+const MODEL_VERSION = 'native-text-risk-1.0.0';
 const FEATURE_LABELS = [
-  "instruction_override",
-  "secret_request",
-  "external_action",
-  "sensitive_data",
+  'instruction_override',
+  'secret_request',
+  'external_action',
+  'sensitive_data',
 ] as const;
 const WEIGHTS = [1.8, 2.4, 1.1, 1.5];
 const BIAS = -2.2;
@@ -36,7 +36,7 @@ function hash(value: unknown): string {
       lanes[lane] = Math.imul(lanes[lane], 16777619 + lane * 2);
     }
   }
-  return Array.from(lanes, (lane) => (lane >>> 0).toString(16).padStart(8, "0")).join("");
+  return Array.from(lanes, (lane) => (lane >>> 0).toString(16).padStart(8, '0')).join('');
 }
 
 // Constant for a given model version: computed once, not on every request.
@@ -45,9 +45,9 @@ const MODEL_HASH = hash({ MODEL_VERSION, WEIGHTS, BIAS, FEATURE_LABELS });
 function normalizedTokens(input: string): Set<string> {
   return new Set(
     input
-      .toLocaleLowerCase("es-MX")
-      .normalize("NFKC")
-      .match(/[\p{L}\p{N}\-_]+/gu) ?? [],
+      .toLocaleLowerCase('es-MX')
+      .normalize('NFKC')
+      .match(/[\p{L}\p{N}\-_]+/gu) ?? []
   );
 }
 
@@ -60,10 +60,10 @@ export function classifyTextRisk(input: string, hooks: NativeMLHooks = {}): Text
   const scanned = input.length > MAX_SCAN_CHARS ? input.slice(0, MAX_SCAN_CHARS) : input;
   const tokens = normalizedTokens(scanned);
   const features = [
-    hasAny(tokens, ["ignora", "override", "bypass", "system", "instrucciones"]),
-    hasAny(tokens, ["secreto", "token", "password", "api", "key", "credencial"]),
-    hasAny(tokens, ["ejecuta", "elimina", "transfiere", "publica", "despliega"]),
-    hasAny(tokens, ["personal", "privado", "pago", "salud", "identidad"]),
+    hasAny(tokens, ['ignora', 'override', 'bypass', 'system', 'instrucciones']),
+    hasAny(tokens, ['secreto', 'token', 'password', 'api', 'key', 'credencial']),
+    hasAny(tokens, ['ejecuta', 'elimina', 'transfiere', 'publica', 'despliega']),
+    hasAny(tokens, ['personal', 'privado', 'pago', 'salud', 'identidad']),
   ];
   const logit = BIAS + features.reduce((sum, feature, index) => sum + feature * WEIGHTS[index]!, 0);
   const probability = sigmoid(logit);
@@ -77,7 +77,7 @@ export function classifyTextRisk(input: string, hooks: NativeMLHooks = {}): Text
     modelId: MODEL_VERSION,
     modelHash,
   };
-  void hooks.audit?.("native_ml.text_risk_scored", {
+  void hooks.audit?.('native_ml.text_risk_scored', {
     modelId: signal.modelId,
     modelHash: signal.modelHash,
     riskScore: signal.riskScore,

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Play,
   SkipForward,
@@ -11,11 +11,11 @@ import {
   Lock,
   Terminal,
   Wifi,
-} from "lucide-react";
+} from 'lucide-react';
 
 const DURATION = 59;
 const TARGET_FPS = 60;
-const FALLBACK_BACKDROP = "/assets/isabella-intro-backdrop.png";
+const FALLBACK_BACKDROP = '/assets/isabella-intro-backdrop.png';
 
 export interface TelemetryPayload {
   elapsed: number;
@@ -34,7 +34,7 @@ interface IntroMediaConfig {
     aspectRatio?: string;
   };
   fallback?: {
-    type?: "static" | "procedural" | "none";
+    type?: 'static' | 'procedural' | 'none';
     url?: string;
   };
 }
@@ -47,45 +47,45 @@ interface CinematicIntroProps {
 const scenes = [
   {
     end: 10,
-    kicker: "NODO CERO // REAL DEL MONTE · HIDALGO · MX",
-    title: "LA INTELIGENCIA EMPIEZA ESCUCHANDO.",
-    body: "Isabella Villaseñor AI sintetiza contexto, memoria y proveniencia territorial bajo estricto mandato y gobernanza humana.",
-    tag: "COGNITIVE ARCHITECTURE // ACTIVE",
+    kicker: 'NODO CERO // REAL DEL MONTE · HIDALGO · MX',
+    title: 'LA INTELIGENCIA EMPIEZA ESCUCHANDO.',
+    body: 'Isabella Villaseñor AI sintetiza contexto, memoria y proveniencia territorial bajo estricto mandato y gobernanza humana.',
+    tag: 'COGNITIVE ARCHITECTURE // ACTIVE',
   },
   {
     end: 20,
-    kicker: "CROWN CORE // ORQUESTACIÓN TÁCTICA AUDITABLE",
-    title: "CADA RESPUESTA TIENE UN ORIGEN DECLARADO.",
-    body: "La percepción transita por capas no-deterministas hacia políticas, decisiones y trazabilidad criptográfica LITLE.",
-    tag: "TRACEABILITY // 100% VERIFIED",
+    kicker: 'CROWN CORE // ORQUESTACIÓN TÁCTICA AUDITABLE',
+    title: 'CADA RESPUESTA TIENE UN ORIGEN DECLARADO.',
+    body: 'La percepción transita por capas no-deterministas hacia políticas, decisiones y trazabilidad criptográfica LITLE.',
+    tag: 'TRACEABILITY // 100% VERIFIED',
   },
   {
     end: 30,
-    kicker: "ARGUS GATE // PROTECCIÓN ZERO-TRUST",
-    title: "LA CAPACIDAD NO ESTÁ POR ENCIMA DEL CUIDADO.",
-    body: "Frente a la ambigüedad o el riesgo, el kernel frena el flujo autónomo y eleva la solicitud al supervisor humano.",
-    tag: "ZERO-TRUST GOVERNANCE // ENGAGED",
+    kicker: 'ARGUS GATE // PROTECCIÓN ZERO-TRUST',
+    title: 'LA CAPACIDAD NO ESTÁ POR ENCIMA DEL CUIDADO.',
+    body: 'Frente a la ambigüedad o el riesgo, el kernel frena el flujo autónomo y eleva la solicitud al supervisor humano.',
+    tag: 'ZERO-TRUST GOVERNANCE // ENGAGED',
   },
   {
     end: 40,
-    kicker: "TRIADA ISA · SOPHIA · ORION // SEGREGACIÓN DE ROLES",
-    title: "ROLES DIVERGENTES. UNA SOLA RESPONSABILIDAD.",
-    body: "Presencia, razonamiento analítico y ejecución táctica operan con límites explícitos de acción, sin opacidad corporativa.",
-    tag: "TRIAD KERNEL // SYNCED",
+    kicker: 'TRIADA ISA · SOPHIA · ORION // SEGREGACIÓN DE ROLES',
+    title: 'ROLES DIVERGENTES. UNA SOLA RESPONSABILIDAD.',
+    body: 'Presencia, razonamiento analítico y ejecución táctica operan con límites explícitos de acción, sin opacidad corporativa.',
+    tag: 'TRIAD KERNEL // SYNCED',
   },
   {
     end: 50,
-    kicker: "SOBERANÍA TERRITORIAL // SANTUARIO DE MEMORIA",
-    title: "EL TERRITORIO Y SU GENTE NO SON UN DATO MÁS.",
-    body: "La memoria colectiva, la raíz cultural y la incertidumbre local se protegen y honran antes de cualquier abstracción.",
-    tag: "LOCAL SOVEREIGNTY // PROTECTED",
+    kicker: 'SOBERANÍA TERRITORIAL // SANTUARIO DE MEMORIA',
+    title: 'EL TERRITORIO Y SU GENTE NO SON UN DATO MÁS.',
+    body: 'La memoria colectiva, la raíz cultural y la incertidumbre local se protegen y honran antes de cualquier abstracción.',
+    tag: 'LOCAL SOVEREIGNTY // PROTECTED',
   },
   {
     end: DURATION + 1,
-    kicker: "ISABELLA VILLASEÑOR AI // KERNEL COGNITIVO LIBRE",
-    title: "TÚ DECIDES. ISABELLA AYUDA A VER MEJOR.",
-    body: "Una interfaz cognitiva comunitaria construida para pensar contigo, defender la verdad y potenciar la soberanía digital.",
-    tag: "SYSTEM READY // STANDBY",
+    kicker: 'ISABELLA VILLASEÑOR AI // KERNEL COGNITIVO LIBRE',
+    title: 'TÚ DECIDES. ISABELLA AYUDA A VER MEJOR.',
+    body: 'Una interfaz cognitiva comunitaria construida para pensar contigo, defender la verdad y potenciar la soberanía digital.',
+    tag: 'SYSTEM READY // STANDBY',
   },
 ] as const;
 
@@ -97,7 +97,7 @@ export function CinematicIntroContent({ onComplete, onTelemetryUpdate }: Cinemat
   const [elapsed, setElapsed] = useState(0);
   const [fps, setFps] = useState(TARGET_FPS);
   const [media, setMedia] = useState<IntroMediaConfig>({
-    fallback: { type: "static", url: FALLBACK_BACKDROP },
+    fallback: { type: 'static', url: FALLBACK_BACKDROP },
   });
 
   const completedRef = useRef(false);
@@ -114,11 +114,11 @@ export function CinematicIntroContent({ onComplete, onTelemetryUpdate }: Cinemat
 
   useEffect(() => {
     const controller = new AbortController();
-    void fetch("/api/mux-intro", {
-      method: "GET",
+    void fetch('/api/mux-intro', {
+      method: 'GET',
       signal: controller.signal,
-      headers: { accept: "application/json" },
-      credentials: "same-origin",
+      headers: { accept: 'application/json' },
+      credentials: 'same-origin',
     })
       .then(async (response) => {
         const payload = (await response.json()) as IntroMediaConfig;
@@ -195,9 +195,9 @@ export function CinematicIntroContent({ onComplete, onTelemetryUpdate }: Cinemat
   useEffect(() => {
     if (showGate) return;
     const prefersReducedMotion =
-      typeof window !== "undefined" &&
-      typeof window.matchMedia === "function" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      typeof window !== 'undefined' &&
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (prefersReducedMotion) {
       const timer = window.setTimeout(complete, 600);
       return () => window.clearTimeout(timer);
@@ -235,18 +235,18 @@ export function CinematicIntroContent({ onComplete, onTelemetryUpdate }: Cinemat
 
   useEffect(() => {
     const handleKeydown = (event: KeyboardEvent) => {
-      if (showGate && (event.key === "Enter" || event.key === " ")) {
+      if (showGate && (event.key === 'Enter' || event.key === ' ')) {
         event.preventDefault();
         enter();
-      } else if (!showGate && event.key === "Escape") {
+      } else if (!showGate && event.key === 'Escape') {
         event.preventDefault();
         complete();
-      } else if (!showGate && event.key.toLowerCase() === "m") {
+      } else if (!showGate && event.key.toLowerCase() === 'm') {
         setMuted((value) => !value);
       }
     };
-    window.addEventListener("keydown", handleKeydown);
-    return () => window.removeEventListener("keydown", handleKeydown);
+    window.addEventListener('keydown', handleKeydown);
+    return () => window.removeEventListener('keydown', handleKeydown);
   }, [complete, enter, showGate]);
 
   useEffect(() => {
@@ -256,17 +256,17 @@ export function CinematicIntroContent({ onComplete, onTelemetryUpdate }: Cinemat
 
   const scene = useMemo(
     () => scenes.find((item) => elapsed < item.end) ?? scenes[scenes.length - 1],
-    [elapsed],
+    [elapsed]
   );
   const progress = Math.min(1, elapsed / DURATION);
   const timecode = `${Math.floor(elapsed / 60)
     .toString()
-    .padStart(2, "0")}:${Math.floor(elapsed % 60)
+    .padStart(2, '0')}:${Math.floor(elapsed % 60)
     .toString()
-    .padStart(2, "0")}`;
+    .padStart(2, '0')}`;
 
   const fallbackUrl =
-    media.fallback?.type === "static"
+    media.fallback?.type === 'static'
       ? (media.fallback.url ?? FALLBACK_BACKDROP)
       : FALLBACK_BACKDROP;
 
@@ -404,7 +404,7 @@ export function CinematicIntroContent({ onComplete, onTelemetryUpdate }: Cinemat
                   className="hidden sm:flex items-center gap-1.5 transition-colors hover:text-cyan-200"
                 >
                   {muted ? <VolumeX className="size-3.5" /> : <Volume2 className="size-3.5" />}
-                  <span>[M] {muted ? "UNMUTE" : "MUTE"}</span>
+                  <span>[M] {muted ? 'UNMUTE' : 'MUTE'}</span>
                 </button>
                 <button
                   type="button"
@@ -443,7 +443,7 @@ export function CinematicIntroContent({ onComplete, onTelemetryUpdate }: Cinemat
             <div className="relative mx-auto mb-8 flex size-28 items-center justify-center rounded-full border border-cyan-400/30 bg-black/60 shadow-[0_0_80px_rgba(34,211,238,0.25),inset_0_0_30px_rgba(34,211,238,0.15)]">
               <div
                 className="absolute inset-0 rounded-full border border-cyan-300/20"
-                style={{ animation: "pulseRing 3s infinite ease-in-out" }}
+                style={{ animation: 'pulseRing 3s infinite ease-in-out' }}
               />
               <div className="size-4 rounded-full bg-cyan-200 shadow-[0_0_25px_8px_rgba(34,211,238,0.8)]" />
               <Lock className="absolute size-5 text-cyan-300/40" />
@@ -480,17 +480,17 @@ export function CinematicIntroContent({ onComplete, onTelemetryUpdate }: Cinemat
               <span
                 className={`size-2 rounded-full ${
                   mediaReady
-                    ? "bg-cyan-300 shadow-[0_0_12px_3px_rgba(34,211,238,0.7)]"
-                    : "bg-white/20"
+                    ? 'bg-cyan-300 shadow-[0_0_12px_3px_rgba(34,211,238,0.7)]'
+                    : 'bg-white/20'
                 }`}
               />
               {playbackUrl
                 ? mediaReady
-                  ? "Flujo de video soberano listo"
-                  : "Cargando canal de video"
+                  ? 'Flujo de video soberano listo'
+                  : 'Cargando canal de video'
                 : mediaFailed
-                  ? "Respaldo territorial activo"
-                  : "Modo de respaldo listo"}
+                  ? 'Respaldo territorial activo'
+                  : 'Modo de respaldo listo'}
             </div>
 
             {/* BOTONES DE ACCIÓN */}
@@ -515,7 +515,7 @@ export function CinematicIntroContent({ onComplete, onTelemetryUpdate }: Cinemat
                 ) : (
                   <Volume2 className="size-4 text-cyan-300" />
                 )}
-                <span>{muted ? "AUDIO DESACTIVADO" : "AUDIO ACTIVADO"}</span>
+                <span>{muted ? 'AUDIO DESACTIVADO' : 'AUDIO ACTIVADO'}</span>
               </button>
             </div>
           </div>

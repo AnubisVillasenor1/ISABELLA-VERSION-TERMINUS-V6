@@ -9,9 +9,9 @@
     "maxTokenLifetimeSeconds": 900
   },
   "assuranceLevels": {
-    "local": {"rank": 1},
-    "aal2": {"rank": 2},
-    "aal3": {"rank": 3}
+    "local": { "rank": 1 },
+    "aal2": { "rank": 2 },
+    "aal3": { "rank": 3 }
   },
   "roles": {
     "citizen": 1,

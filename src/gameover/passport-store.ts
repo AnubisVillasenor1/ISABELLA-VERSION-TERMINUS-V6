@@ -5,9 +5,9 @@
 // writer. This module provides a small JSON-file store with atomic writes; it is
 // deliberately dependency-free so it can be swapped for Postgres/Supabase later
 // behind the same PassportStorePort interface.
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
-import path from "node:path";
-import type { AIPassport } from "./types";
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
+import type { AIPassport } from './types';
 
 export interface PassportStorePort {
   /** Returns every persisted passport in insertion order. */
@@ -17,7 +17,11 @@ export interface PassportStorePort {
 }
 
 function isPassport(value: unknown): value is AIPassport {
-  return typeof value === "object" && value !== null && typeof (value as { id?: unknown }).id === "string";
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    typeof (value as { id?: unknown }).id === 'string'
+  );
 }
 
 /**
@@ -27,26 +31,28 @@ function isPassport(value: unknown): value is AIPassport {
  */
 export function createJsonPassportStore(filePath: string): PassportStorePort {
   const target = filePath.trim();
-  if (!target) throw new Error("PASSPORT_STORE_PATH_REQUIRED");
+  if (!target) throw new Error('PASSPORT_STORE_PATH_REQUIRED');
 
   function load(): readonly AIPassport[] {
     if (!existsSync(target)) return [];
-    const raw = readFileSync(target, "utf8").trim();
+    const raw = readFileSync(target, 'utf8').trim();
     if (!raw) return [];
     let parsed: unknown;
     try {
       parsed = JSON.parse(raw);
     } catch (error) {
-      throw new Error(`PASSPORT_STORE_CORRUPT: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `PASSPORT_STORE_CORRUPT: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
-    if (!Array.isArray(parsed)) throw new Error("PASSPORT_STORE_CORRUPT: expected a JSON array");
+    if (!Array.isArray(parsed)) throw new Error('PASSPORT_STORE_CORRUPT: expected a JSON array');
     return parsed.filter(isPassport).map((passport) => Object.freeze({ ...passport }));
   }
 
   function save(passports: readonly AIPassport[]): void {
     mkdirSync(path.dirname(target), { recursive: true });
     const temp = `${target}.tmp`;
-    writeFileSync(temp, `${JSON.stringify(passports, null, 2)}\n`, "utf8");
+    writeFileSync(temp, `${JSON.stringify(passports, null, 2)}\n`, 'utf8');
     renameSync(temp, target);
   }
 

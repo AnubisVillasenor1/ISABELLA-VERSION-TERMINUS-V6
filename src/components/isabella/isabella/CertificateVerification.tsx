@@ -1,10 +1,10 @@
-import { useState } from "react";
-import { ShieldCheck, Fingerprint, Lock, RotateCcw, Check, X } from "lucide-react";
-import { toast } from "sonner";
+import { useState } from 'react';
+import { ShieldCheck, Fingerprint, Lock, RotateCcw, Check, X } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface VerificationStep {
   label: string;
-  status: "idle" | "loading" | "success" | "error";
+  status: 'idle' | 'loading' | 'success' | 'error';
   detail?: string;
 }
 
@@ -20,17 +20,17 @@ interface IntegrityResponse {
 
 const INITIAL_STEPS: VerificationStep[] = [
   {
-    label: "Consultando estado de integridad económica (/api/economic-integrity)",
-    status: "idle",
+    label: 'Consultando estado de integridad económica (/api/economic-integrity)',
+    status: 'idle',
   },
   {
-    label: "Autoridad de firma del ledger disponible (no simulada)",
-    status: "idle",
+    label: 'Autoridad de firma del ledger disponible (no simulada)',
+    status: 'idle',
   },
-  { label: "Cadena BookPI válida en la base canónica", status: "idle" },
+  { label: 'Cadena BookPI válida en la base canónica', status: 'idle' },
   {
-    label: "Proyección económica reconstruible (economic_events)",
-    status: "idle",
+    label: 'Proyección económica reconstruible (economic_events)',
+    status: 'idle',
   },
 ];
 
@@ -43,7 +43,7 @@ export function CertificateVerification() {
   const [isVerifying, setIsVerifying] = useState(false);
   const [steps, setSteps] = useState<VerificationStep[]>(INITIAL_STEPS);
   const [showCertificate, setShowCertificate] = useState(false);
-  const [sealInfo, setSealInfo] = useState<string>("");
+  const [sealInfo, setSealInfo] = useState<string>('');
 
   const setStep = (idx: number, patch: Partial<VerificationStep>) =>
     setSteps((prev) => prev.map((s, i) => (i === idx ? { ...s, ...patch } : s)));
@@ -51,29 +51,29 @@ export function CertificateVerification() {
   const handleVerify = async () => {
     setIsVerifying(true);
     setShowCertificate(false);
-    setSteps(INITIAL_STEPS.map((s) => ({ ...s, status: "loading" as const })));
+    setSteps(INITIAL_STEPS.map((s) => ({ ...s, status: 'loading' as const })));
 
     try {
-      const res = await fetch("/api/economic-integrity");
+      const res = await fetch('/api/economic-integrity');
       const data = (await res.json()) as IntegrityResponse;
 
-      const ok0 = res.ok && data.status === "ok";
+      const ok0 = res.ok && data.status === 'ok';
       setStep(0, {
-        status: ok0 ? "success" : "error",
+        status: ok0 ? 'success' : 'error',
         detail: `HTTP ${res.status} · status=${data.status}`,
       });
 
       const ok1 =
         data.checks?.signerAvailable === true && data.checks?.signatureSimulated === false;
       setStep(1, {
-        status: ok1 ? "success" : "error",
+        status: ok1 ? 'success' : 'error',
         detail: `signerAvailable=${String(data.checks?.signerAvailable)} · simulated=${String(data.checks?.signatureSimulated)}`,
       });
 
       const ok2 =
         data.checks?.bookpi?.available === true && data.checks?.bookpi?.chainValid === true;
       setStep(2, {
-        status: ok2 ? "success" : "error",
+        status: ok2 ? 'success' : 'error',
         detail: `available=${String(data.checks?.bookpi?.available)} · chainValid=${String(data.checks?.bookpi?.chainValid)}`,
       });
 
@@ -81,24 +81,24 @@ export function CertificateVerification() {
         data.checks?.projection?.available === true &&
         data.checks?.projection?.rebuildable === true;
       setStep(3, {
-        status: ok3 ? "success" : "error",
+        status: ok3 ? 'success' : 'error',
         detail: `available=${String(data.checks?.projection?.available)} · rebuildable=${String(data.checks?.projection?.rebuildable)}`,
       });
 
       if (ok0 && ok1 && ok2 && ok3) {
         setSealInfo(
-          `Integridad verificada el ${new Date().toISOString()}: firmante real, cadena BookPI válida y proyección reconstruible.`,
+          `Integridad verificada el ${new Date().toISOString()}: firmante real, cadena BookPI válida y proyección reconstruible.`
         );
         setShowCertificate(true);
-        toast.success("Integridad del ledger verificada contra el servidor.");
+        toast.success('Integridad del ledger verificada contra el servidor.');
       } else {
         setShowCertificate(false);
-        toast.error("Integridad NO verificada: revisa los chequeos en rojo.");
+        toast.error('Integridad NO verificada: revisa los chequeos en rojo.');
       }
     } catch (err) {
-      setSteps(INITIAL_STEPS.map((s) => ({ ...s, status: "error" as const })));
+      setSteps(INITIAL_STEPS.map((s) => ({ ...s, status: 'error' as const })));
       setShowCertificate(false);
-      toast.error(err instanceof Error ? err.message : "Error consultando integridad.");
+      toast.error(err instanceof Error ? err.message : 'Error consultando integridad.');
     } finally {
       setIsVerifying(false);
     }
@@ -149,29 +149,29 @@ export function CertificateVerification() {
             <div key={idx} className="flex items-center justify-between gap-3">
               <span
                 className={`text-left ${
-                  step.status === "success"
-                    ? "text-emerald-400"
-                    : step.status === "loading"
-                      ? "text-purple-400"
-                      : step.status === "error"
-                        ? "text-red-400"
-                        : "text-muted-foreground"
+                  step.status === 'success'
+                    ? 'text-emerald-400'
+                    : step.status === 'loading'
+                      ? 'text-purple-400'
+                      : step.status === 'error'
+                        ? 'text-red-400'
+                        : 'text-muted-foreground'
                 }`}
               >
                 {idx + 1}. {step.label}
                 {step.detail && <span className="block text-[10px] opacity-80">{step.detail}</span>}
               </span>
               <span className="font-bold uppercase text-[9.5px] shrink-0">
-                {step.status === "idle" && <span className="text-muted-foreground/50">Espera</span>}
-                {step.status === "loading" && (
+                {step.status === 'idle' && <span className="text-muted-foreground/50">Espera</span>}
+                {step.status === 'loading' && (
                   <span className="text-purple-400 animate-pulse">Cargando</span>
                 )}
-                {step.status === "success" && (
+                {step.status === 'success' && (
                   <span className="text-emerald-400 flex items-center gap-1">
                     <Check className="size-3" /> OK
                   </span>
                 )}
-                {step.status === "error" && (
+                {step.status === 'error' && (
                   <span className="text-red-400 flex items-center gap-1">
                     <X className="size-3" /> Falla
                   </span>

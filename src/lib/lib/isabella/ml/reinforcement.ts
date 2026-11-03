@@ -1,5 +1,5 @@
-import { createHash } from "node:crypto";
-import { EvaluationRegistry } from "../models/registry";
+import { createHash } from 'node:crypto';
+import { EvaluationRegistry } from '../models/registry';
 
 /**
  * Governed, deterministic evaluation harness for model candidates.
@@ -55,8 +55,8 @@ export interface EvaluationMetrics {
 export interface EvaluationResult extends EvaluationMetrics {
   passed: boolean;
   gateReasons: string[];
-  evidenceStatus: "EVALUATED_PENDING_APPROVAL";
-  approvedBy: "";
+  evidenceStatus: 'EVALUATED_PENDING_APPROVAL';
+  approvedBy: '';
   evaluatedAt: string;
 }
 
@@ -77,46 +77,46 @@ function assertFiniteNonNegative(value: number, field: string): void {
 }
 
 function normalize(text: string): string[] {
-  if (typeof text !== "string") throw new Error("evaluation_text_must_be_string");
+  if (typeof text !== 'string') throw new Error('evaluation_text_must_be_string');
 
-  return text.normalize("NFKC").toLocaleLowerCase("und").trim().split(/\s+/u).filter(Boolean);
+  return text.normalize('NFKC').toLocaleLowerCase('und').trim().split(/\s+/u).filter(Boolean);
 }
 
 function canonicalize(value: unknown): string {
-  if (value === null) return "null";
-  if (typeof value === "string") return JSON.stringify(value.normalize("NFKC"));
-  if (typeof value === "number") {
-    if (!Number.isFinite(value)) throw new Error("non_finite_number_in_evaluation");
+  if (value === null) return 'null';
+  if (typeof value === 'string') return JSON.stringify(value.normalize('NFKC'));
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) throw new Error('non_finite_number_in_evaluation');
     return JSON.stringify(value);
   }
-  if (typeof value === "boolean") return value ? "true" : "false";
-  if (Array.isArray(value)) return `[${value.map(canonicalize).join(",")}]`;
-  if (typeof value === "object") {
+  if (typeof value === 'boolean') return value ? 'true' : 'false';
+  if (Array.isArray(value)) return `[${value.map(canonicalize).join(',')}]`;
+  if (typeof value === 'object') {
     const object = value as Record<string, unknown>;
     const keys = Object.keys(object).sort();
-    return `{${keys.map((key) => `${JSON.stringify(key)}:${canonicalize(object[key])}`).join(",")}}`;
+    return `{${keys.map((key) => `${JSON.stringify(key)}:${canonicalize(object[key])}`).join(',')}}`;
   }
-  throw new Error("unsupported_value_in_evaluation");
+  throw new Error('unsupported_value_in_evaluation');
 }
 
 function digest(value: unknown): string {
-  return createHash("sha256").update(canonicalize(value), "utf8").digest("hex");
+  return createHash('sha256').update(canonicalize(value), 'utf8').digest('hex');
 }
 
 function validateSample(sample: MLTrainingSample): void {
-  if (!sample || typeof sample !== "object") throw new Error("invalid_evaluation_sample");
-  if (typeof sample.inputData !== "string" || sample.inputData.length > MAX_TEXT_LENGTH) {
-    throw new Error("invalid_sample_input_data");
+  if (!sample || typeof sample !== 'object') throw new Error('invalid_evaluation_sample');
+  if (typeof sample.inputData !== 'string' || sample.inputData.length > MAX_TEXT_LENGTH) {
+    throw new Error('invalid_sample_input_data');
   }
-  if (typeof sample.expectedOutput !== "string" || sample.expectedOutput.length > MAX_TEXT_LENGTH) {
-    throw new Error("invalid_sample_expected_output");
+  if (typeof sample.expectedOutput !== 'string' || sample.expectedOutput.length > MAX_TEXT_LENGTH) {
+    throw new Error('invalid_sample_expected_output');
   }
-  if (sample.actualOutput !== undefined && typeof sample.actualOutput !== "string") {
-    throw new Error("invalid_sample_actual_output");
+  if (sample.actualOutput !== undefined && typeof sample.actualOutput !== 'string') {
+    throw new Error('invalid_sample_actual_output');
   }
-  if (sample.loss !== undefined) assertFiniteNonNegative(sample.loss, "loss");
-  if (sample.biasPenalty !== undefined) assertFiniteNonNegative(sample.biasPenalty, "bias_penalty");
-  if (sample.latencyMs !== undefined) assertFiniteNonNegative(sample.latencyMs, "latency_ms");
+  if (sample.loss !== undefined) assertFiniteNonNegative(sample.loss, 'loss');
+  if (sample.biasPenalty !== undefined) assertFiniteNonNegative(sample.biasPenalty, 'bias_penalty');
+  if (sample.latencyMs !== undefined) assertFiniteNonNegative(sample.latencyMs, 'latency_ms');
 }
 
 function tokenCounts(tokens: string[]): Map<string, number> {
@@ -147,7 +147,7 @@ function tokenF1(expected: string, actual: string): number {
 
 function boundedPenalty(value: number | undefined): number {
   if (value === undefined) return 0;
-  assertFiniteNonNegative(value, "penalty");
+  assertFiniteNonNegative(value, 'penalty');
   return Math.min(1, value);
 }
 
@@ -175,7 +175,7 @@ function resolveThresholds(thresholds?: Partial<EvaluationThresholds>): Evaluati
     resolved.minMeasuredLatencyCoverage < 0 ||
     resolved.minMeasuredLatencyCoverage > 1
   ) {
-    throw new Error("invalid_evaluation_thresholds");
+    throw new Error('invalid_evaluation_thresholds');
   }
 
   return resolved;
@@ -184,18 +184,18 @@ function resolveThresholds(thresholds?: Partial<EvaluationThresholds>): Evaluati
 function benchmarkReasons(
   metrics: Pick<
     EvaluationMetrics,
-    "accuracy" | "f1Score" | "biasScore" | "invalidSampleCount" | "latencyCoverage"
+    'accuracy' | 'f1Score' | 'biasScore' | 'invalidSampleCount' | 'latencyCoverage'
   >,
-  thresholds: EvaluationThresholds,
+  thresholds: EvaluationThresholds
 ): string[] {
   const reasons: string[] = [];
-  if (metrics.accuracy < thresholds.minAccuracy) reasons.push("accuracy_below_threshold");
-  if (metrics.f1Score < thresholds.minF1) reasons.push("f1_below_threshold");
-  if (metrics.biasScore >= thresholds.maxBias) reasons.push("bias_at_or_above_threshold");
+  if (metrics.accuracy < thresholds.minAccuracy) reasons.push('accuracy_below_threshold');
+  if (metrics.f1Score < thresholds.minF1) reasons.push('f1_below_threshold');
+  if (metrics.biasScore >= thresholds.maxBias) reasons.push('bias_at_or_above_threshold');
   if (metrics.invalidSampleCount > thresholds.maxInvalidSamples)
-    reasons.push("invalid_samples_present");
+    reasons.push('invalid_samples_present');
   if (metrics.latencyCoverage < thresholds.minMeasuredLatencyCoverage) {
-    reasons.push("latency_coverage_below_threshold");
+    reasons.push('latency_coverage_below_threshold');
   }
   return reasons;
 }
@@ -208,13 +208,13 @@ export class AdvancedReinforcementEngine {
   public static async evaluateSample(sample: MLTrainingSample): Promise<number> {
     validateSample(sample);
 
-    if (typeof sample.actualOutput !== "string") {
-      throw new Error("evaluation_requires_actual_model_output");
+    if (typeof sample.actualOutput !== 'string') {
+      throw new Error('evaluation_requires_actual_model_output');
     }
 
     const f1 = tokenF1(sample.expectedOutput, sample.actualOutput);
-    const expected = normalize(sample.expectedOutput).join(" ");
-    const actual = normalize(sample.actualOutput).join(" ");
+    const expected = normalize(sample.expectedOutput).join(' ');
+    const actual = normalize(sample.actualOutput).join(' ');
     const exactMatch = expected === actual;
     const baseLoss = exactMatch ? 0 : 1 - f1;
     const biasPenalty = boundedPenalty(sample.biasPenalty);
@@ -224,10 +224,10 @@ export class AdvancedReinforcementEngine {
 
   public static async evaluateDataset(
     samples: MLTrainingSample[],
-    thresholds?: Partial<EvaluationThresholds>,
+    thresholds?: Partial<EvaluationThresholds>
   ): Promise<EvaluationMetrics> {
     if (!Array.isArray(samples) || samples.length === 0) {
-      throw new Error("evaluation_requires_non_empty_dataset");
+      throw new Error('evaluation_requires_non_empty_dataset');
     }
 
     const resolvedThresholds = resolveThresholds(thresholds);
@@ -238,12 +238,12 @@ export class AdvancedReinforcementEngine {
 
     const actualSamples = evaluated.filter(
       (sample): sample is MLTrainingSample & { actualOutput: string } =>
-        typeof sample.actualOutput === "string",
+        typeof sample.actualOutput === 'string'
     );
 
     const invalidSampleCount = evaluated.length - actualSamples.length;
     if (invalidSampleCount > resolvedThresholds.maxInvalidSamples) {
-      throw new Error("evaluation_requires_actual_model_output");
+      throw new Error('evaluation_requires_actual_model_output');
     }
 
     let totalLoss = 0;
@@ -276,7 +276,7 @@ export class AdvancedReinforcementEngine {
         loss: sample.loss,
         biasPenalty: sample.biasPenalty,
         latencyMs: sample.latencyMs,
-      })),
+      }))
     );
 
     const benchmarkId = digest({
@@ -307,10 +307,10 @@ export class AdvancedReinforcementEngine {
     modelId: string,
     version: string,
     samples: MLTrainingSample[],
-    thresholds?: Partial<EvaluationThresholds>,
+    thresholds?: Partial<EvaluationThresholds>
   ): Promise<EvaluationResult | void> {
-    if (!modelId.trim()) throw new Error("evaluation_requires_model_id");
-    if (!version.trim()) throw new Error("evaluation_requires_model_version");
+    if (!modelId.trim()) throw new Error('evaluation_requires_model_id');
+    if (!version.trim()) throw new Error('evaluation_requires_model_version');
 
     const resolvedThresholds = resolveThresholds(thresholds);
     const metrics = await this.evaluateDataset(samples, resolvedThresholds);
@@ -322,10 +322,10 @@ export class AdvancedReinforcementEngine {
       ...metrics,
       passed,
       gateReasons,
-      evidenceStatus: "EVALUATED_PENDING_APPROVAL",
+      evidenceStatus: 'EVALUATED_PENDING_APPROVAL',
       // Evaluation evidence is not human approval. Keep this empty so the
       // production gate remains fail-closed until an authorized approver acts.
-      approvedBy: "",
+      approvedBy: '',
       evaluatedAt,
     };
 
@@ -338,7 +338,7 @@ export class AdvancedReinforcementEngine {
       f1Score: metrics.f1Score,
       biasScore: metrics.biasScore,
       latencyMs: metrics.latencyMs,
-      approvedBy: "",
+      approvedBy: '',
       evaluatedAt,
     });
 

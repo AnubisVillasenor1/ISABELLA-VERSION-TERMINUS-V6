@@ -3,13 +3,13 @@
  * Routes requests, runs ethical triage, appends BookPI chain events.
  * Does not execute real tools or call external models without an authorized backend.
  */
-import { auditTinaContent, type TinaEthicalResult } from "./ethical";
-import { TinaBookPI, type TinaBookEvent } from "./ledger";
-import { TinaPluginRegistry } from "./plugins";
-import { routeTina } from "./router";
-import { normalizeComplexity, type TinaComplexityScore, type TinaRoute } from "./types";
-import { buildTinaCacheKeySync, type TinaCacheInput } from "./cache";
-import { ISABELLA_TINA_MEMBER, TINA_CATEGORY_ID } from "./category";
+import { auditTinaContent, type TinaEthicalResult } from './ethical';
+import { TinaBookPI, type TinaBookEvent } from './ledger';
+import { TinaPluginRegistry } from './plugins';
+import { routeTina } from './router';
+import { normalizeComplexity, type TinaComplexityScore, type TinaRoute } from './types';
+import { buildTinaCacheKeySync, type TinaCacheInput } from './cache';
+import { ISABELLA_TINA_MEMBER, TINA_CATEGORY_ID } from './category';
 
 export interface TinaExecuteInput {
   text: string;
@@ -24,7 +24,7 @@ export interface TinaExecuteInput {
 }
 
 export type TinaExecuteStatus =
-  "pending_human_review" | "blocked_or_review" | "accepted_for_adapter";
+  'pending_human_review' | 'blocked_or_review' | 'accepted_for_adapter';
 
 /**
  * Estado inequívoco de ejecución (ISA-026). El orquestador no ejecuta
@@ -32,7 +32,7 @@ export type TinaExecuteStatus =
  * motivo documenta por qué no hubo ejecución real.
  */
 export type TinaNonExecutionReason =
-  "ADAPTER_NOT_BOUND" | "HUMAN_REVIEW_REQUIRED" | "ETHICAL_BLOCK";
+  'ADAPTER_NOT_BOUND' | 'HUMAN_REVIEW_REQUIRED' | 'ETHICAL_BLOCK';
 
 export interface TinaExecutionOutcome {
   executed: false;
@@ -54,9 +54,9 @@ export interface TinaExecuteResult {
 
 const NOT_EXECUTED_ADAPTER: TinaExecutionOutcome = {
   executed: false,
-  reason: "ADAPTER_NOT_BOUND",
+  reason: 'ADAPTER_NOT_BOUND',
   detail:
-    "Ningún adapter de ejecución está ligado: la solicitud fue enrutada y auditada, no ejecutada.",
+    'Ningún adapter de ejecución está ligado: la solicitud fue enrutada y auditada, no ejecutada.',
 };
 
 export class TinaOrchestrator {
@@ -72,7 +72,7 @@ export class TinaOrchestrator {
     const complexity = normalizeComplexity(input.complexity);
     const route = routeTina(complexity);
 
-    const ledger = await this.bookpi.append("TINA_ROUTE_SELECTED", {
+    const ledger = await this.bookpi.append('TINA_ROUTE_SELECTED', {
       path: route.path,
       mode: route.mode,
       tenantId: input.tenantId,
@@ -90,11 +90,11 @@ export class TinaOrchestrator {
     if (route.requiresHumanReview) {
       return {
         ...base,
-        status: "pending_human_review",
+        status: 'pending_human_review',
         execution: {
           executed: false,
-          reason: "HUMAN_REVIEW_REQUIRED",
-          detail: "Ruta de revisión humana: nada se ejecuta hasta aprobación explícita.",
+          reason: 'HUMAN_REVIEW_REQUIRED',
+          detail: 'Ruta de revisión humana: nada se ejecuta hasta aprobación explícita.',
         },
       };
     }
@@ -104,21 +104,21 @@ export class TinaOrchestrator {
       useAegis: true,
     });
 
-    if (!audit.valid && route.path !== "FAST") {
-      await this.bookpi.append("TINA_BLOCKED", {
-        reason: "ethical_triage_failed",
+    if (!audit.valid && route.path !== 'FAST') {
+      await this.bookpi.append('TINA_BLOCKED', {
+        reason: 'ethical_triage_failed',
         score: audit.score,
         flags: audit.flags.map((f) => f.code),
         tenantId: input.tenantId,
       });
       return {
         ...base,
-        status: "blocked_or_review",
+        status: 'blocked_or_review',
         audit,
         execution: {
           executed: false,
-          reason: "ETHICAL_BLOCK",
-          detail: "Triaje ético fallido: la solicitud no se ejecuta.",
+          reason: 'ETHICAL_BLOCK',
+          detail: 'Triaje ético fallido: la solicitud no se ejecuta.',
         },
       };
     }
@@ -128,15 +128,15 @@ export class TinaOrchestrator {
       principalId: input.principalId,
       scopes: input.scopes ?? [],
       prompt: input.text,
-      policyVersion: input.policyVersion ?? "v0",
-      knowledgeVersion: input.knowledgeVersion ?? "v0",
-      modelVersion: input.modelVersion ?? "v0",
-      territoryId: input.territoryId ?? "unbound",
+      policyVersion: input.policyVersion ?? 'v0',
+      knowledgeVersion: input.knowledgeVersion ?? 'v0',
+      modelVersion: input.modelVersion ?? 'v0',
+      territoryId: input.territoryId ?? 'unbound',
       path: route.path,
     };
     const cacheKey = buildTinaCacheKeySync(cacheInput);
 
-    await this.bookpi.append("TINA_ACCEPTED", {
+    await this.bookpi.append('TINA_ACCEPTED', {
       path: route.path,
       mode: route.mode,
       contentHash: audit.hash,
@@ -147,7 +147,7 @@ export class TinaOrchestrator {
 
     return {
       ...base,
-      status: "accepted_for_adapter",
+      status: 'accepted_for_adapter',
       contentHash: audit.hash,
       audit,
       cacheKey,

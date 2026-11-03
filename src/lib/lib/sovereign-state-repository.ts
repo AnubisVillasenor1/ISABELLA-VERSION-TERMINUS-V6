@@ -1,6 +1,6 @@
-import { config } from "./config";
-import { NeonRepository } from "./persistence/adapters/neon-adapter";
-import * as crypto from "node:crypto";
+import { config } from './config';
+import { NeonRepository } from './persistence/adapters/neon-adapter';
+import * as crypto from 'node:crypto';
 
 export interface BookPILedgerBlock {
   index: number;
@@ -8,24 +8,24 @@ export interface BookPILedgerBlock {
   tenantId: string;
   userId: string;
   operation: string;
-  category: "inference" | "processing" | "apis" | "skills" | "other" | "REFUND_EVENT";
+  category: 'inference' | 'processing' | 'apis' | 'skills' | 'other' | 'REFUND_EVENT';
   costDecimal: string;
   tokensConsumed: number;
   previousHash: string;
   blockHash: string;
   pqcSignature: string | null;
-  signatureAlgorithm: "ECDSA-P384" | "UNSIGNED_DEV";
-  status: "settled" | "pending" | "refunded";
+  signatureAlgorithm: 'ECDSA-P384' | 'UNSIGNED_DEV';
+  status: 'settled' | 'pending' | 'refunded';
 }
 
-export type UserRole = "SovereignOwner" | "Auditor" | "Operator" | "Guest";
+export type UserRole = 'SovereignOwner' | 'Auditor' | 'Operator' | 'Guest';
 
 export interface Tenant {
   id: string;
   name: string;
   region: string;
   quotaBalance: number;
-  tier: "Free" | "Enterprise" | "Sovereign";
+  tier: 'Free' | 'Enterprise' | 'Sovereign';
   metadata?: Record<string, unknown>;
 }
 
@@ -45,7 +45,7 @@ export interface AuditLog {
   correlationId: string;
   actorIp: string;
   event: string;
-  severity: "S0" | "S1" | "S2" | "S3";
+  severity: 'S0' | 'S1' | 'S2' | 'S3';
   details: string;
   remediated: boolean;
   verificationHash: string;
@@ -66,21 +66,21 @@ export interface MonetizationAccount {
   withdrawals: {
     payoutId: string;
     amountCents: number;
-    status: "scheduled" | "processed" | "held" | "rejected";
+    status: 'scheduled' | 'processed' | 'held' | 'rejected';
     idempotencyKey: string;
     createdAt: string;
   }[];
 }
 
-const GENESIS_PREVIOUS_HASH = "0000000000000000000000000000000000000000000000000000000000000000";
+const GENESIS_PREVIOUS_HASH = '0000000000000000000000000000000000000000000000000000000000000000';
 
 function isProductionRuntime(): boolean {
   try {
     const cfg = config();
     return (
-      cfg.NODE_ENV === "production" ||
-      cfg.ISABELLA_RUNTIME_MODE === "production" ||
-      cfg.ISABELLA_RUNTIME_MODE === "staging"
+      cfg.NODE_ENV === 'production' ||
+      cfg.ISABELLA_RUNTIME_MODE === 'production' ||
+      cfg.ISABELLA_RUNTIME_MODE === 'staging'
     );
   } catch {
     return true;
@@ -88,7 +88,7 @@ function isProductionRuntime(): boolean {
 }
 
 function sha256(input: string): string {
-  return crypto.createHash("sha256").update(input).digest("hex");
+  return crypto.createHash('sha256').update(input).digest('hex');
 }
 
 function getSigningKey(): crypto.KeyObject | null {
@@ -110,11 +110,11 @@ class SovereignStateRepository {
   private initialized = false;
 
   constructor() {
-    this.tenantRepo = new NeonRepository<Tenant>("tenant");
-    this.sessionRepo = new NeonRepository<UserSession>("session");
-    this.ledgerRepo = new NeonRepository<BookPILedgerBlock>("ledger");
-    this.auditRepo = new NeonRepository<AuditLog>("audit");
-    this.monetizationRepo = new NeonRepository<MonetizationAccount>("monetization");
+    this.tenantRepo = new NeonRepository<Tenant>('tenant');
+    this.sessionRepo = new NeonRepository<UserSession>('session');
+    this.ledgerRepo = new NeonRepository<BookPILedgerBlock>('ledger');
+    this.auditRepo = new NeonRepository<AuditLog>('audit');
+    this.monetizationRepo = new NeonRepository<MonetizationAccount>('monetization');
   }
 
   private async ensureInit(): Promise<void> {
@@ -168,7 +168,7 @@ class SovereignStateRepository {
 
   async getFullLedger(): Promise<BookPILedgerBlock[]> {
     await this.ensureInit();
-    const { items } = await this.ledgerRepo.list("system", {}, 10000, 0);
+    const { items } = await this.ledgerRepo.list('system', {}, 10000, 0);
     return items;
   }
 
@@ -176,21 +176,21 @@ class SovereignStateRepository {
     tenantId: string,
     userId: string,
     operation: string,
-    category: BookPILedgerBlock["category"],
+    category: BookPILedgerBlock['category'],
     cost: number,
-    tokens: number,
+    tokens: number
   ): Promise<BookPILedgerBlock> {
     await this.ensureInit();
     const signingKey = getSigningKey();
     const isProduction = isProductionRuntime();
     if (isProduction && !signingKey) {
-      throw new Error("BookPI requiere BOOKPI_SIGNING_KEY en producción.");
+      throw new Error('BookPI requiere BOOKPI_SIGNING_KEY en producción.');
     }
 
     return this.ledgerRepo.withTransaction(async (client) => {
       const { rows: lastBlocks } = await client.query(
         `SELECT * FROM ledger WHERE tenant_id = $1 ORDER BY index DESC LIMIT 1`,
-        [tenantId],
+        [tenantId]
       );
       const lastBlock = lastBlocks[0];
       const prevHash = lastBlock ? lastBlock.block_hash : GENESIS_PREVIOUS_HASH;
@@ -200,7 +200,7 @@ class SovereignStateRepository {
       const blockContent = `${index}-${timestamp}-${tenantId}-${userId}-${operation}-${category}-${costDecimal}-${tokens}-${prevHash}`;
       const blockHash = sha256(blockContent);
       const pqcSignature = signingKey
-        ? crypto.sign("sha384", Buffer.from(blockContent), signingKey).toString("base64url")
+        ? crypto.sign('sha384', Buffer.from(blockContent), signingKey).toString('base64url')
         : null;
 
       const newBlock: BookPILedgerBlock = {
@@ -215,8 +215,8 @@ class SovereignStateRepository {
         previousHash: prevHash,
         blockHash,
         pqcSignature,
-        signatureAlgorithm: signingKey ? "ECDSA-P384" : "UNSIGNED_DEV",
-        status: "settled",
+        signatureAlgorithm: signingKey ? 'ECDSA-P384' : 'UNSIGNED_DEV',
+        status: 'settled',
       };
 
       await client.query(
@@ -236,13 +236,13 @@ class SovereignStateRepository {
           blockHash,
           pqcSignature,
           newBlock.signatureAlgorithm,
-          "settled",
-        ],
+          'settled',
+        ]
       );
 
       const { rows: tenantRows } = await client.query(
         `SELECT quota_balance FROM tenants WHERE id = $1 FOR UPDATE`,
-        [tenantId],
+        [tenantId]
       );
       if (tenantRows[0]) {
         const newBalance = Math.max(0, Number(tenantRows[0].quota_balance) - cost);
@@ -258,7 +258,7 @@ class SovereignStateRepository {
 
   async appendRefundEvent(
     index: number,
-    tenantId: string,
+    tenantId: string
   ): Promise<{ success: boolean; error?: string }> {
     await this.ensureInit();
     const signingKey = getSigningKey();
@@ -266,32 +266,32 @@ class SovereignStateRepository {
     if (isProduction && !signingKey) {
       return {
         success: false,
-        error: "BookPI requiere BOOKPI_SIGNING_KEY en producción.",
+        error: 'BookPI requiere BOOKPI_SIGNING_KEY en producción.',
       };
     }
 
     return this.ledgerRepo.withTransaction(async (client) => {
       const { rows: blockRows } = await client.query(
         `SELECT * FROM ledger WHERE index = $1 AND tenant_id = $2 LIMIT 1`,
-        [index, tenantId],
+        [index, tenantId]
       );
-      if (!blockRows[0]) return { success: false, error: "Transacción no encontrada." };
+      if (!blockRows[0]) return { success: false, error: 'Transacción no encontrada.' };
       const block = blockRows[0];
 
       const { rows: refundCheck } = await client.query(
         `SELECT 1 FROM ledger WHERE operation = $1 AND tenant_id = $2 LIMIT 1`,
-        [`REFUND_EVENT: Reembolso de transacción index ${index}`, tenantId],
+        [`REFUND_EVENT: Reembolso de transacción index ${index}`, tenantId]
       );
-      if (refundCheck[0] || block.status === "refunded") {
+      if (refundCheck[0] || block.status === 'refunded') {
         return {
           success: false,
-          error: "Esta transacción ya ha sido reembolsada.",
+          error: 'Esta transacción ya ha sido reembolsada.',
         };
       }
 
       const { rows: lastBlocks } = await client.query(
         `SELECT * FROM ledger WHERE tenant_id = $1 ORDER BY index DESC LIMIT 1`,
-        [tenantId],
+        [tenantId]
       );
       const prevBlock = lastBlocks[0];
       const prevHash = prevBlock ? prevBlock.block_hash : GENESIS_PREVIOUS_HASH;
@@ -303,7 +303,7 @@ class SovereignStateRepository {
       const blockData = `${newIndex}-${timestamp}-${tenantId}-${block.user_id}-REFUND_EVENT: Reembolso de transacción index ${index}-REFUND_EVENT-${costDecimal}-0-${prevHash}`;
       const blockHash = sha256(blockData);
       const pqcSignature = signingKey
-        ? crypto.sign("sha384", Buffer.from(blockData), signingKey).toString("base64url")
+        ? crypto.sign('sha384', Buffer.from(blockData), signingKey).toString('base64url')
         : null;
 
       await client.query(
@@ -316,20 +316,20 @@ class SovereignStateRepository {
           tenantId,
           block.user_id,
           `REFUND_EVENT: Reembolso de transacción index ${index}`,
-          "REFUND_EVENT",
+          'REFUND_EVENT',
           costDecimal,
           0,
           prevHash,
           blockHash,
           pqcSignature,
-          signingKey ? "ECDSA-P384" : "UNSIGNED_DEV",
-          "settled",
-        ],
+          signingKey ? 'ECDSA-P384' : 'UNSIGNED_DEV',
+          'settled',
+        ]
       );
 
       const { rows: tenantRows } = await client.query(
         `SELECT quota_balance FROM tenants WHERE id = $1 FOR UPDATE`,
-        [tenantId],
+        [tenantId]
       );
       if (tenantRows[0]) {
         const newBalance = Number(tenantRows[0].quota_balance) + cost;
@@ -354,21 +354,21 @@ class SovereignStateRepository {
     correlationId: string,
     ip: string,
     event: string,
-    severity: AuditLog["severity"],
+    severity: AuditLog['severity'],
     details: string,
-    tenantId: string,
+    tenantId: string
   ): Promise<AuditLog> {
     await this.ensureInit();
     return this.auditRepo.withTransaction(async (client) => {
       const { rows: lastLogs } = await client.query(
         `SELECT verification_hash FROM audit_events WHERE tenant_id = $1 ORDER BY timestamp DESC LIMIT 1`,
-        [tenantId],
+        [tenantId]
       );
-      const previousLogHash = (lastLogs[0]?.verification_hash as string) ?? "0".repeat(64);
+      const previousLogHash = (lastLogs[0]?.verification_hash as string) ?? '0'.repeat(64);
       const timestamp = new Date().toISOString();
-      const remediated = severity === "S3" || severity === "S2";
+      const remediated = severity === 'S3' || severity === 'S2';
       const id = `evt_${crypto.randomUUID().slice(0, 8)}`;
-      const payload = `${id}|${timestamp}|${traceId}|${correlationId}|${ip}|${event}|${severity}|${details}|${remediated ? "true" : "false"}|${tenantId}|${previousLogHash}`;
+      const payload = `${id}|${timestamp}|${traceId}|${correlationId}|${ip}|${event}|${severity}|${details}|${remediated ? 'true' : 'false'}|${tenantId}|${previousLogHash}`;
       const verificationHash = sha256(payload);
 
       const newLog: AuditLog = {
@@ -401,7 +401,7 @@ class SovereignStateRepository {
           remediated,
           verificationHash,
           previousLogHash,
-        ],
+        ]
       );
 
       return newLog;
@@ -414,7 +414,7 @@ class SovereignStateRepository {
     corruptedIndex?: number;
   }> {
     await this.ensureInit();
-    const { items: ledger } = await this.ledgerRepo.list("system", {}, 10000, 0);
+    const { items: ledger } = await this.ledgerRepo.list('system', {}, 10000, 0);
     for (let i = 0; i < ledger.length; i++) {
       const block = ledger[i];
       if (!block) {
@@ -444,7 +444,7 @@ class SovereignStateRepository {
         if (block.previousHash !== GENESIS_PREVIOUS_HASH) {
           return {
             success: false,
-            error: "Bloque Génesis inválido: Hash previo corrupto.",
+            error: 'Bloque Génesis inválido: Hash previo corrupto.',
             corruptedIndex: 0,
           };
         }
@@ -460,7 +460,7 @@ class SovereignStateRepository {
       }
       if (
         isProductionRuntime() &&
-        (block.signatureAlgorithm === "UNSIGNED_DEV" || block.pqcSignature === null)
+        (block.signatureAlgorithm === 'UNSIGNED_DEV' || block.pqcSignature === null)
       ) {
         return {
           success: false,
@@ -478,14 +478,14 @@ class SovereignStateRepository {
     corruptedId?: string;
   }> {
     await this.ensureInit();
-    const { items: logs } = await this.auditRepo.list("system", {}, 10000, 0);
+    const { items: logs } = await this.auditRepo.list('system', {}, 10000, 0);
     const sorted = [...logs].sort(
-      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
     );
     for (let i = 0; i < sorted.length; i++) {
       const log = sorted[i];
       const prevLog = sorted[i - 1];
-      const expectedPrevHash = i === 0 ? GENESIS_PREVIOUS_HASH : (prevLog?.verificationHash ?? "");
+      const expectedPrevHash = i === 0 ? GENESIS_PREVIOUS_HASH : (prevLog?.verificationHash ?? '');
       if (log.previousLogHash !== expectedPrevHash) {
         return {
           success: false,
@@ -493,7 +493,7 @@ class SovereignStateRepository {
           corruptedId: log.id,
         };
       }
-      const payload = `${log.id}|${log.timestamp}|${log.traceId}|${log.correlationId}|${log.actorIp}|${log.event}|${log.severity}|${log.details}|${log.remediated ? "true" : "false"}|${log.tenantId}|${log.previousLogHash}`;
+      const payload = `${log.id}|${log.timestamp}|${log.traceId}|${log.correlationId}|${log.actorIp}|${log.event}|${log.severity}|${log.details}|${log.remediated ? 'true' : 'false'}|${log.tenantId}|${log.previousLogHash}`;
       const recalculatedHash = sha256(payload);
       if (log.verificationHash !== recalculatedHash) {
         return {
@@ -530,7 +530,7 @@ class SovereignStateRepository {
 
   async updateMonetizationAccount(
     userId: string,
-    update: Partial<MonetizationAccount>,
+    update: Partial<MonetizationAccount>
   ): Promise<MonetizationAccount> {
     await this.ensureInit();
     const account = await this.getMonetizationAccount(userId);
@@ -540,7 +540,7 @@ class SovereignStateRepository {
 
   async getMarketplaceListings(): Promise<unknown[]> {
     await this.ensureInit();
-    const { items } = await this.tenantRepo.list("system", { slug: "marketplace" }, 1, 0);
+    const { items } = await this.tenantRepo.list('system', { slug: 'marketplace' }, 1, 0);
     if (items[0]?.metadata?.marketplaceListings) {
       return items[0].metadata.marketplaceListings as unknown[];
     }
@@ -549,19 +549,19 @@ class SovereignStateRepository {
 
   async saveMarketplaceListings(listings: unknown[]): Promise<void> {
     await this.ensureInit();
-    const { items } = await this.tenantRepo.list("system", { slug: "marketplace" }, 1, 0);
+    const { items } = await this.tenantRepo.list('system', { slug: 'marketplace' }, 1, 0);
     if (items[0]) {
-      await this.tenantRepo.update("system", items[0].id, {
+      await this.tenantRepo.update('system', items[0].id, {
         metadata: { ...items[0].metadata, marketplaceListings: listings },
       });
     } else {
-      await this.tenantRepo.create("system", {
-        id: "marketplace",
-        name: "Marketplace",
-        region: "global",
+      await this.tenantRepo.create('system', {
+        id: 'marketplace',
+        name: 'Marketplace',
+        region: 'global',
         quotaBalance: 0,
-        tier: "Sovereign",
-        slug: "marketplace",
+        tier: 'Sovereign',
+        slug: 'marketplace',
         metadata: { marketplaceListings: listings },
       } as Tenant);
     }

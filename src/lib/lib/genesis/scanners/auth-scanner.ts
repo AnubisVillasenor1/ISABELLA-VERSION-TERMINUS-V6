@@ -1,5 +1,5 @@
-import * as fs from "node:fs";
-import * as path from "node:path";
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 
 export interface AuthScannerConfig {
   rootDir?: string;
@@ -66,15 +66,15 @@ export interface MFAStatus {
 export interface AuthFinding {
   id: string;
   type:
-    | "JWT_WEAK_ALGORITHM"
-    | "JWT_MISSING_CLAIMS"
-    | "RBAC_INCOMPLETE"
-    | "SESSION_NO_REVOCATION"
-    | "MFA_NOT_PRODUCTION_VERIFIED"
-    | "NO_STEP_UP_AUTH"
-    | "NO_JTI_DENYLIST"
-    | "NO_REFRESH_ROTATION";
-  severity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
+    | 'JWT_WEAK_ALGORITHM'
+    | 'JWT_MISSING_CLAIMS'
+    | 'RBAC_INCOMPLETE'
+    | 'SESSION_NO_REVOCATION'
+    | 'MFA_NOT_PRODUCTION_VERIFIED'
+    | 'NO_STEP_UP_AUTH'
+    | 'NO_JTI_DENYLIST'
+    | 'NO_REFRESH_ROTATION';
+  severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
   description: string;
   location: string;
   remediation: string;
@@ -126,7 +126,7 @@ export class AuthScanner {
 
     for (const file of files) {
       try {
-        const content = fs.readFileSync(file, "utf8");
+        const content = fs.readFileSync(file, 'utf8');
         allContent.set(file, content);
       } catch {
         /* intentional empty: skip unreadable files */
@@ -141,7 +141,7 @@ export class AuthScanner {
       jwtValidation,
       rbacImplementation,
       sessionManagement,
-      mfaStatus,
+      mfaStatus
     );
 
     return {
@@ -161,11 +161,11 @@ export class AuthScanner {
 
   private scanJWTValidation(allContent: Map<string, string>): JWTValidation {
     let implemented = false;
-    let algorithm = "unknown";
+    let algorithm = 'unknown';
     const claimsFound = new Set<string>();
     let keyRotationImplemented = false;
     let keyRotationTested = false;
-    let location = "";
+    let location = '';
 
     for (const [file, content] of allContent) {
       const algMatch = content.match(/algorithm\s*[:=]\s*['"]([^'"]+)['"]/);
@@ -180,7 +180,7 @@ export class AuthScanner {
         if (!location) location = file;
       }
 
-      for (const claim of ["iss", "sub", "aud", "exp", "jti", "tenantId", "role", "scope"]) {
+      for (const claim of ['iss', 'sub', 'aud', 'exp', 'jti', 'tenantId', 'role', 'scope']) {
         if (new RegExp(claim).test(content)) {
           claimsFound.add(claim);
         }
@@ -197,14 +197,14 @@ export class AuthScanner {
     return {
       implemented,
       algorithm,
-      issVerified: claimsFound.has("iss"),
-      subVerified: claimsFound.has("sub"),
-      audVerified: claimsFound.has("aud"),
-      expVerified: claimsFound.has("exp"),
-      jtiVerified: claimsFound.has("jti"),
-      tenantIdVerified: claimsFound.has("tenantId"),
-      roleVerified: claimsFound.has("role"),
-      scopeVerified: claimsFound.has("scope"),
+      issVerified: claimsFound.has('iss'),
+      subVerified: claimsFound.has('sub'),
+      audVerified: claimsFound.has('aud'),
+      expVerified: claimsFound.has('exp'),
+      jtiVerified: claimsFound.has('jti'),
+      tenantIdVerified: claimsFound.has('tenantId'),
+      roleVerified: claimsFound.has('role'),
+      scopeVerified: claimsFound.has('scope'),
       keyRotationImplemented,
       keyRotationTested,
       location,
@@ -216,7 +216,7 @@ export class AuthScanner {
     let matrixDefined = false;
     let abacImplemented = false;
     let denyByDefault = false;
-    let location = "";
+    let location = '';
 
     for (const [file, content] of allContent) {
       if (/hasPermission|checkPermission|authorize|permission/.test(content)) {
@@ -253,7 +253,7 @@ export class AuthScanner {
     let jtiDenylist = false;
     let deviceInventory = false;
     let stepUpAuthentication = false;
-    let location = "";
+    let location = '';
 
     for (const [file, content] of allContent) {
       if (/session|token/.test(content)) {
@@ -300,26 +300,26 @@ export class AuthScanner {
     let productionVerified = false;
     let enforcedForPrivileged = false;
     const methods: string[] = [];
-    let location = "";
+    let location = '';
 
     for (const [file, content] of allContent) {
       if (/totp|authenticator|2fa|mfa/gi.test(content)) {
         planned = true;
         implemented = true;
         if (!location) location = file;
-        if (!methods.includes("TOTP")) methods.push("TOTP");
+        if (!methods.includes('TOTP')) methods.push('TOTP');
       }
 
       if (/webauthn|passkey|fido/gi.test(content)) {
-        if (!methods.includes("WebAuthn")) methods.push("WebAuthn");
+        if (!methods.includes('WebAuthn')) methods.push('WebAuthn');
       }
 
       if (/sms.*otp|otp.*sms/gi.test(content)) {
-        if (!methods.includes("SMS")) methods.push("SMS");
+        if (!methods.includes('SMS')) methods.push('SMS');
       }
 
       if (/email.*otp|otp.*email/gi.test(content)) {
-        if (!methods.includes("Email")) methods.push("Email");
+        if (!methods.includes('Email')) methods.push('Email');
       }
 
       if (/require.*mfa|mfa.*required|enforce.*mfa/gi.test(content)) {
@@ -350,118 +350,118 @@ export class AuthScanner {
     jwt: JWTValidation,
     rbac: RBACImplementation,
     session: SessionManagement,
-    mfa: MFAStatus,
+    mfa: MFAStatus
   ): AuthFinding[] {
     const findings: AuthFinding[] = [];
 
     if (
       jwt.implemented &&
-      !["ES256", "ES384", "ES512", "RS256", "RS384", "RS512", "EdDSA"].includes(jwt.algorithm)
+      !['ES256', 'ES384', 'ES512', 'RS256', 'RS384', 'RS512', 'EdDSA'].includes(jwt.algorithm)
     ) {
       findings.push({
         id: `AUTH-JWT-WEAK-${Date.now().toString(36)}`,
-        type: "JWT_WEAK_ALGORITHM",
-        severity: "HIGH",
+        type: 'JWT_WEAK_ALGORITHM',
+        severity: 'HIGH',
         description: `JWT usa algoritmo débil: ${jwt.algorithm}`,
         location: jwt.location,
-        remediation: "Usar ES384, RS256 o EdDSA para JWTs de producción",
+        remediation: 'Usar ES384, RS256 o EdDSA para JWTs de producción',
       });
     }
 
     const missingClaims = [];
-    if (!jwt.issVerified) missingClaims.push("iss");
-    if (!jwt.audVerified) missingClaims.push("aud");
-    if (!jwt.jtiVerified) missingClaims.push("jti");
-    if (!jwt.tenantIdVerified) missingClaims.push("tenantId");
-    if (!jwt.roleVerified) missingClaims.push("role");
-    if (!jwt.scopeVerified) missingClaims.push("scope");
+    if (!jwt.issVerified) missingClaims.push('iss');
+    if (!jwt.audVerified) missingClaims.push('aud');
+    if (!jwt.jtiVerified) missingClaims.push('jti');
+    if (!jwt.tenantIdVerified) missingClaims.push('tenantId');
+    if (!jwt.roleVerified) missingClaims.push('role');
+    if (!jwt.scopeVerified) missingClaims.push('scope');
 
     if (missingClaims.length > 0) {
       findings.push({
         id: `AUTH-JWT-MISSING-${Date.now().toString(36)}`,
-        type: "JWT_MISSING_CLAIMS",
-        severity: "HIGH",
-        description: `JWT faltan claims críticos: ${missingClaims.join(", ")}`,
+        type: 'JWT_MISSING_CLAIMS',
+        severity: 'HIGH',
+        description: `JWT faltan claims críticos: ${missingClaims.join(', ')}`,
         location: jwt.location,
         remediation:
-          "Añadir todos los claims requeridos: iss, sub, aud, exp, jti, tenantId, role, scope",
+          'Añadir todos los claims requeridos: iss, sub, aud, exp, jti, tenantId, role, scope',
       });
     }
 
     if (rbac.implemented && !rbac.matrixDefined) {
       findings.push({
         id: `AUTH-RBAC-INCOMPLETE-${Date.now().toString(36)}`,
-        type: "RBAC_INCOMPLETE",
-        severity: "MEDIUM",
-        description: "RBAC implementado pero sin matriz de permisos definida",
+        type: 'RBAC_INCOMPLETE',
+        severity: 'MEDIUM',
+        description: 'RBAC implementado pero sin matriz de permisos definida',
         location: rbac.location,
-        remediation: "Definir permission-matrix.ts con roles, recursos y acciones",
+        remediation: 'Definir permission-matrix.ts con roles, recursos y acciones',
       });
     }
 
     if (rbac.implemented && !rbac.denyByDefault) {
       findings.push({
         id: `AUTH-RBAC-NO-DENY-${Date.now().toString(36)}`,
-        type: "RBAC_INCOMPLETE",
-        severity: "HIGH",
-        description: "RBAC no tiene deny-by-default",
+        type: 'RBAC_INCOMPLETE',
+        severity: 'HIGH',
+        description: 'RBAC no tiene deny-by-default',
         location: rbac.location,
-        remediation: "Implementar deny-by-default en authorization.ts",
+        remediation: 'Implementar deny-by-default en authorization.ts',
       });
     }
 
     if (session.implemented && !session.sessionRevocation) {
       findings.push({
         id: `AUTH-SESSION-NO-REVOKE-${Date.now().toString(36)}`,
-        type: "SESSION_NO_REVOCATION",
-        severity: "HIGH",
-        description: "Sesiones no revocables",
+        type: 'SESSION_NO_REVOCATION',
+        severity: 'HIGH',
+        description: 'Sesiones no revocables',
         location: session.location,
-        remediation: "Implementar revocación de sesiones con jti denylist",
+        remediation: 'Implementar revocación de sesiones con jti denylist',
       });
     }
 
     if (session.implemented && !session.jtiDenylist) {
       findings.push({
         id: `AUTH-SESSION-NO-JTI-${Date.now().toString(36)}`,
-        type: "NO_JTI_DENYLIST",
-        severity: "HIGH",
-        description: "Sin denylist de jti para revocación",
+        type: 'NO_JTI_DENYLIST',
+        severity: 'HIGH',
+        description: 'Sin denylist de jti para revocación',
         location: session.location,
-        remediation: "Implementar jti denylist/revocation list",
+        remediation: 'Implementar jti denylist/revocation list',
       });
     }
 
     if (session.implemented && !session.refreshTokenRotation) {
       findings.push({
         id: `AUTH-SESSION-NO-ROTATION-${Date.now().toString(36)}`,
-        type: "NO_REFRESH_ROTATION",
-        severity: "MEDIUM",
-        description: "Sin rotación de refresh tokens",
+        type: 'NO_REFRESH_ROTATION',
+        severity: 'MEDIUM',
+        description: 'Sin rotación de refresh tokens',
         location: session.location,
-        remediation: "Implementar refresh token rotation",
+        remediation: 'Implementar refresh token rotation',
       });
     }
 
     if (!session.stepUpAuthentication) {
       findings.push({
         id: `AUTH-NO-STEP-UP-${Date.now().toString(36)}`,
-        type: "NO_STEP_UP_AUTH",
-        severity: "CRITICAL",
-        description: "Operaciones privilegiadas sin step-up authentication",
-        location: "global",
-        remediation: "Implementar MFA step-up para SovereignOwner y operaciones críticas",
+        type: 'NO_STEP_UP_AUTH',
+        severity: 'CRITICAL',
+        description: 'Operaciones privilegiadas sin step-up authentication',
+        location: 'global',
+        remediation: 'Implementar MFA step-up para SovereignOwner y operaciones críticas',
       });
     }
 
     if (mfa.planned && !mfa.productionVerified) {
       findings.push({
         id: `AUTH-MFA-NOT-PROD-${Date.now().toString(36)}`,
-        type: "MFA_NOT_PRODUCTION_VERIFIED",
-        severity: "CRITICAL",
-        description: "MFA planificado pero no verificado en producción",
+        type: 'MFA_NOT_PRODUCTION_VERIFIED',
+        severity: 'CRITICAL',
+        description: 'MFA planificado pero no verificado en producción',
         location: mfa.location,
-        remediation: "Implementar y probar MFA en staging antes de producción",
+        remediation: 'Implementar y probar MFA en staging antes de producción',
       });
     }
 
@@ -470,16 +470,16 @@ export class AuthScanner {
 
   private collectFiles(dir: string): string[] {
     const files: string[] = [];
-    const includePatterns = ["**/*.ts", "**/*.tsx"];
+    const includePatterns = ['**/*.ts', '**/*.tsx'];
     const excludePatterns = [
-      "**/node_modules/**",
-      "**/dist/**",
-      "**/build/**",
-      "**/.git/**",
-      "**/coverage/**",
-      "**/genesis/**",
-      "**/*.test.ts",
-      "**/*.spec.ts",
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/build/**',
+      '**/.git/**',
+      '**/coverage/**',
+      '**/genesis/**',
+      '**/*.test.ts',
+      '**/*.spec.ts',
     ];
 
     const walk = (currentDir: string): void => {
@@ -510,7 +510,7 @@ export class AuthScanner {
   }
 
   private matchPattern(filePath: string, pattern: string): boolean {
-    const regexPattern = pattern.replace(/\*\*/g, ".*").replace(/\*/g, "[^/]*").replace(/\?/g, ".");
+    const regexPattern = pattern.replace(/\*\*/g, '.*').replace(/\*/g, '[^/]*').replace(/\?/g, '.');
     const regex = new RegExp(`^${regexPattern}$`);
     return regex.test(filePath);
   }

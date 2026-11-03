@@ -1,7 +1,7 @@
-import * as fs from "node:fs";
-import * as path from "node:path";
-import { z } from "zod";
-import { EnvironmentFinding } from "../schemas/environment.schema";
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import { z } from 'zod';
+import { EnvironmentFinding } from '../schemas/environment.schema';
 
 export interface EnvScannerConfig {
   rootDir?: string;
@@ -49,13 +49,13 @@ const _ENV_SCHEMA = z.object({
   $schema: z.string().optional(),
   env: z.record(
     z.object({
-      type: z.enum(["string", "number", "boolean", "json"]).default("string"),
+      type: z.enum(['string', 'number', 'boolean', 'json']).default('string'),
       required: z.boolean().default(false),
       default: z.unknown().optional(),
       description: z.string().optional(),
       sensitive: z.boolean().default(false),
-      runtime: z.enum(["client", "server", "both"]).default("server"),
-    }),
+      runtime: z.enum(['client', 'server', 'both']).default('server'),
+    })
   ),
 });
 
@@ -65,8 +65,8 @@ export class EnvironmentScanner {
   constructor(config: EnvScannerConfig = {}) {
     this.config = {
       rootDir: config.rootDir ?? process.cwd(),
-      schemaPath: config.schemaPath ?? path.join(process.cwd(), "src/lib/env-schema.ts"),
-      examplePath: config.examplePath ?? path.join(process.cwd(), ".env.example"),
+      schemaPath: config.schemaPath ?? path.join(process.cwd(), 'src/lib/env-schema.ts'),
+      examplePath: config.examplePath ?? path.join(process.cwd(), '.env.example'),
     };
   }
 
@@ -92,9 +92,9 @@ export class EnvironmentScanner {
       const schemaEntry = schemaVars.get(name);
       const defaultRaw = schemaEntry?.default;
       const defaultValue: string | undefined =
-        typeof defaultRaw === "string" ||
-        typeof defaultRaw === "number" ||
-        typeof defaultRaw === "boolean"
+        typeof defaultRaw === 'string' ||
+        typeof defaultRaw === 'number' ||
+        typeof defaultRaw === 'boolean'
           ? String(defaultRaw)
           : undefined;
       const variable: EnvVariable = {
@@ -104,7 +104,7 @@ export class EnvironmentScanner {
         inCode: codeVars.has(name),
         inCI: ciVars.has(name),
         inProduction: prodVars.has(name),
-        type: schemaEntry?.type ?? "string",
+        type: schemaEntry?.type ?? 'string',
         required: schemaEntry?.required ?? false,
         defaultValue,
         description: schemaEntry?.description,
@@ -129,7 +129,7 @@ export class EnvironmentScanner {
     const result = new Map();
 
     try {
-      const content = fs.readFileSync(this.config.schemaPath, "utf8");
+      const content = fs.readFileSync(this.config.schemaPath, 'utf8');
 
       const exportMatch = content.match(/export\s+const\s+\w+\s*=\s*({[\s\S]*?})\s*;/);
       if (exportMatch) {
@@ -138,12 +138,12 @@ export class EnvironmentScanner {
             .replace(/([{,]\s*)([A-Za-z_$][\w$]*)\s*:/g, '$1"$2":')
             .replace(/'([^']*)'/g, '"$1"');
           const schemaObj: unknown = JSON.parse(normalizedSchema);
-          if (schemaObj && typeof schemaObj === "object") {
+          if (schemaObj && typeof schemaObj === 'object') {
             for (const [key, value] of Object.entries(schemaObj)) {
-              if (value && typeof value === "object") {
+              if (value && typeof value === 'object') {
                 const v = value as Record<string, unknown>;
                 result.set(key, {
-                  type: (v.type as string) ?? "string",
+                  type: (v.type as string) ?? 'string',
                   required: v.required === true,
                   default: v.default,
                   description: v.description as string,
@@ -166,14 +166,14 @@ export class EnvironmentScanner {
     const result = new Map();
 
     try {
-      const content = fs.readFileSync(this.config.examplePath, "utf8");
-      const lines = content.split("\n");
+      const content = fs.readFileSync(this.config.examplePath, 'utf8');
+      const lines = content.split('\n');
 
       for (const line of lines) {
         const trimmed = line.trim();
-        if (!trimmed || trimmed.startsWith("#")) continue;
+        if (!trimmed || trimmed.startsWith('#')) continue;
 
-        const eqIndex = trimmed.indexOf("=");
+        const eqIndex = trimmed.indexOf('=');
         if (eqIndex > 0) {
           const name = trimmed.slice(0, eqIndex).trim();
           const value = trimmed.slice(eqIndex + 1).trim();
@@ -190,13 +190,13 @@ export class EnvironmentScanner {
   private parseCodeUsage(): Map<string, CodeLocation[]> {
     const result = new Map<string, CodeLocation[]>();
 
-    const files = this.collectFiles(this.config.rootDir, ["**/*.ts", "**/*.tsx"]);
+    const files = this.collectFiles(this.config.rootDir, ['**/*.ts', '**/*.tsx']);
 
     for (const file of files) {
       try {
-        const content = fs.readFileSync(file, "utf8");
+        const content = fs.readFileSync(file, 'utf8');
         const relativePath = path.relative(this.config.rootDir, file);
-        const lines = content.split("\n");
+        const lines = content.split('\n');
 
         const patterns = [
           /process\.env\.(\w+)/g,
@@ -209,8 +209,8 @@ export class EnvironmentScanner {
           let match;
           while ((match = pattern.exec(content)) !== null) {
             const varName = match[1];
-            const lineIndex = content.substring(0, match.index).split("\n").length - 1;
-            const context = lines[lineIndex]?.trim().slice(0, 200) ?? "";
+            const lineIndex = content.substring(0, match.index).split('\n').length - 1;
+            const context = lines[lineIndex]?.trim().slice(0, 200) ?? '';
 
             const existing = result.get(varName) ?? [];
             existing.push({ file: relativePath, line: lineIndex + 1, context });
@@ -229,18 +229,18 @@ export class EnvironmentScanner {
     const result = new Map<string, { source: string }>();
 
     const ciDirs = [
-      path.join(this.config.rootDir, ".github", "workflows"),
-      path.join(this.config.rootDir, ".gitlab", "ci"),
+      path.join(this.config.rootDir, '.github', 'workflows'),
+      path.join(this.config.rootDir, '.gitlab', 'ci'),
     ];
 
     for (const ciDir of ciDirs) {
       if (!fs.existsSync(ciDir)) continue;
 
-      const files = fs.readdirSync(ciDir).filter((f) => f.endsWith(".yml") || f.endsWith(".yaml"));
+      const files = fs.readdirSync(ciDir).filter((f) => f.endsWith('.yml') || f.endsWith('.yaml'));
 
       for (const file of files) {
         try {
-          const content = fs.readFileSync(path.join(ciDir, file), "utf8");
+          const content = fs.readFileSync(path.join(ciDir, file), 'utf8');
           const envMatches = content.match(/(\w+):\s*\$\{\{\s*secrets\.(\w+)\s*\}\}/g) ?? [];
 
           for (const match of envMatches) {
@@ -261,14 +261,14 @@ export class EnvironmentScanner {
   private parseProductionEnv(): Map<string, { source: string }> {
     const result = new Map<string, { source: string }>();
 
-    const vercelPath = path.join(this.config.rootDir, "vercel.json");
+    const vercelPath = path.join(this.config.rootDir, 'vercel.json');
     if (fs.existsSync(vercelPath)) {
       try {
-        const content = fs.readFileSync(vercelPath, "utf8");
+        const content = fs.readFileSync(vercelPath, 'utf8');
         const parsed = JSON.parse(content);
         if (parsed.env) {
           for (const [key, _value] of Object.entries(parsed.env)) {
-            result.set(key, { source: "vercel.json" });
+            result.set(key, { source: 'vercel.json' });
           }
         }
       } catch {
@@ -283,12 +283,12 @@ export class EnvironmentScanner {
     if (variable.inCode && !variable.inSchema) {
       findings.push({
         findingId: `ENV-ORPHAN-${variable.name}`,
-        type: "ORPHAN_VARIABLE",
+        type: 'ORPHAN_VARIABLE',
         variable_name: variable.name,
-        severity: "HIGH",
+        severity: 'HIGH',
         details: {
-          expected_in: ["env-schema.ts"],
-          found_in: ["code"],
+          expected_in: ['env-schema.ts'],
+          found_in: ['code'],
           code_locations: variable.codeLocations,
         },
         remediation: `Add ${variable.name} to env-schema.ts with type and required fields`,
@@ -298,12 +298,12 @@ export class EnvironmentScanner {
     if (variable.inSchema && !variable.inCode && !variable.required) {
       findings.push({
         findingId: `ENV-STALE-${variable.name}`,
-        type: "STALE_VARIABLE",
+        type: 'STALE_VARIABLE',
         variable_name: variable.name,
-        severity: "LOW",
+        severity: 'LOW',
         details: {
-          expected_in: ["code"],
-          found_in: ["env-schema.ts"],
+          expected_in: ['code'],
+          found_in: ['env-schema.ts'],
         },
         remediation: `Remove ${variable.name} from env-schema.ts or add usage in code`,
       });
@@ -312,12 +312,12 @@ export class EnvironmentScanner {
     if (variable.required && !variable.inExample) {
       findings.push({
         findingId: `ENV-MISSING-EXAMPLE-${variable.name}`,
-        type: "REQUIRED_NOT_MARKED",
+        type: 'REQUIRED_NOT_MARKED',
         variable_name: variable.name,
-        severity: "HIGH",
+        severity: 'HIGH',
         details: {
-          expected_in: [".env.example"],
-          found_in: ["env-schema.ts"],
+          expected_in: ['.env.example'],
+          found_in: ['env-schema.ts'],
         },
         remediation: `Add ${variable.name} to .env.example with placeholder value`,
       });
@@ -326,12 +326,12 @@ export class EnvironmentScanner {
     if (variable.required && !variable.inProduction && variable.inCode) {
       findings.push({
         findingId: `ENV-MISSING-PROD-${variable.name}`,
-        type: "PRODUCTION_MISSING",
+        type: 'PRODUCTION_MISSING',
         variable_name: variable.name,
-        severity: "CRITICAL",
+        severity: 'CRITICAL',
         details: {
-          expected_in: ["vercel.json", "production environment"],
-          found_in: ["code", "env-schema.ts"],
+          expected_in: ['vercel.json', 'production environment'],
+          found_in: ['code', 'env-schema.ts'],
           code_locations: variable.codeLocations,
         },
         remediation: `Configure ${variable.name} in production environment (Vercel dashboard)`,
@@ -341,17 +341,17 @@ export class EnvironmentScanner {
     if (variable.inSchema && variable.inExample) {
       const schemaEntry = this.parseSchema().get(variable.name);
       const exampleEntry = this.parseExample().get(variable.name);
-      if (schemaEntry && exampleEntry && schemaEntry.type !== "string") {
+      if (schemaEntry && exampleEntry && schemaEntry.type !== 'string') {
         findings.push({
           findingId: `ENV-TYPE-MISMATCH-${variable.name}`,
-          type: "TYPE_MISMATCH",
+          type: 'TYPE_MISMATCH',
           variable_name: variable.name,
-          severity: "MEDIUM",
+          severity: 'MEDIUM',
           details: {
-            expected_in: ["env-schema.ts"],
-            found_in: [".env.example"],
+            expected_in: ['env-schema.ts'],
+            found_in: ['.env.example'],
             expected_type: schemaEntry.type,
-            actual_type: "string",
+            actual_type: 'string',
           },
           remediation: `Ensure example value matches schema type ${schemaEntry.type}`,
         });
@@ -359,7 +359,7 @@ export class EnvironmentScanner {
     }
   }
 
-  private calculateStatistics(variables: EnvVariable[]): EnvScanResult["statistics"] {
+  private calculateStatistics(variables: EnvVariable[]): EnvScanResult['statistics'] {
     let inSchema = 0,
       inExample = 0,
       inCode = 0,
@@ -401,12 +401,12 @@ export class EnvironmentScanner {
   private collectFiles(dir: string, patterns: string[]): string[] {
     const files: string[] = [];
     const excludePatterns = [
-      "**/node_modules/**",
-      "**/dist/**",
-      "**/build/**",
-      "**/.git/**",
-      "**/coverage/**",
-      "**/genesis/**",
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/build/**',
+      '**/.git/**',
+      '**/coverage/**',
+      '**/genesis/**',
     ];
 
     const walk = (currentDir: string): void => {
@@ -437,7 +437,7 @@ export class EnvironmentScanner {
   }
 
   private matchPattern(filePath: string, pattern: string): boolean {
-    const regexPattern = pattern.replace(/\*\*/g, ".*").replace(/\*/g, "[^/]*").replace(/\?/g, ".");
+    const regexPattern = pattern.replace(/\*\*/g, '.*').replace(/\*/g, '[^/]*').replace(/\?/g, '.');
     const regex = new RegExp(`^${regexPattern}$`);
     return regex.test(filePath);
   }

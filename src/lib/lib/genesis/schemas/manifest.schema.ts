@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 export const ManifestIntegritySchema = z.object({
   claimsHash: z.string().length(128),
@@ -12,7 +12,7 @@ export const ManifestIntegritySchema = z.object({
 export type ManifestIntegrity = z.infer<typeof ManifestIntegritySchema>;
 
 export const ManifestSignatureSchema = z.object({
-  algorithm: z.enum(["Ed25519", "ECDSA-P384"]),
+  algorithm: z.enum(['Ed25519', 'ECDSA-P384']),
   publicKey: z.string(),
   signature: z.string(),
   certificate: z.string().optional(),
@@ -73,7 +73,7 @@ export const ManifestSummarySchema = z.object({
     productionReadiness: z.number().min(0).max(100),
   }),
   releaseDecision: z.object({
-    decision: z.enum(["GO", "CONDITIONAL", "NO-GO"]),
+    decision: z.enum(['GO', 'CONDITIONAL', 'NO-GO']),
     blockingFindings: z.number().int().nonnegative(),
     justification: z.string(),
   }),
@@ -83,10 +83,10 @@ export type ManifestSummary = z.infer<typeof ManifestSummarySchema>;
 
 export const ManifestSchema = z.object({
   manifest: z.object({
-    version: z.string().default("2.0.1"),
+    version: z.string().default('2.0.1'),
     generatedAt: z.string().datetime(),
-    generator: z.string().default("genesis-audit-engine"),
-    generatorVersion: z.string().default("2.0.1"),
+    generator: z.string().default('genesis-audit-engine'),
+    generatorVersion: z.string().default('2.0.1'),
     generatorHash: z.string().length(128),
   }),
   context: ManifestContextSchema,
@@ -108,10 +108,10 @@ export function validateManifest(manifest: unknown): Manifest {
 export function createEmptyManifest(generatorHash: string, context: ManifestContext): Manifest {
   return {
     manifest: {
-      version: "2.0.1",
+      version: '2.0.1',
       generatedAt: new Date().toISOString(),
-      generator: "genesis-audit-engine",
-      generatorVersion: "2.0.1",
+      generator: 'genesis-audit-engine',
+      generatorVersion: '2.0.1',
       generatorHash,
     },
     context,
@@ -140,9 +140,9 @@ export function createEmptyManifest(generatorHash: string, context: ManifestCont
         productionReadiness: 0,
       },
       releaseDecision: {
-        decision: "NO-GO",
+        decision: 'NO-GO',
         blockingFindings: 0,
-        justification: "Audit not executed",
+        justification: 'Audit not executed',
       },
     },
     claims: [],
@@ -150,11 +150,11 @@ export function createEmptyManifest(generatorHash: string, context: ManifestCont
     findings: [],
     evidenceReferences: [],
     integrity: {
-      claimsHash: "0".repeat(128),
-      controlsHash: "0".repeat(128),
-      findingsHash: "0".repeat(128),
-      evidenceHash: "0".repeat(128),
-      manifestHash: "0".repeat(128),
+      claimsHash: '0'.repeat(128),
+      controlsHash: '0'.repeat(128),
+      findingsHash: '0'.repeat(128),
+      evidenceHash: '0'.repeat(128),
+      manifestHash: '0'.repeat(128),
     },
   };
 }

@@ -13,10 +13,14 @@ export interface PricingContext {
 }
 
 export function dynamicPrice(ctx: PricingContext): number {
-  if (!Number.isFinite(ctx.basePrice) || ctx.basePrice < 0) throw new RangeError("DYN: basePrice must be >= 0");
-  if (!Number.isFinite(ctx.demandFactor) || ctx.demandFactor < 0) throw new RangeError("DYN: demandFactor must be >= 0");
-  if (!Number.isFinite(ctx.loadFactor) || ctx.loadFactor < 0) throw new RangeError("DYN: loadFactor must be >= 0");
-  if (!Number.isFinite(ctx.valueFactor) || ctx.valueFactor < 0) throw new RangeError("DYN: valueFactor must be >= 0");
+  if (!Number.isFinite(ctx.basePrice) || ctx.basePrice < 0)
+    throw new RangeError('DYN: basePrice must be >= 0');
+  if (!Number.isFinite(ctx.demandFactor) || ctx.demandFactor < 0)
+    throw new RangeError('DYN: demandFactor must be >= 0');
+  if (!Number.isFinite(ctx.loadFactor) || ctx.loadFactor < 0)
+    throw new RangeError('DYN: loadFactor must be >= 0');
+  if (!Number.isFinite(ctx.valueFactor) || ctx.valueFactor < 0)
+    throw new RangeError('DYN: valueFactor must be >= 0');
   const raw = ctx.basePrice * ctx.demandFactor * ctx.loadFactor * ctx.valueFactor;
   return Math.max(0, Math.round(raw * 100) / 100);
 }

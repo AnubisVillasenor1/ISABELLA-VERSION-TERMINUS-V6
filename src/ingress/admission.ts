@@ -1,6 +1,6 @@
 /** Admisión (INGRESS — admission control). Fail-closed por defecto. */
 
-export type AdmissionEffect = "ALLOW" | "DENY";
+export type AdmissionEffect = 'ALLOW' | 'DENY';
 
 export interface AdmissionVerdict {
   effect: AdmissionEffect;
@@ -24,16 +24,16 @@ export interface AdmissionContext {
 }
 
 export const DENY_ALL: AdmissionRule = {
-  name: "deny-by-default",
+  name: 'deny-by-default',
   test: () => true,
-  effect: "DENY",
-  reason: "fail-closed: ninguna regla de admisión ha aprobado",
+  effect: 'DENY',
+  reason: 'fail-closed: ninguna regla de admisión ha aprobado',
 };
 
 export function evaluateAdmission(
   ctx: AdmissionContext,
   rules: readonly AdmissionRule[],
-  opts: { failClosed?: boolean } = {},
+  opts: { failClosed?: boolean } = {}
 ): AdmissionVerdict {
   const failClosed = opts.failClosed ?? true;
   const ordered = [...rules, ...(failClosed ? [DENY_ALL] : [])];
@@ -55,10 +55,10 @@ export function evaluateAdmission(
   }
 
   return {
-    effect: failClosed ? "DENY" : "ALLOW",
+    effect: failClosed ? 'DENY' : 'ALLOW',
     reason: failClosed
-      ? "ninguna regla de admisión aprobó (fail-closed)"
-      : "ninguna regla denegó (admisión abierta)",
+      ? 'ninguna regla de admisión aprobó (fail-closed)'
+      : 'ninguna regla denegó (admisión abierta)',
     evidencedAt: new Date().toISOString(),
   };
 }

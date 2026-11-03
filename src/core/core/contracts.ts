@@ -8,39 +8,39 @@
  * ISABELLA-DHK-V1.0
  */
 
-import { randomUUID } from "crypto";
+import { randomUUID } from 'crypto';
 
 // ============================================================================
 // OPERATION STATES
 // ============================================================================
 
 export type OperationState =
-  | "received"
-  | "identified"
-  | "classified"
-  | "context_ready"
-  | "alpha_processing"
-  | "proposal_ready"
-  | "beta_evaluating"
-  | "approval_required"
-  | "executing"
-  | "verifying"
-  | "implementation_ready"
-  | "monetization_hypothesis"
-  | "completed"
-  | "degraded"
-  | "rejected"
-  | "cancelled"
-  | "audited";
+  | 'received'
+  | 'identified'
+  | 'classified'
+  | 'context_ready'
+  | 'alpha_processing'
+  | 'proposal_ready'
+  | 'beta_evaluating'
+  | 'approval_required'
+  | 'executing'
+  | 'verifying'
+  | 'implementation_ready'
+  | 'monetization_hypothesis'
+  | 'completed'
+  | 'degraded'
+  | 'rejected'
+  | 'cancelled'
+  | 'audited';
 
 // ============================================================================
 // REQUEST / RESPONSE
 // ============================================================================
 
 export type RequestMode =
-  "chat" | "assistant" | "research" | "edge" | "quantum" | "implementation" | "monetization";
+  'chat' | 'assistant' | 'research' | 'edge' | 'quantum' | 'implementation' | 'monetization';
 
-export type ResponseStatus = "completed" | "review_required" | "degraded" | "rejected" | "async";
+export type ResponseStatus = 'completed' | 'review_required' | 'degraded' | 'rejected' | 'async';
 
 export interface IsabellaDualRequest {
   requestId: string;
@@ -84,7 +84,7 @@ export interface IsabellaDualResponse {
 // CROWN DECISION
 // ============================================================================
 
-export type CrownDecisionResult = "allow" | "deny" | "review" | "defer";
+export type CrownDecisionResult = 'allow' | 'deny' | 'review' | 'defer';
 
 export interface CrownDecision {
   decisionId: string;
@@ -104,25 +104,25 @@ export interface CrownDecision {
 // ============================================================================
 
 export type DataClassification =
-  "public" | "internal" | "private" | "sensitive" | "restricted" | "critical";
+  'public' | 'internal' | 'private' | 'sensitive' | 'restricted' | 'critical';
 
 // ============================================================================
 // RISK LEVELS
 // ============================================================================
 
-export type RiskLevel = "R0_informational" | "R1_low" | "R2_moderate" | "R3_high" | "R4_critical";
+export type RiskLevel = 'R0_informational' | 'R1_low' | 'R2_moderate' | 'R3_high' | 'R4_critical';
 
 // ============================================================================
 // PROPOSAL
 // ============================================================================
 
-export type ProposalStatus = "draft" | "review" | "approved";
+export type ProposalStatus = 'draft' | 'review' | 'approved';
 
 export interface ProposalAlternative {
   name: string;
   cost: number;
   currency: string;
-  risk: "low" | "medium" | "high";
+  risk: 'low' | 'medium' | 'high';
   timeToFirstResult: string;
 }
 
@@ -145,7 +145,7 @@ export interface Proposal {
 // IMPLEMENTATION PLAN
 // ============================================================================
 
-export type ImplementationStatus = "draft" | "approved" | "running" | "completed" | "blocked";
+export type ImplementationStatus = 'draft' | 'approved' | 'running' | 'completed' | 'blocked';
 
 export interface Milestone {
   id: string;
@@ -182,18 +182,18 @@ export interface ImplementationPlan {
 // MONETIZATION
 // ============================================================================
 
-export type MonetizationStatus = "hypothesis" | "validated" | "approved";
+export type MonetizationStatus = 'hypothesis' | 'validated' | 'approved';
 
 export type MonetizationModel =
-  | "product"
-  | "service"
-  | "subscription"
-  | "membership"
-  | "marketplace"
-  | "license"
-  | "affiliation"
-  | "donation"
-  | "reward";
+  | 'product'
+  | 'service'
+  | 'subscription'
+  | 'membership'
+  | 'marketplace'
+  | 'license'
+  | 'affiliation'
+  | 'donation'
+  | 'reward';
 
 export interface MonetizationScenarios {
   conservative: number;
@@ -224,7 +224,7 @@ export interface MonetizationHypothesis {
 
 export interface EvidenceRecord {
   evidenceId: string;
-  type: "source" | "data" | "measurement" | "simulation" | "expert";
+  type: 'source' | 'data' | 'measurement' | 'simulation' | 'expert';
   claim: string;
   confidence: number;
   source: string;
@@ -292,8 +292,8 @@ export interface ToolCapability {
   inputSchema: object;
   outputSchema: object;
   requiredScopes: string[];
-  riskLevel: "low" | "medium" | "high" | "critical";
-  networkAccess: "none" | "allowlist" | "restricted";
+  riskLevel: 'low' | 'medium' | 'high' | 'critical';
+  networkAccess: 'none' | 'allowlist' | 'restricted';
   reversible: boolean;
   timeoutMs: number;
 }
@@ -312,7 +312,7 @@ export interface QuantumEvidence {
   processedMeasurement: unknown;
   confidenceInterval?: [number, number];
   classicalBaseline?: number;
-  status: "experimental" | "validated" | "rejected";
+  status: 'experimental' | 'validated' | 'rejected';
 }
 
 // ============================================================================
@@ -324,5 +324,5 @@ export function createRequestId(): string {
 }
 
 export function createTraceId(): string {
-  return randomUUID().replace(/-/g, "").slice(0, 32);
+  return randomUUID().replace(/-/g, '').slice(0, 32);
 }

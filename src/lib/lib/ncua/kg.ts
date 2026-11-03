@@ -6,10 +6,10 @@
  * distinguir patrimonio documentado de tradición oral.
  */
 
-import { embed, cosine } from "./embed";
+import { embed, cosine } from './embed';
 
 export type KGFactSource =
-  "patrimonio-documentado" | "tradicion-oral" | "sistema" | "contemporaneo";
+  'patrimonio-documentado' | 'tradicion-oral' | 'sistema' | 'contemporaneo';
 
 export interface KGFact {
   id: string;
@@ -53,7 +53,7 @@ export class SovereignKnowledgeGraph {
       weight?: number;
       source?: KGFactSource;
       confidence?: number;
-    } = {},
+    } = {}
   ): KGFact {
     const fact: KGFact = {
       id: `kg:${this.facts.length}:${hashOf(subject + predicate + object)}`,
@@ -61,7 +61,7 @@ export class SovereignKnowledgeGraph {
       predicate,
       object,
       weight: options.weight ?? 1,
-      source: options.source ?? "sistema",
+      source: options.source ?? 'sistema',
       confidence: options.confidence ?? 0.5,
     };
     this.facts.push(fact);
@@ -76,7 +76,7 @@ export class SovereignKnowledgeGraph {
 
   retrieve(
     query: string,
-    options: { topK?: number; minScore?: number; hops?: number } = {},
+    options: { topK?: number; minScore?: number; hops?: number } = {}
   ): KGRetrieval[] {
     const topK = options.topK ?? 4;
     const minScore = options.minScore ?? 0.3;
@@ -128,11 +128,11 @@ export class SovereignKnowledgeGraph {
       const label = factSourceLabel(hit.fact.source);
       const confidence = Math.round(hit.fact.confidence * 100);
       sentences.push(
-        `${hit.fact.subject} ${hit.fact.predicate} ${hit.fact.object} [${label}, confianza ${confidence}%].`,
+        `${hit.fact.subject} ${hit.fact.predicate} ${hit.fact.object} [${label}, confianza ${confidence}%].`
       );
     }
     return {
-      text: sentences.join(" "),
+      text: sentences.join(' '),
       groundedFacts: hits.length,
     };
   }
@@ -140,10 +140,10 @@ export class SovereignKnowledgeGraph {
 
 function factSourceLabel(source: KGFactSource): string {
   const labels: Record<KGFactSource, string> = {
-    "patrimonio-documentado": "patrimonio documentado",
-    "tradicion-oral": "tradición oral",
-    sistema: "fuente de sistema",
-    contemporaneo: "fuente contemporánea",
+    'patrimonio-documentado': 'patrimonio documentado',
+    'tradicion-oral': 'tradición oral',
+    sistema: 'fuente de sistema',
+    contemporaneo: 'fuente contemporánea',
   };
   return labels[source];
 }
@@ -163,64 +163,64 @@ export function seedRdmKnowledgeGraph(options: { dim?: number } = {}): Sovereign
     [string, string, string, { weight?: number; source?: KGFactSource; confidence?: number }]
   > = [
     [
-      "Real del Monte",
-      "es",
-      "pueblo minero en el estado de Hidalgo, México",
-      { weight: 1, source: "patrimonio-documentado", confidence: 0.92 },
+      'Real del Monte',
+      'es',
+      'pueblo minero en el estado de Hidalgo, México',
+      { weight: 1, source: 'patrimonio-documentado', confidence: 0.92 },
     ],
     [
-      "Real del Monte",
-      "es",
-      "parte del distrito minero de Pachuca-Real del Monte",
-      { weight: 1, source: "patrimonio-documentado", confidence: 0.9 },
+      'Real del Monte',
+      'es',
+      'parte del distrito minero de Pachuca-Real del Monte',
+      { weight: 1, source: 'patrimonio-documentado', confidence: 0.9 },
     ],
     [
-      "el paste",
-      "fue",
-      "introducido por mineros córnico-alemanes en Real del Monte",
-      { weight: 1, source: "tradicion-oral", confidence: 0.82 },
+      'el paste',
+      'fue',
+      'introducido por mineros córnico-alemanes en Real del Monte',
+      { weight: 1, source: 'tradicion-oral', confidence: 0.82 },
     ],
     [
-      "el paste",
-      "es",
-      "patrimonio gastronómico del estado de Hidalgo",
-      { weight: 1, source: "patrimonio-documentado", confidence: 0.88 },
+      'el paste',
+      'es',
+      'patrimonio gastronómico del estado de Hidalgo',
+      { weight: 1, source: 'patrimonio-documentado', confidence: 0.88 },
     ],
     [
-      "Pedro Romero de Terreros",
-      "fue",
-      "el Conde de Regla y desarrolló las minas del distrito",
-      { weight: 1, source: "patrimonio-documentado", confidence: 0.9 },
+      'Pedro Romero de Terreros',
+      'fue',
+      'el Conde de Regla y desarrolló las minas del distrito',
+      { weight: 1, source: 'patrimonio-documentado', confidence: 0.9 },
     ],
     [
-      "Mina de Acosta",
-      "es",
-      "un museo de sitio minero visitable en Pachuca",
-      { weight: 1, source: "patrimonio-documentado", confidence: 0.91 },
+      'Mina de Acosta',
+      'es',
+      'un museo de sitio minero visitable en Pachuca',
+      { weight: 1, source: 'patrimonio-documentado', confidence: 0.91 },
     ],
     [
-      "plata",
-      "se",
-      "extraía en el distrito minero de Pachuca-Real del Monte",
-      { weight: 1, source: "patrimonio-documentado", confidence: 0.9 },
+      'plata',
+      'se',
+      'extraía en el distrito minero de Pachuca-Real del Monte',
+      { weight: 1, source: 'patrimonio-documentado', confidence: 0.9 },
     ],
     [
-      "platería",
-      "trabaja",
-      "plata de ley 925",
-      { weight: 1, source: "contemporaneo", confidence: 0.85 },
+      'platería',
+      'trabaja',
+      'plata de ley 925',
+      { weight: 1, source: 'contemporaneo', confidence: 0.85 },
     ],
     [
-      "Nodo Cero",
-      "es",
-      "el centro del ecosistema TAMV en Real del Monte",
-      { weight: 1, source: "sistema", confidence: 0.7 },
+      'Nodo Cero',
+      'es',
+      'el centro del ecosistema TAMV en Real del Monte',
+      { weight: 1, source: 'sistema', confidence: 0.7 },
     ],
     [
-      "Isabella",
-      "opera",
-      "bajo soberanía humana y gobernanza explícita",
-      { weight: 1, source: "patrimonio-documentado", confidence: 0.95 },
+      'Isabella',
+      'opera',
+      'bajo soberanía humana y gobernanza explícita',
+      { weight: 1, source: 'patrimonio-documentado', confidence: 0.95 },
     ],
   ];
   for (const [subject, predicate, object, options] of seeded) {

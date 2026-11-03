@@ -1,1 +1,1 @@
-export { MonetizationDashboardSecure as MonetizationDashboard } from "./MonetizationDashboardSecure";
+export { MonetizationDashboardSecure as MonetizationDashboard } from './MonetizationDashboardSecure';

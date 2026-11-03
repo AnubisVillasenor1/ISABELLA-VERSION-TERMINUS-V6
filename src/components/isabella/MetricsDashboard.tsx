@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useId, useMemo } from "react";
+import { useState, useEffect, useCallback, useId, useMemo } from 'react';
 import {
   Zap,
   Activity,
@@ -13,7 +13,7 @@ import {
   SlidersHorizontal,
   Sparkles,
   Info,
-} from "lucide-react";
+} from 'lucide-react';
 import {
   ResponsiveContainer,
   LineChart,
@@ -24,13 +24,13 @@ import {
   Tooltip,
   Legend,
   ReferenceLine,
-} from "recharts";
+} from 'recharts';
 import {
   doublePipeline,
   DoublePipelineSnapshot,
   PipelineMetrics,
   PipelinePort,
-} from "@/lib/isabella/double-pipeline";
+} from '@/lib/isabella/double-pipeline';
 
 interface CustomTooltipProps {
   active?: boolean;
@@ -78,8 +78,8 @@ export function MetricsDashboard() {
   const componentId = useId();
   const [snapshot, setSnapshot] = useState<DoublePipelineSnapshot | null>(null);
   const [isRunningBenchmark, setIsRunningBenchmark] = useState(false);
-  const [selectedPipeline, setSelectedPipeline] = useState<"A" | "B" | "BOTH">("A");
-  const [visibleMetric, setVisibleMetric] = useState<"ALL" | "P50" | "P95" | "P99">("ALL");
+  const [selectedPipeline, setSelectedPipeline] = useState<'A' | 'B' | 'BOTH'>('A');
+  const [visibleMetric, setVisibleMetric] = useState<'ALL' | 'P50' | 'P95' | 'P99'>('ALL');
   const [autoRefreshIntervalMs, setAutoRefreshIntervalMs] = useState<number>(3000);
   const [lastBenchmarkRun, setLastBenchmarkRun] = useState<string | null>(null);
 
@@ -159,7 +159,7 @@ export function MetricsDashboard() {
   }
 
   const activeMetrics: PipelineMetrics =
-    selectedPipeline === "B" ? snapshot.metricsB : snapshot.metricsA;
+    selectedPipeline === 'B' ? snapshot.metricsB : snapshot.metricsA;
 
   const isTurbo = snapshot.turboModeEnabled ?? true;
   const speedupFactor = snapshot.turboSpeedupFactor ?? 1.0;
@@ -198,12 +198,12 @@ export function MetricsDashboard() {
             onClick={handleToggleTurbo}
             className={`inline-flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all shadow-sm ${
               isTurbo
-                ? "bg-gradient-to-r from-amber-500 to-emerald-500 text-black hover:opacity-90 shadow-emerald-500/20"
-                : "border border-border/80 bg-secondary/80 text-muted-foreground hover:bg-secondary"
+                ? 'bg-gradient-to-r from-amber-500 to-emerald-500 text-black hover:opacity-90 shadow-emerald-500/20'
+                : 'border border-border/80 bg-secondary/80 text-muted-foreground hover:bg-secondary'
             }`}
           >
-            <Zap className={`h-3.5 w-3.5 ${isTurbo ? "fill-black" : ""}`} />
-            <span>Super Turbo: {isTurbo ? `ACTIVO (${speedupFactor}x)` : "INACTIVO (1.0x)"}</span>
+            <Zap className={`h-3.5 w-3.5 ${isTurbo ? 'fill-black' : ''}`} />
+            <span>Super Turbo: {isTurbo ? `ACTIVO (${speedupFactor}x)` : 'INACTIVO (1.0x)'}</span>
           </button>
 
           {/* BOTÓN EJECUTAR BENCHMARK */}
@@ -213,8 +213,8 @@ export function MetricsDashboard() {
             disabled={isRunningBenchmark}
             className="inline-flex items-center gap-2 rounded-lg border border-cyan-500/40 bg-cyan-500/10 px-3.5 py-1.5 text-xs font-medium text-cyan-300 hover:bg-cyan-500/20 disabled:opacity-50 transition-colors"
           >
-            <Play className={`h-3.5 w-3.5 ${isRunningBenchmark ? "animate-spin" : ""}`} />
-            <span>{isRunningBenchmark ? "Benchmarkeando..." : "Ejecutar Test Turbo"}</span>
+            <Play className={`h-3.5 w-3.5 ${isRunningBenchmark ? 'animate-spin' : ''}`} />
+            <span>{isRunningBenchmark ? 'Benchmarkeando...' : 'Ejecutar Test Turbo'}</span>
           </button>
 
           {/* SELECTOR INTERVALO REFRESH */}
@@ -365,33 +365,33 @@ export function MetricsDashboard() {
             <div className="flex rounded-lg border border-border/60 bg-secondary/30 p-0.5 text-xs font-mono">
               <button
                 type="button"
-                onClick={() => setSelectedPipeline("A")}
+                onClick={() => setSelectedPipeline('A')}
                 className={`rounded px-2.5 py-1 transition-colors ${
-                  selectedPipeline === "A"
-                    ? "bg-primary text-primary-foreground font-semibold shadow-xs"
-                    : "text-muted-foreground hover:text-foreground"
+                  selectedPipeline === 'A'
+                    ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 Pipeline A (Activo)
               </button>
               <button
                 type="button"
-                onClick={() => setSelectedPipeline("B")}
+                onClick={() => setSelectedPipeline('B')}
                 className={`rounded px-2.5 py-1 transition-colors ${
-                  selectedPipeline === "B"
-                    ? "bg-primary text-primary-foreground font-semibold shadow-xs"
-                    : "text-muted-foreground hover:text-foreground"
+                  selectedPipeline === 'B'
+                    ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 Pipeline B (Failover)
               </button>
               <button
                 type="button"
-                onClick={() => setSelectedPipeline("BOTH")}
+                onClick={() => setSelectedPipeline('BOTH')}
                 className={`rounded px-2.5 py-1 transition-colors ${
-                  selectedPipeline === "BOTH"
-                    ? "bg-primary text-primary-foreground font-semibold shadow-xs"
-                    : "text-muted-foreground hover:text-foreground"
+                  selectedPipeline === 'BOTH'
+                    ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 Comparativo A/B
@@ -400,15 +400,15 @@ export function MetricsDashboard() {
 
             {/* SELECCIÓN DE PERCENTIL */}
             <div className="flex rounded-lg border border-border/60 bg-secondary/30 p-0.5 text-xs font-mono">
-              {(["ALL", "P50", "P95", "P99"] as const).map((filter) => (
+              {(['ALL', 'P50', 'P95', 'P99'] as const).map((filter) => (
                 <button
                   type="button"
                   key={filter}
                   onClick={() => setVisibleMetric(filter)}
                   className={`rounded px-2 py-1 transition-colors ${
                     visibleMetric === filter
-                      ? "bg-cyan-500/20 text-cyan-300 font-semibold"
-                      : "text-muted-foreground hover:text-foreground"
+                      ? 'bg-cyan-500/20 text-cyan-300 font-semibold'
+                      : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
                   {filter}
@@ -428,22 +428,22 @@ export function MetricsDashboard() {
                 stroke="rgba(255,255,255,0.4)"
                 fontSize={10}
                 tickLine={false}
-                axisLine={{ stroke: "rgba(255,255,255,0.1)" }}
+                axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
               />
               <YAxis
                 stroke="rgba(255,255,255,0.4)"
                 fontSize={10}
                 tickLine={false}
-                axisLine={{ stroke: "rgba(255,255,255,0.1)" }}
+                axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
                 unit=" ms"
-                domain={[0, "auto"]}
+                domain={[0, 'auto']}
               />
               <Tooltip content={<CustomLatencyTooltip />} />
               <Legend
                 wrapperStyle={{
-                  paddingTop: "12px",
-                  fontSize: "11px",
-                  fontFamily: "monospace",
+                  paddingTop: '12px',
+                  fontSize: '11px',
+                  fontFamily: 'monospace',
                 }}
               />
               {/* LÍNEA DE REFERENCIA SLA OBJETIVO */}
@@ -453,49 +453,49 @@ export function MetricsDashboard() {
                 strokeDasharray="4 4"
                 strokeOpacity={0.6}
                 label={{
-                  value: "Límite SLA p99 (5.0 ms)",
-                  fill: "#f43f5e",
+                  value: 'Límite SLA p99 (5.0 ms)',
+                  fill: '#f43f5e',
                   fontSize: 10,
-                  position: "top",
+                  position: 'top',
                 }}
               />
 
               {/* RENDERIZADO CONDICIONAL DE LÍNEAS SEGÚN VISTA */}
-              {(selectedPipeline === "A" || selectedPipeline === "BOTH") && (
+              {(selectedPipeline === 'A' || selectedPipeline === 'BOTH') && (
                 <>
-                  {(visibleMetric === "ALL" || visibleMetric === "P50") && (
+                  {(visibleMetric === 'ALL' || visibleMetric === 'P50') && (
                     <Line
                       type="monotone"
-                      name={selectedPipeline === "BOTH" ? "p50 (Pipe A)" : "p50 Latencia (ms)"}
+                      name={selectedPipeline === 'BOTH' ? 'p50 (Pipe A)' : 'p50 Latencia (ms)'}
                       dataKey="p50_A"
                       stroke="#10b981"
                       strokeWidth={2.5}
-                      dot={{ r: 3, fill: "#10b981", strokeWidth: 0 }}
-                      activeDot={{ r: 5, stroke: "#10b981", strokeWidth: 2, fill: "#fff" }}
+                      dot={{ r: 3, fill: '#10b981', strokeWidth: 0 }}
+                      activeDot={{ r: 5, stroke: '#10b981', strokeWidth: 2, fill: '#fff' }}
                       isAnimationActive={false}
                     />
                   )}
-                  {(visibleMetric === "ALL" || visibleMetric === "P95") && (
+                  {(visibleMetric === 'ALL' || visibleMetric === 'P95') && (
                     <Line
                       type="monotone"
-                      name={selectedPipeline === "BOTH" ? "p95 (Pipe A)" : "p95 Latencia (ms)"}
+                      name={selectedPipeline === 'BOTH' ? 'p95 (Pipe A)' : 'p95 Latencia (ms)'}
                       dataKey="p95_A"
                       stroke="#f59e0b"
                       strokeWidth={2.5}
-                      dot={{ r: 3, fill: "#f59e0b", strokeWidth: 0 }}
-                      activeDot={{ r: 5, stroke: "#f59e0b", strokeWidth: 2, fill: "#fff" }}
+                      dot={{ r: 3, fill: '#f59e0b', strokeWidth: 0 }}
+                      activeDot={{ r: 5, stroke: '#f59e0b', strokeWidth: 2, fill: '#fff' }}
                       isAnimationActive={false}
                     />
                   )}
-                  {(visibleMetric === "ALL" || visibleMetric === "P99") && (
+                  {(visibleMetric === 'ALL' || visibleMetric === 'P99') && (
                     <Line
                       type="monotone"
-                      name={selectedPipeline === "BOTH" ? "p99 (Pipe A)" : "p99 Latencia (ms)"}
+                      name={selectedPipeline === 'BOTH' ? 'p99 (Pipe A)' : 'p99 Latencia (ms)'}
                       dataKey="p99_A"
                       stroke="#f43f5e"
                       strokeWidth={2.5}
-                      dot={{ r: 3, fill: "#f43f5e", strokeWidth: 0 }}
-                      activeDot={{ r: 5, stroke: "#f43f5e", strokeWidth: 2, fill: "#fff" }}
+                      dot={{ r: 3, fill: '#f43f5e', strokeWidth: 0 }}
+                      activeDot={{ r: 5, stroke: '#f43f5e', strokeWidth: 2, fill: '#fff' }}
                       isAnimationActive={false}
                     />
                   )}
@@ -503,41 +503,41 @@ export function MetricsDashboard() {
               )}
 
               {/* PIPELINE B EN VISTA DUAL O INDIVIDUAL */}
-              {(selectedPipeline === "B" || selectedPipeline === "BOTH") && (
+              {(selectedPipeline === 'B' || selectedPipeline === 'BOTH') && (
                 <>
-                  {(visibleMetric === "ALL" || visibleMetric === "P50") && (
+                  {(visibleMetric === 'ALL' || visibleMetric === 'P50') && (
                     <Line
                       type="monotone"
-                      name={selectedPipeline === "BOTH" ? "p50 (Pipe B)" : "p50 Latencia (ms)"}
+                      name={selectedPipeline === 'BOTH' ? 'p50 (Pipe B)' : 'p50 Latencia (ms)'}
                       dataKey="p50_B"
                       stroke="#06b6d4"
                       strokeWidth={2}
-                      strokeDasharray={selectedPipeline === "BOTH" ? "5 5" : undefined}
-                      dot={{ r: 2.5, fill: "#06b6d4", strokeWidth: 0 }}
+                      strokeDasharray={selectedPipeline === 'BOTH' ? '5 5' : undefined}
+                      dot={{ r: 2.5, fill: '#06b6d4', strokeWidth: 0 }}
                       isAnimationActive={false}
                     />
                   )}
-                  {(visibleMetric === "ALL" || visibleMetric === "P95") && (
+                  {(visibleMetric === 'ALL' || visibleMetric === 'P95') && (
                     <Line
                       type="monotone"
-                      name={selectedPipeline === "BOTH" ? "p95 (Pipe B)" : "p95 Latencia (ms)"}
+                      name={selectedPipeline === 'BOTH' ? 'p95 (Pipe B)' : 'p95 Latencia (ms)'}
                       dataKey="p95_B"
                       stroke="#eab308"
                       strokeWidth={2}
-                      strokeDasharray={selectedPipeline === "BOTH" ? "5 5" : undefined}
-                      dot={{ r: 2.5, fill: "#eab308", strokeWidth: 0 }}
+                      strokeDasharray={selectedPipeline === 'BOTH' ? '5 5' : undefined}
+                      dot={{ r: 2.5, fill: '#eab308', strokeWidth: 0 }}
                       isAnimationActive={false}
                     />
                   )}
-                  {(visibleMetric === "ALL" || visibleMetric === "P99") && (
+                  {(visibleMetric === 'ALL' || visibleMetric === 'P99') && (
                     <Line
                       type="monotone"
-                      name={selectedPipeline === "BOTH" ? "p99 (Pipe B)" : "p99 Latencia (ms)"}
+                      name={selectedPipeline === 'BOTH' ? 'p99 (Pipe B)' : 'p99 Latencia (ms)'}
                       dataKey="p99_B"
                       stroke="#fb7185"
                       strokeWidth={2}
-                      strokeDasharray={selectedPipeline === "BOTH" ? "5 5" : undefined}
-                      dot={{ r: 2.5, fill: "#fb7185", strokeWidth: 0 }}
+                      strokeDasharray={selectedPipeline === 'BOTH' ? '5 5' : undefined}
+                      dot={{ r: 2.5, fill: '#fb7185', strokeWidth: 0 }}
                       isAnimationActive={false}
                     />
                   )}
@@ -587,39 +587,39 @@ export function MetricsDashboard() {
             {(
               [
                 {
-                  port: "Ingest",
-                  name: "P1: Ingest",
-                  desc: "Sanitización & Hash",
+                  port: 'Ingest',
+                  name: 'P1: Ingest',
+                  desc: 'Sanitización & Hash',
                   concurrent: false,
                 },
                 {
-                  port: "Policy",
-                  name: "P2: Policy",
-                  desc: "CROWN & Zero Trust",
+                  port: 'Policy',
+                  name: 'P2: Policy',
+                  desc: 'CROWN & Zero Trust',
                   concurrent: true,
                 },
                 {
-                  port: "Context",
-                  name: "P3: Context",
-                  desc: "Resolución 5 Scopes",
+                  port: 'Context',
+                  name: 'P3: Context',
+                  desc: 'Resolución 5 Scopes',
                   concurrent: true,
                 },
                 {
-                  port: "Inference",
-                  name: "P4: Inference",
-                  desc: "Motor Cognitivo",
+                  port: 'Inference',
+                  name: 'P4: Inference',
+                  desc: 'Motor Cognitivo',
                   concurrent: false,
                 },
                 {
-                  port: "Evidence",
-                  name: "P5: Evidence",
-                  desc: "BookPI Sello Asíncrono",
+                  port: 'Evidence',
+                  name: 'P5: Evidence',
+                  desc: 'BookPI Sello Asíncrono',
                   concurrent: true,
                 },
                 {
-                  port: "Delivery",
-                  name: "P6: Delivery",
-                  desc: "Entrega Determinista",
+                  port: 'Delivery',
+                  name: 'P6: Delivery',
+                  desc: 'Entrega Determinista',
                   concurrent: false,
                 },
               ] as const
@@ -645,8 +645,8 @@ export function MetricsDashboard() {
                     <div
                       className={`h-full rounded-full transition-all duration-500 ${
                         item.concurrent && isTurbo
-                          ? "bg-gradient-to-r from-cyan-400 to-emerald-400"
-                          : "bg-cyan-500/70"
+                          ? 'bg-gradient-to-r from-cyan-400 to-emerald-400'
+                          : 'bg-cyan-500/70'
                       }`}
                       style={{ width: `${percentage}%` }}
                     />
@@ -691,7 +691,7 @@ export function MetricsDashboard() {
                 </div>
                 <ul className="list-disc list-inside space-y-1 pl-1 text-[10px]">
                   <li>
-                    <strong className="text-foreground">Caché Triangular (Rings A, B, C):</strong>{" "}
+                    <strong className="text-foreground">Caché Triangular (Rings A, B, C):</strong>{' '}
                     Deduplica consultas repetitivas de políticas e identidades.
                   </li>
                   <li>

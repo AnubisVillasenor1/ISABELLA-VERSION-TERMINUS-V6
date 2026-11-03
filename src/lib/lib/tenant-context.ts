@@ -17,7 +17,7 @@ export interface TenantContext {
   /** Tenant autenticado del actor. */
   tenantId: string;
   /** Devuelto/confirmado por un orígen de confianza, no por el cliente. */
-  resolvedBy: "bearer" | "cookie" | "system" | "api_key" | "unauthenticated";
+  resolvedBy: 'bearer' | 'cookie' | 'system' | 'api_key' | 'unauthenticated';
   /** Presente si el actor está autenticado. */
   authenticated: boolean;
   /** Momento UTC de resolución. */
@@ -26,10 +26,10 @@ export interface TenantContext {
 
 /** Identidad anónima para requests no autenticados. */
 export const ANONYMOUS_TENANT_CONTEXT: TenantContext = {
-  subject: "anon",
-  username: "anon",
-  tenantId: "system",
-  resolvedBy: "unauthenticated",
+  subject: 'anon',
+  username: 'anon',
+  tenantId: 'system',
+  resolvedBy: 'unauthenticated',
   authenticated: false,
   resolvedAt: new Date(0).toISOString(),
 };
@@ -41,18 +41,18 @@ export const ANONYMOUS_TENANT_CONTEXT: TenantContext = {
  */
 export function assertTenantBoundary(
   authenticated: TenantContext,
-  requestedTenantId: string | undefined,
+  requestedTenantId: string | undefined
 ): { allowed: boolean; reason: string } {
   if (!authenticated.authenticated || !requestedTenantId) {
     return {
       allowed: true,
-      reason: "Sin tenant explícito: no hay frontera que validar.",
+      reason: 'Sin tenant explícito: no hay frontera que validar.',
     };
   }
   if (authenticated.tenantId === requestedTenantId) {
     return {
       allowed: true,
-      reason: "Tenant coincide con identidad autenticada.",
+      reason: 'Tenant coincide con identidad autenticada.',
     };
   }
   return {
@@ -66,8 +66,8 @@ export function guestTenantContext(subject: string): TenantContext {
   return {
     subject,
     username: subject,
-    tenantId: "system",
-    resolvedBy: "unauthenticated",
+    tenantId: 'system',
+    resolvedBy: 'unauthenticated',
     authenticated: false,
     resolvedAt: new Date().toISOString(),
   };

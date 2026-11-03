@@ -10,10 +10,10 @@
  * ============================================================================
  */
 
-import * as crypto from "node:crypto";
-import { repositoryFactory } from "./persistence/repository-factory";
-import { SecuritySystem } from "./security";
-import { type Role } from "./rbac";
+import * as crypto from 'node:crypto';
+import { repositoryFactory } from './persistence/repository-factory';
+import { SecuritySystem } from './security';
+import { type Role } from './rbac';
 
 export interface UserProfile {
   id: string;
@@ -30,16 +30,16 @@ export interface UserProfile {
 export class UserAuthService {
   private static readonly ITERATIONS = 100_000;
   private static readonly KEY_LEN = 64;
-  private static readonly DIGEST = "sha512";
+  private static readonly DIGEST = 'sha512';
 
   /**
    * Hashea una contraseña en texto plano utilizando PBKDF2 con sal criptográfica única.
    */
   public static hashPassword(password: string): { hash: string; salt: string } {
-    const salt = crypto.randomBytes(16).toString("hex");
+    const salt = crypto.randomBytes(16).toString('hex');
     const hash = crypto
       .pbkdf2Sync(password, salt, this.ITERATIONS, this.KEY_LEN, this.DIGEST)
-      .toString("hex");
+      .toString('hex');
     return { hash, salt };
   }
 
@@ -49,10 +49,10 @@ export class UserAuthService {
   public static verifyPassword(password: string, hash: string, salt: string): boolean {
     const computed = crypto
       .pbkdf2Sync(password, salt, this.ITERATIONS, this.KEY_LEN, this.DIGEST)
-      .toString("hex");
+      .toString('hex');
 
-    const hashBuf = Buffer.from(hash, "hex");
-    const computedBuf = Buffer.from(computed, "hex");
+    const hashBuf = Buffer.from(hash, 'hex');
+    const computedBuf = Buffer.from(computed, 'hex');
 
     if (hashBuf.length !== computedBuf.length) {
       return false;
@@ -88,27 +88,27 @@ export class UserAuthService {
     // P0-06: bloquear signup nativo en producción — solo dev/test/migración.
     // Fail-closed: cualquier fallo al resolver el modo (config importada,
     // esquema, etc.) PROPAGA el error; no se traga el guard.
-    const { config } = await import("./config");
-    const { resolveRuntimeMode } = await import("./runtime-mode");
+    const { config } = await import('./config');
+    const { resolveRuntimeMode } = await import('./runtime-mode');
     const mode = resolveRuntimeMode(config().ISABELLA_RUNTIME_MODE);
-    if (mode === "production" || mode === "staging") {
+    if (mode === 'production' || mode === 'staging') {
       throw new Error(
-        "signup nativo deshabilitado en producción — usar Supabase Auth/OIDC canónico",
+        'signup nativo deshabilitado en producción — usar Supabase Auth/OIDC canónico'
       );
     }
     const email = params.email.trim().toLowerCase();
     const username = params.username.trim();
-    const role: Role = "Operator"; // P0-06: rol derivado server-side, nunca del cliente
-    const ip = params.ip || "127.0.0.1";
+    const role: Role = 'Operator'; // P0-06: rol derivado server-side, nunca del cliente
+    const ip = params.ip || '127.0.0.1';
 
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      throw new Error("Formato de correo electrónico inválido.");
+      throw new Error('Formato de correo electrónico inválido.');
     }
     if (!username || username.length < 3) {
-      throw new Error("El nombre de usuario debe contener al menos 3 caracteres.");
+      throw new Error('El nombre de usuario debe contener al menos 3 caracteres.');
     }
     if (!params.password || params.password.length < 8) {
-      throw new Error("La contraseña debe tener una longitud mínima de 8 caracteres.");
+      throw new Error('La contraseña debe tener una longitud mínima de 8 caracteres.');
     }
 
     // Regla de fortaleza de contraseña
@@ -117,14 +117,14 @@ export class UserAuthService {
     const hasDigit = /[0-9]/.test(params.password);
     if (!hasUpper || !hasLower || !hasDigit) {
       throw new Error(
-        "La contraseña debe incluir mayúsculas, minúsculas y al menos un dígito numérico.",
+        'La contraseña debe incluir mayúsculas, minúsculas y al menos un dígito numérico.'
       );
     }
 
-    const userId = `usr_${crypto.randomBytes(8).toString("hex")}`;
+    const userId = `usr_${crypto.randomBytes(8).toString('hex')}`;
     const tenantId = params.tenantSlug
-      ? `tnt_${params.tenantSlug.toLowerCase().replace(/[^a-z0-9_-]/g, "")}`
-      : `tnt_${username.toLowerCase().replace(/[^a-z0-9_-]/g, "")}_${userId.slice(4, 8)}`;
+      ? `tnt_${params.tenantSlug.toLowerCase().replace(/[^a-z0-9_-]/g, '')}`
+      : `tnt_${username.toLowerCase().replace(/[^a-z0-9_-]/g, '')}_${userId.slice(4, 8)}`;
 
     const { hash, salt } = this.hashPassword(params.password);
 
@@ -134,13 +134,13 @@ export class UserAuthService {
     const tenantRepo = repositoryFactory.getTenantRepository();
     const existingTenant = await tenantRepo.read(tenantId, tenantId);
     if (existingTenant && params.tenantSlug) {
-      throw new Error("tenant_already_exists — el tenant indicado ya existe");
+      throw new Error('tenant_already_exists — el tenant indicado ya existe');
     }
     if (!existingTenant) {
       await tenantRepo.create(tenantId, {
         id: tenantId,
         slug: params.tenantSlug || username.toLowerCase(),
-        tier: "sovereign",
+        tier: 'sovereign',
         quotaBalance: 500, // Balance de bienvenida de tokens
         quotaTierLimit: 50_000,
         createdAt: new Date().toISOString(),
@@ -155,8 +155,8 @@ export class UserAuthService {
       id: `cred:${email}`,
       tenantId,
       userId,
-      principalType: "user",
-      tokenJti: "credential_record",
+      principalType: 'user',
+      tokenJti: 'credential_record',
       expiresAt: new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString(),
       createdAt: new Date().toISOString(),
       metadata: {
@@ -173,12 +173,12 @@ export class UserAuthService {
       userId,
       role,
       tenantId,
-      "isabella:chat isabella:voice isabella:tools isabella:ledger:write",
+      'isabella:chat isabella:voice isabella:tools isabella:ledger:write'
     );
 
-    const tokenPayload = token.split(".")[1];
+    const tokenPayload = token.split('.')[1];
     const tokenClaims = tokenPayload
-      ? (JSON.parse(Buffer.from(tokenPayload, "base64url").toString("utf8")) as {
+      ? (JSON.parse(Buffer.from(tokenPayload, 'base64url').toString('utf8')) as {
           jti?: string;
         })
       : {};
@@ -189,11 +189,11 @@ export class UserAuthService {
       id: `${userId}:${jti}`,
       tenantId,
       userId,
-      principalType: "user",
+      principalType: 'user',
       tokenJti: jti,
       expiresAt: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
       createdAt: new Date().toISOString(),
-      metadata: { ip, userAgent: "IsabellaClientApp" },
+      metadata: { ip, userAgent: 'IsabellaClientApp' },
     });
 
     // 5. Registrar auditoría
@@ -203,11 +203,11 @@ export class UserAuthService {
       tenantId,
       traceId: `trc_signup_${userId.slice(4)}`,
       timestamp: new Date().toISOString(),
-      action: "user.signup",
-      resource: "identity",
-      severity: "S3",
+      action: 'user.signup',
+      resource: 'identity',
+      severity: 'S3',
       actor: userId,
-      result: "success",
+      result: 'success',
       details: { email, username, role, tenantId },
     });
 
@@ -239,13 +239,13 @@ export class UserAuthService {
     };
   }> {
     const email = params.email.trim().toLowerCase();
-    const ip = params.ip || "127.0.0.1";
+    const ip = params.ip || '127.0.0.1';
 
     const sessionRepo = repositoryFactory.getSessionRepository();
     const credRecord = await sessionRepo.read(`cred:${email}`, `cred:${email}`);
 
     if (!credRecord || !credRecord.metadata) {
-      throw new Error("Credenciales inválidas o usuario no registrado.");
+      throw new Error('Credenciales inválidas o usuario no registrado.');
     }
 
     const meta = credRecord.metadata as {
@@ -264,14 +264,14 @@ export class UserAuthService {
         tenantId: credRecord.tenantId,
         traceId: `trc_login_fail_${crypto.randomUUID().slice(0, 8)}`,
         timestamp: new Date().toISOString(),
-        action: "user.login_failed",
-        resource: "identity",
-        severity: "S1",
+        action: 'user.login_failed',
+        resource: 'identity',
+        severity: 'S1',
         actor: email,
-        result: "denied",
-        details: { ip, reason: "invalid_password_hash" },
+        result: 'denied',
+        details: { ip, reason: 'invalid_password_hash' },
       });
-      throw new Error("Credenciales inválidas o contraseña incorrecta.");
+      throw new Error('Credenciales inválidas o contraseña incorrecta.');
     }
 
     // Emitir nuevo Sovereign JWT
@@ -279,12 +279,12 @@ export class UserAuthService {
       credRecord.userId,
       meta.role,
       credRecord.tenantId,
-      "isabella:chat isabella:voice isabella:tools isabella:ledger:write",
+      'isabella:chat isabella:voice isabella:tools isabella:ledger:write'
     );
 
-    const tokenPayload = token.split(".")[1];
+    const tokenPayload = token.split('.')[1];
     const tokenClaims = tokenPayload
-      ? (JSON.parse(Buffer.from(tokenPayload, "base64url").toString("utf8")) as {
+      ? (JSON.parse(Buffer.from(tokenPayload, 'base64url').toString('utf8')) as {
           jti?: string;
         })
       : {};
@@ -295,7 +295,7 @@ export class UserAuthService {
       id: `${credRecord.userId}:${jti}`,
       tenantId: credRecord.tenantId,
       userId: credRecord.userId,
-      principalType: "user",
+      principalType: 'user',
       tokenJti: jti,
       expiresAt: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
       createdAt: new Date().toISOString(),
@@ -308,11 +308,11 @@ export class UserAuthService {
       tenantId: credRecord.tenantId,
       traceId: `trc_login_ok_${crypto.randomUUID().slice(0, 8)}`,
       timestamp: new Date().toISOString(),
-      action: "user.login_success",
-      resource: "identity",
-      severity: "S3",
+      action: 'user.login_success',
+      resource: 'identity',
+      severity: 'S3',
       actor: credRecord.userId,
-      result: "success",
+      result: 'success',
       details: { email, role: meta.role, ip },
     });
 

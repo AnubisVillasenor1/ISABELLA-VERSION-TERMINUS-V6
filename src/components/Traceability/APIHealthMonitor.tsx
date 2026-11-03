@@ -1,38 +1,38 @@
-import React, { useState, useEffect } from "react";
-import { Activity, Server, Wifi, WifiOff } from "lucide-react";
-import { isabellaFetch } from "../../lib/apiInterceptor";
+import React, { useState, useEffect } from 'react';
+import { Activity, Server, Wifi, WifiOff } from 'lucide-react';
+import { isabellaFetch } from '../../lib/apiInterceptor';
 
 export const APIHealthMonitor: React.FC = () => {
   const [latency, setLatency] = useState<number | null>(null);
-  const [status, setStatus] = useState<"healthy" | "degraded" | "offline">("healthy");
+  const [status, setStatus] = useState<'healthy' | 'degraded' | 'offline'>('healthy');
   const [lastCheck, setLastCheck] = useState<Date>(new Date());
 
   useEffect(() => {
     let isMounted = true;
-    
+
     const checkHealth = async () => {
       try {
         const start = performance.now();
         // A simple ping to the local API which would then represent gateway health
         // Alternatively we can ping Gemini directly, but for now we ping our server health
-        const res = await fetch("/api/health").catch(() => null); 
-        
+        const res = await fetch('/api/health').catch(() => null);
+
         const end = performance.now();
-        
+
         if (isMounted) {
           if (res && res.ok) {
             const currentLatency = Math.round(end - start);
             setLatency(currentLatency);
-            setStatus(currentLatency > 1500 ? "degraded" : "healthy");
+            setStatus(currentLatency > 1500 ? 'degraded' : 'healthy');
           } else {
-            setStatus("offline");
+            setStatus('offline');
             setLatency(null);
           }
           setLastCheck(new Date());
         }
       } catch (err) {
         if (isMounted) {
-          setStatus("offline");
+          setStatus('offline');
           setLatency(null);
           setLastCheck(new Date());
         }
@@ -55,11 +55,11 @@ export const APIHealthMonitor: React.FC = () => {
           <Activity className="w-4 h-4 text-emerald-400" />
           Métricas de Enlace (API)
         </h3>
-        {status === "healthy" ? (
+        {status === 'healthy' ? (
           <span className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/10 text-emerald-400 text-xs font-medium rounded-full border border-emerald-500/20">
             <Wifi className="w-3.5 h-3.5" /> ONLINE
           </span>
-        ) : status === "degraded" ? (
+        ) : status === 'degraded' ? (
           <span className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/10 text-amber-400 text-xs font-medium rounded-full border border-amber-500/20">
             <Wifi className="w-3.5 h-3.5" /> DEGRADADO
           </span>
@@ -74,18 +74,24 @@ export const APIHealthMonitor: React.FC = () => {
         <div className="bg-black/20 rounded-lg p-3 border border-white/5">
           <div className="text-xs text-slate-500 mb-1">Latencia de Red</div>
           <div className="text-2xl font-light font-mono text-white flex items-baseline gap-1">
-            {latency !== null ? latency : "---"} <span className="text-xs text-slate-500 font-sans">ms</span>
+            {latency !== null ? latency : '---'}{' '}
+            <span className="text-xs text-slate-500 font-sans">ms</span>
           </div>
         </div>
-        
+
         <div className="bg-black/20 rounded-lg p-3 border border-white/5">
           <div className="text-xs text-slate-500 mb-1">Último Pulso</div>
           <div className="text-sm font-light text-slate-300 mt-1.5">
-            {lastCheck.toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+            {lastCheck.toLocaleTimeString([], {
+              hour12: false,
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit',
+            })}
           </div>
         </div>
       </div>
-      
+
       <div className="mt-2 text-xs text-slate-500 flex items-center gap-2">
         <Server className="w-3.5 h-3.5" />
         Gateway Zero-Trust Activo

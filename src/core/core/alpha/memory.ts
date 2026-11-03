@@ -4,7 +4,7 @@
  * Recuperación contextual de memorias para el kernel Alpha.
  */
 
-import type { DataClassification } from "../contracts";
+import type { DataClassification } from '../contracts';
 
 export interface MemoryQuery {
   query: string;
@@ -35,8 +35,8 @@ export class AlphaMemory {
         id: crypto.randomUUID(),
         content: `Contexto verificado para query: ${query.query.slice(0, 100)}`,
         confidence: 0.88,
-        source: "hybrid_memory_index",
-        scope: query.scopes[0] ?? "session",
+        source: 'hybrid_memory_index',
+        scope: query.scopes[0] ?? 'session',
         createdAt: new Date().toISOString(),
       },
     ];

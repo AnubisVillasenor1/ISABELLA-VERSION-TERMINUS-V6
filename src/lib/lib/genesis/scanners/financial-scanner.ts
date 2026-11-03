@@ -1,5 +1,5 @@
-import * as fs from "node:fs";
-import * as path from "node:path";
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 
 export interface FinancialScannerConfig {
   rootDir?: string;
@@ -22,7 +22,7 @@ export interface FinancialScanResult {
 export interface FinancialOperation {
   name: string;
   implementation: string;
-  type: "credit" | "debit" | "transfer" | "refund" | "payout" | "webhook_handling";
+  type: 'credit' | 'debit' | 'transfer' | 'refund' | 'payout' | 'webhook_handling';
   atomic: boolean;
   idempotent: boolean;
   doubleEntry: boolean;
@@ -41,7 +41,7 @@ export interface AtomicityTest {
 }
 
 export interface IdempotencyTest {
-  mechanism: "idempotency_key" | "event_id" | "transaction_id";
+  mechanism: 'idempotency_key' | 'event_id' | 'transaction_id';
   implementationVerified: boolean;
   testResults: {
     singleExecution: { passed: boolean };
@@ -52,17 +52,17 @@ export interface IdempotencyTest {
 
 export interface FinancialCriticalFinding {
   type:
-    | "NON_ATOMIC_FINANCIAL_MUTATION"
-    | "DOUBLE_SPEND_VULNERABILITY"
-    | "IDEMPOTENCY_MISSING"
-    | "WEBHOOK_RACE_CONDITION"
-    | "BALANCE_NEGATIVE_ALLOWED"
-    | "PAYOUT_WITHOUT_VERIFICATION"
-    | "REFUND_NOT_ATOMIC"
-    | "LEDGER_INCONSISTENT";
+    | 'NON_ATOMIC_FINANCIAL_MUTATION'
+    | 'DOUBLE_SPEND_VULNERABILITY'
+    | 'IDEMPOTENCY_MISSING'
+    | 'WEBHOOK_RACE_CONDITION'
+    | 'BALANCE_NEGATIVE_ALLOWED'
+    | 'PAYOUT_WITHOUT_VERIFICATION'
+    | 'REFUND_NOT_ATOMIC'
+    | 'LEDGER_INCONSISTENT';
   location: string;
   description: string;
-  risk: "CRITICAL" | "HIGH";
+  risk: 'CRITICAL' | 'HIGH';
   example: string;
   remediation: string;
 }
@@ -134,7 +134,7 @@ export class FinancialScanner {
 
     for (const file of files) {
       try {
-        const content = fs.readFileSync(file, "utf8");
+        const content = fs.readFileSync(file, 'utf8');
         allContent.set(file, content);
       } catch {
         /* intentional empty: skip unreadable files */
@@ -170,7 +170,7 @@ export class FinancialScanner {
           const regex = new RegExp(pattern.source, pattern.flags);
           let match;
           while ((match = regex.exec(content)) !== null) {
-            const lineIndex = content.substring(0, match.index).split("\n").length - 1;
+            const lineIndex = content.substring(0, match.index).split('\n').length - 1;
 
             const atomic = this.checkAtomic(content, match.index);
             const idempotent = this.checkIdempotent(content, match.index);
@@ -181,7 +181,7 @@ export class FinancialScanner {
             operations.push({
               name: `${opType}_${operations.length}`,
               implementation: this.getImplementationSnippet(content, match.index),
-              type: opType as FinancialOperation["type"],
+              type: opType as FinancialOperation['type'],
               atomic,
               idempotent,
               doubleEntry,
@@ -223,54 +223,54 @@ export class FinancialScanner {
   }
 
   private getImplementationSnippet(content: string, index: number): string {
-    const lines = content.split("\n");
-    const lineIndex = content.substring(0, index).split("\n").length - 1;
+    const lines = content.split('\n');
+    const lineIndex = content.substring(0, index).split('\n').length - 1;
     const start = Math.max(0, lineIndex - 2);
     const end = Math.min(lines.length, lineIndex + 3);
-    return lines.slice(start, end).join("\n");
+    return lines.slice(start, end).join('\n');
   }
 
   private runAtomicityTests(
     _operations: FinancialOperation[],
-    _allContent: Map<string, string>,
+    _allContent: Map<string, string>
   ): AtomicityTest[] {
     return [
       {
-        name: "concurrent_debits",
-        description: "100 debits concurrentes sobre cuenta con balance 1000",
+        name: 'concurrent_debits',
+        description: '100 debits concurrentes sobre cuenta con balance 1000',
         steps: [
-          "Crear cuenta con balance = 1000",
-          "Ejecutar 100 transacciones de débito de 10 en paralelo",
-          "Esperar completitud",
-          "Verificar balance final",
+          'Crear cuenta con balance = 1000',
+          'Ejecutar 100 transacciones de débito de 10 en paralelo',
+          'Esperar completitud',
+          'Verificar balance final',
         ],
-        expected: "balance = 0",
-        observed: "pending_execution",
+        expected: 'balance = 0',
+        observed: 'pending_execution',
         passed: false,
       },
       {
-        name: "concurrent_credits",
-        description: "100 créditos concurrentes sobre cuenta con balance 0",
+        name: 'concurrent_credits',
+        description: '100 créditos concurrentes sobre cuenta con balance 0',
         steps: [
-          "Crear cuenta con balance = 0",
-          "Ejecutar 100 transacciones de crédito de 10 en paralelo",
-          "Esperar completitud",
-          "Verificar balance final",
+          'Crear cuenta con balance = 0',
+          'Ejecutar 100 transacciones de crédito de 10 en paralelo',
+          'Esperar completitud',
+          'Verificar balance final',
         ],
-        expected: "balance = 1000",
-        observed: "pending_execution",
+        expected: 'balance = 1000',
+        observed: 'pending_execution',
         passed: false,
       },
       {
-        name: "webhook_replay",
-        description: "Webhook entregado múltiples veces",
+        name: 'webhook_replay',
+        description: 'Webhook entregado múltiples veces',
         steps: [
-          "Disparar webhook de pago",
-          "Simular 5 entregas del mismo webhook",
-          "Verificar créditos aplicados",
+          'Disparar webhook de pago',
+          'Simular 5 entregas del mismo webhook',
+          'Verificar créditos aplicados',
         ],
-        expected: "1 crédito aplicado",
-        observed: "pending_execution",
+        expected: '1 crédito aplicado',
+        observed: 'pending_execution',
         passed: false,
       },
     ];
@@ -278,13 +278,13 @@ export class FinancialScanner {
 
   private runIdempotencyTests(
     operations: FinancialOperation[],
-    _allContent: Map<string, string>,
+    _allContent: Map<string, string>
   ): IdempotencyTest[] {
-    const webhookOps = operations.filter((o) => o.type === "webhook_handling");
+    const webhookOps = operations.filter((o) => o.type === 'webhook_handling');
     const mechanism =
       webhookOps.length > 0 && webhookOps.some((o) => o.idempotent)
-        ? "event_id"
-        : "idempotency_key";
+        ? 'event_id'
+        : 'idempotency_key';
 
     return [
       {
@@ -301,78 +301,78 @@ export class FinancialScanner {
 
   private findCriticalIssues(
     operations: FinancialOperation[],
-    _allContent: Map<string, string>,
+    _allContent: Map<string, string>
   ): FinancialCriticalFinding[] {
     const findings: FinancialCriticalFinding[] = [];
 
     const nonAtomic = operations.filter(
-      (o) => !o.atomic && (o.type === "debit" || o.type === "credit" || o.type === "transfer"),
+      (o) => !o.atomic && (o.type === 'debit' || o.type === 'credit' || o.type === 'transfer')
     );
     for (const op of nonAtomic) {
       findings.push({
-        type: "NON_ATOMIC_FINANCIAL_MUTATION",
+        type: 'NON_ATOMIC_FINANCIAL_MUTATION',
         location: op.location,
         description: `Operación financiera ${op.type} no atómica detectada`,
-        risk: "CRITICAL",
+        risk: 'CRITICAL',
         example: op.implementation,
         remediation:
-          "Implementar transacciones atómicas con BEGIN/COMMIT y validación de balance dentro de la transacción",
+          'Implementar transacciones atómicas con BEGIN/COMMIT y validación de balance dentro de la transacción',
       });
     }
 
     const missingIdempotency = operations.filter(
-      (o) => !o.idempotent && o.type === "webhook_handling",
+      (o) => !o.idempotent && o.type === 'webhook_handling'
     );
     for (const op of missingIdempotency) {
       findings.push({
-        type: "IDEMPOTENCY_MISSING",
+        type: 'IDEMPOTENCY_MISSING',
         location: op.location,
-        description: "Manejo de webhook sin idempotencia atómica",
-        risk: "CRITICAL",
+        description: 'Manejo de webhook sin idempotencia atómica',
+        risk: 'CRITICAL',
         example: op.implementation,
-        remediation: "Usar transacción DB para idempotency + business logic atómico",
+        remediation: 'Usar transacción DB para idempotency + business logic atómico',
       });
     }
 
     const missingBalanceCheck = operations.filter(
-      (o) => !o.balanceCheck && (o.type === "debit" || o.type === "transfer"),
+      (o) => !o.balanceCheck && (o.type === 'debit' || o.type === 'transfer')
     );
     for (const op of missingBalanceCheck) {
       findings.push({
-        type: "BALANCE_NEGATIVE_ALLOWED",
+        type: 'BALANCE_NEGATIVE_ALLOWED',
         location: op.location,
-        description: "Débito sin verificación de balance previo",
-        risk: "HIGH",
+        description: 'Débito sin verificación de balance previo',
+        risk: 'HIGH',
         example: op.implementation,
-        remediation: "Añadir verificación de balance dentro de la transacción antes de mutar",
+        remediation: 'Añadir verificación de balance dentro de la transacción antes de mutar',
       });
     }
 
-    const nonAtomicRefunds = operations.filter((o) => !o.atomic && o.type === "refund");
+    const nonAtomicRefunds = operations.filter((o) => !o.atomic && o.type === 'refund');
     for (const op of nonAtomicRefunds) {
       findings.push({
-        type: "REFUND_NOT_ATOMIC",
+        type: 'REFUND_NOT_ATOMIC',
         location: op.location,
-        description: "Reembolso no atómico",
-        risk: "HIGH",
+        description: 'Reembolso no atómico',
+        risk: 'HIGH',
         example: op.implementation,
-        remediation: "Implementar reembolso como transacción atómica que crea evento REFUND_EVENT",
+        remediation: 'Implementar reembolso como transacción atómica que crea evento REFUND_EVENT',
       });
     }
 
     const missingLedger = operations.filter(
       (o) =>
         !o.ledgerIntegrated &&
-        (o.type === "debit" || o.type === "credit" || o.type === "transfer" || o.type === "refund"),
+        (o.type === 'debit' || o.type === 'credit' || o.type === 'transfer' || o.type === 'refund')
     );
     for (const op of missingLedger) {
       findings.push({
-        type: "LEDGER_INCONSISTENT",
+        type: 'LEDGER_INCONSISTENT',
         location: op.location,
-        description: "Operación financiera no integrada con ledger BookPI",
-        risk: "HIGH",
+        description: 'Operación financiera no integrada con ledger BookPI',
+        risk: 'HIGH',
         example: op.implementation,
-        remediation: "Integrar appendLedgerBlock o economic_events en cada mutación financiera",
+        remediation: 'Integrar appendLedgerBlock o economic_events en cada mutación financiera',
       });
     }
 
@@ -381,16 +381,16 @@ export class FinancialScanner {
 
   private collectFiles(dir: string): string[] {
     const files: string[] = [];
-    const includePatterns = ["**/*.ts", "**/*.tsx"];
+    const includePatterns = ['**/*.ts', '**/*.tsx'];
     const excludePatterns = [
-      "**/node_modules/**",
-      "**/dist/**",
-      "**/build/**",
-      "**/.git/**",
-      "**/coverage/**",
-      "**/genesis/**",
-      "**/*.test.ts",
-      "**/*.spec.ts",
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/build/**',
+      '**/.git/**',
+      '**/coverage/**',
+      '**/genesis/**',
+      '**/*.test.ts',
+      '**/*.spec.ts',
     ];
 
     const walk = (currentDir: string): void => {
@@ -421,7 +421,7 @@ export class FinancialScanner {
   }
 
   private matchPattern(filePath: string, pattern: string): boolean {
-    const regexPattern = pattern.replace(/\*\*/g, ".*").replace(/\*/g, "[^/]*").replace(/\?/g, ".");
+    const regexPattern = pattern.replace(/\*\*/g, '.*').replace(/\*/g, '[^/]*').replace(/\?/g, '.');
     const regex = new RegExp(`^${regexPattern}$`);
     return regex.test(filePath);
   }

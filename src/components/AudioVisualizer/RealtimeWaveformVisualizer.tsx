@@ -1,10 +1,10 @@
-import React, { useEffect, useRef, useState, useCallback, useId } from "react";
-import { Activity, Waves, Gauge, Play, Square, Maximize2, Minimize2, Zap } from "lucide-react";
-import { useCrown } from "../../context/CrownContext";
-import { getAudioContextConstructor } from "../../utils/audioContext";
+import React, { useEffect, useRef, useState, useCallback, useId } from 'react';
+import { Activity, Waves, Gauge, Play, Square, Maximize2, Minimize2, Zap } from 'lucide-react';
+import { useCrown } from '../../context/CrownContext';
+import { getAudioContextConstructor } from '../../utils/audioContext';
 
-export type WaveformMode = "oscilloscope" | "harmonic_ribbon" | "dual_trace" | "radial_mandala";
-export type WaveformTheme = "electric_cyan" | "sovereign_gold" | "isa_rose" | "emerald_matrix";
+export type WaveformMode = 'oscilloscope' | 'harmonic_ribbon' | 'dual_trace' | 'radial_mandala';
+export type WaveformTheme = 'electric_cyan' | 'sovereign_gold' | 'isa_rose' | 'emerald_matrix';
 
 interface RealtimeWaveformVisualizerProps {
   height?: number;
@@ -24,42 +24,42 @@ const THEMES: Record<
   }
 > = {
   electric_cyan: {
-    name: "Cian Eléctrico CROWN",
-    primary: "#38bdf8",
-    secondary: "#0284c7",
-    glow: "rgba(56, 189, 248, 0.55)",
-    background: "#030816",
-    grid: "rgba(56, 189, 248, 0.08)",
+    name: 'Cian Eléctrico CROWN',
+    primary: '#38bdf8',
+    secondary: '#0284c7',
+    glow: 'rgba(56, 189, 248, 0.55)',
+    background: '#030816',
+    grid: 'rgba(56, 189, 248, 0.08)',
   },
   sovereign_gold: {
-    name: "Oro Soberano & Jade",
-    primary: "#E0BB5D",
-    secondary: "#2EB67D",
-    glow: "rgba(224, 187, 93, 0.55)",
-    background: "#080c0a",
-    grid: "rgba(224, 187, 93, 0.08)",
+    name: 'Oro Soberano & Jade',
+    primary: '#E0BB5D',
+    secondary: '#2EB67D',
+    glow: 'rgba(224, 187, 93, 0.55)',
+    background: '#080c0a',
+    grid: 'rgba(224, 187, 93, 0.08)',
   },
   isa_rose: {
-    name: "Resonancia Rosa ISA",
-    primary: "#f43f5e",
-    secondary: "#fda4af",
-    glow: "rgba(244, 63, 94, 0.55)",
-    background: "#0d0408",
-    grid: "rgba(244, 63, 94, 0.08)",
+    name: 'Resonancia Rosa ISA',
+    primary: '#f43f5e',
+    secondary: '#fda4af',
+    glow: 'rgba(244, 63, 94, 0.55)',
+    background: '#0d0408',
+    grid: 'rgba(244, 63, 94, 0.08)',
   },
   emerald_matrix: {
-    name: "Matriz Esmeralda Real",
-    primary: "#10b981",
-    secondary: "#059669",
-    glow: "rgba(16, 185, 129, 0.55)",
-    background: "#020c08",
-    grid: "rgba(16, 185, 129, 0.08)",
+    name: 'Matriz Esmeralda Real',
+    primary: '#10b981',
+    secondary: '#059669',
+    glow: 'rgba(16, 185, 129, 0.55)',
+    background: '#020c08',
+    grid: 'rgba(16, 185, 129, 0.08)',
   },
 };
 
 export const RealtimeWaveformVisualizer: React.FC<RealtimeWaveformVisualizerProps> = ({
   height = 180,
-  className = "",
+  className = '',
   showControls = true,
 }) => {
   const { state } = useCrown();
@@ -70,8 +70,8 @@ export const RealtimeWaveformVisualizer: React.FC<RealtimeWaveformVisualizerProp
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   // User configurable state
-  const [mode, setMode] = useState<WaveformMode>("oscilloscope");
-  const [theme, setTheme] = useState<WaveformTheme>("electric_cyan");
+  const [mode, setMode] = useState<WaveformMode>('oscilloscope');
+  const [theme, setTheme] = useState<WaveformTheme>('electric_cyan');
   const [gain, setGain] = useState<number>(1.25);
   const [lineWidth] = useState<number>(2.0);
   const [expanded, setExpanded] = useState<boolean>(false);
@@ -94,7 +94,7 @@ export const RealtimeWaveformVisualizer: React.FC<RealtimeWaveformVisualizerProp
 
   // Lazy initialize AudioContext & AnalyserNode
   const ensureAudioNodes = useCallback(() => {
-    if (!audioCtxRef.current || audioCtxRef.current.state === "closed") {
+    if (!audioCtxRef.current || audioCtxRef.current.state === 'closed') {
       const AudioContextClass = getAudioContextConstructor();
       if (!AudioContextClass) return { ctx: null, analyser: null };
 
@@ -107,10 +107,10 @@ export const RealtimeWaveformVisualizer: React.FC<RealtimeWaveformVisualizerProp
         audioCtxRef.current = ctx;
         analyserRef.current = analyser;
       } catch (err) {
-        console.warn("Unable to initialize Web Audio AnalyserNode", err);
+        console.warn('Unable to initialize Web Audio AnalyserNode', err);
         return { ctx: null, analyser: null };
       }
-    } else if (audioCtxRef.current.state === "suspended") {
+    } else if (audioCtxRef.current.state === 'suspended') {
       audioCtxRef.current.resume().catch(() => {});
     }
 
@@ -131,11 +131,11 @@ export const RealtimeWaveformVisualizer: React.FC<RealtimeWaveformVisualizerProp
           const gNode = ctx.createGain();
 
           const basePitch = (voiceSettings.pitch || 1.1) * 210;
-          osc.type = "triangle";
+          osc.type = 'triangle';
           osc.frequency.setValueAtTime(basePitch, ctx.currentTime);
 
           // Vocal tract resonance (Formant F1)
-          filter.type = "bandpass";
+          filter.type = 'bandpass';
           filter.frequency.setValueAtTime(620, ctx.currentTime);
           filter.Q.setValueAtTime(3.5, ctx.currentTime);
 
@@ -156,7 +156,7 @@ export const RealtimeWaveformVisualizer: React.FC<RealtimeWaveformVisualizerProp
           synthGainRef.current.gain.setValueAtTime(0.02, ctx.currentTime);
         }
       } catch (e) {
-        console.warn("Could not start acoustic synthesis carrier", e);
+        console.warn('Could not start acoustic synthesis carrier', e);
       }
     } else {
       // Gracefully fade out synthesis carrier when not speaking
@@ -207,10 +207,10 @@ export const RealtimeWaveformVisualizer: React.FC<RealtimeWaveformVisualizerProp
         const gNode = ctx.createGain();
 
         // 220Hz (A3 - Natural Female Pitch fundamental)
-        osc.type = "sawtooth";
+        osc.type = 'sawtooth';
         osc.frequency.setValueAtTime(224, ctx.currentTime);
 
-        filter.type = "bandpass";
+        filter.type = 'bandpass';
         filter.frequency.setValueAtTime(680, ctx.currentTime);
         filter.Q.setValueAtTime(4.0, ctx.currentTime);
 
@@ -227,7 +227,7 @@ export const RealtimeWaveformVisualizer: React.FC<RealtimeWaveformVisualizerProp
         testToneGainRef.current = gNode;
         setIsPlayingTestTone(true);
       } catch (err) {
-        console.warn("Failed to activate test tone", err);
+        console.warn('Failed to activate test tone', err);
       }
     }
   }, [ensureAudioNodes, isPlayingTestTone]);
@@ -254,7 +254,7 @@ export const RealtimeWaveformVisualizer: React.FC<RealtimeWaveformVisualizerProp
       if (animFrameRef.current) {
         cancelAnimationFrame(animFrameRef.current);
       }
-      if (audioCtxRef.current && audioCtxRef.current.state !== "closed") {
+      if (audioCtxRef.current && audioCtxRef.current.state !== 'closed') {
         audioCtxRef.current.close().catch(() => {});
       }
     };
@@ -264,7 +264,7 @@ export const RealtimeWaveformVisualizer: React.FC<RealtimeWaveformVisualizerProp
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
     let phase = 0;
@@ -354,7 +354,7 @@ export const RealtimeWaveformVisualizer: React.FC<RealtimeWaveformVisualizerProp
       }
 
       // Center baseline crosshair
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
       ctx.setLineDash([4, 4]);
       ctx.beginPath();
       ctx.moveTo(0, midY);
@@ -363,7 +363,7 @@ export const RealtimeWaveformVisualizer: React.FC<RealtimeWaveformVisualizerProp
       ctx.setLineDash([]);
 
       // ── MODE 1: OSCILLOSCOPE TIME-DOMAIN WAVEFORM ──
-      if (mode === "oscilloscope") {
+      if (mode === 'oscilloscope') {
         // Outer ambient glow pass
         ctx.save();
         ctx.shadowColor = activeTheme.glow;
@@ -398,7 +398,7 @@ export const RealtimeWaveformVisualizer: React.FC<RealtimeWaveformVisualizerProp
         ctx.restore();
 
         // Inner sharp crisp core trace
-        ctx.strokeStyle = "#ffffff";
+        ctx.strokeStyle = '#ffffff';
         ctx.lineWidth = lineWidth * 0.7;
         ctx.beginPath();
         x = 0;
@@ -423,11 +423,11 @@ export const RealtimeWaveformVisualizer: React.FC<RealtimeWaveformVisualizerProp
       }
 
       // ── MODE 2: HARMONIC RIBBON (GRADIENT FILLED WAVE) ──
-      else if (mode === "harmonic_ribbon") {
+      else if (mode === 'harmonic_ribbon') {
         const sliceWidth = width / bufferLength;
         const gradient = ctx.createLinearGradient(0, 0, 0, h);
         gradient.addColorStop(0, activeTheme.glow);
-        gradient.addColorStop(0.5, "rgba(255, 255, 255, 0.05)");
+        gradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.05)');
         gradient.addColorStop(1, activeTheme.glow);
 
         ctx.fillStyle = gradient;
@@ -461,7 +461,7 @@ export const RealtimeWaveformVisualizer: React.FC<RealtimeWaveformVisualizerProp
       }
 
       // ── MODE 3: DUAL-TRACE STEREO WAVE ──
-      else if (mode === "dual_trace") {
+      else if (mode === 'dual_trace') {
         const sliceWidth = width / (bufferLength / 2);
         const yTop = h * 0.28;
         const yBottom = h * 0.72;
@@ -502,7 +502,7 @@ export const RealtimeWaveformVisualizer: React.FC<RealtimeWaveformVisualizerProp
       }
 
       // ── MODE 4: RADIAL MANDALA ──
-      else if (mode === "radial_mandala") {
+      else if (mode === 'radial_mandala') {
         const centerX = width / 2;
         const centerY = midY;
         const baseRadius = Math.min(width, h) * 0.28;
@@ -554,8 +554,8 @@ export const RealtimeWaveformVisualizer: React.FC<RealtimeWaveformVisualizerProp
     };
 
     handleResize();
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, [expanded, height]);
 
   return (
@@ -569,12 +569,12 @@ export const RealtimeWaveformVisualizer: React.FC<RealtimeWaveformVisualizerProp
           <div
             className={`size-2.5 rounded-full ${
               isSpeaking
-                ? "bg-rose-500 animate-ping"
+                ? 'bg-rose-500 animate-ping'
                 : isPlayingTestTone
-                  ? "bg-amber-400 animate-pulse"
+                  ? 'bg-amber-400 animate-pulse'
                   : isListening
-                    ? "bg-emerald-400 animate-pulse"
-                    : "bg-slate-600"
+                    ? 'bg-emerald-400 animate-pulse'
+                    : 'bg-slate-600'
             }`}
           />
           <span className="font-bold text-slate-200 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
@@ -585,21 +585,21 @@ export const RealtimeWaveformVisualizer: React.FC<RealtimeWaveformVisualizerProp
           <span
             className={`px-2 py-0.5 rounded-md text-[10px] font-semibold border ${
               isSpeaking
-                ? "bg-rose-500/20 text-rose-300 border-rose-500/40"
+                ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
                 : isPlayingTestTone
-                  ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
+                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
                   : isListening
-                    ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
-                    : "bg-slate-800/60 text-slate-400 border-slate-700/50"
+                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                    : 'bg-slate-800/60 text-slate-400 border-slate-700/50'
             }`}
           >
             {isSpeaking
-              ? "SÍNTESIS ACTIVA · 48 kHz"
+              ? 'SÍNTESIS ACTIVA · 48 kHz'
               : isPlayingTestTone
-                ? "TONO DE PRUEBA ACÚSTICO"
+                ? 'TONO DE PRUEBA ACÚSTICO'
                 : isListening
-                  ? "MICRÓFONO EN VIVO"
-                  : "VOZ EN REPOSO"}
+                  ? 'MICRÓFONO EN VIVO'
+                  : 'VOZ EN REPOSO'}
           </span>
         </div>
 
@@ -611,10 +611,10 @@ export const RealtimeWaveformVisualizer: React.FC<RealtimeWaveformVisualizerProp
             <span
               className={`font-bold ${
                 liveRmsDb > -20
-                  ? "text-rose-400"
+                  ? 'text-rose-400'
                   : liveRmsDb > -36
-                    ? "text-emerald-400"
-                    : "text-slate-300"
+                    ? 'text-emerald-400'
+                    : 'text-slate-300'
               }`}
             >
               {liveRmsDb.toFixed(1)} dBFS
@@ -640,7 +640,7 @@ export const RealtimeWaveformVisualizer: React.FC<RealtimeWaveformVisualizerProp
         <canvas
           ref={canvasRef}
           className="w-full block"
-          style={{ height: expanded ? "320px" : `${height}px` }}
+          style={{ height: expanded ? '320px' : `${height}px` }}
         />
 
         {/* Live Audio Indicator Ribbon */}
@@ -659,10 +659,10 @@ export const RealtimeWaveformVisualizer: React.FC<RealtimeWaveformVisualizerProp
           <div className="flex items-center gap-1">
             {(
               [
-                { id: "oscilloscope", label: "Osciloscopio" },
-                { id: "harmonic_ribbon", label: "Cinta Armónica" },
-                { id: "dual_trace", label: "Traza Dual" },
-                { id: "radial_mandala", label: "Mandala Polar" },
+                { id: 'oscilloscope', label: 'Osciloscopio' },
+                { id: 'harmonic_ribbon', label: 'Cinta Armónica' },
+                { id: 'dual_trace', label: 'Traza Dual' },
+                { id: 'radial_mandala', label: 'Mandala Polar' },
               ] as const
             ).map((m) => (
               <button
@@ -671,8 +671,8 @@ export const RealtimeWaveformVisualizer: React.FC<RealtimeWaveformVisualizerProp
                 onClick={() => setMode(m.id)}
                 className={`px-2.5 py-1 rounded-lg text-[10px] uppercase font-bold tracking-wider transition-all cursor-pointer ${
                   mode === m.id
-                    ? "bg-sky-500 text-slate-950 shadow-sm shadow-sky-500/40"
-                    : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+                    ? 'bg-sky-500 text-slate-950 shadow-sm shadow-sky-500/40'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
                 }`}
               >
                 {m.label}
@@ -722,12 +722,12 @@ export const RealtimeWaveformVisualizer: React.FC<RealtimeWaveformVisualizerProp
               onClick={toggleTestTone}
               className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all cursor-pointer ${
                 isPlayingTestTone
-                  ? "bg-amber-500 text-slate-950 border-amber-400 shadow-md shadow-amber-950/40"
-                  : "bg-slate-800/60 text-slate-300 border-slate-700 hover:bg-slate-800"
+                  ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md shadow-amber-950/40'
+                  : 'bg-slate-800/60 text-slate-300 border-slate-700 hover:bg-slate-800'
               }`}
             >
               {isPlayingTestTone ? <Square className="size-3" /> : <Play className="size-3" />}
-              <span>{isPlayingTestTone ? "Detener Tono" : "Tono Prueba (A3)"}</span>
+              <span>{isPlayingTestTone ? 'Detener Tono' : 'Tono Prueba (A3)'}</span>
             </button>
 
             {/* Expand / Collapse Button */}
@@ -735,7 +735,7 @@ export const RealtimeWaveformVisualizer: React.FC<RealtimeWaveformVisualizerProp
               type="button"
               onClick={() => setExpanded(!expanded)}
               aria-label={
-                expanded ? "Reducir visualizador de onda" : "Expandir visualizador de onda"
+                expanded ? 'Reducir visualizador de onda' : 'Expandir visualizador de onda'
               }
               className="p-1 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition-all cursor-pointer"
             >

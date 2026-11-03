@@ -1,4 +1,4 @@
-import type { Valuation, ValuationSignals } from "./types";
+import type { Valuation, ValuationSignals } from './types';
 
 // SCER Cognitive Asset Valuation (state: draft | engine-generated).
 // Motor determinista y puro: las mismas señales producen siempre el mismo valor.
@@ -16,7 +16,7 @@ export const VALUATION_WEIGHTS = {
 export const VALUATION_UNIT_MINOR = 100_000;
 
 function assertSignal(name: string, value: number): void {
-  if (typeof value !== "number" || !Number.isFinite(value)) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
     throw new Error(`Valuation signal "${name}" must be a finite number.`);
   }
   if (value < 0 || value > 100) {
@@ -34,10 +34,10 @@ function round4(value: number): number {
  * unitario máximo; `confidence` privilegia la cobertura de evidencia.
  */
 export function valuateAsset(signals: ValuationSignals): Valuation {
-  assertSignal("quality", signals.quality);
-  assertSignal("demand", signals.demand);
-  assertSignal("scarcity", signals.scarcity);
-  assertSignal("evidenceCoverage", signals.evidenceCoverage);
+  assertSignal('quality', signals.quality);
+  assertSignal('demand', signals.demand);
+  assertSignal('scarcity', signals.scarcity);
+  assertSignal('evidenceCoverage', signals.evidenceCoverage);
 
   const components = {
     quality: round4(signals.quality * VALUATION_WEIGHTS.quality),
@@ -47,12 +47,10 @@ export function valuateAsset(signals: ValuationSignals): Valuation {
   };
 
   const score = round4(
-    components.quality + components.demand + components.scarcity + components.evidenceCoverage,
+    components.quality + components.demand + components.scarcity + components.evidenceCoverage
   );
   const baseValueMinor = Math.round((score / 100) * VALUATION_UNIT_MINOR);
-  const confidence = round4(
-    (signals.evidenceCoverage / 100) * 0.6 + (signals.quality / 100) * 0.4,
-  );
+  const confidence = round4((signals.evidenceCoverage / 100) * 0.6 + (signals.quality / 100) * 0.4);
 
   return { score, baseValueMinor, confidence, components };
 }

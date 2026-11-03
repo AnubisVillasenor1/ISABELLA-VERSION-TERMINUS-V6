@@ -9,8 +9,23 @@ package-lock.json
 *.log
 .DS_Store
 data/
+.data/
 *.jsonl
 !fixtures/**/*.jsonl
 evidence/*.json
 artifacts/
 firebase-applet-config.json
+.vercel
+
+# Generated Netlify publish media
+netlify/public/assets/
+
+# Perfiles de Chrome creados por las verificaciones headless (CDP): son basura de
+# entorno, no entradas versionables.
+.chrome-headless-profile*/
+
+.vercel
+
+# Configuración local del editor (extensiones recomendadas, preferencias por máquina):
+# versionarla impondría a todo clonador una extensión de terceros.
+.vscode/

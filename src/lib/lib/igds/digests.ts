@@ -1,14 +1,14 @@
 /**
- * IGDS — Motor de digests (src/lib/igds/digests.ts)
+ * IGDS — Motor de digests (src/lib/lib/igds/digests.ts)
  * -----------------------------------------------------------------
  * SHA-256 para interoperabilidad/C2PA y SHA3-256 para el perfil `long-term`.
  * Los digests se codifican siempre en hex minúscula para el registro Genesis y
  * en base64url cuando el protocolo externo lo exige (RFC 3161 / COSE).
  */
-import { createHash } from "node:crypto";
-import { canonicalizeBytes } from "./canonical";
+import { createHash } from 'node:crypto';
+import { canonicalizeBytes } from './canonical';
 
-export const DIGEST_ALGORITHMS = ["sha256", "sha3-256"] as const;
+export const DIGEST_ALGORITHMS = ['sha256', 'sha3-256'] as const;
 export type DigestAlgorithm = (typeof DIGEST_ALGORITHMS)[number];
 
 export interface ContentDigest {
@@ -26,11 +26,11 @@ export function digestBytes(algorithm: DigestAlgorithm, data: Buffer | string): 
 }
 
 export function digestHex(algorithm: DigestAlgorithm, data: Buffer | string): string {
-  return digestBytes(algorithm, data).toString("hex");
+  return digestBytes(algorithm, data).toString('hex');
 }
 
 export function digestBase64Url(algorithm: DigestAlgorithm, data: Buffer | string): string {
-  return digestBytes(algorithm, data).toString("base64url");
+  return digestBytes(algorithm, data).toString('base64url');
 }
 
 /** Digest canónico de una estructura JSON arbitraria (RFC 8785 + algoritmo). */
@@ -49,7 +49,7 @@ export function formatDigest(digest: ContentDigest): string {
 }
 
 export function parseDigest(encoded: string): ContentDigest | null {
-  const separator = encoded.indexOf(":");
+  const separator = encoded.indexOf(':');
   if (separator <= 0) return null;
   const algorithm = encoded.slice(0, separator);
   const value = encoded.slice(separator + 1);

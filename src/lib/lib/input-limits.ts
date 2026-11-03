@@ -1,4 +1,4 @@
-import { config } from "./config";
+import { config } from './config';
 
 /**
  * LÍMITES GLOBALES DE ENTRADA (src/lib/input-limits.ts)
@@ -31,25 +31,25 @@ export function getInputLimits(): InputLimits {
 
 export function assertBodyWithinLimits(length: number): void {
   if (length > getInputLimits().maxBodyBytes) {
-    throw new LimitError("BODY_TOO_LARGE", getInputLimits().maxBodyBytes, length);
+    throw new LimitError('BODY_TOO_LARGE', getInputLimits().maxBodyBytes, length);
   }
 }
 
 export function assertMessagesWithinLimits(count: number): void {
   if (count > getInputLimits().maxMessages) {
-    throw new LimitError("TOO_MANY_MESSAGES", getInputLimits().maxMessages, count);
+    throw new LimitError('TOO_MANY_MESSAGES', getInputLimits().maxMessages, count);
   }
 }
 
 export function assertAttachmentWithinLimits(bytes: number): void {
   if (bytes > getInputLimits().maxAttachmentBytes) {
-    throw new LimitError("ATTACHMENT_TOO_LARGE", getInputLimits().maxAttachmentBytes, bytes);
+    throw new LimitError('ATTACHMENT_TOO_LARGE', getInputLimits().maxAttachmentBytes, bytes);
   }
 }
 
 export function assertToolsWithinLimits(count: number): void {
   if (count > getInputLimits().maxToolsPerRequest) {
-    throw new LimitError("TOO_MANY_TOOLS", getInputLimits().maxToolsPerRequest, count);
+    throw new LimitError('TOO_MANY_TOOLS', getInputLimits().maxToolsPerRequest, count);
   }
 }
 
@@ -60,7 +60,7 @@ export class LimitError extends Error {
 
   constructor(code: string, limit: number, actual: number) {
     super(`${code}: límite ${limit}, recibido ${actual}`);
-    this.name = "LimitError";
+    this.name = 'LimitError';
     this.code = code;
     this.limit = limit;
     this.actual = actual;
@@ -89,7 +89,7 @@ export async function parseSafeJsonBody(request: Request): Promise<unknown> {
       if (value) {
         totalBytes += value.length;
         if (totalBytes > maxBytes) {
-          throw new LimitError("BODY_TOO_LARGE", maxBytes, totalBytes);
+          throw new LimitError('BODY_TOO_LARGE', maxBytes, totalBytes);
         }
         chunks.push(value);
       }

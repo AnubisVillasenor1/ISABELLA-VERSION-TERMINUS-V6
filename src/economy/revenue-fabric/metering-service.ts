@@ -4,7 +4,7 @@
  * Part of Isabella Sovereign Revenue Fabric v4
  */
 
-import { createHash, timingSafeEqual } from "node:crypto";
+import { createHash, timingSafeEqual } from 'node:crypto';
 
 export type UsageEvent = {
   readonly idempotencyKey: string;
@@ -19,7 +19,7 @@ export type UsageEvent = {
 };
 
 export type MeteringConfig = {
-  readonly aggregationWindow: "hourly" | "daily" | "monthly";
+  readonly aggregationWindow: 'hourly' | 'daily' | 'monthly';
   readonly retentionDays: number;
   readonly flushIntervalMs: number;
 };
@@ -39,7 +39,7 @@ export type AggregatedUsage = {
 };
 
 const DEFAULT_CONFIG: MeteringConfig = {
-  aggregationWindow: "hourly",
+  aggregationWindow: 'hourly',
   retentionDays: 90,
   flushIntervalMs: 60_000,
 };
@@ -56,9 +56,12 @@ export class MeteringService {
   }
 
   private startFlushTimer(): void {
+    // `unref()`: el flush es mantenimiento. Un temporizador ref'd impediría terminar a
+    // cualquier proceso que importe la app (el smoke de `build:dist` cuelga así).
     this.flushTimer = setInterval(() => {
       this.aggregatePendingEvents();
     }, this.config.flushIntervalMs);
+    this.flushTimer.unref();
   }
 
   stop(): void {
@@ -70,30 +73,30 @@ export class MeteringService {
 
   recordUsage(event: UsageEvent): { accepted: boolean; reason?: string } {
     if (!event.idempotencyKey) {
-      return { accepted: false, reason: "IDEMPOTENCY_KEY_REQUIRED" };
+      return { accepted: false, reason: 'IDEMPOTENCY_KEY_REQUIRED' };
     }
     if (!event.userId) {
-      return { accepted: false, reason: "USER_ID_REQUIRED" };
+      return { accepted: false, reason: 'USER_ID_REQUIRED' };
     }
     if (event.quantity <= 0) {
-      return { accepted: false, reason: "QUANTITY_MUST_BE_POSITIVE" };
+      return { accepted: false, reason: 'QUANTITY_MUST_BE_POSITIVE' };
     }
     if (!Number.isFinite(event.quantity)) {
-      return { accepted: false, reason: "QUANTITY_MUST_BE_FINITE" };
+      return { accepted: false, reason: 'QUANTITY_MUST_BE_FINITE' };
     }
 
     const userEvents = this.events.get(event.userId) || [];
-    
+
     // Check idempotency
-    const existing = userEvents.find(e => e.idempotencyKey === event.idempotencyKey);
+    const existing = userEvents.find((e) => e.idempotencyKey === event.idempotencyKey);
     if (existing) {
-      return { accepted: true, reason: "DUPLICATE_ACCEPTED" };
+      return { accepted: true, reason: 'DUPLICATE_ACCEPTED' };
     }
 
     // Validate timestamp
     const occurredAt = new Date(event.occurredAt);
     if (isNaN(occurredAt.getTime())) {
-      return { accepted: false, reason: "INVALID_TIMESTAMP" };
+      return { accepted: false, reason: 'INVALID_TIMESTAMP' };
     }
 
     // Add event
@@ -119,11 +122,11 @@ export class MeteringService {
       }
 
       for (const [key, events] of groups.entries()) {
-        const parts = key.split(":");
-        const resourceType = parts[0] ?? "";
-        const resourceId = parts[1] ?? "";
-        const metricName = parts[2] ?? "";
-        const unit = parts[3] ?? "";
+        const parts = key.split(':');
+        const resourceType = parts[0] ?? '';
+        const resourceId = parts[1] ?? '';
+        const metricName = parts[2] ?? '';
+        const unit = parts[3] ?? '';
         const totalQuantity = events.reduce((sum, e) => sum + e.quantity, 0);
 
         // Get pricing (in real impl, would query pricing service)
@@ -152,11 +155,11 @@ export class MeteringService {
 
   private getWindowStart(date: Date): Date {
     const d = new Date(date);
-    if (this.config.aggregationWindow === "hourly") {
+    if (this.config.aggregationWindow === 'hourly') {
       d.setMinutes(0, 0, 0);
-    } else if (this.config.aggregationWindow === "daily") {
+    } else if (this.config.aggregationWindow === 'daily') {
       d.setHours(0, 0, 0, 0);
-    } else if (this.config.aggregationWindow === "monthly") {
+    } else if (this.config.aggregationWindow === 'monthly') {
       d.setDate(1);
       d.setHours(0, 0, 0, 0);
     }
@@ -165,11 +168,11 @@ export class MeteringService {
 
   private getWindowEnd(date: Date): Date {
     const d = new Date(date);
-    if (this.config.aggregationWindow === "hourly") {
+    if (this.config.aggregationWindow === 'hourly') {
       d.setMinutes(59, 59, 999);
-    } else if (this.config.aggregationWindow === "daily") {
+    } else if (this.config.aggregationWindow === 'daily') {
       d.setHours(23, 59, 59, 999);
-    } else if (this.config.aggregationWindow === "monthly") {
+    } else if (this.config.aggregationWindow === 'monthly') {
       d.setMonth(d.getMonth() + 1);
       d.setDate(0);
       d.setHours(23, 59, 59, 999);
@@ -177,43 +180,54 @@ export class MeteringService {
     return d;
   }
 
-  private getPricing(resourceType: string, metricName: string): { unitPrice: number; currency: string } {
+  private getPricing(
+    resourceType: string,
+    metricName: string
+  ): { unitPrice: number; currency: string } {
     // Simplified pricing - in real impl would query pricing service
     const pricing: Record<string, Record<string, { unitPrice: number; currency: string }>> = {
       ISA_API: {
-        tokens: { unitPrice: 0.000002, currency: "USD" },
-        requests: { unitPrice: 0.0001, currency: "USD" },
+        tokens: { unitPrice: 0.000002, currency: 'USD' },
+        requests: { unitPrice: 0.0001, currency: 'USD' },
       },
       AI_CLOUD: {
-        "gpu-seconds": { unitPrice: 0.0005, currency: "USD" },
-        "cpu-seconds": { unitPrice: 0.00005, currency: "USD" },
-        "storage-gb-hours": { unitPrice: 0.00001, currency: "USD" },
+        'gpu-seconds': { unitPrice: 0.0005, currency: 'USD' },
+        'cpu-seconds': { unitPrice: 0.00005, currency: 'USD' },
+        'storage-gb-hours': { unitPrice: 0.00001, currency: 'USD' },
       },
       AGENT_HOSTING: {
-        "agent-hours": { unitPrice: 0.01, currency: "USD" },
+        'agent-hours': { unitPrice: 0.01, currency: 'USD' },
       },
       SKILL_MARKETPLACE: {
-        executions: { unitPrice: 0.001, currency: "USD" },
+        executions: { unitPrice: 0.001, currency: 'USD' },
       },
     };
 
-    return pricing[resourceType]?.[metricName] || { unitPrice: 0, currency: "USD" };
+    return pricing[resourceType]?.[metricName] || { unitPrice: 0, currency: 'USD' };
   }
 
   getUserUsage(userId: string, since?: Date): readonly AggregatedUsage[] {
     const userAgg = this.aggregated.get(userId) || [];
     if (!since) return userAgg;
-    return userAgg.filter(a => new Date(a.windowStart) >= since);
+    return userAgg.filter((a) => new Date(a.windowStart) >= since);
   }
 
-  getUsageForBilling(userId: string, windowStart: Date, windowEnd: Date): readonly AggregatedUsage[] {
-    return this.getUserUsage(userId).filter(a => {
+  getUsageForBilling(
+    userId: string,
+    windowStart: Date,
+    windowEnd: Date
+  ): readonly AggregatedUsage[] {
+    return this.getUserUsage(userId).filter((a) => {
       const start = new Date(a.windowStart);
       return start >= windowStart && start <= windowEnd;
     });
   }
 
-  generateInvoiceData(userId: string, periodStart: Date, periodEnd: Date): {
+  generateInvoiceData(
+    userId: string,
+    periodStart: Date,
+    periodEnd: Date
+  ): {
     readonly userId: string;
     readonly periodStart: string;
     readonly periodEnd: string;
@@ -231,7 +245,7 @@ export class MeteringService {
     readonly currency: string;
   } {
     const usage = this.getUsageForBilling(userId, periodStart, periodEnd);
-    const lineItems = usage.map(u => ({
+    const lineItems = usage.map((u) => ({
       resourceType: u.resourceType,
       resourceId: u.resourceId,
       metricName: u.metricName,
@@ -242,7 +256,7 @@ export class MeteringService {
       estimatedCost: u.estimatedCost,
     }));
 
-    const currency = usage[0]?.currency || "USD";
+    const currency = usage[0]?.currency || 'USD';
     const totalEstimatedCost = lineItems.reduce((sum, item) => sum + item.estimatedCost, 0);
 
     return {

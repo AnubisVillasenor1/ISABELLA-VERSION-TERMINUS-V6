@@ -1,7 +1,7 @@
-import { resolveSkillInvocation } from "@/lib/skill-registry";
-import { getIsabellaSkill, getRuntimeSkill, type IsabellaSkillId } from "@/lib/skills/registry";
-import type { SkillContext, SkillResult } from "@/lib/skills/contracts";
-import { CentralizedTelemetryService } from "@/lib/latam-aegis-x";
+import { resolveSkillInvocation } from '@/lib/skill-registry';
+import { getIsabellaSkill, getRuntimeSkill, type IsabellaSkillId } from '@/lib/skills/registry';
+import type { SkillContext, SkillResult } from '@/lib/skills/contracts';
+import { CentralizedTelemetryService } from '@/lib/latam-aegis-x';
 
 export type SkillExecutionContext = {
   requestId: string;
@@ -10,7 +10,7 @@ export type SkillExecutionContext = {
   tenantId: string;
   scope: string;
   locale?: string;
-  history?: SkillContext["history"];
+  history?: SkillContext['history'];
 };
 
 export type SkillExecutionOutcome =
@@ -35,16 +35,16 @@ export type SkillExecutionOutcome =
     };
 
 function isValidSkillResult(value: unknown): value is SkillResult<unknown> {
-  if (!value || typeof value !== "object") return false;
+  if (!value || typeof value !== 'object') return false;
   const result = value as Record<string, unknown>;
   return (
-    typeof result.skillId === "string" &&
-    typeof result.summary === "string" &&
+    typeof result.skillId === 'string' &&
+    typeof result.summary === 'string' &&
     Array.isArray(result.evidence) &&
     Array.isArray(result.warnings) &&
     Array.isArray(result.auditEvents) &&
-    typeof result.data !== "undefined" &&
-    ["SUCCESS", "PARTIAL", "BLOCKED", "ESCALATED", "FAILED"].includes(String(result.status))
+    typeof result.data !== 'undefined' &&
+    ['SUCCESS', 'PARTIAL', 'BLOCKED', 'ESCALATED', 'FAILED'].includes(String(result.status))
   );
 }
 
@@ -57,20 +57,20 @@ function isValidSkillResult(value: unknown): value is SkillResult<unknown> {
  */
 export async function executeConversationalSkill(
   input: string,
-  context: SkillExecutionContext,
+  context: SkillExecutionContext
 ): Promise<SkillExecutionOutcome> {
   const resolved = resolveSkillInvocation(input);
   if (!resolved) return { matched: false, result: null };
 
-  if ("error" in resolved) {
+  if ('error' in resolved) {
     CentralizedTelemetryService.logEvent(
-      "CROWN_GATEWAY",
-      "CROWN_ROUTER",
-      "SkillInvocationBlocked",
+      'CROWN_GATEWAY',
+      'CROWN_ROUTER',
+      'SkillInvocationBlocked',
       { code: resolved.code, invocation: input.slice(0, 120), tenantId: context.tenantId },
-      "warn",
+      'warn',
       context.traceId,
-      context.requestId,
+      context.requestId
     );
     return {
       matched: true,
@@ -83,20 +83,20 @@ export async function executeConversationalSkill(
 
   const { skill, prompt, invocation } = resolved;
   const missingScopes = skill.requiredScopes.filter(
-    (required) => !context.scope.split(/\s+/).filter(Boolean).includes(required),
+    (required) => !context.scope.split(/\s+/).filter(Boolean).includes(required)
   );
   if (missingScopes.length) {
-    const message = `Skill @${skill.id} requiere scopes no concedidos: ${missingScopes.join(", ")}`;
+    const message = `Skill @${skill.id} requiere scopes no concedidos: ${missingScopes.join(', ')}`;
     CentralizedTelemetryService.logEvent(
-      "CROWN_GATEWAY",
-      "CROWN_CONSTITUTION",
-      "SkillAuthorizationDenied",
+      'CROWN_GATEWAY',
+      'CROWN_CONSTITUTION',
+      'SkillAuthorizationDenied',
       { skillId: skill.id, missingScopes, tenantId: context.tenantId },
-      "security_incident",
+      'security_incident',
       context.traceId,
-      context.requestId,
+      context.requestId
     );
-    return { matched: true, blocked: true, code: "SKILL_SCOPE_DENIED", message, invocation };
+    return { matched: true, blocked: true, code: 'SKILL_SCOPE_DENIED', message, invocation };
   }
 
   const registeredSkill = getIsabellaSkill(skill.id as IsabellaSkillId);
@@ -105,7 +105,7 @@ export async function executeConversationalSkill(
     return {
       matched: true,
       blocked: true,
-      code: "SKILL_RUNTIME_NOT_FOUND",
+      code: 'SKILL_RUNTIME_NOT_FOUND',
       message: `Skill sin runtime: @${skill.id}`,
       invocation,
     };
@@ -114,7 +114,7 @@ export async function executeConversationalSkill(
   const skillContext: SkillContext = {
     requestId: context.requestId,
     actorId: context.actorId,
-    locale: context.locale ?? "es-MX",
+    locale: context.locale ?? 'es-MX',
     federation: runtime.federation,
     intent: skill.id,
     text: prompt,
@@ -124,58 +124,58 @@ export async function executeConversationalSkill(
 
   if (!runtime.canRun({ prompt }, skillContext)) {
     CentralizedTelemetryService.logEvent(
-      "CROWN_GATEWAY",
-      "CROWN_CONSTITUTION",
-      "SkillCanRunDenied",
+      'CROWN_GATEWAY',
+      'CROWN_CONSTITUTION',
+      'SkillCanRunDenied',
       { skillId: skill.id, tenantId: context.tenantId },
-      "warn",
+      'warn',
       context.traceId,
-      context.requestId,
+      context.requestId
     );
     return {
       matched: true,
       blocked: true,
-      code: "SKILL_CAN_RUN_DENIED",
+      code: 'SKILL_CAN_RUN_DENIED',
       message: `El runtime de @${skill.id} rechazó la ejecución para este contexto.`,
       invocation,
     };
   }
 
   CentralizedTelemetryService.logEvent(
-    "CROWN_GATEWAY",
-    "CROWN_ROUTER",
-    "SkillInvocationStarted",
+    'CROWN_GATEWAY',
+    'CROWN_ROUTER',
+    'SkillInvocationStarted',
     { skillId: skill.id, version: runtime.version, tenantId: context.tenantId },
-    "info",
+    'info',
     context.traceId,
-    context.requestId,
+    context.requestId
   );
 
   try {
     const result = await runtime.run({ prompt }, skillContext);
     if (!isValidSkillResult(result)) {
       CentralizedTelemetryService.logEvent(
-        "CROWN_GATEWAY",
-        "CROWN_CONSTITUTION",
-        "SkillOutputValidationFailed",
+        'CROWN_GATEWAY',
+        'CROWN_CONSTITUTION',
+        'SkillOutputValidationFailed',
         { skillId: skill.id, tenantId: context.tenantId },
-        "error",
+        'error',
         context.traceId,
-        context.requestId,
+        context.requestId
       );
       return {
         matched: true,
         blocked: true,
-        code: "SKILL_OUTPUT_INVALID",
+        code: 'SKILL_OUTPUT_INVALID',
         message: `@${skill.id} produjo una salida que no cumple el contrato SkillResult.`,
         invocation,
       };
     }
 
     CentralizedTelemetryService.logEvent(
-      "CROWN_GATEWAY",
-      "CROWN_ROUTER",
-      "SkillInvocationCompleted",
+      'CROWN_GATEWAY',
+      'CROWN_ROUTER',
+      'SkillInvocationCompleted',
       {
         skillId: skill.id,
         status: result.status,
@@ -183,30 +183,30 @@ export async function executeConversationalSkill(
         warningCount: result.warnings.length,
         tenantId: context.tenantId,
       },
-      result.status === "FAILED" ? "error" : "info",
+      result.status === 'FAILED' ? 'error' : 'info',
       context.traceId,
-      context.requestId,
+      context.requestId
     );
 
     return { matched: true, result, invocation };
   } catch (error) {
     CentralizedTelemetryService.logEvent(
-      "CROWN_GATEWAY",
-      "CROWN_ROUTER",
-      "SkillInvocationFailed",
+      'CROWN_GATEWAY',
+      'CROWN_ROUTER',
+      'SkillInvocationFailed',
       {
         skillId: skill.id,
         tenantId: context.tenantId,
-        error: error instanceof Error ? error.message : "unknown",
+        error: error instanceof Error ? error.message : 'unknown',
       },
-      "error",
+      'error',
       context.traceId,
-      context.requestId,
+      context.requestId
     );
     return {
       matched: true,
       blocked: true,
-      code: "SKILL_EXECUTION_FAILED",
+      code: 'SKILL_EXECUTION_FAILED',
       message: `La ejecución de @${skill.id} falló de forma controlada.`,
       invocation,
     };

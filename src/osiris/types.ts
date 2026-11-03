@@ -8,31 +8,37 @@
  * Fidelity contract: SPECIFIED ≠ IMPLEMENTED ≠ TESTED ≠ INTEGRATED ≠
  * VERIFIED ≠ DEPLOYED ≠ CERTIFIED.
  */
-import type { JsonValue } from "../bookpi/types";
+import type { JsonValue } from '../bookpi/types';
 
-export const OSIRIS_MODULE = "OSIRIS" as const;
-export const OSIRIS_VERSION = "0.1.0" as const;
+export const OSIRIS_MODULE = 'OSIRIS' as const;
+export const OSIRIS_VERSION = '0.1.0' as const;
 
 /** Canonical method id: [TINA].[YUN].[MODULO].[FUNCION].[VERSION].[RISK].[GOV]. */
 export const OSIRIS_METHOD_IDS = {
-  inspect: "TINA.YUN.OSIRIS.inspect_signal.v0.1.0.MEDIUM.INSTITUTIONAL",
-  posture: "TINA.YUN.OSIRIS.assess_posture.v0.1.0.LOW.AUTONOMOUS",
-  audit: "TINA.YUN.OSIRIS.record_finding.v0.1.0.LOW.INSTITUTIONAL",
+  inspect: 'TINA.YUN.OSIRIS.inspect_signal.v0.1.0.MEDIUM.INSTITUTIONAL',
+  posture: 'TINA.YUN.OSIRIS.assess_posture.v0.1.0.LOW.AUTONOMOUS',
+  audit: 'TINA.YUN.OSIRIS.record_finding.v0.1.0.LOW.INSTITUTIONAL',
 } as const;
 
-export type ThreatSeverity = "info" | "low" | "medium" | "high" | "critical";
+export type ThreatSeverity = 'info' | 'low' | 'medium' | 'high' | 'critical';
 
-export const SEVERITY_ORDER: readonly ThreatSeverity[] = ["info", "low", "medium", "high", "critical"];
+export const SEVERITY_ORDER: readonly ThreatSeverity[] = [
+  'info',
+  'low',
+  'medium',
+  'high',
+  'critical',
+];
 
 export type ThreatCategory =
-  | "credential_abuse"
-  | "injection_attempt"
-  | "rate_anomaly"
-  | "payload_anomaly"
-  | "reconnaissance"
-  | "policy_evasion"
-  | "crypto_posture"
-  | "unknown";
+  | 'credential_abuse'
+  | 'injection_attempt'
+  | 'rate_anomaly'
+  | 'payload_anomaly'
+  | 'reconnaissance'
+  | 'policy_evasion'
+  | 'crypto_posture'
+  | 'unknown';
 
 /**
  * Observable features extracted from an inbound signal. Callers are responsible
@@ -67,18 +73,19 @@ export interface DetectionFinding {
 }
 
 /** Advisory only. Human authority decides the response. */
-export type DefenseRecommendation = "ALLOW" | "MONITOR" | "RATE_LIMIT" | "REVIEW" | "BLOCK_RECOMMENDED";
+export type DefenseRecommendation =
+  'ALLOW' | 'MONITOR' | 'RATE_LIMIT' | 'REVIEW' | 'BLOCK_RECOMMENDED';
 
 export interface DetectionResult {
   readonly signalId: string;
   readonly timestamp: string;
   readonly findings: readonly DetectionFinding[];
-  readonly maxSeverity: ThreatSeverity | "none";
+  readonly maxSeverity: ThreatSeverity | 'none';
   readonly score: number;
   readonly recommendation: DefenseRecommendation;
 }
 
-export type PostureState = "active" | "inactive" | "unknown";
+export type PostureState = 'active' | 'inactive' | 'unknown';
 
 export interface PostureControl {
   readonly control: string;
@@ -92,7 +99,7 @@ export interface DefensePosture {
   readonly activeCount: number;
   readonly unknownCount: number;
   /** Never "secure". OSIRIS does not certify. */
-  readonly certification: "NOT_CERTIFIED";
+  readonly certification: 'NOT_CERTIFIED';
   readonly trainedModelPresent: false;
 }
 

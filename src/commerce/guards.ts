@@ -1,7 +1,7 @@
 /** COMMERCE — guards de API: autenticación de servicio, acceso por rol/scoping y errores tipados. */
 
-import { verifyBearerToken, type ApiTokenVerdict } from "../security/api-token";
-import type { AuthContext, WorkspaceRole } from "./types";
+import { verifyBearerToken, type ApiTokenVerdict } from '../security/api-token';
+import type { AuthContext, WorkspaceRole } from './types';
 
 export interface ApiErrorShape {
   error: {
@@ -22,7 +22,7 @@ export class ApiError extends Error {
 
   constructor(code: string, message: string, status: number, requestId: string, retryable = false) {
     super(message);
-    this.name = "ApiError";
+    this.name = 'ApiError';
     this.code = code;
     this.status = status;
     this.requestId = requestId;
@@ -46,15 +46,15 @@ export class ApiError extends Error {
 export function formatAsApiError(
   err: Error,
   requestId: string,
-  fallbackCode = "INTERNAL",
+  fallbackCode = 'INTERNAL',
   _fallbackStatus = 500,
-  retryable = false,
+  retryable = false
 ): ApiErrorShape {
   if (err instanceof ApiError) return err.toShape();
   return {
     error: {
       code: fallbackCode,
-      message: "Error interno; no se exponen trazos ni secretos.",
+      message: 'Error interno; no se exponen trazos ni secretos.',
       request_id: requestId,
       retryable,
       timestamp: new Date().toISOString(),
@@ -64,39 +64,62 @@ export function formatAsApiError(
 
 export function isAuthorizedBearer(
   authorizationHeader: string | undefined,
-  expectedToken: string | undefined,
+  expectedToken: string | undefined
 ): ApiTokenVerdict {
   return verifyBearerToken(authorizationHeader, expectedToken);
 }
 
-export function requireServiceBearer(
-  verdict: ApiTokenVerdict,
-  requestId: string,
-): void {
-  if (verdict === "NOT_CONFIGURED") {
-    throw new ApiError("SERVICE_AUTH_NOT_CONFIGURED", "Autenticación de servicio no configurada.", 503, requestId);
+export function requireServiceBearer(verdict: ApiTokenVerdict, requestId: string): void {
+  if (verdict === 'NOT_CONFIGURED') {
+    throw new ApiError(
+      'SERVICE_AUTH_NOT_CONFIGURED',
+      'Autenticación de servicio no configurada.',
+      503,
+      requestId
+    );
   }
-  if (verdict !== "AUTHORIZED") {
-    throw new ApiError("UNAUTHORIZED", "Token de servicio inválido.", 401, requestId);
+  if (verdict !== 'AUTHORIZED') {
+    throw new ApiError('UNAUTHORIZED', 'Token de servicio inválido.', 401, requestId);
   }
 }
 
 export function requireRevenueAccess(context: AuthContext | undefined, scope: string): void {
   if (!context) {
-    throw new ApiError("UNAUTHENTICATED", "Contexto de autenticación ausente.", 401, "unknown");
+    throw new ApiError('UNAUTHENTICATED', 'Contexto de autenticación ausente.', 401, 'unknown');
   }
-  const allowedRoles: readonly WorkspaceRole[] = ["owner", "admin", "operator"];
+  const allowedRoles: readonly WorkspaceRole[] = ['owner', 'admin', 'operator'];
   if (!allowedRoles.includes(context.role)) {
-    throw new ApiError("ROLE_NOT_ALLOWED", "El rol no permite esta operación.", 403, context.requestId);
+    throw new ApiError(
+      'ROLE_NOT_ALLOWED',
+      'El rol no permite esta operación.',
+      403,
+      context.requestId
+    );
   }
-  if (context.planCode === "free") {
-    throw new ApiError("PREMIUM_REQUIRED", "La operación requiere un plan PREMIUM o superior.", 402, context.requestId);
+  if (context.planCode === 'free') {
+    throw new ApiError(
+      'PREMIUM_REQUIRED',
+      'La operación requiere un plan PREMIUM o superior.',
+      402,
+      context.requestId
+    );
   }
   if (!context.scopes.includes(scope)) {
-    throw new ApiError("SCOPE_REQUIRED", "Falta el scoping requerido para la operación.", 403, context.requestId);
+    throw new ApiError(
+      'SCOPE_REQUIRED',
+      'Falta el scoping requerido para la operación.',
+      403,
+      context.requestId
+    );
   }
-  if (context.riskLevel === "critical") {
-    throw new ApiError("ACCOUNT_REVIEW_REQUIRED", "La cuenta requiere revisión antes de operar.", 403, context.requestId, true);
+  if (context.riskLevel === 'critical') {
+    throw new ApiError(
+      'ACCOUNT_REVIEW_REQUIRED',
+      'La cuenta requiere revisión antes de operar.',
+      403,
+      context.requestId,
+      true
+    );
   }
 }
 

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Check, Zap } from "lucide-react";
+import { useState } from 'react';
+import { Check, Zap } from 'lucide-react';
 
 export interface SubscriptionTier {
   id: string;
@@ -8,79 +8,79 @@ export interface SubscriptionTier {
   billing: string;
   description: string;
   badge?: string;
-  icon: "free" | "personal" | "creator" | "enterprise";
+  icon: 'free' | 'personal' | 'creator' | 'enterprise';
   features: string[];
 }
 
 interface PlanSelectorProps {
   currentPlanId: string | null;
-  onSelectPlan: (planId: string, billingCycle: "monthly" | "yearly") => void;
+  onSelectPlan: (planId: string, billingCycle: 'monthly' | 'yearly') => void;
 }
 
 export function PlanSelector({ currentPlanId, onSelectPlan }: PlanSelectorProps) {
-  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
 
   const plans: SubscriptionTier[] = [
     {
-      id: "free",
-      name: "Isabella Free",
-      price: "Gratuito",
-      billing: "Para siempre",
-      description: "Acceso básico a las capacidades cognitivas territoriales.",
-      icon: "free",
+      id: 'free',
+      name: 'Isabella Free',
+      price: 'Gratuito',
+      billing: 'Para siempre',
+      description: 'Acceso básico a las capacidades cognitivas territoriales.',
+      icon: 'free',
       features: [
-        "Límite de 50 mensajes mensuales",
-        "Modulación empática de ISA Core",
-        "Verificaciones de SOPHIA Engine",
-        "Soberanía de datos local",
-        "Soporte comunitario",
+        'Límite de 50 mensajes mensuales',
+        'Modulación empática de ISA Core',
+        'Verificaciones de SOPHIA Engine',
+        'Soberanía de datos local',
+        'Soporte comunitario',
       ],
     },
     {
-      id: "personal",
-      name: "Isabella Personal",
-      price: billingCycle === "monthly" ? "$9.99" : "$7.99",
-      billing: billingCycle === "monthly" ? "/mes" : "/mes, facturado anual",
-      description: "Ideal para operadores individuales que buscan memoria ampliada.",
-      badge: "Popular",
-      icon: "personal",
+      id: 'personal',
+      name: 'Isabella Personal',
+      price: billingCycle === 'monthly' ? '$9.99' : '$7.99',
+      billing: billingCycle === 'monthly' ? '/mes' : '/mes, facturado anual',
+      description: 'Ideal para operadores individuales que buscan memoria ampliada.',
+      badge: 'Popular',
+      icon: 'personal',
       features: [
-        "Mensajes mensuales ilimitados",
-        "Memoria persistente de sesión ampliada",
-        "Acceso preferente de red (latencia reducida)",
-        "Síntesis vocal HD de ISA Core",
-        "Prioridad de inferencia media",
+        'Mensajes mensuales ilimitados',
+        'Memoria persistente de sesión ampliada',
+        'Acceso preferente de red (latencia reducida)',
+        'Síntesis vocal HD de ISA Core',
+        'Prioridad de inferencia media',
       ],
     },
     {
-      id: "pro",
-      name: "Isabella Creator",
-      price: billingCycle === "monthly" ? "$19.99" : "$15.99",
-      billing: billingCycle === "monthly" ? "/mes" : "/mes, facturado anual",
-      description: "Capacidades de integración total con APIs territoriales y GIS.",
-      icon: "creator",
+      id: 'pro',
+      name: 'Isabella Creator',
+      price: billingCycle === 'monthly' ? '$19.99' : '$15.99',
+      billing: billingCycle === 'monthly' ? '/mes' : '/mes, facturado anual',
+      description: 'Capacidades de integración total con APIs territoriales y GIS.',
+      icon: 'creator',
       features: [
-        "Todo lo incluido en Personal",
-        "Invocación avanzada del motor ORION",
-        "Llaves de API con scopes expandidos",
-        "Ejecución segura de Skills PRAXIS",
-        "Integración con el Gemelo Digital GEMET",
-        "Soporte prioritario 24/7",
+        'Todo lo incluido en Personal',
+        'Invocación avanzada del motor ORION',
+        'Llaves de API con scopes expandidos',
+        'Ejecución segura de Skills PRAXIS',
+        'Integración con el Gemelo Digital GEMET',
+        'Soporte prioritario 24/7',
       ],
     },
     {
-      id: "enterprise",
-      name: "Isabella Enterprise",
-      price: "Personalizado",
-      billing: "Contrato institucional",
-      description: "Nodos dedicados para corporaciones y administraciones públicas.",
-      icon: "enterprise",
+      id: 'enterprise',
+      name: 'Isabella Enterprise',
+      price: 'Personalizado',
+      billing: 'Contrato institucional',
+      description: 'Nodos dedicados para corporaciones y administraciones públicas.',
+      icon: 'enterprise',
       features: [
-        "Mallas e infraestructura dedicadas CITEMESH",
-        "Cumplimiento legislativo y resguardo de datos soberanos",
-        "Entrenamientos locales parametrizados",
-        "Soporte dedicado PQC con ingenieros cognitivos",
-        "SLA garantizado del 99.9%",
+        'Mallas e infraestructura dedicadas CITEMESH',
+        'Cumplimiento legislativo y resguardo de datos soberanos',
+        'Entrenamientos locales parametrizados',
+        'Soporte dedicado PQC con ingenieros cognitivos',
+        'SLA garantizado del 99.9%',
       ],
     },
   ];
@@ -101,21 +101,21 @@ export function PlanSelector({ currentPlanId, onSelectPlan }: PlanSelectorProps)
         {/* Toggle billing cycle */}
         <div className="bg-secondary/20 p-1 rounded-xl border border-border/30 flex items-center self-start sm:self-auto">
           <button
-            onClick={() => setBillingCycle("monthly")}
+            onClick={() => setBillingCycle('monthly')}
             className={`px-3 py-1 font-mono text-[10px] rounded-lg transition-all ${
-              billingCycle === "monthly"
-                ? "bg-electric/25 text-platinum font-semibold"
-                : "text-muted-foreground hover:text-platinum"
+              billingCycle === 'monthly'
+                ? 'bg-electric/25 text-platinum font-semibold'
+                : 'text-muted-foreground hover:text-platinum'
             }`}
           >
             Mensual
           </button>
           <button
-            onClick={() => setBillingCycle("yearly")}
+            onClick={() => setBillingCycle('yearly')}
             className={`px-3 py-1 font-mono text-[10px] rounded-lg transition-all ${
-              billingCycle === "yearly"
-                ? "bg-electric/25 text-platinum font-semibold"
-                : "text-muted-foreground hover:text-platinum"
+              billingCycle === 'yearly'
+                ? 'bg-electric/25 text-platinum font-semibold'
+                : 'text-muted-foreground hover:text-platinum'
             }`}
           >
             Anual (-20%)
@@ -126,14 +126,14 @@ export function PlanSelector({ currentPlanId, onSelectPlan }: PlanSelectorProps)
       {/* Grid of plans */}
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {plans.map((p) => {
-          const isCurrent = currentPlanId === p.id || (p.id === "free" && !currentPlanId);
+          const isCurrent = currentPlanId === p.id || (p.id === 'free' && !currentPlanId);
           return (
             <div
               key={p.id}
               className={`glass rounded-3xl p-5 border flex flex-col justify-between transition-all relative ${
                 isCurrent
-                  ? "border-electric/70 shadow-[0_0_15px_-5px_var(--electric)] bg-electric/5"
-                  : "border-border/30 hover:border-border/60"
+                  ? 'border-electric/70 shadow-[0_0_15px_-5px_var(--electric)] bg-electric/5'
+                  : 'border-border/30 hover:border-border/60'
               }`}
             >
               {p.badge && (
@@ -179,15 +179,15 @@ export function PlanSelector({ currentPlanId, onSelectPlan }: PlanSelectorProps)
                   disabled={isCurrent}
                   className={`w-full py-2 rounded-xl font-mono text-[10px] uppercase tracking-wider transition-all border ${
                     isCurrent
-                      ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 cursor-default"
-                      : "bg-secondary/15 border-border/40 text-platinum hover:bg-secondary/35 hover:border-border/60"
+                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 cursor-default'
+                      : 'bg-secondary/15 border-border/40 text-platinum hover:bg-secondary/35 hover:border-border/60'
                   }`}
                 >
                   {isCurrent
-                    ? "Plan Activo"
-                    : p.id === "enterprise"
-                      ? "Contactar ventas"
-                      : "Seleccionar Plan"}
+                    ? 'Plan Activo'
+                    : p.id === 'enterprise'
+                      ? 'Contactar ventas'
+                      : 'Seleccionar Plan'}
                 </button>
               </div>
             </div>

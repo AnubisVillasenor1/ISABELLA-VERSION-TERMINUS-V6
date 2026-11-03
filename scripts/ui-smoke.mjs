@@ -3,8 +3,11 @@ import assert from 'node:assert/strict';
 
 const html = fs.readFileSync('src/ui/index.html', 'utf8');
 const js = fs.readFileSync('src/ui/app.js', 'utf8');
+const cognitionClient = fs.readFileSync('src/ui/cognition-client.js', 'utf8');
 const chatPlus = fs.readFileSync('src/ui/chat-plus.js', 'utf8');
 const css = fs.readFileSync('src/ui/cinematic.css', 'utf8');
+const nexusCss = fs.readFileSync('src/ui/nexus.css', 'utf8');
+const nexusJs = fs.readFileSync('src/ui/nexus.js', 'utf8');
 const server = fs.readFileSync('src/server.ts', 'utf8');
 const vercelConfig = JSON.parse(fs.readFileSync('vercel.json', 'utf8'));
 
@@ -18,15 +21,21 @@ for (const id of ['navToggle', 'primaryLinks', 'runtimeStatus', 'soundToggle', '
   assert.ok(ids.has(id), `Missing interactive UI element #${id}`);
   assert.ok(js.includes(`byId('${id}')`) || js.includes(`byId("${id}")`) || js.includes(`#${id}`), `Missing interaction wiring for #${id}`);
 }
-assert.ok(js.includes("fetch('/api/v1/cognition/route'"), 'Chat must call the existing cognition route');
+assert.ok(
+  js.includes("fetch('/api/v1/cognition/route'") ||
+    (cognitionClient.includes("route: '/api/v1/cognition/route'") &&
+      cognitionClient.includes('fetch(ENDPOINTS.route') &&
+      js.includes('window.IsabellaCognition')),
+  'Chat must call the existing cognition route'
+);
 assert.ok(js.includes('response.ok') && js.includes('payloadFor') && js.includes('/^data:audio\\/(?:mpeg|mp3|wav);base64,/'), 'Server TTS playback must require a valid audio payload');
 assert.ok(js.includes("fetch('/api/v1/tts/synthesize'"), 'Voice reading must call the canonical TTS endpoint');
 assert.ok(js.includes("fetch('/api/v1/cognition/speech'"), 'Voice reading must retain the legacy speech fallback endpoint');
 assert.ok(js.includes("fetch('/api/v1/health'"), 'UI must check the health endpoint');
-assert.ok(server.includes('app.get("/api/v1/health"'), 'The runtime health endpoint must exist');
+assert.ok(server.includes("app.get('/api/v1/health'"), 'The runtime health endpoint must exist');
 assert.ok(chatPlus.includes("if (!catalog)"), 'Pricing failures must render an explicit unavailable state instead of an endless loading message');
 assert.ok(chatPlus.includes("document.querySelectorAll('.plans-interval')") && chatPlus.includes('const paint = () =>'), 'Monthly/yearly controls must rerender real catalog data');
-assert.ok(server.includes('app.get("/api/v1/billing/prices"'), 'The public pricing catalog route must exist');
+assert.ok(server.includes("app.get('/api/v1/billing/prices'"), 'The public pricing catalog route must exist');
 assert.ok(chatPlus.includes("fetch('/api/v1/billing/prices'"), 'The plans UI must load the public pricing catalog from the server');
 assert.ok(typeof vercelConfig.functions?.["api/index.js"]?.includeFiles === 'string', 'Vercel includeFiles must be a glob string, not an array');
 assert.ok(vercelConfig.functions["api/index.js"].includeFiles.includes('dist/**') && vercelConfig.functions["api/index.js"].includeFiles.includes('src/ui/**') && vercelConfig.functions["api/index.js"].includeFiles.includes('src/assets/video/**'), 'Express function must bundle the server, UI, and intro media assets');
@@ -34,10 +43,10 @@ assert.equal(vercelConfig.rewrites?.length, 1, 'Vercel must route application pa
 assert.equal(vercelConfig.rewrites?.[0]?.destination, '/api', 'Vercel rewrite must target the API function');
 assert.ok(fs.existsSync('api/index.js'), 'The serverless Express entrypoint must exist');
 assert.ok(server.includes('serveAsset(req, res, htmlAsset'), 'The root UI must use the startup-cached, compressed HTML asset');
-assert.ok(server.includes('app.get("/ui/chat-plus.js"'), 'Runtime must serve the Chat+ enhancement layer');
+assert.ok(server.includes("app.get('/ui/chat-plus.js'"), 'Runtime must serve the Chat+ enhancement layer');
 assert.ok(fs.existsSync('src/ui/chat-plus.js') && !/innerHTML\s*=/.test(chatPlus), 'Chat+ must exist and never assign innerHTML');
 assert.ok(fs.existsSync('src/assets/video/IntroVideoIsabella-web.mp4'), 'The fast-start web rendition of the intro must be present');
-assert.ok(server.includes('fs.readFileSync(path.join(uiPath, "cinematic.css")'), 'The stylesheet route must serve the current CSS asset');
+assert.ok(server.includes("fs.readFileSync(path.join(uiPath, 'cinematic.css')"), 'The stylesheet route must serve the current CSS asset');
 assert.ok(css.includes('.nav-links.is-open'), 'Responsive menu open state must be styled');
 assert.ok(css.includes('@media (max-width:1180px){\n  .topbar{position:sticky') && css.includes('.nav-toggle{display:inline-flex'), 'The primary navigation toggle must be visible wherever tablet navigation links are collapsed');
 assert.ok(css.includes('.side-rail.rail-left.is-open,.side-rail.rail-right.is-open'), 'Responsive side rails must be hidden until opened and reveal on click');
@@ -47,7 +56,7 @@ assert.ok(!/\.side-rail\{[^}]*!important/.test(css), 'Legacy !important rules mu
 assert.ok(!/\.side-rail\{\s*display\s*:\s*none\s*!important/.test(css), 'A global !important display:none must not make navigation rails permanently inaccessible');
 assert.ok(css.includes('transform:translateX(calc(-100% - 20px))'), 'Closed left rail must remain off-canvas until explicitly opened');
 assert.ok(css.includes('transform:translateX(calc(100% + 20px))'), 'Closed right rail must remain off-canvas until explicitly opened');
-assert.equal((html.match(/class="side-rail /g) || []).length, 2, 'The interface must render one folded rail on each side');
+assert.equal((html.match(/class="side-rail /g) || []).length, 4, 'The interface must render four independent folded rails across both sides');
 assert.ok(html.includes('class="rail-panel"'), 'Each side rail must expose folded command panels');
 assert.ok(html.includes('class="command-palette"'), 'A native command palette must be available');
 assert.ok(html.includes('id="studio"'), 'The local Studio workspace must exist');
@@ -95,6 +104,52 @@ assert.ok(js.includes('Math.floor((boundedElapsed / Math.max(1, introTotalMs)) *
 assert.ok(js.includes('scene.inert = !active'), 'Inactive intro scenes must be removed from keyboard tab order');
 assert.ok(!/introVideo\.currentTime\s*=\s*0/.test(js), 'Intro must not seek on start: a seek forces a re-buffer and shows as a pause');
 assert.ok(!/introWatchdog[\s\S]{0,900}introVideo\.pause\(\)/.test(js.slice(js.indexOf('const startIntroMedia'), js.indexOf('const beginImmersion'))), 'A network stall must never pause the intro video');
+
+assert.ok(html.includes('/styles/nexus.css'), 'The Nexus layer stylesheet must be loaded');
+assert.ok(html.includes('/ui/nexus.js'), 'The Nexus client must be loaded');
+assert.ok(html.includes('id="nexus"'), 'The Nexus console section must exist');
+assert.equal((html.match(/data-rail="(?:context|history|runtime|system)"/g) || []).length, 4, 'Four independent matrix rails must exist');
+assert.equal((html.match(/data-rail-close=/g) || []).length, 4, 'Every rail must expose a collapse control');
+assert.equal((html.match(/data-rail-matrix/g) || []).length, 4, 'Every rail must mount its own matrix canvas');
+assert.ok(html.includes('id="nexusAdminToken" type="password"'), 'The operator token must never render as plain text');
+assert.ok(html.includes('id="nexusVoiceProbe"') && html.includes('id="nexusVoiceStatus"'), 'The runtime tab must expose a real voice probe');
+assert.ok(html.includes('id="nexusXrVr"') && html.includes('id="nexusSpatialMode"'), 'Spatial capability detection and depth mode must exist');
+assert.ok(nexusJs.includes('window.IsabellaNexus'), 'The Nexus client must expose an activation bridge');
+assert.ok(nexusJs.includes('sessionStorage') && nexusJs.includes('isabella.nexus.adminToken'), 'The operator token must live in sessionStorage only');
+assert.ok(!/innerHTML\s*=/.test(nexusJs), 'The Nexus client must never assign innerHTML');
+assert.ok(!nexusJs.includes('localStorage'), 'Nexus credentials must not be persisted beyond the tab');
+assert.ok(nexusJs.includes("'/api/v1/federation/node'"), 'Nexus must read the real federation status');
+assert.ok(nexusJs.includes("'/api/v1/federation/catalog'"), 'Nexus must read the OpenAPI catalog');
+assert.ok(nexusJs.includes("'/api/v1/federation/models'"), 'Nexus must read the model runtime');
+assert.ok(nexusJs.includes("'/api/v1/federation/connectors'") && nexusJs.includes("'/api/v1/federation/inbox"), 'Nexus must manage connectors and the signed inbox');
+assert.ok(nexusJs.includes("'/api/v1/admin/programs'") && nexusJs.includes("'/api/v1/admin/api-keys'"), 'Nexus must issue and manage program API keys');
+assert.ok(nexusJs.includes("'/api/v1/voice/speak'"), 'The voice probe must hit the canonical public voice route');
+assert.ok(nexusJs.includes('isSessionSupported'), 'Spatial detection must query WebXR support');
+assert.ok(nexusJs.includes('safeApiPath') && nexusJs.includes("value.startsWith('/api/v1/')"), 'The workbench must restrict requests to same-origin /api/v1 routes');
+assert.ok(nexusJs.includes('prefers-reduced-motion'), 'Matrix effects must respect reduced motion');
+assert.ok(nexusJs.includes('RailMatrix'), 'Rails must drive a real matrix canvas');
+assert.ok(nexusCss.includes('.rail-launcher.is-latched'), 'Open rails must latch their launchers');
+assert.ok(nexusCss.includes('.ui-ripple'), 'Every interaction must expose the ripple feedback layer');
+assert.ok(nexusCss.includes('body .side-rail[data-rail].is-open'), 'Floating rails must open from their off-canvas state');
+assert.ok(js.includes("case 'go-nexus':") && js.includes("focusNexus('keys')") && js.includes("focusNexus('connectors')"), 'Command palette must open Nexus directly on a tab');
+assert.ok(server.includes("app.get('/ui/nexus.js'") && server.includes("fs.readFileSync(path.join(uiPath, 'nexus.js')"), 'Runtime must serve the Nexus client from the startup asset cache');
+assert.ok(server.includes("app.get('/styles/nexus.css'") && server.includes("fs.readFileSync(path.join(uiPath, 'nexus.css')"), 'Runtime must serve the Nexus stylesheet from the startup asset cache');
+
+const universeJs = fs.readFileSync('src/ui/universe-map.js', 'utf8');
+assert.ok(html.includes('/ui/universe-map.js'), 'El mapa del universo debe cargarse en el workspace');
+assert.ok(html.includes('id="universeBoard"') && html.includes('id="universeLegend"') && html.includes('id="universeReadout"'), 'El mapa necesita panel, leyenda en texto y lectura accesible');
+assert.ok(html.includes('id="quantumMesh"'), 'El canvas del mapa debe existir en el hero');
+assert.ok(!/innerHTML\s*=/.test(universeJs), 'El mapa debe construir el DOM sin innerHTML');
+assert.ok(!universeJs.includes('Math.random'), 'El mapa del universo no puede inventar posiciones, pesos ni estados');
+assert.ok(universeJs.includes("'/api/v1/status'") && universeJs.includes('fetch(ENDPOINT'), 'El mapa debe leer los registros reales del runtime');
+assert.ok(universeJs.includes('isabella.universe.v1'), 'El mapa debe validar el esquema antes de pintar');
+assert.ok(universeJs.includes('SIN DATOS'), 'Un fallo del registro debe renderizar un estado explícito, no una maqueta');
+assert.ok(universeJs.includes('prefers-reduced-motion') && universeJs.includes('IntersectionObserver'), 'El mapa debe respetar el movimiento reducido y pausarse fuera de pantalla');
+assert.ok(server.includes("app.get('/ui/universe-map.js'") && server.includes("fs.readFileSync(path.join(uiPath, 'universe-map.js')"), 'Runtime must serve the universe map client from the startup asset cache');
+assert.ok(css.includes('.universe-board') && css.includes('.universe-legend'), 'El panel del mapa debe tener estilo propio');
+assert.ok(!js.includes("byId('quantumMesh')"), 'La maqueta aleatoria ya no puede montar encima del mapa real');
+assert.ok(!server.includes("toolsCount: 2"), 'El estado público no puede publicar un conteo inventado');
+assert.ok(server.includes('buildUniverseSnapshot'), 'El mapa debe leer el snapshot derivado de los registros reales');
 const introCss = fs.readFileSync(new URL('../src/ui/cinematic.css', import.meta.url), 'utf8');
 const centerCss = fs.readFileSync(new URL('../src/ui/command-center.css', import.meta.url), 'utf8');
 assert.ok(!/\.cinematic-intro\s*\{[^}]*display\s*:\s*none/.test(centerCss), 'command-center.css must not hide the cinematic intro');
@@ -107,7 +162,7 @@ assert.ok(js.includes('introMediaFallbackLocked'), 'Intro fallback must be termi
 assert.ok(html.slice(html.indexOf('id="immersionGate"'), html.indexOf('<video id="introVideo"')).includes('id="skipIntro"'), 'The intro bypass must remain inside the modal consent gate');
 assert.ok(js.includes('trapImmersionDialogFocus') && js.includes("event.key === 'Escape'"), 'The consent dialog must trap keyboard focus and close on Escape');
 assert.ok(js.includes("immersionConsent?.focus({ preventScroll: true })"), 'Keyboard focus must enter the consent dialog on open');
-assert.ok(server.includes('app.get("/assets/video/IntroVideoIsabella.mp4"'), 'Runtime must serve the intro video');
+assert.ok(server.includes("app.get('/assets/video/IntroVideoIsabella.mp4'"), 'Runtime must serve the intro video');
 assert.ok(server.includes('IntroVideoIsabella.mp4'), 'Runtime video route must target the canonical asset');
 assert.ok(js.includes('INTRO_SCENE_MS = 4_200'), 'Intro timing must be scene-based and bounded');
 assert.ok(js.includes("intro.dataset.scene = String(sceneIndex)"), 'Scene changes must drive camera angles');
@@ -125,7 +180,10 @@ assert.ok(js.includes('const exportConversation ='), 'Conversation export must b
 assert.ok(js.includes('const resetConversation = ('), 'New-session/restart behavior must clear the visible conversation and rotate the session ID');
 assert.ok(js.includes('commandPalette.showModal()'), 'The command center must use a native dialog when supported');
 assert.ok(js.includes("event.key.toLowerCase() === 'k'"), 'The command center must expose the Ctrl/Cmd+K keyboard shortcut');
-assert.ok(js.includes("event.key === 'Enter' && !event.shiftKey"), 'Enter must send while Shift+Enter preserves newlines');
+assert.ok(
+  /event\.key === 'Enter'\s*&&\s*!event\.shiftKey/.test(js),
+  'Enter must send while Shift+Enter preserves newlines'
+);
 assert.ok(js.includes("saveDraft(paragraph.dataset.raw || paragraph.textContent || '')"), 'Assistant answers must have a working local save action');
 
 console.log('CINEMATIC_INTRO_12_SCENES_OK');

@@ -1,7 +1,7 @@
-import type { BookPiVerification } from "./ledger";
+import type { BookPiVerification } from './ledger';
 
 export interface LegacyBookPiReadiness {
-  status: "healthy" | "degraded";
+  status: 'healthy' | 'degraded';
   backend: string;
   valid: boolean;
   durable: boolean;
@@ -14,42 +14,44 @@ export interface LegacyBookPiReadiness {
  * local chain is healthy only for this component; it does not imply shared HA.
  */
 export function inspectLegacyBookPiLedger(
-  verify: () => Pick<BookPiVerification, "storage" | "valid" | "durable">,
+  verify: () => Pick<BookPiVerification, 'storage' | 'valid' | 'durable'>
 ): LegacyBookPiReadiness {
   try {
     const result = verify();
     if (!result.valid) {
       return {
-        status: "degraded",
+        status: 'degraded',
         backend: result.storage,
         valid: false,
         durable: result.durable,
-        reason: "Legacy BookPI chain verification failed; inspect the restricted operator report.",
+        reason: 'Legacy BookPI chain verification failed; inspect the restricted operator report.',
       };
     }
     if (result.durable) {
       return {
-        status: "healthy",
+        status: 'healthy',
         backend: result.storage,
         valid: true,
         durable: true,
-        reason: "Legacy BookPI durable local chain verified; this is not shared PostgreSQL durability.",
+        reason:
+          'Legacy BookPI durable local chain verified; this is not shared PostgreSQL durability.',
       };
     }
     return {
-      status: "degraded",
+      status: 'degraded',
       backend: result.storage,
       valid: true,
       durable: false,
-      reason: "Legacy BookPI in-memory chain is valid but volatile; events will not survive process restart.",
+      reason:
+        'Legacy BookPI in-memory chain is valid but volatile; events will not survive process restart.',
     };
   } catch {
     return {
-      status: "degraded",
-      backend: "UNKNOWN",
+      status: 'degraded',
+      backend: 'UNKNOWN',
       valid: false,
       durable: false,
-      reason: "Legacy BookPI ledger is unavailable or requires maintenance recovery.",
+      reason: 'Legacy BookPI ledger is unavailable or requires maintenance recovery.',
     };
   }
 }

@@ -29,7 +29,7 @@ import {
   type SealSigner,
   type TsaClient,
   type TsaVerifier,
-} from "./igds";
+} from './igds';
 
 export interface IgdsRevocationLookup {
   (keyId: string): Promise<{ effective_at: string; scope: RevocationScope } | null>;
@@ -47,7 +47,7 @@ export interface IgdsServiceDeps {
 
 export function sealWithService(
   input: SealDocumentInput,
-  deps: IgdsServiceDeps,
+  deps: IgdsServiceDeps
 ): Promise<IgdsSealPackage> {
   return sealDocument(input, {
     signer: deps.signer,
@@ -67,7 +67,7 @@ export interface ServiceVerifyOptions {
 export async function verifyWithService(
   pkg: IgdsSealPackage,
   deps: IgdsServiceDeps,
-  options: ServiceVerifyOptions = {},
+  options: ServiceVerifyOptions = {}
 ): Promise<IgdsVerificationReport> {
   const keyId = pkg.manifest.signatures?.[0]?.key_id;
   const trustedPublicKeys =
@@ -97,7 +97,7 @@ export interface ServiceRevocationInput {
 
 export function revokeWithService(
   input: ServiceRevocationInput,
-  deps: IgdsServiceDeps,
+  deps: IgdsServiceDeps
 ): Promise<GenesisEntry> {
   const payload = createRevocationPayload(input);
   const signature = signDigest(deps.signer, revocationDigest(payload));
@@ -123,12 +123,10 @@ export function checkpointWithService(deps: IgdsServiceDeps): Promise<GenesisChe
  * aportarse explícitamente cuando exista una raíz de confianza real.
  */
 export async function createConfiguredIgdsService(
-  overrides: Partial<
-    Pick<IgdsServiceDeps, "tsa" | "tsaVerifier" | "now" | "revocationLookup">
-  > = {},
+  overrides: Partial<Pick<IgdsServiceDeps, 'tsa' | 'tsaVerifier' | 'now' | 'revocationLookup'>> = {}
 ): Promise<IgdsServiceDeps> {
   const signer = createConfiguredSealSigner();
-  const { createPostgresGenesisRegistry } = await import("./repositories/igds-genesis-repository");
+  const { createPostgresGenesisRegistry } = await import('./repositories/igds-genesis-repository');
   const registry = createPostgresGenesisRegistry();
   const tsaUrl = getConfiguredTsaUrl();
   const tsa = overrides.tsa ?? (tsaUrl ? createRfc3161TsaClient({ url: tsaUrl }) : undefined);

@@ -8,16 +8,16 @@ import {
   randomInt,
   sign,
   verify,
-} from "node:crypto";
-import { neon } from "@neondatabase/serverless";
-import { config } from "@/lib/config";
-import { robustMedianAggregate, weightedAverage } from "@/lib/cognitive/native-engine";
+} from 'node:crypto';
+import { neon } from '@neondatabase/serverless';
+import { config } from '@/lib/config';
+import { robustMedianAggregate, weightedAverage } from '@/lib/cognitive/native-engine';
 
 export interface FederatedNode {
   nodeId: string;
   territoryId: string;
   publicKey: string;
-  status: "ACTIVE" | "SUSPENDED" | "REVOKED";
+  status: 'ACTIVE' | 'SUSPENDED' | 'REVOKED';
   capabilities: string[];
 }
 export interface LocalUpdate {
@@ -59,7 +59,7 @@ export class PostgresReplayStore implements ReplayStore {
   private readonly db;
   constructor(databaseUrl = config().DATABASE_URL) {
     if (!databaseUrl)
-      throw new Error("federation_replay_store_unavailable: DATABASE_URL is required");
+      throw new Error('federation_replay_store_unavailable: DATABASE_URL is required');
     this.db = neon(databaseUrl);
   }
   async seen(key: string): Promise<boolean> {
@@ -78,10 +78,10 @@ export class PostgresReplayStore implements ReplayStore {
 }
 
 export function createIdentity() {
-  const { publicKey, privateKey } = generateKeyPairSync("ed25519");
+  const { publicKey, privateKey } = generateKeyPairSync('ed25519');
   return { privateKey, publicKey };
 }
-function canonical(u: Omit<LocalUpdate, "signature" | "hash">) {
+function canonical(u: Omit<LocalUpdate, 'signature' | 'hash'>) {
   return JSON.stringify({
     updateId: u.updateId,
     nodeId: u.nodeId,
@@ -96,12 +96,12 @@ function canonical(u: Omit<LocalUpdate, "signature" | "hash">) {
   });
 }
 export function signUpdate(
-  input: Omit<LocalUpdate, "signature" | "hash">,
-  privateKey: ReturnType<typeof createPrivateKey>,
+  input: Omit<LocalUpdate, 'signature' | 'hash'>,
+  privateKey: ReturnType<typeof createPrivateKey>
 ): LocalUpdate {
   const payload = canonical(input);
-  const signature = sign(null, Buffer.from(payload), privateKey).toString("base64url");
-  const hash = createHash("sha256").update(payload).digest("hex");
+  const signature = sign(null, Buffer.from(payload), privateKey).toString('base64url');
+  const hash = createHash('sha256').update(payload).digest('hex');
   return { ...input, signature, hash };
 }
 export async function validateUpdate(
@@ -112,60 +112,60 @@ export async function validateUpdate(
   expectedVersion: string,
   now = Date.now(),
   maxAgeMs = 15 * 60_000,
-  maxMagnitude = 100,
+  maxMagnitude = 100
 ): Promise<void> {
-  if (node.status !== "ACTIVE") throw new Error("Federated node not active");
+  if (node.status !== 'ACTIVE') throw new Error('Federated node not active');
   if (update.nodeId !== node.nodeId || update.territoryId !== node.territoryId)
-    throw new Error("Node/territory mismatch");
+    throw new Error('Node/territory mismatch');
   if (update.modelId !== expectedModel || update.baseVersion !== expectedVersion)
-    throw new Error("Incompatible model version");
-  if (!update.delta.length || update.delta.length > 1_000_000) throw new Error("Invalid delta");
+    throw new Error('Incompatible model version');
+  if (!update.delta.length || update.delta.length > 1_000_000) throw new Error('Invalid delta');
   if (update.sampleCount < 1 || !Number.isSafeInteger(update.sampleCount))
-    throw new Error("Invalid sample count");
+    throw new Error('Invalid sample count');
   const createdAt = new Date(update.createdAt).getTime();
   if (!Number.isFinite(createdAt) || now - createdAt > maxAgeMs || createdAt - now > 60_000)
-    throw new Error("Stale/future update");
+    throw new Error('Stale/future update');
   const magnitude = Math.sqrt(update.delta.reduce((s, x) => s + x * x, 0));
   if (!Number.isFinite(magnitude) || magnitude > maxMagnitude)
-    throw new Error("Update magnitude rejected");
+    throw new Error('Update magnitude rejected');
   const publicKey = createPublicKey(node.publicKey);
   if (
     !verify(
       null,
       Buffer.from(canonical(update)),
       publicKey,
-      Buffer.from(update.signature, "base64url"),
+      Buffer.from(update.signature, 'base64url')
     )
   )
-    throw new Error("Invalid update signature");
-  const expectedHash = createHash("sha256").update(canonical(update)).digest("hex");
-  if (expectedHash !== update.hash) throw new Error("Update hash mismatch");
+    throw new Error('Invalid update signature');
+  const expectedHash = createHash('sha256').update(canonical(update)).digest('hex');
+  if (expectedHash !== update.hash) throw new Error('Update hash mismatch');
   const accepted = store.claim
     ? await store.claim(update.nonce)
     : !(await store.seen(update.nonce)) && (await store.remember(update.nonce), true);
-  if (!accepted) throw new Error("Replay detected");
+  if (!accepted) throw new Error('Replay detected');
 }
 export function addDifferentialPrivacy(
   delta: number[],
   epsilon: number,
   clipNorm = 1,
-  random = () => randomInt(0, 1_000_000) / 1_000_000,
+  random = () => randomInt(0, 1_000_000) / 1_000_000
 ): number[] {
-  if (!(epsilon > 0)) throw new Error("epsilon must be positive");
+  if (!(epsilon > 0)) throw new Error('epsilon must be positive');
   const norm = Math.sqrt(delta.reduce((s, x) => s + x * x, 0)) || 1;
   const scale = Math.min(1, clipNorm / norm);
   const b = clipNorm / epsilon;
   return delta.map((x) => x * scale + (random() - 0.5 + random() - 0.5) * b);
 }
 export function aggregateFedAvg(updates: LocalUpdate[]): number[] {
-  if (!updates.length) throw new Error("No updates");
+  if (!updates.length) throw new Error('No updates');
   return weightedAverage(
     updates.map((u) => u.delta),
-    updates.map((u) => u.sampleCount),
+    updates.map((u) => u.sampleCount)
   );
 }
 export function aggregateByzantineResistant(updates: LocalUpdate[], trimFraction = 0.1): number[] {
-  if (!updates.length) throw new Error("No updates");
+  if (!updates.length) throw new Error('No updates');
   if (updates.length < 3) return aggregateFedAvg(updates);
   const n = updates.length,
     k = Math.floor(n * trimFraction);
@@ -176,12 +176,12 @@ export function aggregateByzantineResistant(updates: LocalUpdate[], trimFraction
   });
 }
 export function aggregateRobustMedian(updates: LocalUpdate[]): number[] {
-  if (!updates.length) throw new Error("No updates");
+  if (!updates.length) throw new Error('No updates');
   return robustMedianAggregate(updates.map((u) => u.delta));
 }
 export function newUpdate(
-  input: Omit<LocalUpdate, "updateId" | "nonce" | "createdAt">,
-  privateKey: ReturnType<typeof createPrivateKey>,
+  input: Omit<LocalUpdate, 'updateId' | 'nonce' | 'createdAt'>,
+  privateKey: ReturnType<typeof createPrivateKey>
 ): LocalUpdate {
   return signUpdate(
     {
@@ -190,6 +190,6 @@ export function newUpdate(
       nonce: randomUUID(),
       createdAt: new Date().toISOString(),
     },
-    privateKey,
+    privateKey
   );
 }

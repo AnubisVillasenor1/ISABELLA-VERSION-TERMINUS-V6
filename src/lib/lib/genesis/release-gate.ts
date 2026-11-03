@@ -1,6 +1,6 @@
-import { Claim } from "./schemas/claim.schema";
-import { Finding } from "./schemas";
-import { Evidence } from "./schemas/evidence.schema";
+import { Claim } from './schemas/claim.schema';
+import { Finding } from './schemas';
+import { Evidence } from './schemas/evidence.schema';
 
 /**
  * RELEASE GATE (src/lib/genesis/release/release-gate.ts) — P0-90
@@ -27,7 +27,7 @@ import { Evidence } from "./schemas/evidence.schema";
  * claims satisfechos + tipos de evidencia realmente recolectados.
  */
 
-export type ReleaseDecision = "GO" | "CONDITIONAL" | "NO-GO";
+export type ReleaseDecision = 'GO' | 'CONDITIONAL' | 'NO-GO';
 
 export interface ReleaseGateDomain {
   id: string;
@@ -40,47 +40,47 @@ export interface ReleaseGateDomain {
 
 export const RELEASE_GATE_DOMAINS: ReleaseGateDomain[] = [
   {
-    id: "MANDATORY-CLAIMS",
-    label: "Mandatory claims (gobernanza/seguridad núcleo)",
-    requiredClaims: ["CLAIM-002", "CLAIM-003", "CLAIM-006", "CLAIM-007", "CLAIM-008", "CLAIM-010"],
+    id: 'MANDATORY-CLAIMS',
+    label: 'Mandatory claims (gobernanza/seguridad núcleo)',
+    requiredClaims: ['CLAIM-002', 'CLAIM-003', 'CLAIM-006', 'CLAIM-007', 'CLAIM-008', 'CLAIM-010'],
     requiredEvidenceKinds: [],
   },
   {
-    id: "SECURITY",
-    label: "Seguridad",
-    requiredClaims: ["CLAIM-002", "CLAIM-003", "CLAIM-008", "CLAIM-010"],
-    requiredEvidenceKinds: ["SECURITY_TEST", "TEST_HITL", "TEST_AUDIT_CHAIN", "TEST_CONCURRENCY"],
+    id: 'SECURITY',
+    label: 'Seguridad',
+    requiredClaims: ['CLAIM-002', 'CLAIM-003', 'CLAIM-008', 'CLAIM-010'],
+    requiredEvidenceKinds: ['SECURITY_TEST', 'TEST_HITL', 'TEST_AUDIT_CHAIN', 'TEST_CONCURRENCY'],
   },
   {
-    id: "FINANCIAL",
-    label: "Circuito financiero (casos A–J)",
-    requiredClaims: ["CLAIM-005"],
+    id: 'FINANCIAL',
+    label: 'Circuito financiero (casos A–J)',
+    requiredClaims: ['CLAIM-005'],
     requiredEvidenceKinds: [
-      "UNIT_TEST",
-      "INTEGRATION_TEST",
-      "CONCURRENCY_TEST",
-      "EXTERNAL_AUDIT",
-      "DEPLOYMENT_RECORD",
-      "HEALTH_CHECK",
+      'UNIT_TEST',
+      'INTEGRATION_TEST',
+      'CONCURRENCY_TEST',
+      'EXTERNAL_AUDIT',
+      'DEPLOYMENT_RECORD',
+      'HEALTH_CHECK',
     ],
   },
   {
-    id: "RUNTIME",
-    label: "Runtime",
-    requiredClaims: ["CLAIM-006"],
-    requiredEvidenceKinds: ["HEALTH_CHECK", "MONITORING_DATA", "DEPLOYMENT_RECORD"],
+    id: 'RUNTIME',
+    label: 'Runtime',
+    requiredClaims: ['CLAIM-006'],
+    requiredEvidenceKinds: ['HEALTH_CHECK', 'MONITORING_DATA', 'DEPLOYMENT_RECORD'],
   },
   {
-    id: "DEPLOYMENT",
-    label: "Despliegue",
+    id: 'DEPLOYMENT',
+    label: 'Despliegue',
     requiredClaims: [],
-    requiredEvidenceKinds: ["DEPLOYMENT_RECORD", "HEALTH_CHECK"],
+    requiredEvidenceKinds: ['DEPLOYMENT_RECORD', 'HEALTH_CHECK'],
   },
   {
-    id: "DR",
-    label: "Recuperación ante desastres",
+    id: 'DR',
+    label: 'Recuperación ante desastres',
     requiredClaims: [],
-    requiredEvidenceKinds: ["INCIDENT_REPORT", "MONITORING_DATA", "DEPLOYMENT_RECORD"],
+    requiredEvidenceKinds: ['INCIDENT_REPORT', 'MONITORING_DATA', 'DEPLOYMENT_RECORD'],
   },
 ];
 
@@ -111,14 +111,14 @@ export interface ReleaseGateInput {
   domainEvidenceCoverage?: (domainId: string) => number;
 }
 
-const CLAIM_SATISFACTION_STATUSES = ["TESTED", "VERIFIED", "PRODUCTION-VERIFIED"] as const;
+const CLAIM_SATISFACTION_STATUSES = ['TESTED', 'VERIFIED', 'PRODUCTION-VERIFIED'] as const;
 
 export function isClaimSatisfiedByStatus(status: string): boolean {
   return (CLAIM_SATISFACTION_STATUSES as readonly string[]).includes(status);
 }
 
 export function countOpenBySeverity(findings: Finding[], severity: string): number {
-  return findings.filter((f) => f.severity === severity && f.status === "OPEN").length;
+  return findings.filter((f) => f.severity === severity && f.status === 'OPEN').length;
 }
 
 export function evaluateReleaseGate(input: ReleaseGateInput): ReleaseGateResult {
@@ -141,8 +141,8 @@ export function evaluateReleaseGate(input: ReleaseGateInput): ReleaseGateResult 
         label: `Claim: ${label}`,
         passed: satisfied,
         detail: satisfied
-          ? "Claim satisfecha con estado >= TESTED"
-          : "Claim NO satisfecha — requiere estado TESTED/VERIFIED/PRODUCTION-VERIFIED",
+          ? 'Claim satisfecha con estado >= TESTED'
+          : 'Claim NO satisfecha — requiere estado TESTED/VERIFIED/PRODUCTION-VERIFIED',
       });
     }
 
@@ -171,54 +171,54 @@ export function evaluateReleaseGate(input: ReleaseGateInput): ReleaseGateResult 
     }
   }
 
-  const criticalOpen = countOpenBySeverity(input.findings, "CRITICAL");
-  const highOpen = countOpenBySeverity(input.findings, "HIGH");
+  const criticalOpen = countOpenBySeverity(input.findings, 'CRITICAL');
+  const highOpen = countOpenBySeverity(input.findings, 'HIGH');
 
-  let decision: ReleaseDecision = "GO";
+  let decision: ReleaseDecision = 'GO';
   const reasons: string[] = [];
 
   // Regla 1: critical abierta → NO-GO.
   if (criticalOpen > 0) {
-    decision = "NO-GO";
+    decision = 'NO-GO';
     reasons.push(`${criticalOpen} finding(s) CRITICAL abierta(s) bloquean el release`);
   }
 
   // Regla 2: circuito financiero no probado → NO-GO (nunca live payments).
-  if (!passedDomains.includes("FINANCIAL")) {
-    decision = "NO-GO";
-    reasons.push("Dominio FINANCIAL no probado: casos financieros (A–J) sin evidencia suficiente");
+  if (!passedDomains.includes('FINANCIAL')) {
+    decision = 'NO-GO';
+    reasons.push('Dominio FINANCIAL no probado: casos financieros (A–J) sin evidencia suficiente');
   }
 
   // Regla 3: dominios mandatorios/seguridad fallidos → NO-GO.
-  const mandatoryFailed = failedDomains.filter((d) => ["MANDATORY-CLAIMS", "SECURITY"].includes(d));
+  const mandatoryFailed = failedDomains.filter((d) => ['MANDATORY-CLAIMS', 'SECURITY'].includes(d));
   if (mandatoryFailed.length > 0) {
-    decision = "NO-GO";
-    reasons.push(`Dominios obligatorios fallidos: ${mandatoryFailed.join(", ")}`);
+    decision = 'NO-GO';
+    reasons.push(`Dominios obligatorios fallidos: ${mandatoryFailed.join(', ')}`);
   }
 
   // Regla 4: high abierta, readiness <70 o cobertura <60 → CONDITIONAL.
-  if (decision === "GO") {
+  if (decision === 'GO') {
     if (highOpen > 0) {
-      decision = "CONDITIONAL";
+      decision = 'CONDITIONAL';
       reasons.push(`${highOpen} finding(s) HIGH requieren plan de mitigación`);
     }
     if (input.productionReadiness < 70) {
-      decision = "CONDITIONAL";
+      decision = 'CONDITIONAL';
       reasons.push(`Production readiness ${input.productionReadiness}% < 70%`);
     }
     if (input.evidenceCoverage < 60) {
-      decision = "CONDITIONAL";
+      decision = 'CONDITIONAL';
       reasons.push(`Cobertura de evidencia ${input.evidenceCoverage}% < 60%`);
     }
   }
 
   const justification =
-    decision === "GO"
-      ? "Todos los dominios del release gate pasaron con evidencia real"
-      : reasons.join("; ");
+    decision === 'GO'
+      ? 'Todos los dominios del release gate pasaron con evidencia real'
+      : reasons.join('; ');
 
   const blockingFindings =
-    decision === "NO-GO"
+    decision === 'NO-GO'
       ? criticalOpen > 0
         ? criticalOpen
         : failedDomains.length > 0
@@ -238,7 +238,7 @@ export function evaluateReleaseGate(input: ReleaseGateInput): ReleaseGateResult 
 
 export function createEvidenceCoverageMeasurer(
   claims: Claim[],
-  evidencesByClaim: (claimId: string) => Evidence[],
+  evidencesByClaim: (claimId: string) => Evidence[]
 ) {
   const expectedKinds = new Set<string>();
   for (const claim of claims) {

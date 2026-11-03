@@ -1,6 +1,6 @@
-import { createHash } from "node:crypto";
-import { NeonRepository } from "@/lib/persistence/adapters/neon-adapter";
-import { evaluateModelRelease, type ReleaseCandidate } from "./release-gate";
+import { createHash } from 'node:crypto';
+import { NeonRepository } from '@/lib/persistence/adapters/neon-adapter';
+import { evaluateModelRelease, type ReleaseCandidate } from './release-gate';
 
 export interface ModelReleaseRecord {
   id: string;
@@ -10,23 +10,23 @@ export interface ModelReleaseRecord {
   artifactHash: string;
   manifestHash: string;
   evidenceId: string;
-  status: "CANDIDATE" | "APPROVED" | "REVOKED";
+  status: 'CANDIDATE' | 'APPROVED' | 'REVOKED';
   createdAt: string;
 }
 
-const releases = new NeonRepository<ModelReleaseRecord>("fgais_model_releases");
+const releases = new NeonRepository<ModelReleaseRecord>('fgais_model_releases');
 
 function releaseId(tenantId: string, candidate: ReleaseCandidate): string {
-  return `rel_${createHash("sha256").update(`${tenantId}:${candidate.modelId}:${candidate.version}`).digest("hex").slice(0, 32)}`;
+  return `rel_${createHash('sha256').update(`${tenantId}:${candidate.modelId}:${candidate.version}`).digest('hex').slice(0, 32)}`;
 }
 
 export async function proposeModelRelease(
   tenantId: string,
-  candidate: ReleaseCandidate,
+  candidate: ReleaseCandidate
 ): Promise<ModelReleaseRecord> {
-  if (!tenantId) throw new Error("tenantId required");
+  if (!tenantId) throw new Error('tenantId required');
   const decision = evaluateModelRelease(candidate);
-  if (!decision.allowed) throw new Error(`model_release_blocked: ${decision.reasons.join("; ")}`);
+  if (!decision.allowed) throw new Error(`model_release_blocked: ${decision.reasons.join('; ')}`);
   const record: ModelReleaseRecord = {
     id: releaseId(tenantId, candidate),
     tenantId,
@@ -35,7 +35,7 @@ export async function proposeModelRelease(
     artifactHash: candidate.artifactHash,
     manifestHash: candidate.manifestHash,
     evidenceId: candidate.evidenceId,
-    status: "CANDIDATE",
+    status: 'CANDIDATE',
     createdAt: new Date().toISOString(),
   };
   return releases.create(tenantId, record);

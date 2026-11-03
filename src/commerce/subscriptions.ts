@@ -7,8 +7,8 @@
  * validated against an explicit state machine and every change is appended to
  * an in-memory audit trail.
  */
-import type { PlanId, SubscriptionStatus } from "./types";
-import { PLANS } from "./plans";
+import type { PlanId, SubscriptionStatus } from './types';
+import { PLANS } from './plans';
 
 export interface SubscriptionRecord {
   readonly workspaceId: string;
@@ -16,6 +16,7 @@ export interface SubscriptionRecord {
   readonly status: SubscriptionStatus;
   readonly provider: string;
   readonly externalRef?: string;
+  readonly providerCustomerId?: string;
   readonly currentPeriodEnd?: string;
   readonly updatedAt: string;
   readonly createdAt: string;
@@ -24,7 +25,7 @@ export interface SubscriptionRecord {
 export interface SubscriptionEvent {
   readonly at: string;
   readonly workspaceId: string;
-  readonly from: SubscriptionStatus | "none";
+  readonly from: SubscriptionStatus | 'none';
   readonly to: SubscriptionStatus;
   readonly planCode: PlanId;
   readonly reason: string;
@@ -52,11 +53,11 @@ export class InMemorySubscriptionPersistence implements SubscriptionPersistence 
 
 /** Allowed status transitions; a fresh subscription starts at `none`. */
 const ALLOWED_TRANSITIONS: Record<SubscriptionStatus, readonly SubscriptionStatus[]> = {
-  trialing: ["active", "past_due", "canceled", "suspended"],
-  active: ["trialing", "past_due", "canceled", "suspended"],
-  past_due: ["active", "canceled", "suspended"],
-  canceled: ["active", "trialing"],
-  suspended: ["active", "canceled"],
+  trialing: ['active', 'past_due', 'canceled', 'suspended'],
+  active: ['trialing', 'past_due', 'canceled', 'suspended'],
+  past_due: ['active', 'canceled', 'suspended'],
+  canceled: ['active', 'trialing'],
+  suspended: ['active', 'canceled'],
 };
 
 export interface SubscribeInput {
@@ -64,7 +65,7 @@ export interface SubscribeInput {
   readonly planCode: PlanId;
   readonly provider: string;
   readonly externalRef: string;
-  readonly status?: Extract<SubscriptionStatus, "active" | "trialing">;
+  readonly status?: Extract<SubscriptionStatus, 'active' | 'trialing'>;
   readonly currentPeriodEnd?: string;
   /** Explicit acknowledgement that an ENTERPRISE contract is in place. */
   readonly contract?: boolean;
@@ -90,7 +91,8 @@ export class SubscriptionStore {
 
   private recordEvent(event: SubscriptionEvent): void {
     this.events.push(Object.freeze(event));
-    if (this.events.length > this.eventLimit) this.events.splice(0, this.events.length - this.eventLimit);
+    if (this.events.length > this.eventLimit)
+      this.events.splice(0, this.events.length - this.eventLimit);
   }
 
   private async transition(
@@ -100,15 +102,20 @@ export class SubscriptionStore {
     provider: string,
     externalRef: string | undefined,
     reason: string,
-    currentPeriodEnd?: string,
+    currentPeriodEnd?: string
   ): Promise<SubscriptionRecord> {
     const existing = await this.persistence.get(workspaceId);
-    const from: SubscriptionStatus | "none" = existing?.status ?? "none";
-    if (existing && next !== existing.status && !ALLOWED_TRANSITIONS[existing.status].includes(next)) {
+    const from: SubscriptionStatus | 'none' = existing?.status ?? 'none';
+    if (
+      existing &&
+      next !== existing.status &&
+      !ALLOWED_TRANSITIONS[existing.status].includes(next)
+    ) {
       throw new Error(`SUBSCRIPTION_TRANSITION_INVALID: ${existing.status} -> ${next}`);
     }
-    if (!provider.trim()) throw new Error("SUBSCRIPTION_PROVIDER_REQUIRED");
-    if (!externalRef || !externalRef.trim()) throw new Error("SUBSCRIPTION_PROVIDER_REFERENCE_REQUIRED");
+    if (!provider.trim()) throw new Error('SUBSCRIPTION_PROVIDER_REQUIRED');
+    if (!externalRef || !externalRef.trim())
+      throw new Error('SUBSCRIPTION_PROVIDER_REFERENCE_REQUIRED');
 
     const now = this.now();
     const record: SubscriptionRecord = Object.freeze({
@@ -128,33 +135,74 @@ export class SubscriptionStore {
 
   /** Record a verified paid/trialing subscription from a provider reference. */
   async subscribe(input: SubscribeInput): Promise<SubscriptionRecord> {
-    if (!input.workspaceId.trim()) throw new Error("SUBSCRIPTION_WORKSPACE_REQUIRED");
+    if (!input.workspaceId.trim()) throw new Error('SUBSCRIPTION_WORKSPACE_REQUIRED');
     if (PLANS[input.planCode].contractRequired && input.contract !== true) {
-      throw new Error("SUBSCRIPTION_CONTRACT_REQUIRED");
+      throw new Error('SUBSCRIPTION_CONTRACT_REQUIRED');
     }
-    const status = input.status ?? "active";
-    return this.transition(input.workspaceId, input.planCode, status, input.provider, input.externalRef, "subscribe", input.currentPeriodEnd);
+    const status = input.status ?? 'active';
+    return this.transition(
+      input.workspaceId,
+      input.planCode,
+      status,
+      input.provider,
+      input.externalRef,
+      'subscribe',
+      input.currentPeriodEnd
+    );
   }
 
-  async upgrade(workspaceId: string, planCode: PlanId, provider: string, externalRef: string): Promise<SubscriptionRecord> {
+  async upgrade(
+    workspaceId: string,
+    planCode: PlanId,
+    provider: string,
+    externalRef: string
+  ): Promise<SubscriptionRecord> {
     const existing = await this.persistence.get(workspaceId);
-    const status = existing && (existing.status === "active" || existing.status === "trialing") ? existing.status : "active";
-    return this.transition(workspaceId, planCode, status, provider, externalRef, "upgrade");
+    const status =
+      existing && (existing.status === 'active' || existing.status === 'trialing')
+        ? existing.status
+        : 'active';
+    return this.transition(workspaceId, planCode, status, provider, externalRef, 'upgrade');
   }
 
-  async markPastDue(workspaceId: string, provider: string, externalRef: string): Promise<SubscriptionRecord> {
+  async markPastDue(
+    workspaceId: string,
+    provider: string,
+    externalRef: string
+  ): Promise<SubscriptionRecord> {
     const existing = await this.require(workspaceId);
-    return this.transition(workspaceId, existing.planCode, "past_due", provider, externalRef, "past_due");
+    return this.transition(
+      workspaceId,
+      existing.planCode,
+      'past_due',
+      provider,
+      externalRef,
+      'past_due'
+    );
   }
 
-  async cancel(workspaceId: string, reason = "canceled"): Promise<SubscriptionRecord> {
+  async cancel(workspaceId: string, reason = 'canceled'): Promise<SubscriptionRecord> {
     const existing = await this.require(workspaceId);
-    return this.transition(workspaceId, existing.planCode, "canceled", existing.provider, existing.externalRef ?? "n/a", reason);
+    return this.transition(
+      workspaceId,
+      existing.planCode,
+      'canceled',
+      existing.provider,
+      existing.externalRef ?? 'n/a',
+      reason
+    );
   }
 
-  async suspend(workspaceId: string, reason = "suspended"): Promise<SubscriptionRecord> {
+  async suspend(workspaceId: string, reason = 'suspended'): Promise<SubscriptionRecord> {
     const existing = await this.require(workspaceId);
-    return this.transition(workspaceId, existing.planCode, "suspended", existing.provider, existing.externalRef ?? "n/a", reason);
+    return this.transition(
+      workspaceId,
+      existing.planCode,
+      'suspended',
+      existing.provider,
+      existing.externalRef ?? 'n/a',
+      reason
+    );
   }
 
   async get(workspaceId: string): Promise<SubscriptionRecord | null> {
@@ -183,12 +231,12 @@ export class SubscriptionStore {
     const existing = await this.persistence.get(workspaceId);
     return existing
       ? { planCode: existing.planCode, status: existing.status }
-      : { planCode: "free", status: "active" };
+      : { planCode: 'free', status: 'active' };
   }
 
   private async require(workspaceId: string): Promise<SubscriptionRecord> {
     const existing = await this.persistence.get(workspaceId);
-    if (!existing) throw new Error("SUBSCRIPTION_NOT_FOUND");
+    if (!existing) throw new Error('SUBSCRIPTION_NOT_FOUND');
     return existing;
   }
 }

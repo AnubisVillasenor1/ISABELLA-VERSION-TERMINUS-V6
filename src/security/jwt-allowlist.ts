@@ -7,12 +7,12 @@
  * header parameters. Verification of the signature itself belongs elsewhere.
  */
 export type JwtAlgorithmRejection =
-  | "MALFORMED_TOKEN"
-  | "MALFORMED_HEADER"
-  | "ALG_MISSING"
-  | "ALG_NONE"
-  | "ALG_NOT_ALLOWED"
-  | "UNEXPECTED_HEADER_PARAMETER";
+  | 'MALFORMED_TOKEN'
+  | 'MALFORMED_HEADER'
+  | 'ALG_MISSING'
+  | 'ALG_NONE'
+  | 'ALG_NOT_ALLOWED'
+  | 'UNEXPECTED_HEADER_PARAMETER';
 
 export interface JwtAlgorithmPolicy {
   allowedAlgorithms: readonly string[];
@@ -21,8 +21,8 @@ export interface JwtAlgorithmPolicy {
 
 /** Strict default: asymmetric only, no `none`, no shared-secret HMAC. */
 export const STRICT_JWT_ALGORITHM_POLICY: JwtAlgorithmPolicy = {
-  allowedAlgorithms: ["ES256", "EdDSA"],
-  allowedHeaderParameters: ["alg", "typ", "kid"],
+  allowedAlgorithms: ['ES256', 'EdDSA'],
+  allowedHeaderParameters: ['alg', 'typ', 'kid'],
 };
 
 export interface JwtAlgorithmAccepted {
@@ -48,11 +48,11 @@ function reject(reason: JwtAlgorithmRejection, detail: string): JwtAlgorithmReje
 function decodeHeader(part: string): Record<string, unknown> | undefined {
   let parsed: unknown;
   try {
-    parsed = JSON.parse(Buffer.from(part, "base64url").toString("utf8"));
+    parsed = JSON.parse(Buffer.from(part, 'base64url').toString('utf8'));
   } catch {
     return undefined;
   }
-  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return undefined;
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return undefined;
   return parsed as Record<string, unknown>;
 }
 
@@ -62,16 +62,17 @@ function decodeHeader(part: string): Record<string, unknown> | undefined {
  */
 export function verifyJwtAlgorithm(
   token: string,
-  policy: Partial<JwtAlgorithmPolicy> = {},
+  policy: Partial<JwtAlgorithmPolicy> = {}
 ): JwtAlgorithmVerdict {
-  const allowedAlgorithms = policy.allowedAlgorithms ?? STRICT_JWT_ALGORITHM_POLICY.allowedAlgorithms;
+  const allowedAlgorithms =
+    policy.allowedAlgorithms ?? STRICT_JWT_ALGORITHM_POLICY.allowedAlgorithms;
   const allowedHeaderParameters =
     policy.allowedHeaderParameters ?? STRICT_JWT_ALGORITHM_POLICY.allowedHeaderParameters;
   const allowedHeaderSet = new Set(allowedHeaderParameters);
 
-  if (typeof token !== "string") return reject("MALFORMED_TOKEN", "token must be a string");
-  const parts = token.split(".");
-  if (parts.length !== 3) return reject("MALFORMED_TOKEN", "expected three dot-separated segments");
+  if (typeof token !== 'string') return reject('MALFORMED_TOKEN', 'token must be a string');
+  const parts = token.split('.');
+  if (parts.length !== 3) return reject('MALFORMED_TOKEN', 'expected three dot-separated segments');
   const [headerPart, payloadPart, signaturePart] = parts;
   if (
     headerPart === undefined ||
@@ -81,25 +82,25 @@ export function verifyJwtAlgorithm(
     !BASE64URL.test(payloadPart) ||
     !BASE64URL.test(signaturePart)
   ) {
-    return reject("MALFORMED_TOKEN", "segments must be non-empty base64url");
+    return reject('MALFORMED_TOKEN', 'segments must be non-empty base64url');
   }
 
   const header = decodeHeader(headerPart);
-  if (header === undefined) return reject("MALFORMED_HEADER", "header is not a JSON object");
+  if (header === undefined) return reject('MALFORMED_HEADER', 'header is not a JSON object');
 
   const alg = header.alg;
-  if (typeof alg !== "string" || alg.length === 0) {
-    return reject("ALG_MISSING", "header.alg must be a non-empty string");
+  if (typeof alg !== 'string' || alg.length === 0) {
+    return reject('ALG_MISSING', 'header.alg must be a non-empty string');
   }
-  if (alg.toLowerCase() === "none") {
-    return reject("ALG_NONE", "alg:none is never accepted");
+  if (alg.toLowerCase() === 'none') {
+    return reject('ALG_NONE', 'alg:none is never accepted');
   }
   if (!allowedAlgorithms.includes(alg)) {
-    return reject("ALG_NOT_ALLOWED", `algorithm ${alg} is not in the allowlist`);
+    return reject('ALG_NOT_ALLOWED', `algorithm ${alg} is not in the allowlist`);
   }
   for (const key of Object.keys(header)) {
     if (!allowedHeaderSet.has(key)) {
-      return reject("UNEXPECTED_HEADER_PARAMETER", `header parameter ${key} is not allowed`);
+      return reject('UNEXPECTED_HEADER_PARAMETER', `header parameter ${key} is not allowed`);
     }
   }
 

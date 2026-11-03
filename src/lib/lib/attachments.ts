@@ -1,6 +1,6 @@
 export interface Attachment {
   id: string;
-  kind: "image" | "audio";
+  kind: 'image' | 'audio';
   /** data URL completo (`data:<mime>;base64,...`). */
   dataUrl: string;
   mime: string;
@@ -14,19 +14,19 @@ export function fileToDataUrl(file: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(new Error("No se pudo leer el archivo."));
+    reader.onerror = () => reject(new Error('No se pudo leer el archivo.'));
     reader.readAsDataURL(file);
   });
 }
 
 /** Formato de contenedor aceptado por el gateway para `input_audio`. */
 export function audioFormatFromMime(mime: string): string {
-  const base = mime.split(";")[0] ?? "";
-  if (base.includes("mp4") || base.includes("m4a")) return "m4a";
-  if (base.includes("ogg")) return "ogg";
-  if (base.includes("wav")) return "wav";
-  if (base.includes("mpeg")) return "mp3";
-  return "webm";
+  const base = mime.split(';')[0] ?? '';
+  if (base.includes('mp4') || base.includes('m4a')) return 'm4a';
+  if (base.includes('ogg')) return 'ogg';
+  if (base.includes('wav')) return 'wav';
+  if (base.includes('mpeg')) return 'mp3';
+  return 'webm';
 }
 
 export function humanSize(bytes: number): string {

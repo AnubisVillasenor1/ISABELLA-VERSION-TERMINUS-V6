@@ -5,7 +5,7 @@ export interface ConsentRecord {
   purpose: string;
   scope: readonly string[];
   grantedAt: string;
-  grantedBy: "human" | "delegated";
+  grantedBy: 'human' | 'delegated';
   revokedAt?: string;
 }
 
@@ -25,12 +25,14 @@ export function createConsentRegistry(): ConsentRegistryLike {
           r.principalId === principalId &&
           r.purpose === purpose &&
           !r.revokedAt &&
-          r.scope.includes(scope),
+          r.scope.includes(scope)
       );
     },
     register(record) {
-      if (record.grantedBy !== "human" && record.grantedBy !== "delegated") {
-        throw new Error("CONSENT: el consentimiento debe provenir de un humano o de delegación explícita");
+      if (record.grantedBy !== 'human' && record.grantedBy !== 'delegated') {
+        throw new Error(
+          'CONSENT: el consentimiento debe provenir de un humano o de delegación explícita'
+        );
       }
       records.push({ ...record });
     },
@@ -40,7 +42,7 @@ export function createConsentRegistry(): ConsentRegistryLike {
           r.principalId === principalId &&
           r.purpose === purpose &&
           r.scope.includes(scope) &&
-          !r.revokedAt,
+          !r.revokedAt
       );
       if (target) {
         target.revokedAt = new Date().toISOString();
@@ -58,7 +60,7 @@ export type ConsentRequirement = {
 export function requireConsent(
   registry: ConsentRegistryLike,
   principalId: string,
-  requirement: ConsentRequirement,
+  requirement: ConsentRequirement
 ): boolean {
   return registry.check(principalId, requirement.purpose, requirement.scope);
 }

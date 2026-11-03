@@ -1,5 +1,5 @@
 /**
- * LEDGER DE DECISIONES POSTGRES (src/lib/repositories/decision-repository.ts)
+ * LEDGER DE DECISIONES POSTGRES (src/lib/lib/repositories/decision-repository.ts)
  * -----------------------------------------------------------------
  * Implementación durable de `LedgerStore` sobre `isabella_decisions`
  * (migración 20260926030000_isabella_policy_as_code.sql), con las reglas de
@@ -16,12 +16,12 @@
  * que los repositorios con cliente inyectado); en runtime se usa el pool real.
  */
 
-import { config } from "../config";
-import type { DecisionRecord, LedgerStore } from "../governance/decision-ledger";
+import { config } from '../config';
+import type { DecisionRecord, LedgerStore } from '../governance/decision-ledger';
 
 export type DecisionQuery = (
   text: string,
-  values?: unknown[],
+  values?: unknown[]
 ) => Promise<{ rows: Array<Record<string, unknown>> }>;
 
 export interface DecisionLedgerDeps {
@@ -38,10 +38,10 @@ async function resolveQuery(deps?: DecisionLedgerDeps): Promise<DecisionQuery> {
   const url = config().DATABASE_URL;
   if (!url) {
     throw new Error(
-      "DECISION_LEDGER_UNAVAILABLE: DATABASE_URL ausente; isabella_decisions no es alcanzable.",
+      'DECISION_LEDGER_UNAVAILABLE: DATABASE_URL ausente; isabella_decisions no es alcanzable.'
     );
   }
-  const { Pool } = await import("pg");
+  const { Pool } = await import('pg');
   const pool = new Pool({ connectionString: url, max: 2 });
   poolQuery = (text, values) => pool.query(text, values);
   poolClose = () => pool.end();
@@ -65,17 +65,17 @@ function mapRow(row: Record<string, unknown>): DecisionRecord {
     authority: String(row.authority),
     capability: String(row.capability),
     policy: String(row.policy),
-    risk: String(row.risk) as DecisionRecord["risk"],
+    risk: String(row.risk) as DecisionRecord['risk'],
     ...(row.model_id == null ? {} : { modelId: String(row.model_id) }),
     inputHash: String(row.input_hash),
     outputHash: String(row.output_hash),
-    result: String(row.result) as DecisionRecord["result"],
+    result: String(row.result) as DecisionRecord['result'],
     timestamp: new Date(String(row.recorded_at)).toISOString(),
     previousHash: String(row.previous_hash),
     recordHash: String(row.record_hash),
     evidenceIds: Array.isArray(evidence)
       ? evidence.map((item) => String(item))
-      : typeof evidence === "string"
+      : typeof evidence === 'string'
         ? (JSON.parse(evidence) as string[]).map((item) => String(item))
         : [],
   };
@@ -96,7 +96,7 @@ export function createPostgresDecisionLedger(deps?: DecisionLedgerDeps): LedgerS
         WHERE tenant_id = $1
         ORDER BY created_at DESC, id DESC
         LIMIT 1`,
-      [tenantId],
+      [tenantId]
     );
     return rows[0] ? String(rows[0].record_hash) : undefined;
   }
@@ -108,13 +108,13 @@ export function createPostgresDecisionLedger(deps?: DecisionLedgerDeps): LedgerS
       `SELECT 1 FROM public.isabella_decisions
         WHERE tenant_id = $1 AND record_hash = $2
         LIMIT 1`,
-      [record.tenantId, record.recordHash],
+      [record.tenantId, record.recordHash]
     );
     if (duplicate.rows[0]) return;
-    const expected = (await latestHash(record.tenantId)) ?? "GENESIS";
+    const expected = (await latestHash(record.tenantId)) ?? 'GENESIS';
     if (record.previousHash !== expected) {
       throw new Error(
-        `DECISION_CHAIN_MISMATCH: previousHash ${record.previousHash} no coincide con el último record_hash ${expected}.`,
+        `DECISION_CHAIN_MISMATCH: previousHash ${record.previousHash} no coincide con el último record_hash ${expected}.`
       );
     }
     const { rows } = await run(
@@ -140,7 +140,7 @@ export function createPostgresDecisionLedger(deps?: DecisionLedgerDeps): LedgerS
         record.recordHash,
         JSON.stringify(record.evidenceIds),
         record.timestamp,
-      ],
+      ]
     );
     if (!rows[0]) {
       // Reenvío idempotente del mismo registro: no es un fallo de integridad.
@@ -150,7 +150,7 @@ export function createPostgresDecisionLedger(deps?: DecisionLedgerDeps): LedgerS
 
   async function verifyChain(
     tenantId: string,
-    limit = 100,
+    limit = 100
   ): Promise<{ ok: boolean; checked: number }> {
     const run = await resolveQuery(deps);
     const { rows } = await run(
@@ -161,7 +161,7 @@ export function createPostgresDecisionLedger(deps?: DecisionLedgerDeps): LedgerS
           LIMIT $2
        ) recent
        ORDER BY created_at ASC, id ASC`,
-      [tenantId, limit],
+      [tenantId, limit]
     );
     let previous: string | null = null;
     let checked = 0;

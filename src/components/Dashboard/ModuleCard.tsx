@@ -1,6 +1,6 @@
-import React, { useState } from "react";
-import { CognitiveModule } from "../../types";
-import { useCrown } from "../../context/CrownContext";
+import React, { useState } from 'react';
+import { CognitiveModule } from '../../types';
+import { useCrown } from '../../context/CrownContext';
 import {
   Brain,
   Heart,
@@ -15,8 +15,8 @@ import {
   TrendingUp,
   Cpu,
   Power,
-} from "lucide-react";
-import { soundManager } from "../../utils/soundEffects";
+} from 'lucide-react';
+import { soundManager } from '../../utils/soundEffects';
 
 interface ModuleCardProps {
   module: CognitiveModule;
@@ -31,15 +31,15 @@ export const ModuleCard: React.FC<ModuleCardProps> = ({ module, isFocused = fals
 
   const getModuleIcon = () => {
     switch (module.id) {
-      case "ISA":
+      case 'ISA':
         return Heart;
-      case "SOPHIA":
+      case 'SOPHIA':
         return Brain;
-      case "ORION":
+      case 'ORION':
         return Zap;
-      case "ARGUS":
+      case 'ARGUS':
         return Shield;
-      case "CROWN_GATEWAY":
+      case 'CROWN_GATEWAY':
       default:
         return Layers;
     }
@@ -48,16 +48,16 @@ export const ModuleCard: React.FC<ModuleCardProps> = ({ module, isFocused = fals
   const Icon = getModuleIcon();
 
   const handleWeightChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    updateModuleParameter(module.id, "weight", parseFloat(e.target.value));
+    updateModuleParameter(module.id, 'weight', parseFloat(e.target.value));
   };
 
   const handleSensitivityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    updateModuleParameter(module.id, "sensitivity", parseFloat(e.target.value));
+    updateModuleParameter(module.id, 'sensitivity', parseFloat(e.target.value));
   };
 
   const handleToggle = () => {
     soundManager.playBeep(module.parameters.enabled ? 400 : 800, 0.03);
-    updateModuleParameter(module.id, "enabled", !module.parameters.enabled);
+    updateModuleParameter(module.id, 'enabled', !module.parameters.enabled);
   };
 
   return (
@@ -66,7 +66,7 @@ export const ModuleCard: React.FC<ModuleCardProps> = ({ module, isFocused = fals
         isCurrentActive
           ? `border-blue-500 ring-2 ring-blue-500/40 shadow-2xl shadow-blue-500/20 scale-[1.02]`
           : `border-slate-800 hover:border-slate-700`
-      } ${!module.parameters.enabled ? "opacity-50 grayscale" : ""}`}
+      } ${!module.parameters.enabled ? 'opacity-50 grayscale' : ''}`}
     >
       {/* Active pulse highlight badge */}
       {isCurrentActive && (
@@ -103,8 +103,8 @@ export const ModuleCard: React.FC<ModuleCardProps> = ({ module, isFocused = fals
               onClick={() => setShowSettings(!showSettings)}
               className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
                 showSettings
-                  ? "bg-blue-950/60 border-blue-500/50 text-sky-300"
-                  : "bg-[#030712] border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-[#081220]"
+                  ? 'bg-blue-950/60 border-blue-500/50 text-sky-300'
+                  : 'bg-[#030712] border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-[#081220]'
               }`}
               title="Ajustar parámetros cognitivos"
             >
@@ -115,10 +115,10 @@ export const ModuleCard: React.FC<ModuleCardProps> = ({ module, isFocused = fals
               onClick={handleToggle}
               className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
                 module.parameters.enabled
-                  ? "bg-emerald-950/40 border-emerald-500/40 text-emerald-400"
-                  : "bg-red-950/40 border-red-500/40 text-red-400"
+                  ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-400'
+                  : 'bg-red-950/40 border-red-500/40 text-red-400'
               }`}
-              title={module.parameters.enabled ? "Módulo activado" : "Módulo en pausa"}
+              title={module.parameters.enabled ? 'Módulo activado' : 'Módulo en pausa'}
             >
               <Power className="w-3.5 h-3.5" />
             </button>
@@ -127,12 +127,8 @@ export const ModuleCard: React.FC<ModuleCardProps> = ({ module, isFocused = fals
 
         {/* Full Name & Description */}
         <div className="py-2.5 space-y-1">
-          <p className="text-[11px] font-mono font-medium text-sky-300/90">
-            {module.fullName}
-          </p>
-          <p className="text-xs text-slate-300 leading-relaxed font-sans">
-            {module.description}
-          </p>
+          <p className="text-[11px] font-mono font-medium text-sky-300/90">{module.fullName}</p>
+          <p className="text-xs text-slate-300 leading-relaxed font-sans">{module.description}</p>
         </div>
 
         {/* Core Pillars */}
@@ -154,9 +150,7 @@ export const ModuleCard: React.FC<ModuleCardProps> = ({ module, isFocused = fals
         <div className="grid grid-cols-3 gap-2 text-center font-mono">
           <div className="p-2 rounded-xl bg-[#030712] border border-slate-800/80">
             <span className="text-[10px] text-slate-400 block">ACTIVACIÓN</span>
-            <span className="text-sm font-bold text-slate-100">
-              {module.metrics.activation}%
-            </span>
+            <span className="text-sm font-bold text-slate-100">{module.metrics.activation}%</span>
             <div className="w-full bg-slate-900 h-1 rounded-full overflow-hidden mt-1">
               <div
                 className="h-full rounded-full bg-blue-500 transition-all duration-300"
@@ -167,9 +161,7 @@ export const ModuleCard: React.FC<ModuleCardProps> = ({ module, isFocused = fals
 
           <div className="p-2 rounded-xl bg-[#030712] border border-slate-800/80">
             <span className="text-[10px] text-slate-400 block">LATENCIA</span>
-            <span className="text-sm font-bold text-sky-400">
-              {module.metrics.latencyMs}ms
-            </span>
+            <span className="text-sm font-bold text-sky-400">{module.metrics.latencyMs}ms</span>
             <span className="text-[9px] text-slate-400 block mt-0.5">
               {module.metrics.throughput}
             </span>
@@ -177,9 +169,7 @@ export const ModuleCard: React.FC<ModuleCardProps> = ({ module, isFocused = fals
 
           <div className="p-2 rounded-xl bg-[#030712] border border-slate-800/80">
             <span className="text-[10px] text-slate-400 block">CONFIANZA</span>
-            <span className="text-sm font-bold text-emerald-400">
-              {module.metrics.confidence}%
-            </span>
+            <span className="text-sm font-bold text-emerald-400">{module.metrics.confidence}%</span>
             <span className="text-[9px] text-slate-400 block mt-0.5">
               {module.metrics.activeThreads} hilos
             </span>

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from 'react';
 import {
   Activity,
   CheckCircle,
@@ -8,8 +8,8 @@ import {
   Server,
   ShieldAlert,
   XCircle,
-} from "lucide-react";
-type HealthState = "unknown" | "ok" | "failed";
+} from 'lucide-react';
+type HealthState = 'unknown' | 'ok' | 'failed';
 
 type HealthResponse = {
   status?: string;
@@ -19,8 +19,8 @@ type HealthResponse = {
 
 async function readHealth(path: string): Promise<HealthResponse> {
   const response = await fetch(path, {
-    cache: "no-store",
-    headers: { accept: "application/json" },
+    cache: 'no-store',
+    headers: { accept: 'application/json' },
   });
   let body: HealthResponse = {};
   try {
@@ -36,40 +36,40 @@ async function readHealth(path: string): Promise<HealthResponse> {
 }
 
 function formatTimestamp(value?: string): string {
-  if (!value) return "—";
+  if (!value) return '—';
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "—" : date.toLocaleTimeString();
+  return Number.isNaN(date.getTime()) ? '—' : date.toLocaleTimeString();
 }
 
 export function SystemMonitor() {
-  const [envMode, setEnvMode] = useState<"development" | "staging" | "production">("production");
-  const [live, setLive] = useState<HealthState>("unknown");
-  const [ready, setReady] = useState<HealthState>("unknown");
-  const [deep, setDeep] = useState<HealthState>("unknown");
-  const [checks, setChecks] = useState<HealthResponse["checks"]>({});
+  const [envMode, setEnvMode] = useState<'development' | 'staging' | 'production'>('production');
+  const [live, setLive] = useState<HealthState>('unknown');
+  const [ready, setReady] = useState<HealthState>('unknown');
+  const [deep, setDeep] = useState<HealthState>('unknown');
+  const [checks, setChecks] = useState<HealthResponse['checks']>({});
   const [lastCheck, setLastCheck] = useState<string>();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === 'undefined') return;
     const host = window.location.hostname;
-    if (host.includes("-dev") || host === "localhost" || host === "127.0.0.1")
-      setEnvMode("development");
-    else if (host.includes("-pre") || host.includes("staging")) setEnvMode("staging");
-    else setEnvMode("production");
+    if (host.includes('-dev') || host === 'localhost' || host === '127.0.0.1')
+      setEnvMode('development');
+    else if (host.includes('-pre') || host.includes('staging')) setEnvMode('staging');
+    else setEnvMode('production');
   }, []);
 
   const refresh = useCallback(async () => {
     setIsRefreshing(true);
     const timestamp = new Date().toISOString();
     try {
-      const liveResult = await readHealth("/api/health/live");
-      setLive("ok");
+      const liveResult = await readHealth('/api/health/live');
+      setLive('ok');
       setLastCheck(liveResult.timestamp ?? timestamp);
     } catch {
-      setLive("failed");
-      setReady("failed");
-      setDeep("failed");
+      setLive('failed');
+      setReady('failed');
+      setDeep('failed');
       setChecks({});
       setLastCheck(timestamp);
       setIsRefreshing(false);
@@ -77,24 +77,24 @@ export function SystemMonitor() {
     }
 
     try {
-      const readyResult = await readHealth("/api/health/ready");
-      setReady(readyResult.status === "ready" ? "ok" : "failed");
+      const readyResult = await readHealth('/api/health/ready');
+      setReady(readyResult.status === 'ready' ? 'ok' : 'failed');
       setChecks(readyResult.checks ?? {});
       setLastCheck(readyResult.timestamp ?? timestamp);
     } catch (error) {
-      setReady("failed");
+      setReady('failed');
       const body = (error as { body?: HealthResponse }).body;
       setChecks(body?.checks ?? {});
       setLastCheck(body?.timestamp ?? timestamp);
     }
 
     try {
-      const deepResult = await readHealth("/api/health/deep");
-      setDeep(deepResult.status === "ready" ? "ok" : "failed");
+      const deepResult = await readHealth('/api/health/deep');
+      setDeep(deepResult.status === 'ready' ? 'ok' : 'failed');
       setChecks((previous) => ({ ...previous, ...(deepResult.checks ?? {}) }));
       setLastCheck(deepResult.timestamp ?? timestamp);
     } catch {
-      setDeep("failed");
+      setDeep('failed');
     } finally {
       setIsRefreshing(false);
     }
@@ -107,13 +107,13 @@ export function SystemMonitor() {
   }, [refresh]);
 
   const statusIcon = (state: HealthState) => {
-    if (state === "ok") return <CheckCircle className="size-3.5" />;
-    if (state === "failed") return <XCircle className="size-3.5" />;
+    if (state === 'ok') return <CheckCircle className="size-3.5" />;
+    if (state === 'failed') return <XCircle className="size-3.5" />;
     return <Clock3 className="size-3.5" />;
   };
 
   const statusText = (state: HealthState) =>
-    state === "ok" ? "OK" : state === "failed" ? "FAIL" : "PENDING";
+    state === 'ok' ? 'OK' : state === 'failed' ? 'FAIL' : 'PENDING';
   const dbCheck = checks?.repository;
   const auditCheck = checks?.audit;
 
@@ -145,16 +145,16 @@ export function SystemMonitor() {
             aria-label="Actualizar estado"
             className="p-1.5 rounded-lg border border-border/10 hover:bg-white/5"
           >
-            <RefreshCw className={`size-3 ${isRefreshing ? "animate-spin" : ""}`} />
+            <RefreshCw className={`size-3 ${isRefreshing ? 'animate-spin' : ''}`} />
           </button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {[
-          ["Liveness", live],
-          ["Readiness", ready],
-          ["Deep readiness", deep],
+          ['Liveness', live],
+          ['Readiness', ready],
+          ['Deep readiness', deep],
         ].map(([label, state]) => (
           <div
             key={label as string}
@@ -165,7 +165,7 @@ export function SystemMonitor() {
               {label as string}
             </span>
             <span
-              className={`flex items-center gap-1 font-bold text-[10px] ${state === "ok" ? "text-emerald-400" : state === "failed" ? "text-red-400" : "text-muted-foreground"}`}
+              className={`flex items-center gap-1 font-bold text-[10px] ${state === 'ok' ? 'text-emerald-400' : state === 'failed' ? 'text-red-400' : 'text-muted-foreground'}`}
             >
               {statusIcon(state as HealthState)}
               {statusText(state as HealthState)}
@@ -181,14 +181,14 @@ export function SystemMonitor() {
           </span>
           <div className="flex items-center justify-between text-[10px]">
             <span>PostgreSQL repository</span>
-            <strong className={dbCheck?.ok ? "text-emerald-400" : "text-red-400"}>
-              {dbCheck?.ok ? "HEALTHY" : "UNAVAILABLE"}
+            <strong className={dbCheck?.ok ? 'text-emerald-400' : 'text-red-400'}>
+              {dbCheck?.ok ? 'HEALTHY' : 'UNAVAILABLE'}
             </strong>
           </div>
           <div className="flex items-center justify-between text-[10px]">
             <span>Audit repository</span>
-            <strong className={auditCheck?.ok ? "text-emerald-400" : "text-red-400"}>
-              {auditCheck?.ok ? "HEALTHY" : "UNAVAILABLE"}
+            <strong className={auditCheck?.ok ? 'text-emerald-400' : 'text-red-400'}>
+              {auditCheck?.ok ? 'HEALTHY' : 'UNAVAILABLE'}
             </strong>
           </div>
         </div>
@@ -216,9 +216,9 @@ export function SystemMonitor() {
               className="flex items-center justify-between p-2 bg-black/15 border border-border/5 rounded-lg"
             >
               <span className="text-white font-semibold text-[10px]">{name}</span>
-              <span className={check?.ok ? "text-emerald-400" : "text-red-400"}>
-                {check?.ok ? "OK" : (check?.error ?? "FAIL")}
-                {typeof check?.latencyMs === "number" ? ` · ${check.latencyMs.toFixed(1)}ms` : ""}
+              <span className={check?.ok ? 'text-emerald-400' : 'text-red-400'}>
+                {check?.ok ? 'OK' : (check?.error ?? 'FAIL')}
+                {typeof check?.latencyMs === 'number' ? ` · ${check.latencyMs.toFixed(1)}ms` : ''}
               </span>
             </div>
           ))}
@@ -228,7 +228,7 @@ export function SystemMonitor() {
         </div>
       </div>
 
-      {ready === "failed" && (
+      {ready === 'failed' && (
         <p className="text-[9px] text-amber-300">
           El entorno no está listo para operaciones críticas. El monitor refleja el estado del
           backend y no intenta maquillarlo.

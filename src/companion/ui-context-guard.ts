@@ -9,8 +9,8 @@
  * `authoritative: false` por tipo, y `claimIsAuthoritative()` es estructural-
  * mente `false`.
  */
-import type { Principal } from "../identity/principal";
-import type { PdpDecision } from "../identity/pdp";
+import type { Principal } from '../identity/principal';
+import type { PdpDecision } from '../identity/pdp';
 
 export interface UiContextClaim {
   readonly tenantId: string;
@@ -19,10 +19,10 @@ export interface UiContextClaim {
 
 export interface VerifiedIdentity {
   readonly principal: Principal;
-  readonly pdp: Pick<PdpDecision, "effect" | "admitted">;
+  readonly pdp: Pick<PdpDecision, 'effect' | 'admitted'>;
 }
 
-export type UiGuardVerdict = "ALLOW_MATCH" | "DENY_MISMATCH" | "DENY_MISSING" | "DENY_EMPTY_CLAIM";
+export type UiGuardVerdict = 'ALLOW_MATCH' | 'DENY_MISMATCH' | 'DENY_MISSING' | 'DENY_EMPTY_CLAIM';
 
 export interface UiContextGuardResult {
   readonly verdict: UiGuardVerdict;
@@ -36,26 +36,30 @@ function deny(verdict: UiGuardVerdict, reason: string): UiContextGuardResult {
 
 export function verifyUiContext(
   verified: VerifiedIdentity | undefined,
-  claim: UiContextClaim | undefined,
+  claim: UiContextClaim | undefined
 ): UiContextGuardResult {
-  if (!verified) return deny("DENY_MISSING", "UI_CONTEXT_GUARD: sin identidad verificada en backend");
-  if (verified.pdp.admitted !== true || verified.pdp.effect === "DENY") {
-    return deny("DENY_MISSING", "UI_CONTEXT_GUARD: PDP no admite la identidad verificada");
+  if (!verified)
+    return deny('DENY_MISSING', 'UI_CONTEXT_GUARD: sin identidad verificada en backend');
+  if (verified.pdp.admitted !== true || verified.pdp.effect === 'DENY') {
+    return deny('DENY_MISSING', 'UI_CONTEXT_GUARD: PDP no admite la identidad verificada');
   }
   if (!claim || claim.tenantId.trim().length === 0 || claim.actorId.trim().length === 0) {
-    return deny("DENY_EMPTY_CLAIM", "UI_CONTEXT_GUARD: claim del UI vacío o incompleto");
+    return deny('DENY_EMPTY_CLAIM', 'UI_CONTEXT_GUARD: claim del UI vacío o incompleto');
   }
-  const matches = verified.principal.id === claim.actorId && (verified.principal.tenantId ?? "") === claim.tenantId;
+  const matches =
+    verified.principal.id === claim.actorId &&
+    (verified.principal.tenantId ?? '') === claim.tenantId;
   if (!matches) {
     return deny(
-      "DENY_MISMATCH",
-      `UI_CONTEXT_GUARD: claim del UI (tenant=${claim.tenantId}, actor=${claim.actorId}) no coincide con la identidad verificada`,
+      'DENY_MISMATCH',
+      `UI_CONTEXT_GUARD: claim del UI (tenant=${claim.tenantId}, actor=${claim.actorId}) no coincide con la identidad verificada`
     );
   }
   return Object.freeze({
-    verdict: "ALLOW_MATCH" as const,
+    verdict: 'ALLOW_MATCH' as const,
     authoritative: false as const,
-    reason: "UI_CONTEXT_GUARD: el claim coincide con la identidad verificada; el claim NUNCA confiere autoridad.",
+    reason:
+      'UI_CONTEXT_GUARD: el claim coincide con la identidad verificada; el claim NUNCA confiere autoridad.',
   });
 }
 

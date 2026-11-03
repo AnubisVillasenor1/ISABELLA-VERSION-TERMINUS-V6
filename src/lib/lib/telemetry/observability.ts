@@ -1,9 +1,9 @@
-import { IsabellaCoreId, ISABELLA_MODULE_CATALOG, IsabellaModuleId } from "../latam-aegis-x";
+import { IsabellaCoreId, ISABELLA_MODULE_CATALOG, IsabellaModuleId } from '../latam-aegis-x';
 
 export interface CoreTelemetryMetric {
   id: IsabellaCoreId;
   moduleId: IsabellaModuleId;
-  status: "active" | "warning" | "error" | "restarting";
+  status: 'active' | 'warning' | 'error' | 'restarting';
   memoryUsageBytes: number;
   stackDepth: number;
   temperatureCelsius: number;
@@ -70,7 +70,7 @@ class ObservabilityEngine {
         cores[coreId] = {
           id: coreId,
           moduleId: moduleId as IsabellaModuleId,
-          status: "warning",
+          status: 'warning',
           memoryUsageBytes: 0,
           stackDepth: 0,
           temperatureCelsius: 0,
@@ -96,7 +96,7 @@ class ObservabilityEngine {
       try {
         listener(snapshot);
       } catch (error) {
-        console.error("Error invoking telemetry listener:", error);
+        console.error('Error invoking telemetry listener:', error);
       }
     }
   }
@@ -113,8 +113,8 @@ class ObservabilityEngine {
 
   /** Records a real observed application event; it does not generate events. */
   public recordEvent(latencyMs: number, score: number) {
-    if (!Number.isFinite(latencyMs) || latencyMs < 0) throw new Error("invalid_latency");
-    if (!Number.isFinite(score)) throw new Error("invalid_anomaly_score");
+    if (!Number.isFinite(latencyMs) || latencyMs < 0) throw new Error('invalid_latency');
+    if (!Number.isFinite(score)) throw new Error('invalid_anomaly_score');
     const s = this.currentSnapshot;
     this.latencySamples.push(latencyMs);
     if (this.latencySamples.length > LATENCY_SAMPLES) this.latencySamples.shift();
@@ -135,7 +135,7 @@ class ObservabilityEngine {
   /** Explicit state updates are only accepted from real runtime instrumentation. */
   public updateCoreTelemetry(
     coreId: IsabellaCoreId,
-    telemetry: Partial<Omit<CoreTelemetryMetric, "id" | "moduleId">>,
+    telemetry: Partial<Omit<CoreTelemetryMetric, 'id' | 'moduleId'>>
   ) {
     const core = this.currentSnapshot.cores[coreId];
     if (!core) throw new Error(`unknown_core:${coreId}`);
@@ -143,26 +143,26 @@ class ObservabilityEngine {
       telemetry.memoryUsageBytes !== undefined &&
       (!Number.isFinite(telemetry.memoryUsageBytes) || telemetry.memoryUsageBytes < 0)
     )
-      throw new Error("invalid_memory");
+      throw new Error('invalid_memory');
     if (
       telemetry.loadPercentage !== undefined &&
       (!Number.isFinite(telemetry.loadPercentage) ||
         telemetry.loadPercentage < 0 ||
         telemetry.loadPercentage > 100)
     )
-      throw new Error("invalid_load");
+      throw new Error('invalid_load');
     Object.assign(core, telemetry);
     this.currentSnapshot.timestamp = new Date().toISOString();
     this.notifyListeners();
   }
 
   public forceRestartCore(coreId: IsabellaCoreId) {
-    this.updateCoreTelemetry(coreId, { status: "restarting" });
+    this.updateCoreTelemetry(coreId, { status: 'restarting' });
   }
 
   public flagCoreWarning(coreId: IsabellaCoreId, load: number, stack: number) {
     this.updateCoreTelemetry(coreId, {
-      status: "warning",
+      status: 'warning',
       loadPercentage: load,
       stackDepth: stack,
     });
@@ -171,7 +171,7 @@ class ObservabilityEngine {
   public flagCoreError(coreId: IsabellaCoreId, memory: number) {
     const core = this.currentSnapshot.cores[coreId];
     this.updateCoreTelemetry(coreId, {
-      status: "error",
+      status: 'error',
       memoryUsageBytes: memory,
       errorCount: core.errorCount + 1,
     });

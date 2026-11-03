@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect } from "react";
-import { TerminalMessage, CognitiveModuleId } from "../../types";
-import { useCrown } from "../../context/CrownContext";
+import React, { useState, useRef, useEffect } from 'react';
+import { TerminalMessage, CognitiveModuleId } from '../../types';
+import { useCrown } from '../../context/CrownContext';
 import {
   Brain,
   Shield,
@@ -21,24 +21,24 @@ import {
   MessageSquare,
   AlertCircle,
   X,
-} from "lucide-react";
-import { soundManager } from "../../utils/soundEffects";
-import { authFetch } from "../../lib/auth-client";
+} from 'lucide-react';
+import { soundManager } from '../../utils/soundEffects';
+import { authFetch } from '../../lib/auth-client';
 
 const POSITIVE_CATEGORIES = [
-  "Precisión Epistémica (E0/E1)",
-  "Prosodia y Empatía Humana",
-  "Razonamiento Dialéctico CROWN",
-  "Resolución Rápida",
-  "Código y Lógica Exacta",
+  'Precisión Epistémica (E0/E1)',
+  'Prosodia y Empatía Humana',
+  'Razonamiento Dialéctico CROWN',
+  'Resolución Rápida',
+  'Código y Lógica Exacta',
 ];
 
 const NEGATIVE_CATEGORIES = [
-  "Alucinación o Inexactitud",
-  "Tono Rígido o Desalineado",
-  "Falta Fundamentación / Citas",
-  "Respuesta Parcial o Incompleta",
-  "Alerta de Seguridad / ARGUS",
+  'Alucinación o Inexactitud',
+  'Tono Rígido o Desalineado',
+  'Falta Fundamentación / Citas',
+  'Respuesta Parcial o Incompleta',
+  'Alerta de Seguridad / ARGUS',
 ];
 
 interface MessageStreamProps {
@@ -59,7 +59,7 @@ export const MessageStream: React.FC<MessageStreamProps> = ({ messages }) => {
     useCrown();
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, state.isProcessing]);
 
   const showToast = (id: string, text: string) => {
@@ -71,34 +71,34 @@ export const MessageStream: React.FC<MessageStreamProps> = ({ messages }) => {
 
   const handleThumbsUp = (msgId: string) => {
     const current = messages.find((m) => m.id === msgId);
-    if (current?.feedback === "up") {
+    if (current?.feedback === 'up') {
       removeMessageFeedback(msgId);
-      showToast(msgId, "Evaluación retirada");
+      showToast(msgId, 'Evaluación retirada');
       return;
     }
-    const cat = feedbackState[msgId]?.category || "Precisión Epistémica (E0/E1)";
-    submitMessageFeedback(msgId, "up", {
+    const cat = feedbackState[msgId]?.category || 'Precisión Epistémica (E0/E1)';
+    submitMessageFeedback(msgId, 'up', {
       category: cat,
       notes: feedbackState[msgId]?.notes,
     });
-    showToast(msgId, "¡Evaluación positiva registrada!");
+    showToast(msgId, '¡Evaluación positiva registrada!');
   };
 
   const handleThumbsDown = (msgId: string) => {
     const current = messages.find((m) => m.id === msgId);
-    if (current?.feedback === "down") {
+    if (current?.feedback === 'down') {
       removeMessageFeedback(msgId);
-      showToast(msgId, "Evaluación retirada");
+      showToast(msgId, 'Evaluación retirada');
       setFeedbackDrawerMsgId(null);
       return;
     }
-    const cat = feedbackState[msgId]?.category || "Alucinación o Inexactitud";
-    submitMessageFeedback(msgId, "down", {
+    const cat = feedbackState[msgId]?.category || 'Alucinación o Inexactitud';
+    submitMessageFeedback(msgId, 'down', {
       category: cat,
       notes: feedbackState[msgId]?.notes,
     });
     setFeedbackDrawerMsgId(msgId);
-    showToast(msgId, "Observación de modelo registrada. Puedes detallar abajo.");
+    showToast(msgId, 'Observación de modelo registrada. Puedes detallar abajo.');
   };
 
   const toggleFeedbackDrawer = (msgId: string) => {
@@ -106,7 +106,7 @@ export const MessageStream: React.FC<MessageStreamProps> = ({ messages }) => {
     setFeedbackDrawerMsgId((prev) => (prev === msgId ? null : msgId));
   };
 
-  const handleSelectCategory = (msgId: string, category: string, rating: "up" | "down") => {
+  const handleSelectCategory = (msgId: string, category: string, rating: 'up' | 'down') => {
     setFeedbackState((prev) => ({
       ...prev,
       [msgId]: { ...prev[msgId], category },
@@ -125,14 +125,14 @@ export const MessageStream: React.FC<MessageStreamProps> = ({ messages }) => {
     }));
   };
 
-  const handleSaveFeedbackDetails = (msgId: string, rating: "up" | "down") => {
+  const handleSaveFeedbackDetails = (msgId: string, rating: 'up' | 'down') => {
     const current = feedbackState[msgId];
     submitMessageFeedback(msgId, rating, {
       category: current?.category,
       notes: current?.notes,
     });
     setFeedbackDrawerMsgId(null);
-    showToast(msgId, "Detalles de calidad guardados para análisis del modelo.");
+    showToast(msgId, 'Detalles de calidad guardados para análisis del modelo.');
   };
 
   const handleCopy = (id: string, text: string) => {
@@ -149,35 +149,35 @@ export const MessageStream: React.FC<MessageStreamProps> = ({ messages }) => {
 
   const getModuleBadge = (moduleId?: CognitiveModuleId) => {
     switch (moduleId) {
-      case "ISA":
+      case 'ISA':
         return {
-          label: "ISA Resonancia",
-          color: "bg-rose-500/10 text-rose-300 border-rose-500/30",
+          label: 'ISA Resonancia',
+          color: 'bg-rose-500/10 text-rose-300 border-rose-500/30',
           icon: Heart,
         };
-      case "SOPHIA":
+      case 'SOPHIA':
         return {
-          label: "SOPHIA Mente",
-          color: "bg-sky-500/10 text-sky-300 border-sky-500/30",
+          label: 'SOPHIA Mente',
+          color: 'bg-sky-500/10 text-sky-300 border-sky-500/30',
           icon: Brain,
         };
-      case "ORION":
+      case 'ORION':
         return {
-          label: "ORION Síntesis",
-          color: "bg-amber-500/10 text-amber-300 border-amber-500/30",
+          label: 'ORION Síntesis',
+          color: 'bg-amber-500/10 text-amber-300 border-amber-500/30',
           icon: Zap,
         };
-      case "ARGUS":
+      case 'ARGUS':
         return {
-          label: "ARGUS Centinela",
-          color: "bg-emerald-500/10 text-emerald-300 border-emerald-500/30",
+          label: 'ARGUS Centinela',
+          color: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30',
           icon: Shield,
         };
-      case "CROWN_GATEWAY":
+      case 'CROWN_GATEWAY':
       default:
         return {
-          label: "CROWN Gateway",
-          color: "bg-blue-500/10 text-blue-300 border-blue-500/30",
+          label: 'CROWN Gateway',
+          color: 'bg-blue-500/10 text-blue-300 border-blue-500/30',
           icon: Layers,
         };
     }
@@ -186,9 +186,9 @@ export const MessageStream: React.FC<MessageStreamProps> = ({ messages }) => {
   return (
     <div className="flex-1 overflow-y-auto space-y-4 pr-1 scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent">
       {messages.map((msg) => {
-        const isAssistant = msg.role === "isabella" || msg.role === "assistant";
+        const isAssistant = msg.role === 'isabella' || msg.role === 'assistant';
 
-        if (msg.role === "system") {
+        if (msg.role === 'system') {
           return (
             <div
               key={msg.id}
@@ -205,7 +205,7 @@ export const MessageStream: React.FC<MessageStreamProps> = ({ messages }) => {
           );
         }
 
-        if (msg.role === "argus_alert") {
+        if (msg.role === 'argus_alert') {
           return (
             <div
               key={msg.id}
@@ -227,7 +227,7 @@ export const MessageStream: React.FC<MessageStreamProps> = ({ messages }) => {
           );
         }
 
-        if (msg.role === "user") {
+        if (msg.role === 'user') {
           return (
             <div key={msg.id} className="flex justify-end">
               <div className="max-w-[85%] md:max-w-[75%] rounded-3xl rounded-tr-sm bg-[#0B1D33] border border-[#1E3B5E] p-4 text-[#F8FAFC] shadow-xl backdrop-blur-md">
@@ -320,7 +320,7 @@ export const MessageStream: React.FC<MessageStreamProps> = ({ messages }) => {
                     />
                     <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-[#030712]/80 border border-sky-500/40 text-sky-300 text-[10px] font-mono backdrop-blur-md flex items-center gap-1">
                       <Sparkles className="w-3 h-3 text-amber-400" />
-                      <span>{msg.generatedImage.style || "ORION Canvas"}</span>
+                      <span>{msg.generatedImage.style || 'ORION Canvas'}</span>
                     </div>
                   </div>
                   <div className="p-3.5 space-y-2">
@@ -330,7 +330,7 @@ export const MessageStream: React.FC<MessageStreamProps> = ({ messages }) => {
                     <div className="flex items-center justify-between pt-1">
                       <button
                         type="button"
-                        onClick={() => setActiveView("image_studio")}
+                        onClick={() => setActiveView('image_studio')}
                         className="flex items-center gap-1 text-xs font-mono text-sky-400 hover:text-sky-300 transition-colors cursor-pointer"
                       >
                         <Palette className="w-3.5 h-3.5" />
@@ -345,25 +345,25 @@ export const MessageStream: React.FC<MessageStreamProps> = ({ messages }) => {
               )}
 
               {/* Idlen Sponsored Content Card */}
-              {msg.sponsoredContent && msg.sponsoredContent.type === "idlen_chat_ad" && (
+              {msg.sponsoredContent && msg.sponsoredContent.type === 'idlen_chat_ad' && (
                 <div className="mt-4 pt-3 border-t border-slate-800/60">
                   <a
-                    href={msg.sponsoredContent.ctaUrl ?? "#"}
+                    href={msg.sponsoredContent.ctaUrl ?? '#'}
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={() => {
                       const sc = msg.sponsoredContent!;
                       // Client-side: pixel click tracking
-                      if (typeof window !== "undefined" && typeof window.idlen === "function") {
+                      if (typeof window !== 'undefined' && typeof window.idlen === 'function') {
                         try {
-                          window.idlen("impression", sc.adId ?? "");
+                          window.idlen('impression', sc.adId ?? '');
                         } catch {
                           /* pixel not loaded */
                         }
                       }
                       // Server-side: reliable click tracking via Idlen SDK
-                      authFetch("/api/v1/idlen/click", {
-                        method: "POST",
+                      authFetch('/api/v1/idlen/click', {
+                        method: 'POST',
                         body: JSON.stringify({
                           adId: sc.adId,
                           publisherId: sc.publisherId,
@@ -400,23 +400,23 @@ export const MessageStream: React.FC<MessageStreamProps> = ({ messages }) => {
                 (() => {
                   const telemetry = {
                     argusSafety: msg.cognitiveTelemetry.argusSafety ?? {
-                      status: "EVIDENCE_GATED",
-                      guardrailCheck: "No disponible",
+                      status: 'EVIDENCE_GATED',
+                      guardrailCheck: 'No disponible',
                       integrityScore: null,
                     },
                     isaResonance: msg.cognitiveTelemetry.isaResonance ?? {
-                      emotionalTone: "neutral",
-                      coreFocus: "No disponible",
+                      emotionalTone: 'neutral',
+                      coreFocus: 'No disponible',
                       empathyValence: null,
                     },
                     sophiaReasoning: msg.cognitiveTelemetry.sophiaReasoning ?? {
                       logicDepth: 0,
-                      heuristicInsight: "No disponible",
+                      heuristicInsight: 'No disponible',
                       epistemicCertainty: null,
                     },
                     orionExecution: msg.cognitiveTelemetry.orionExecution ?? {
-                      actionType: "none",
-                      resourceUtilization: "No disponible",
+                      actionType: 'none',
+                      resourceUtilization: 'No disponible',
                       executionSteps: [],
                     },
                   };
@@ -434,7 +434,7 @@ export const MessageStream: React.FC<MessageStreamProps> = ({ messages }) => {
                           </span>
                         </div>
                         <div className="flex items-center gap-1 text-slate-400">
-                          <span>{isExpanded ? "Ocultar" : "Expandir flujo"}</span>
+                          <span>{isExpanded ? 'Ocultar' : 'Expandir flujo'}</span>
                           {isExpanded ? (
                             <ChevronUp className="w-3.5 h-3.5" />
                           ) : (
@@ -469,9 +469,9 @@ export const MessageStream: React.FC<MessageStreamProps> = ({ messages }) => {
                                 {telemetry.argusSafety.guardrailCheck}
                               </p>
                               <div className="text-[10px] text-slate-400">
-                                Integridad:{" "}
+                                Integridad:{' '}
                                 {telemetry.argusSafety.integrityScore == null
-                                  ? "EVIDENCE_GATED (sin evidencia)"
+                                  ? 'EVIDENCE_GATED (sin evidencia)'
                                   : `${(telemetry.argusSafety.integrityScore * 100).toFixed(1)}%`}
                               </div>
                             </div>
@@ -490,9 +490,9 @@ export const MessageStream: React.FC<MessageStreamProps> = ({ messages }) => {
                                 {telemetry.isaResonance.coreFocus}
                               </p>
                               <div className="text-[10px] text-slate-400">
-                                Valencia empática:{" "}
+                                Valencia empática:{' '}
                                 {telemetry.isaResonance.empathyValence == null
-                                  ? "EVIDENCE_GATED (sin evidencia)"
+                                  ? 'EVIDENCE_GATED (sin evidencia)'
                                   : `${(telemetry.isaResonance.empathyValence * 100).toFixed(0)}%`}
                               </div>
                             </div>
@@ -511,9 +511,9 @@ export const MessageStream: React.FC<MessageStreamProps> = ({ messages }) => {
                                 {telemetry.sophiaReasoning.heuristicInsight}
                               </p>
                               <div className="text-[10px] text-slate-400">
-                                Certeza epistémica:{" "}
+                                Certeza epistémica:{' '}
                                 {telemetry.sophiaReasoning.epistemicCertainty == null
-                                  ? "EVIDENCE_GATED (sin evidencia)"
+                                  ? 'EVIDENCE_GATED (sin evidencia)'
                                   : `${(telemetry.sophiaReasoning.epistemicCertainty * 100).toFixed(1)}%`}
                               </div>
                             </div>
@@ -568,7 +568,7 @@ export const MessageStream: React.FC<MessageStreamProps> = ({ messages }) => {
                                 </div>
                                 <div className="flex flex-col gap-0.5">
                                   <span className="text-sky-400">
-                                    SOPHIA:{" "}
+                                    SOPHIA:{' '}
                                     {Math.round(msg.routingDecision.moduleWeights.sophia * 100)}%
                                   </span>
                                   <div className="w-full bg-[#030712] h-1.5 rounded-full overflow-hidden">
@@ -582,7 +582,7 @@ export const MessageStream: React.FC<MessageStreamProps> = ({ messages }) => {
                                 </div>
                                 <div className="flex flex-col gap-0.5">
                                   <span className="text-amber-400">
-                                    ORION:{" "}
+                                    ORION:{' '}
                                     {Math.round(msg.routingDecision.moduleWeights.orion * 100)}%
                                   </span>
                                   <div className="w-full bg-[#030712] h-1.5 rounded-full overflow-hidden">
@@ -596,7 +596,7 @@ export const MessageStream: React.FC<MessageStreamProps> = ({ messages }) => {
                                 </div>
                                 <div className="flex flex-col gap-0.5">
                                   <span className="text-emerald-400">
-                                    ARGUS:{" "}
+                                    ARGUS:{' '}
                                     {Math.round(msg.routingDecision.moduleWeights.argus * 100)}%
                                   </span>
                                   <div className="w-full bg-[#030712] h-1.5 rounded-full overflow-hidden">
@@ -610,7 +610,7 @@ export const MessageStream: React.FC<MessageStreamProps> = ({ messages }) => {
                                 </div>
                                 <div className="flex flex-col gap-0.5">
                                   <span className="text-blue-400">
-                                    CROWN:{" "}
+                                    CROWN:{' '}
                                     {Math.round(msg.routingDecision.moduleWeights.crown * 100)}%
                                   </span>
                                   <div className="w-full bg-[#030712] h-1.5 rounded-full overflow-hidden">
@@ -638,7 +638,7 @@ export const MessageStream: React.FC<MessageStreamProps> = ({ messages }) => {
                     {/* Voice narration */}
                     <button
                       type="button"
-                      onClick={() => speakText(msg.content ?? "")}
+                      onClick={() => speakText(msg.content ?? '')}
                       className="flex items-center gap-1 hover:text-amber-300 transition-colors cursor-pointer"
                       title="Escuchar respuesta de Isabella con su voz"
                     >
@@ -649,7 +649,7 @@ export const MessageStream: React.FC<MessageStreamProps> = ({ messages }) => {
                     {/* Copy button */}
                     <button
                       type="button"
-                      onClick={() => handleCopy(msg.id, msg.content ?? "")}
+                      onClick={() => handleCopy(msg.id, msg.content ?? '')}
                       className="flex items-center gap-1 hover:text-sky-300 transition-colors cursor-pointer"
                       title="Copiar texto"
                     >
@@ -676,18 +676,18 @@ export const MessageStream: React.FC<MessageStreamProps> = ({ messages }) => {
                             type="button"
                             onClick={() => handleThumbsUp(msg.id)}
                             className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono font-medium transition-all cursor-pointer ${
-                              msg.feedback === "up"
-                                ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm shadow-emerald-950/60 font-bold"
-                                : "text-slate-400 hover:text-emerald-300 hover:bg-slate-800/60"
+                              msg.feedback === 'up'
+                                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm shadow-emerald-950/60 font-bold'
+                                : 'text-slate-400 hover:text-emerald-300 hover:bg-slate-800/60'
                             }`}
                             title="Respuesta precisa, coherente y de alta calidad cualitativa"
                             aria-label="Voto positivo para esta respuesta"
                           >
                             <ThumbsUp
                               className={`w-3.5 h-3.5 ${
-                                msg.feedback === "up"
-                                  ? "text-emerald-400 fill-emerald-400/30 scale-110"
-                                  : "text-slate-400"
+                                msg.feedback === 'up'
+                                  ? 'text-emerald-400 fill-emerald-400/30 scale-110'
+                                  : 'text-slate-400'
                               } transition-transform`}
                             />
                             <span>Útil</span>
@@ -698,18 +698,18 @@ export const MessageStream: React.FC<MessageStreamProps> = ({ messages }) => {
                             type="button"
                             onClick={() => handleThumbsDown(msg.id)}
                             className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono font-medium transition-all cursor-pointer ${
-                              msg.feedback === "down"
-                                ? "bg-rose-500/20 text-rose-300 border border-rose-500/40 shadow-sm shadow-rose-950/60 font-bold"
-                                : "text-slate-400 hover:text-rose-300 hover:bg-slate-800/60"
+                              msg.feedback === 'down'
+                                ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 shadow-sm shadow-rose-950/60 font-bold'
+                                : 'text-slate-400 hover:text-rose-300 hover:bg-slate-800/60'
                             }`}
                             title="Señalar alucinación, inconsistencia o respuesta mejorable"
                             aria-label="Voto negativo para esta respuesta"
                           >
                             <ThumbsDown
                               className={`w-3.5 h-3.5 ${
-                                msg.feedback === "down"
-                                  ? "text-rose-400 fill-rose-400/30 scale-110"
-                                  : "text-slate-400"
+                                msg.feedback === 'down'
+                                  ? 'text-rose-400 fill-rose-400/30 scale-110'
+                                  : 'text-slate-400'
                               } transition-transform`}
                             />
                             <span>Mejorar</span>
@@ -721,14 +721,14 @@ export const MessageStream: React.FC<MessageStreamProps> = ({ messages }) => {
                             onClick={() => toggleFeedbackDrawer(msg.id)}
                             className={`px-2 py-1 rounded-lg text-[10px] font-mono transition-all cursor-pointer flex items-center gap-1 ${
                               feedbackDrawerMsgId === msg.id
-                                ? "bg-sky-500/20 text-sky-300 border border-sky-500/40 font-bold"
-                                : "text-slate-500 hover:text-slate-300 hover:bg-slate-800/40"
+                                ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40 font-bold'
+                                : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/40'
                             }`}
                             title="Desplegar categorías cualitativas y notas de rendimiento"
                           >
                             <MessageSquare className="w-3 h-3 text-sky-400" />
                             <span className="hidden md:inline">
-                              {feedbackDrawerMsgId === msg.id ? "Ocultar" : "Detalles"}
+                              {feedbackDrawerMsgId === msg.id ? 'Ocultar' : 'Detalles'}
                             </span>
                           </button>
                         </div>
@@ -737,19 +737,19 @@ export const MessageStream: React.FC<MessageStreamProps> = ({ messages }) => {
                         {msg.feedback && (
                           <div
                             className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono border ${
-                              msg.feedback === "up"
-                                ? "bg-emerald-950/40 text-emerald-300 border-emerald-700/50"
-                                : "bg-rose-950/40 text-rose-300 border-rose-700/50"
+                              msg.feedback === 'up'
+                                ? 'bg-emerald-950/40 text-emerald-300 border-emerald-700/50'
+                                : 'bg-rose-950/40 text-rose-300 border-rose-700/50'
                             }`}
                           >
-                            {msg.feedback === "up" ? (
+                            {msg.feedback === 'up' ? (
                               <Check className="w-3 h-3 text-emerald-400" />
                             ) : (
                               <AlertCircle className="w-3 h-3 text-rose-400" />
                             )}
                             <span className="truncate max-w-[170px]">
                               {msg.feedbackCategory ||
-                                (msg.feedback === "up" ? "Alta Calidad" : "Revisión")}
+                                (msg.feedback === 'up' ? 'Alta Calidad' : 'Revisión')}
                             </span>
                           </div>
                         )}
@@ -805,7 +805,7 @@ export const MessageStream: React.FC<MessageStreamProps> = ({ messages }) => {
 
                     {/* Qualitative Category Pills */}
                     <div className="flex flex-wrap gap-1.5">
-                      {(msg.feedback === "down" ? NEGATIVE_CATEGORIES : POSITIVE_CATEGORIES).map(
+                      {(msg.feedback === 'down' ? NEGATIVE_CATEGORIES : POSITIVE_CATEGORIES).map(
                         (cat) => {
                           const isCatSelected =
                             (feedbackState[msg.id]?.category || msg.feedbackCategory) === cat;
@@ -814,20 +814,20 @@ export const MessageStream: React.FC<MessageStreamProps> = ({ messages }) => {
                               key={cat}
                               type="button"
                               onClick={() =>
-                                handleSelectCategory(msg.id, cat, msg.feedback || "up")
+                                handleSelectCategory(msg.id, cat, msg.feedback || 'up')
                               }
                               className={`px-2.5 py-1 rounded-lg text-[10px] font-mono transition-all border cursor-pointer ${
                                 isCatSelected
-                                  ? msg.feedback === "down"
-                                    ? "bg-rose-500/20 text-rose-200 border-rose-500/60 font-bold shadow-sm shadow-rose-950/40"
-                                    : "bg-emerald-500/20 text-emerald-200 border-emerald-500/60 font-bold shadow-sm shadow-emerald-950/40"
-                                  : "bg-[#081220] text-slate-300 border-slate-800 hover:border-slate-700 hover:bg-[#0c1a30]"
+                                  ? msg.feedback === 'down'
+                                    ? 'bg-rose-500/20 text-rose-200 border-rose-500/60 font-bold shadow-sm shadow-rose-950/40'
+                                    : 'bg-emerald-500/20 text-emerald-200 border-emerald-500/60 font-bold shadow-sm shadow-emerald-950/40'
+                                  : 'bg-[#081220] text-slate-300 border-slate-800 hover:border-slate-700 hover:bg-[#0c1a30]'
                               }`}
                             >
                               {cat}
                             </button>
                           );
-                        },
+                        }
                       )}
                     </div>
 
@@ -838,12 +838,12 @@ export const MessageStream: React.FC<MessageStreamProps> = ({ messages }) => {
                         value={
                           feedbackState[msg.id]?.notes !== undefined
                             ? feedbackState[msg.id]?.notes
-                            : msg.feedbackNotes || ""
+                            : msg.feedbackNotes || ''
                         }
                         onChange={(e) => handleNoteChange(msg.id, e.target.value)}
                         onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            handleSaveFeedbackDetails(msg.id, msg.feedback || "up");
+                          if (e.key === 'Enter') {
+                            handleSaveFeedbackDetails(msg.id, msg.feedback || 'up');
                           }
                         }}
                         placeholder="Nota cualitativa (ej. la respuesta fue poética pero omitió citar la fuente)..."
@@ -851,7 +851,7 @@ export const MessageStream: React.FC<MessageStreamProps> = ({ messages }) => {
                       />
                       <button
                         type="button"
-                        onClick={() => handleSaveFeedbackDetails(msg.id, msg.feedback || "up")}
+                        onClick={() => handleSaveFeedbackDetails(msg.id, msg.feedback || 'up')}
                         className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-mono text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 shadow-md shadow-blue-950/40"
                       >
                         <Check className="w-3.5 h-3.5" />

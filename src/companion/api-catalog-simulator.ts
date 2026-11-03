@@ -9,13 +9,13 @@
  * puede crearse, y `execute()` sólo devuelve respuestas simuladas en memoria.
  * No realiza side effects ni delega en PDP/identidad.
  */
-export type HttpMethod = "GET" | "POST";
+export type HttpMethod = 'GET' | 'POST';
 
 export interface SimulatedEndpoint {
   readonly route: string;
   readonly method: HttpMethod;
   readonly sensitive: boolean;
-  readonly sideEffects: "NONE";
+  readonly sideEffects: 'NONE';
 }
 
 export interface ApiCatalogSimulator {
@@ -37,15 +37,19 @@ export interface ApiSimulatorConfig {
 export function createApiCatalogSimulator(config: ApiSimulatorConfig): ApiCatalogSimulator {
   const byRoute = new Map<string, SimulatedEndpoint>();
   for (const endpoint of config.catalog) {
-    if (endpoint.route.trim().length === 0) throw new Error("CATALOG_SIMULATOR: ruta vacía");
-    if (!endpoint.route.startsWith("/")) throw new Error(`CATALOG_SIMULATOR: ruta sin '/' inicial: ${endpoint.route}`);
-    if (endpoint.method !== "GET" && endpoint.method !== "POST") {
+    if (endpoint.route.trim().length === 0) throw new Error('CATALOG_SIMULATOR: ruta vacía');
+    if (!endpoint.route.startsWith('/'))
+      throw new Error(`CATALOG_SIMULATOR: ruta sin '/' inicial: ${endpoint.route}`);
+    if (endpoint.method !== 'GET' && endpoint.method !== 'POST') {
       throw new Error(`CATALOG_SIMULATOR: método no soportado ${endpoint.method}`);
     }
-    if (endpoint.sideEffects !== "NONE") {
-      throw new Error(`CATALOG_SIMULATOR: endpoint con side effects no es simulable: ${endpoint.route}`);
+    if (endpoint.sideEffects !== 'NONE') {
+      throw new Error(
+        `CATALOG_SIMULATOR: endpoint con side effects no es simulable: ${endpoint.route}`
+      );
     }
-    if (byRoute.has(endpoint.route)) throw new Error(`CATALOG_SIMULATOR: ruta duplicada ${endpoint.route}`);
+    if (byRoute.has(endpoint.route))
+      throw new Error(`CATALOG_SIMULATOR: ruta duplicada ${endpoint.route}`);
     byRoute.set(endpoint.route, Object.freeze({ ...endpoint }));
   }
 
@@ -55,7 +59,11 @@ export function createApiCatalogSimulator(config: ApiSimulatorConfig): ApiCatalo
     if (endpoint.sensitive) {
       throw new Error(`CATALOG_SIMULATOR: ruta sensible no simulable sin ejecución: ${route}`);
     }
-    return Object.freeze({ ok: true as const, simulated: true as const, payload: `simulated:${route}` });
+    return Object.freeze({
+      ok: true as const,
+      simulated: true as const,
+      payload: `simulated:${route}`,
+    });
   };
 
   return Object.freeze({

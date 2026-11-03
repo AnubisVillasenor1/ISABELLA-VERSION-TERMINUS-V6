@@ -12,7 +12,9 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-MIGRATIONS_DIR="${PROJECT_DIR}/migrations"
+# The versioned SQL lives in infra/db/migrations (BookPI ledger, commerce RLS/idempotency). The old
+# ${PROJECT_DIR}/migrations directory never existed, so no migration beyond schema.sql was ever applied.
+MIGRATIONS_DIR="${MIGRATIONS_DIR:-${PROJECT_DIR}/infra/db/migrations}"
 SCHEMA_FILE="${PROJECT_DIR}/scripts/schema.sql"
 ENV_FILE="${PROJECT_DIR}/.env"
 
@@ -26,12 +28,31 @@ if [[ -f "$ENV_FILE" ]]; then
     source "$ENV_FILE"
 fi
 
-# Database connection parameters
-DB_HOST="${POSTGRES_HOST:-postgres}"
-DB_PORT="${POSTGRES_PORT:-5432}"
-DB_USER="${POSTGRES_USER:-isabella_admin}"
-DB_NAME="${POSTGRES_DB:-isabella_db}"
-DB_PASSWORD="${POSTGRES_PASSWORD:-${DB_PASSWORD}}"
+# Database connection parameters. DATABASE_URL is the canonical contract (compose,
+# k8s, PaaS); the POSTGRES_* components remain as a fallback for operators that
+# prefer discrete variables.
+if [[ -n "${DATABASE_URL:-}" ]]; then
+    while IFS='=' read -r key value; do
+        [[ -n "$key" ]] && printf -v "$key" '%s' "$value"
+    done < <(DATABASE_URL="$DATABASE_URL" node -e '
+        const u = new URL(process.env.DATABASE_URL);
+        const dec = decodeURIComponent;
+        const out = {
+            DB_HOST: u.hostname,
+            DB_PORT: u.port || "5432",
+            DB_USER: dec(u.username || "postgres"),
+            DB_NAME: dec((u.pathname || "/postgres").slice(1)),
+            DB_PASSWORD: dec(u.password || ""),
+        };
+        for (const [k, v] of Object.entries(out)) console.log(k + "=" + v);
+    ')
+fi
+
+DB_HOST="${DB_HOST:-${POSTGRES_HOST:-postgres}}"
+DB_PORT="${DB_PORT:-${POSTGRES_PORT:-5432}}"
+DB_USER="${DB_USER:-${POSTGRES_USER:-isabella_admin}}"
+DB_NAME="${DB_NAME:-${POSTGRES_DB:-isabella_db}}"
+DB_PASSWORD="${DB_PASSWORD:-${POSTGRES_PASSWORD:-}}"
 
 export PGPASSWORD="$DB_PASSWORD"
 
@@ -133,7 +154,11 @@ cmd_migrate() {
         run_migration "000" "initial_schema" "$SCHEMA_FILE" || return 1
     fi
 
-    # Additional migrations from migrations directory
+    # Additional migrations from migrations directory (fail closed: a missing directory is a deploy error)
+    if [[ ! -d "$MIGRATIONS_DIR" ]]; then
+        log_error "Migrations directory not found: $MIGRATIONS_DIR"
+        return 1
+    fi
     if [[ -d "$MIGRATIONS_DIR" ]]; then
         for file in "$MIGRATIONS_DIR"/*.sql; do
             [[ -f "$file" ]] || continue

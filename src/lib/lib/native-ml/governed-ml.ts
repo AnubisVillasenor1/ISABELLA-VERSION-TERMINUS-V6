@@ -4,20 +4,20 @@
  * Principio: ningún agente reforzado puede modificar políticas críticas sin POLICY + aprobación humana.
  */
 export type MLType =
-  | "supervised"
-  | "unsupervised"
-  | "federated"
-  | "reinforced"
-  | "generative"
-  | "graphrag"
-  | "xai"
-  | "quantum-research";
+  | 'supervised'
+  | 'unsupervised'
+  | 'federated'
+  | 'reinforced'
+  | 'generative'
+  | 'graphrag'
+  | 'xai'
+  | 'quantum-research';
 export type MLJob = {
   id: string;
   type: MLType;
   datasetVersion?: string;
   tenantId: string;
-  status: "DESIGNED" | "IMPLEMENTED" | "TESTED" | "VERIFIED" | "DEPLOYED" | "CERTIFIED";
+  status: 'DESIGNED' | 'IMPLEMENTED' | 'TESTED' | 'VERIFIED' | 'DEPLOYED' | 'CERTIFIED';
   evidenceRequired: string[];
   risks: string[];
   controls: string[];
@@ -25,74 +25,74 @@ export type MLJob = {
 
 const CONTROLS: Record<MLType, { use: string; control: string }> = {
   supervised: {
-    use: "Riesgo, fraude, clasificación",
-    control: "Dataset versionado, fairness y drift monitoring",
+    use: 'Riesgo, fraude, clasificación',
+    control: 'Dataset versionado, fairness y drift monitoring',
   },
-  unsupervised: { use: "Anomalías, clustering", control: "Revisión humana y falsos positivos" },
+  unsupervised: { use: 'Anomalías, clustering', control: 'Revisión humana y falsos positivos' },
   federated: {
-    use: "Entrenamiento entre territorios",
-    control: "Secure aggregation, consentimiento y salida",
+    use: 'Entrenamiento entre territorios',
+    control: 'Secure aggregation, consentimiento y salida',
   },
-  reinforced: { use: "Simulación de políticas", control: "Sandbox, límites y aprobación humana" },
-  generative: { use: "Borradores y escenarios", control: "Provenance, abstención y filtro" },
-  graphrag: { use: "Relaciones y fuentes", control: "Citas, versiones y conflictos" },
-  xai: { use: "Explicación", control: "Atribución, contraste y apelación" },
-  "quantum-research": {
-    use: "Kernels y optimización experimental",
-    control: "Baseline clásico y no claims automáticos",
+  reinforced: { use: 'Simulación de políticas', control: 'Sandbox, límites y aprobación humana' },
+  generative: { use: 'Borradores y escenarios', control: 'Provenance, abstención y filtro' },
+  graphrag: { use: 'Relaciones y fuentes', control: 'Citas, versiones y conflictos' },
+  xai: { use: 'Explicación', control: 'Atribución, contraste y apelación' },
+  'quantum-research': {
+    use: 'Kernels y optimización experimental',
+    control: 'Baseline clásico y no claims automáticos',
   },
 };
 
-export function createMLJob(type: MLType, tenantId: string, datasetVersion = "v1"): MLJob {
+export function createMLJob(type: MLType, tenantId: string, datasetVersion = 'v1'): MLJob {
   const base = CONTROLS[type];
   return {
     id: `ml_${type}_${Date.now().toString(36)}`,
     type,
     tenantId,
     datasetVersion,
-    status: "DESIGNED",
+    status: 'DESIGNED',
     evidenceRequired: [
-      "dataset hash",
-      "train log",
-      "eval metrics",
-      "fairness report",
-      "drift check",
+      'dataset hash',
+      'train log',
+      'eval metrics',
+      'fairness report',
+      'drift check',
     ],
     risks:
-      type === "reinforced"
-        ? ["No modificar permisos/políticas automáticamente — requiere POLICY + humano"]
+      type === 'reinforced'
+        ? ['No modificar permisos/políticas automáticamente — requiere POLICY + humano']
         : [],
-    controls: [base.control, "XAI con atribución", "Baseline clásico antes de claim cuántico"],
+    controls: [base.control, 'XAI con atribución', 'Baseline clásico antes de claim cuántico'],
   };
 }
 
 export function validateRLPolicyChange(
   job: MLJob,
-  requesterRole: string,
+  requesterRole: string
 ): { allowed: boolean; reason: string } {
-  if (job.type !== "reinforced") return { allowed: true, reason: "No es RL, flujo normal" };
-  if (["SovereignOwner", "Operator"].includes(requesterRole))
+  if (job.type !== 'reinforced') return { allowed: true, reason: 'No es RL, flujo normal' };
+  if (['SovereignOwner', 'Operator'].includes(requesterRole))
     return {
       allowed: false,
       reason:
-        "RL solo puede PROPONER política en sandbox; POLICY y humano deben aprobar (v3.0 Cap. XV)",
+        'RL solo puede PROPONER política en sandbox; POLICY y humano deben aprobar (v3.0 Cap. XV)',
     };
-  return { allowed: false, reason: "RL blocked: requiere aprobación humana explícita" };
+  return { allowed: false, reason: 'RL blocked: requiere aprobación humana explícita' };
 }
 
 export function quantumBaselineCheck(metric: {
   classical: number;
   quantum: number;
   pValue?: number;
-}): { claim: "verified" | "inconclusive" | "rejected"; reason: string } {
+}): { claim: 'verified' | 'inconclusive' | 'rejected'; reason: string } {
   if (metric.quantum <= metric.classical)
     return {
-      claim: "rejected",
+      claim: 'rejected',
       reason: `Quantum ${metric.quantum} no supera baseline clásico ${metric.classical} — no claim automático`,
     };
   if (metric.pValue !== undefined && metric.pValue > 0.05)
-    return { claim: "inconclusive", reason: `p=${metric.pValue} >0.05 — no significativo` };
-  return { claim: "verified", reason: "Supera baseline clásico con significancia" };
+    return { claim: 'inconclusive', reason: `p=${metric.pValue} >0.05 — no significativo` };
+  return { claim: 'verified', reason: 'Supera baseline clásico con significancia' };
 }
 
 export function graphRAGWithProvenance(
@@ -102,21 +102,21 @@ export function graphRAGWithProvenance(
     content: string;
     provenanceHash: string;
     confidence: number;
-    status: "verified" | "hypothesis" | "conflict";
-  }>,
+    status: 'verified' | 'hypothesis' | 'conflict';
+  }>
 ) {
-  const verified = sources.filter((s) => s.status === "verified");
-  const conflicts = sources.filter((s) => s.status === "conflict");
+  const verified = sources.filter((s) => s.status === 'verified');
+  const conflicts = sources.filter((s) => s.status === 'conflict');
   return {
     query,
     sources,
     evidenceStatus: conflicts.length
-      ? "E3"
+      ? 'E3'
       : verified.length >= 2
-        ? "E0"
+        ? 'E0'
         : verified.length === 1
-          ? "E1"
-          : "E2",
+          ? 'E1'
+          : 'E2',
     provenanceRequired: true,
     toResponse: () => ({
       answer: `GraphRAG: ${verified.length} fuentes verificadas, ${conflicts.length} conflictos. Query: ${query}`,
@@ -140,7 +140,7 @@ export type DriftReport = {
 };
 export function detectDrift(baseline: number[], current: number[], threshold = 0.15): DriftReport {
   if (baseline.length === 0 || current.length === 0)
-    return { drift: 0, threshold, triggered: false, recommendation: "Sin datos suficientes" };
+    return { drift: 0, threshold, triggered: false, recommendation: 'Sin datos suficientes' };
   const bAvg = baseline.reduce((a, b) => a + b, 0) / baseline.length;
   const cAvg = current.reduce((a, b) => a + b, 0) / current.length;
   const drift = Math.abs(cAvg - bAvg) / (Math.abs(bAvg) || 1);
@@ -151,7 +151,7 @@ export function detectDrift(baseline: number[], current: number[], threshold = 0
     recommendation:
       drift > threshold
         ? `Drift ${drift.toFixed(3)} > ${threshold} — reentrenar con dataset versionado y auditar fairness`
-        : "Drift dentro de umbral",
+        : 'Drift dentro de umbral',
   };
 }
 

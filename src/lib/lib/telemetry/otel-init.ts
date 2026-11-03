@@ -6,9 +6,9 @@
  * Ecosistema: TAMV ONLINE NETWORK / Nodo Cero (Real del Monte, Hidalgo, México)
  */
 
-import { randomUUID } from "node:crypto";
-import { config, passthroughEnv } from "../config";
-import { createOTelEvent, toOTelLog, type MetricKind } from "./otel-neutral";
+import { randomUUID } from 'node:crypto';
+import { config, passthroughEnv } from '../config';
+import { createOTelEvent, toOTelLog, type MetricKind } from './otel-neutral';
 
 export interface SpanContext {
   traceId: string;
@@ -19,12 +19,12 @@ export interface SpanContext {
 export interface SpanRecord {
   context: SpanContext;
   name: string;
-  kind: "INTERNAL" | "SERVER" | "CLIENT" | "PRODUCER" | "CONSUMER";
+  kind: 'INTERNAL' | 'SERVER' | 'CLIENT' | 'PRODUCER' | 'CONSUMER';
   startTimeUnixNano: string;
   endTimeUnixNano: string;
   durationMs: number;
   status: {
-    code: "UNSET" | "OK" | "ERROR";
+    code: 'UNSET' | 'OK' | 'ERROR';
     message?: string;
   };
   attributes: Record<string, string | number | boolean>;
@@ -42,7 +42,7 @@ export interface OTelMetricPoint {
 class OpenTelemetryService {
   private static instance: OpenTelemetryService | null = null;
   private endpoint: string | null = null;
-  private serviceName = "isabella-ai";
+  private serviceName = 'isabella-ai';
   private isEnabled = false;
   private isInitialized = false;
 
@@ -68,40 +68,40 @@ class OpenTelemetryService {
 
     try {
       const cfg = config();
-      this.serviceName = cfg.OTEL_SERVICE_NAME || "isabella-ai";
+      this.serviceName = cfg.OTEL_SERVICE_NAME || 'isabella-ai';
       const endpoint = cfg.OTEL_EXPORTER_OTLP_ENDPOINT;
 
       if (endpoint && endpoint.trim().length > 0) {
-        this.endpoint = endpoint.trim().replace(/\/+$/, "");
+        this.endpoint = endpoint.trim().replace(/\/+$/, '');
         this.isEnabled = true;
         console.log(
-          `[OpenTelemetry] Inicializado con endpoint OTLP: ${this.endpoint} (Service: ${this.serviceName})`,
+          `[OpenTelemetry] Inicializado con endpoint OTLP: ${this.endpoint} (Service: ${this.serviceName})`
         );
       } else {
         this.isEnabled = false;
         console.log(
-          `[OpenTelemetry] Endpoint OTLP no definido en .env. Modo local de observabilidad activado.`,
+          `[OpenTelemetry] Endpoint OTLP no definido en .env. Modo local de observabilidad activado.`
         );
       }
 
       // Iniciar ciclo de vaciado por lotes (cada 5 segundos)
-      if (typeof setInterval !== "undefined") {
+      if (typeof setInterval !== 'undefined') {
         this.flushTimer = setInterval(() => {
           void this.flush();
         }, 5000);
       }
     } catch (err) {
       this.isEnabled = false;
-      console.warn("[OpenTelemetry] Error inicializando configuración OTel:", err);
+      console.warn('[OpenTelemetry] Error inicializando configuración OTel:', err);
     }
   }
 
   public generateTraceId(): string {
-    return randomUUID().replace(/-/g, "");
+    return randomUUID().replace(/-/g, '');
   }
 
   public generateSpanId(): string {
-    return randomUUID().replace(/-/g, "").slice(0, 16);
+    return randomUUID().replace(/-/g, '').slice(0, 16);
   }
 
   /**
@@ -111,11 +111,11 @@ class OpenTelemetryService {
     name: string,
     operation: (spanContext: SpanContext) => Promise<T>,
     options?: {
-      kind?: "INTERNAL" | "SERVER" | "CLIENT";
+      kind?: 'INTERNAL' | 'SERVER' | 'CLIENT';
       parentSpanId?: string;
       traceId?: string;
       attributes?: Record<string, string | number | boolean>;
-    },
+    }
   ): Promise<T> {
     const traceId = options?.traceId || this.generateTraceId();
     const spanId = this.generateSpanId();
@@ -137,11 +137,11 @@ class OpenTelemetryService {
       this.recordSpan({
         context: spanContext,
         name,
-        kind: options?.kind || "INTERNAL",
+        kind: options?.kind || 'INTERNAL',
         startTimeUnixNano: startUnixNano,
         endTimeUnixNano: endUnixNano,
         durationMs: Number(elapsed.toFixed(2)),
-        status: { code: "OK" },
+        status: { code: 'OK' },
         attributes,
       });
 
@@ -151,17 +151,17 @@ class OpenTelemetryService {
       const endUnixNano = (BigInt(Date.now()) * 1_000_000n).toString();
       const errorMessage = error instanceof Error ? error.message : String(error);
 
-      attributes["error"] = true;
-      attributes["error.message"] = errorMessage;
+      attributes['error'] = true;
+      attributes['error.message'] = errorMessage;
 
       this.recordSpan({
         context: spanContext,
         name,
-        kind: options?.kind || "INTERNAL",
+        kind: options?.kind || 'INTERNAL',
         startTimeUnixNano: startUnixNano,
         endTimeUnixNano: endUnixNano,
         durationMs: Number(elapsed.toFixed(2)),
-        status: { code: "ERROR", message: errorMessage },
+        status: { code: 'ERROR', message: errorMessage },
         attributes,
       });
 
@@ -173,19 +173,19 @@ class OpenTelemetryService {
     // También enviamos evento estructurado a OTel neutral / logs locales
     const otelEvent = createOTelEvent({
       traceId: span.context.traceId,
-      kind: (span.status.code === "ERROR" ? "error" : "request") as MetricKind,
+      kind: (span.status.code === 'ERROR' ? 'error' : 'request') as MetricKind,
       name: span.name,
       durationMs: span.durationMs,
-      status: span.status.code === "OK" ? "ok" : "error",
+      status: span.status.code === 'OK' ? 'ok' : 'error',
       attributes: {
         service_name: this.serviceName,
         span_id: span.context.spanId,
-        parent_span_id: span.context.parentSpanId || "",
+        parent_span_id: span.context.parentSpanId || '',
         ...span.attributes,
       },
     });
 
-    if (passthroughEnv("NODE_ENV") === "development" && span.status.code === "ERROR") {
+    if (passthroughEnv('NODE_ENV') === 'development' && span.status.code === 'ERROR') {
       console.log(`[OTel] ${toOTelLog(otelEvent)}`);
     }
 
@@ -209,7 +209,7 @@ class OpenTelemetryService {
     this.metricQueue.push({
       name: metric.name,
       value: metric.value,
-      unit: metric.unit || "1",
+      unit: metric.unit || '1',
       description: metric.description,
       timestampUnixNano: (BigInt(Date.now()) * 1_000_000n).toString(),
       attributes: metric.attributes || {},
@@ -239,7 +239,7 @@ class OpenTelemetryService {
 
     // 1. Exportar Spans (OTLP /v1/traces)
     if (currentSpans.length > 0) {
-      const tracesUrl = this.endpoint.endsWith("/v1/traces")
+      const tracesUrl = this.endpoint.endsWith('/v1/traces')
         ? this.endpoint
         : `${this.endpoint}/v1/traces`;
 
@@ -248,36 +248,36 @@ class OpenTelemetryService {
           {
             resource: {
               attributes: [
-                { key: "service.name", value: { stringValue: this.serviceName } },
-                { key: "service.version", value: { stringValue: "4.3.3" } },
+                { key: 'service.name', value: { stringValue: this.serviceName } },
+                { key: 'service.version', value: { stringValue: '4.3.3' } },
                 {
-                  key: "deployment.environment",
-                  value: { stringValue: passthroughEnv("NODE_ENV") || "development" },
+                  key: 'deployment.environment',
+                  value: { stringValue: passthroughEnv('NODE_ENV') || 'development' },
                 },
               ],
             },
             scopeSpans: [
               {
-                scope: { name: "isabella-core-tracer", version: "1.0.0" },
+                scope: { name: 'isabella-core-tracer', version: '1.0.0' },
                 spans: currentSpans.map((s) => ({
                   traceId: s.context.traceId,
                   spanId: s.context.spanId,
-                  parentSpanId: s.context.parentSpanId || "",
+                  parentSpanId: s.context.parentSpanId || '',
                   name: s.name,
-                  kind: s.kind === "SERVER" ? 2 : s.kind === "CLIENT" ? 3 : 1,
+                  kind: s.kind === 'SERVER' ? 2 : s.kind === 'CLIENT' ? 3 : 1,
                   startTimeUnixNano: s.startTimeUnixNano,
                   endTimeUnixNano: s.endTimeUnixNano,
                   attributes: Object.entries(s.attributes).map(([k, v]) => ({
                     key: k,
                     value:
-                      typeof v === "number"
+                      typeof v === 'number'
                         ? { doubleValue: v }
-                        : typeof v === "boolean"
+                        : typeof v === 'boolean'
                           ? { boolValue: v }
                           : { stringValue: String(v) },
                   })),
                   status: {
-                    code: s.status.code === "OK" ? 1 : s.status.code === "ERROR" ? 2 : 0,
+                    code: s.status.code === 'OK' ? 1 : s.status.code === 'ERROR' ? 2 : 0,
                     message: s.status.message,
                   },
                 })),
@@ -289,22 +289,22 @@ class OpenTelemetryService {
 
       try {
         await fetch(tracesUrl, {
-          method: "POST",
+          method: 'POST',
           headers: {
-            "Content-Type": "application/json",
+            'Content-Type': 'application/json',
           },
           body: JSON.stringify(payload),
           signal: AbortSignal.timeout(3000),
         });
       } catch (err) {
         // En caso de fallo en el colector no interrumpir la ejecución
-        console.warn("[OpenTelemetry] Error enviando lote de trazas a OTLP:", err);
+        console.warn('[OpenTelemetry] Error enviando lote de trazas a OTLP:', err);
       }
     }
 
     // 2. Exportar Métricas (OTLP /v1/metrics)
     if (currentMetrics.length > 0) {
-      const metricsUrl = this.endpoint.endsWith("/v1/metrics")
+      const metricsUrl = this.endpoint.endsWith('/v1/metrics')
         ? this.endpoint
         : `${this.endpoint}/v1/metrics`;
 
@@ -312,15 +312,15 @@ class OpenTelemetryService {
         resourceMetrics: [
           {
             resource: {
-              attributes: [{ key: "service.name", value: { stringValue: this.serviceName } }],
+              attributes: [{ key: 'service.name', value: { stringValue: this.serviceName } }],
             },
             scopeMetrics: [
               {
-                scope: { name: "isabella-metrics", version: "1.0.0" },
+                scope: { name: 'isabella-metrics', version: '1.0.0' },
                 metrics: currentMetrics.map((m) => ({
                   name: m.name,
-                  description: m.description || "",
-                  unit: m.unit || "1",
+                  description: m.description || '',
+                  unit: m.unit || '1',
                   gauge: {
                     dataPoints: [
                       {
@@ -342,13 +342,13 @@ class OpenTelemetryService {
 
       try {
         await fetch(metricsUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(metricPayload),
           signal: AbortSignal.timeout(3000),
         });
       } catch (err) {
-        console.warn("[OpenTelemetry] Error enviando métricas a OTLP:", err);
+        console.warn('[OpenTelemetry] Error enviando métricas a OTLP:', err);
       }
     }
   }
@@ -380,9 +380,9 @@ export const initOpenTelemetry = () => otelService.init();
 export const withSpan = <T>(
   name: string,
   op: (ctx: SpanContext) => Promise<T>,
-  options?: Parameters<OpenTelemetryService["withSpan"]>[2],
+  options?: Parameters<OpenTelemetryService['withSpan']>[2]
 ) => otelService.withSpan(name, op, options);
 export const recordSpan = (span: SpanRecord) => otelService.recordSpan(span);
-export const recordMetric = (m: Parameters<OpenTelemetryService["recordMetric"]>[0]) =>
+export const recordMetric = (m: Parameters<OpenTelemetryService['recordMetric']>[0]) =>
   otelService.recordMetric(m);
 export const flushTelemetry = () => otelService.flush();

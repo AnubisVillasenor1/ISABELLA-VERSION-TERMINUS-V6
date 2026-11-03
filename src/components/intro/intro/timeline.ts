@@ -6,16 +6,16 @@
  */
 
 export type IntroPhase =
-  | "VOID"
-  | "STELLAR_FIELD"
-  | "COMET_PASSAGE"
-  | "COGNITIVE_CORE"
-  | "LOGO_REVEAL"
-  | "HEARTBEAT"
-  | "HUMMINGBIRD_ENTRY"
-  | "HUMMINGBIRD_ASCENT"
-  | "INTERFACE_REVEAL"
-  | "ONLINE";
+  | 'VOID'
+  | 'STELLAR_FIELD'
+  | 'COMET_PASSAGE'
+  | 'COGNITIVE_CORE'
+  | 'LOGO_REVEAL'
+  | 'HEARTBEAT'
+  | 'HUMMINGBIRD_ENTRY'
+  | 'HUMMINGBIRD_ASCENT'
+  | 'INTERFACE_REVEAL'
+  | 'ONLINE';
 
 export const TIMELINE = {
   void: [0, 5],
@@ -32,16 +32,16 @@ export const TIMELINE = {
 export const TOTAL_DURATION = 50;
 
 export function resolveIntroPhase(time: number): IntroPhase {
-  if (time < 5) return "VOID";
-  if (time < 12) return "STELLAR_FIELD";
-  if (time < 19) return "COMET_PASSAGE";
-  if (time < 26) return "COGNITIVE_CORE";
-  if (time < 33) return "LOGO_REVEAL";
-  if (time < 39) return "HEARTBEAT";
-  if (time < 43) return "HUMMINGBIRD_ENTRY";
-  if (time < 47) return "HUMMINGBIRD_ASCENT";
-  if (time < 50) return "INTERFACE_REVEAL";
-  return "ONLINE";
+  if (time < 5) return 'VOID';
+  if (time < 12) return 'STELLAR_FIELD';
+  if (time < 19) return 'COMET_PASSAGE';
+  if (time < 26) return 'COGNITIVE_CORE';
+  if (time < 33) return 'LOGO_REVEAL';
+  if (time < 39) return 'HEARTBEAT';
+  if (time < 43) return 'HUMMINGBIRD_ENTRY';
+  if (time < 47) return 'HUMMINGBIRD_ASCENT';
+  if (time < 50) return 'INTERFACE_REVEAL';
+  return 'ONLINE';
 }
 
 const PHASE_RANGES: Record<string, [number, number]> = {
@@ -117,12 +117,12 @@ export interface IntroState {
   elapsed: number;
   cameraShot: CameraShot;
   isReducedMotion: boolean;
-  performanceProfile: "high" | "medium" | "low";
+  performanceProfile: 'high' | 'medium' | 'low';
 }
 
 export function createInitialState(isReducedMotion: boolean): IntroState {
   return {
-    phase: "VOID",
+    phase: 'VOID',
     progress: 0,
     elapsed: 0,
     cameraShot: CAMERA_SHOTS[0],
@@ -131,57 +131,56 @@ export function createInitialState(isReducedMotion: boolean): IntroState {
   };
 }
 
-function detectPerformanceProfile(): "high" | "medium" | "low" {
-  if (typeof navigator === "undefined") return "medium";
+function detectPerformanceProfile(): 'high' | 'medium' | 'low' {
+  if (typeof navigator === 'undefined') return 'medium';
 
   const connection = (navigator as Record<string, unknown>).connection as
-    | { effectiveType?: string; saveData?: boolean }
-    | undefined;
+    { effectiveType?: string; saveData?: boolean } | undefined;
 
-  if (connection?.saveData) return "low";
-  if (connection?.effectiveType === "2g" || connection?.effectiveType === "slow-2g") return "low";
+  if (connection?.saveData) return 'low';
+  if (connection?.effectiveType === '2g' || connection?.effectiveType === 'slow-2g') return 'low';
 
   const memory = (navigator as Record<string, unknown>).deviceMemory as number | undefined;
-  if (memory && memory < 4) return "low";
-  if (memory && memory < 8) return "medium";
+  if (memory && memory < 4) return 'low';
+  if (memory && memory < 8) return 'medium';
 
   const cores = navigator.hardwareConcurrency ?? 4;
-  if (cores <= 2) return "low";
-  if (cores <= 4) return "medium";
+  if (cores <= 2) return 'low';
+  if (cores <= 4) return 'medium';
 
-  return "high";
+  return 'high';
 }
 
-export function getPerformanceLimits(profile: "high" | "medium" | "low") {
+export function getPerformanceLimits(profile: 'high' | 'medium' | 'low') {
   switch (profile) {
-    case "high":
+    case 'high':
       return {
         starfield2D: 4000,
         starfield3D: 15000,
         cometParticles: 500,
         bloom: true,
         fog: true,
-        hummingbirdDetail: "full" as const,
+        hummingbirdDetail: 'full' as const,
         pixelRatio: 2,
       };
-    case "medium":
+    case 'medium':
       return {
         starfield2D: 2000,
         starfield3D: 6000,
         cometParticles: 300,
         bloom: true,
         fog: true,
-        hummingbirdDetail: "simplified" as const,
+        hummingbirdDetail: 'simplified' as const,
         pixelRatio: 1.5,
       };
-    case "low":
+    case 'low':
       return {
         starfield2D: 800,
         starfield3D: 1000,
         cometParticles: 100,
         bloom: false,
         fog: false,
-        hummingbirdDetail: "sprite" as const,
+        hummingbirdDetail: 'sprite' as const,
         pixelRatio: 1,
       };
   }

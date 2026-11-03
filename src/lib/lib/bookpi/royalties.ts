@@ -5,7 +5,7 @@
  * La última federación recibe el remanente exacto:
  *   total - distributed  (evita pérdidas por redondeo).
  */
-import type { RoyaltySplitResult } from "./BookPiEngine";
+import type { RoyaltySplitResult } from './BookPiEngine';
 
 export interface FederationShareInput {
   federationId: number;
@@ -17,10 +17,10 @@ const BASIS_POINTS_DIVISOR = 10000n;
 
 export function calculateBookPiRoyalties(
   totalRevenueWei: bigint,
-  federationShares: FederationShareInput[],
+  federationShares: FederationShareInput[]
 ): RoyaltySplitResult[] {
   if (federationShares.length === 0) {
-    throw new Error("Se requieren las participaciones de al menos una federación.");
+    throw new Error('Se requieren las participaciones de al menos una federación.');
   }
   let distributed = 0n;
 

@@ -1,5 +1,5 @@
-import * as crypto from "node:crypto";
-import { sovereignStateRepository } from "./sovereign-state-repository";
+import * as crypto from 'node:crypto';
+import { sovereignStateRepository } from './sovereign-state-repository';
 
 // ============================================================================
 // TYPES & INTERFACES FOR QUP v3.0 — SOVEREIGN EDITION
@@ -10,15 +10,15 @@ export interface QupExperimentInput {
     name: string;
     features: Array<Record<string, unknown>>;
   };
-  backend: "ibm_sherbrooke_qpu" | "aer_simulator_local" | "aws_braket_dm1";
+  backend: 'ibm_sherbrooke_qpu' | 'aer_simulator_local' | 'aws_braket_dm1';
   config: {
     qubitCount: number;
     circuitDepth: number;
     objective:
-      "hamiltonian_spectrum" | "qml_classification" | "qec_syndrome" | "quantum_simulation";
-    errorMitigation: ("ZNE" | "PEC" | "TREX")[];
-    errorCorrection: "toric_code_L3" | "toric_code_L5" | "none";
-    classicalBaseline: "xgboost" | "pytorch_mlp" | "jax_ode";
+      'hamiltonian_spectrum' | 'qml_classification' | 'qec_syndrome' | 'quantum_simulation';
+    errorMitigation: ('ZNE' | 'PEC' | 'TREX')[];
+    errorCorrection: 'toric_code_L3' | 'toric_code_L5' | 'none';
+    classicalBaseline: 'xgboost' | 'pytorch_mlp' | 'jax_ode';
   };
 }
 
@@ -65,7 +65,7 @@ export interface QupExperimentResult {
       verified: boolean;
     };
     pqcSignatures: {
-      algorithm: "HMAC-SHA3-512/audit-seal-v1";
+      algorithm: 'HMAC-SHA3-512/audit-seal-v1';
       payloadHash: string;
       seal: string;
       verified: boolean;
@@ -76,10 +76,10 @@ export interface QupExperimentResult {
   };
   governance: {
     atlasImpact: number;
-    atlasInterpretation: "POSITIVE" | "NEUTRAL" | "NEGATIVE";
-    anubisIntegrity: "VERIFIED" | "MISMATCH";
-    themisAuditability: "SUFFICIENT" | "PARTIAL" | "INSUFFICIENT";
-    vigiaAction: "ALLOW" | "THROTTLE" | "TEMPORARY_BLOCK";
+    atlasInterpretation: 'POSITIVE' | 'NEUTRAL' | 'NEGATIVE';
+    anubisIntegrity: 'VERIFIED' | 'MISMATCH';
+    themisAuditability: 'SUFFICIENT' | 'PARTIAL' | 'INSUFFICIENT';
+    vigiaAction: 'ALLOW' | 'THROTTLE' | 'TEMPORARY_BLOCK';
     expedienteSummary: string;
   };
 }
@@ -94,9 +94,9 @@ export class FeaturePlane {
   public static validateSchema(features: Array<Record<string, unknown>>): boolean {
     if (!Array.isArray(features) || features.length === 0) return false;
     for (const record of features) {
-      if (typeof record !== "object" || record === null) return false;
+      if (typeof record !== 'object' || record === null) return false;
       // Quantum ML datasets must have 'x' (features) and 'y' (target) variables
-      if (!("x" in record) || !("y" in record)) return false;
+      if (!('x' in record) || !('y' in record)) return false;
     }
     return true;
   }
@@ -113,10 +113,10 @@ export class FeaturePlane {
     return features.map((record) => {
       const scrubbed: Record<string, unknown> = {};
       for (const [key, value] of Object.entries(record)) {
-        if (typeof value === "string") {
-          let temp = value.replace(emailRegex, "[ANONYMIZED_EMAIL]");
-          temp = temp.replace(ipRegex, "[ANONYMIZED_IP]");
-          temp = temp.replace(nameRegex, "[SCRUBBED_NAME]");
+        if (typeof value === 'string') {
+          let temp = value.replace(emailRegex, '[ANONYMIZED_EMAIL]');
+          temp = temp.replace(ipRegex, '[ANONYMIZED_IP]');
+          temp = temp.replace(nameRegex, '[SCRUBBED_NAME]');
           scrubbed[key] = temp;
         } else {
           scrubbed[key] = value;
@@ -135,7 +135,7 @@ export class FeaturePlane {
     getProof: (index: number) => string[];
   } {
     const leaves = data.map((item) =>
-      crypto.createHash("sha3-512").update(JSON.stringify(item)).digest("hex"),
+      crypto.createHash('sha3-512').update(JSON.stringify(item)).digest('hex')
     );
 
     const tree: string[][] = [leaves];
@@ -146,16 +146,16 @@ export class FeaturePlane {
         const left = currentLevel[i];
         const right = i + 1 < currentLevel.length ? currentLevel[i + 1] : left;
         const combined = crypto
-          .createHash("sha3-512")
+          .createHash('sha3-512')
           .update(left + right)
-          .digest("hex");
+          .digest('hex');
         nextLevel.push(combined);
       }
       tree.push(nextLevel);
     }
 
     const root =
-      tree[tree.length - 1][0] || crypto.createHash("sha3-512").update("empty").digest("hex");
+      tree[tree.length - 1][0] || crypto.createHash('sha3-512').update('empty').digest('hex');
 
     const getProof = (index: number): string[] => {
       const proof: string[] = [];
@@ -186,7 +186,7 @@ export class FeaturePlane {
     for (const sibling of proof) {
       const isRight = currentIndex % 2 === 1;
       const combined = isRight ? sibling + currentHash : currentHash + sibling;
-      currentHash = crypto.createHash("sha3-512").update(combined).digest("hex");
+      currentHash = crypto.createHash('sha3-512').update(combined).digest('hex');
       currentIndex = Math.floor(currentIndex / 2);
     }
     return currentHash === root;
@@ -204,8 +204,8 @@ export class QupMlRuntime {
   public static simulateExecution(
     qubitCount: number,
     depth: number,
-    errorMitigation: ("ZNE" | "PEC" | "TREX")[],
-    errorCorrection: "toric_code_L3" | "toric_code_L5" | "none",
+    errorMitigation: ('ZNE' | 'PEC' | 'TREX')[],
+    errorCorrection: 'toric_code_L3' | 'toric_code_L5' | 'none'
   ) {
     // 1. Raw hardware error rates based on layout parameters
     const baseDepolarizingError = 0.015; // 1.5% 2-qubit gate error
@@ -214,17 +214,17 @@ export class QupMlRuntime {
 
     // 2. Apply Error Mitigation Factor
     let mitigationFactor = 1.0;
-    if (errorMitigation.includes("ZNE")) mitigationFactor *= 0.65; // Zero Noise Extrapolation
-    if (errorMitigation.includes("PEC")) mitigationFactor *= 0.75; // Probabilistic Error Cancellation
-    if (errorMitigation.includes("TREX")) mitigationFactor *= 0.85; // Tensor-network Readout Error Mitigation
+    if (errorMitigation.includes('ZNE')) mitigationFactor *= 0.65; // Zero Noise Extrapolation
+    if (errorMitigation.includes('PEC')) mitigationFactor *= 0.75; // Probabilistic Error Cancellation
+    if (errorMitigation.includes('TREX')) mitigationFactor *= 0.85; // Tensor-network Readout Error Mitigation
     const mitigatedErrorRate = rawErrorRate * mitigationFactor;
 
     // Pseudo-deterministic properties based on circuit complexity to avoid Math.random
     const pseudoRandom = ((qubitCount * depth) % 100) / 100; // Value between 0 and 0.99
 
     // 3. Simulating Toric Code Quantum Error Correction (MWPM)
-    const hasQec = errorCorrection !== "none";
-    const L = errorCorrection === "toric_code_L5" ? 5 : errorCorrection === "toric_code_L3" ? 3 : 0;
+    const hasQec = errorCorrection !== 'none';
+    const L = errorCorrection === 'toric_code_L5' ? 5 : errorCorrection === 'toric_code_L3' ? 3 : 0;
     const syndromeDetected = hasQec && pseudoRandom < 0.45;
     const syndromesCount = syndromeDetected ? Math.floor((pseudoRandom * (L * L)) / 2) + 1 : 0;
 
@@ -271,12 +271,12 @@ export class QupCompilationPlane {
 
     // Simulate PassManager compilation optimizations
     const mappingStrategy =
-      qubitCount > 25 ? "SabreMap (Dense Layout)" : "TrivialMap (Direct coupling)";
-    const routingStrategy = qubitCount > 25 ? "StochasticSWAP Router" : "LookaheadSWAP Router";
+      qubitCount > 25 ? 'SabreMap (Dense Layout)' : 'TrivialMap (Direct coupling)';
+    const routingStrategy = qubitCount > 25 ? 'StochasticSWAP Router' : 'LookaheadSWAP Router';
     const optimizationLevel = isBigCircuit
-      ? "PassManager Level 3 (Heavy Synthesis)"
-      : "PassManager Level 2 (Local Simplify)";
-    const translationStrategy = "BasisTranslator ([rx, ry, rz, cx, id] -> ISA)";
+      ? 'PassManager Level 3 (Heavy Synthesis)'
+      : 'PassManager Level 2 (Local Simplify)';
+    const translationStrategy = 'BasisTranslator ([rx, ry, rz, cx, id] -> ISA)';
 
     // Compile-time compression
     const depthReductionFactor = isBigCircuit ? 0.55 : 0.35; // 55% reduction for heavy ansatz
@@ -319,7 +319,7 @@ export class QupCompilationPlane {
 // criptográfica real, jamás un literal.
 // ============================================================================
 export interface QupAuditSeal {
-  algorithm: "HMAC-SHA3-512/audit-seal-v1";
+  algorithm: 'HMAC-SHA3-512/audit-seal-v1';
   payloadHash: string;
   seal: string;
   verified: boolean;
@@ -327,12 +327,12 @@ export interface QupAuditSeal {
 
 export class QupAuditSealer {
   public static async sealPayload(payload: string): Promise<QupAuditSeal> {
-    const { SovereignAudit } = await import("./sovereign-audit");
+    const { SovereignAudit } = await import('./sovereign-audit');
     const payloadHash = SovereignAudit.hashData(payload);
     const seal = await SovereignAudit.signAuditSeal(payloadHash);
     const verified = await SovereignAudit.verifyAuditSeal(payloadHash, seal);
     return {
-      algorithm: "HMAC-SHA3-512/audit-seal-v1",
+      algorithm: 'HMAC-SHA3-512/audit-seal-v1',
       payloadHash,
       seal,
       verified,
@@ -354,16 +354,16 @@ export class QupOrchestrator {
     userId: string,
     role: string,
     traceId: string,
-    input: QupExperimentInput,
+    input: QupExperimentInput
   ): Promise<QupExperimentResult> {
     const correlationId = `corr_qup_${crypto.randomUUID().slice(0, 8)}`;
-    const ip = "127.0.0.1";
+    const ip = '127.0.0.1';
 
     // --- PHASE 1: FEATURE & DATASET PLANE ---
     const schemaValid = FeaturePlane.validateSchema(input.dataset.features);
     if (!schemaValid) {
       throw new Error(
-        "Dataset features failed validation schema check. 'x' and 'y' columns are required.",
+        "Dataset features failed validation schema check. 'x' and 'y' columns are required."
       );
     }
     const anonymizedFeatures = FeaturePlane.scrubPII(input.dataset.features);
@@ -375,25 +375,25 @@ export class QupOrchestrator {
       proofLeaf,
       merkleProof,
       merkleTree.root,
-      leafIndex,
+      leafIndex
     );
 
     // --- PHASE 2: COMPILATION & EXECUTION PLANE ---
     const compilation = QupCompilationPlane.compileCircuit(
       input.config.circuitDepth,
-      input.config.qubitCount,
+      input.config.qubitCount
     );
     const runtime = QupMlRuntime.simulateExecution(
       input.config.qubitCount,
       compilation.compiledDepth,
       input.config.errorMitigation,
-      input.config.errorCorrection,
+      input.config.errorCorrection
     );
 
     // --- PHASE 3: ETHICAL GOVERNANCE (ATLAS, ANUBIS, THEMIS, VIGIA) ---
 
     // --- PHASE 3: ETHICAL GOVERNANCE & PQC AUDIT (ATLAS, ANUBIS, THEMIS, VIGIA, ML-DSA) ---
-    const { IsabellaGovernance } = await import("./isabella-governance");
+    const { IsabellaGovernance } = await import('./isabella-governance');
     const governanceResult = await IsabellaGovernance.validateQuantumJob({
       jobId: traceId,
       userId: userId,
@@ -402,7 +402,7 @@ export class QupOrchestrator {
       authenticated: true,
       datasetName: input.dataset.name,
       backend: input.backend,
-      territory: "Nodo Cómputo Territorial TAMV",
+      territory: 'Nodo Cómputo Territorial TAMV',
       fidelityTarget: runtime.quantumFidelity,
     });
 
@@ -416,7 +416,7 @@ export class QupOrchestrator {
     const anubisRun = {
       result: {
         isAuthentic:
-          governanceResult.auditTrail.anubisHash !== "" &&
+          governanceResult.auditTrail.anubisHash !== '' &&
           governanceResult.auditTrail.anubisHash === merkleTree.root,
         matchingHash: governanceResult.auditTrail.anubisHash,
       },
@@ -432,22 +432,22 @@ export class QupOrchestrator {
         tenant: tenantId,
         merkleRoot: merkleTree.root,
         governanceSeal: governanceResult.auditSeal,
-      }),
+      })
     );
     if (!pqcSignatures.verified) {
-      throw new Error("QUP audit seal verification failed (fail-closed).");
+      throw new Error('QUP audit seal verification failed (fail-closed).');
     }
 
     // --- PHASE 5: SOVEREIGN LEDGER & BOOKPI INTEGRITY ---
     // Maximize monetization: dynamic pricing based on complexity and premium sovereign features
-    const { QupPricingModel } = await import("./monetization/pricing");
+    const { QupPricingModel } = await import('./monetization/pricing');
     const pricing = QupPricingModel.calculateCost({
       qubitCount: input.config.qubitCount,
       circuitDepth: compilation.compiledDepth,
       latencyMs: compilation.latencyMs,
-      hasQec: input.config.errorCorrection !== "none",
-      hasZne: input.config.errorMitigation.includes("ZNE"),
-      hasPec: input.config.errorMitigation.includes("PEC"),
+      hasQec: input.config.errorCorrection !== 'none',
+      hasZne: input.config.errorMitigation.includes('ZNE'),
+      hasPec: input.config.errorMitigation.includes('PEC'),
       fidelity: runtime.quantumFidelity,
       strictIsolation: true,
       infrastructureCostCents: Math.round(compilation.latencyMs * 0.8) + 500,
@@ -459,9 +459,9 @@ export class QupOrchestrator {
       tenantId,
       userId,
       `QUP v3.0 Compilación + Estimación clásica: ${input.config.objective}. Qubits: ${input.config.qubitCount}. Fidelidad estimada: ${Math.round(runtime.quantumFidelity * 100)}%. Plataforma Net: $${(pricing.revenueSplit.platformFeeCents / 100).toFixed(2)}. Sello de auditoría verificado.`,
-      "inference",
+      'inference',
       costCents / 100,
-      compilation.compiledDepth,
+      compilation.compiledDepth
     );
 
     // Append Audit record in SovereignDB
@@ -469,14 +469,14 @@ export class QupOrchestrator {
       traceId,
       correlationId,
       ip,
-      "QUP v3.0 Workflow Executed Successfully",
-      "S3",
+      'QUP v3.0 Workflow Executed Successfully',
+      'S3',
       `Ejecutado con éxito en ${input.backend}. Costo: $${(costCents / 100).toFixed(2)}. Sello de auditoría verificado: ${pqcSignatures.verified}. Merkle root: ${merkleTree.root.slice(0, 16)}...`,
-      tenantId,
+      tenantId
     );
 
     return {
-      experimentId: `qup_exp_${crypto.randomBytes(8).toString("hex")}`,
+      experimentId: `qup_exp_${crypto.randomBytes(8).toString('hex')}`,
       timestamp: new Date().toISOString(),
       backendUsed: input.backend,
       datasetMetrics: {
@@ -500,11 +500,11 @@ export class QupOrchestrator {
       },
       governance: {
         atlasImpact: atlasRun?.data?.territorialImpact ?? 0,
-        atlasInterpretation: atlasRun?.data?.interpretation ?? "NEUTRAL",
-        anubisIntegrity: anubisRun.result.isAuthentic ? "VERIFIED" : "MISMATCH",
-        themisAuditability: themisRun?.data?.auditability ?? "PARTIAL",
-        vigiaAction: vigiaRun?.data?.allowed ? "ALLOW" : "TEMPORARY_BLOCK",
-        expedienteSummary: themisRun?.summary ?? "",
+        atlasInterpretation: atlasRun?.data?.interpretation ?? 'NEUTRAL',
+        anubisIntegrity: anubisRun.result.isAuthentic ? 'VERIFIED' : 'MISMATCH',
+        themisAuditability: themisRun?.data?.auditability ?? 'PARTIAL',
+        vigiaAction: vigiaRun?.data?.allowed ? 'ALLOW' : 'TEMPORARY_BLOCK',
+        expedienteSummary: themisRun?.summary ?? '',
       },
     };
   }

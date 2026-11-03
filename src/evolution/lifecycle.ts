@@ -1,10 +1,5 @@
 export type ControlLifecycle =
-  | "ACTIVE"
-  | "REVOKED"
-  | "INVALIDATED"
-  | "SUPERSEDED"
-  | "DEPRECATED"
-  | "ROLLBACK";
+  'ACTIVE' | 'REVOKED' | 'INVALIDATED' | 'SUPERSEDED' | 'DEPRECATED' | 'ROLLBACK';
 
 export interface LifecycleTransition {
   from: ControlLifecycle;
@@ -14,12 +9,12 @@ export interface LifecycleTransition {
 }
 
 const ALLOWED: Record<ControlLifecycle, readonly ControlLifecycle[]> = {
-  ACTIVE: ["REVOKED", "INVALIDATED", "SUPERSEDED", "DEPRECATED", "ROLLBACK"],
-  REVOKED: ["ACTIVE"],
-  INVALIDATED: ["ACTIVE", "SUPERSEDED"],
-  SUPERSEDED: ["DEPRECATED"],
+  ACTIVE: ['REVOKED', 'INVALIDATED', 'SUPERSEDED', 'DEPRECATED', 'ROLLBACK'],
+  REVOKED: ['ACTIVE'],
+  INVALIDATED: ['ACTIVE', 'SUPERSEDED'],
+  SUPERSEDED: ['DEPRECATED'],
   DEPRECATED: [],
-  ROLLBACK: ["ACTIVE", "INVALIDATED"],
+  ROLLBACK: ['ACTIVE', 'INVALIDATED'],
 };
 
 export function allowLifecycleTransition(from: ControlLifecycle, to: ControlLifecycle): boolean {
@@ -28,9 +23,11 @@ export function allowLifecycleTransition(from: ControlLifecycle, to: ControlLife
 
 export function assertLifecycleTransition(transition: LifecycleTransition): void {
   if (!allowLifecycleTransition(transition.from, transition.to)) {
-    throw new Error(`EVOLUTION: invalid lifecycle transition ${transition.from} -> ${transition.to}`);
+    throw new Error(
+      `EVOLUTION: invalid lifecycle transition ${transition.from} -> ${transition.to}`
+    );
   }
   if (!transition.evidenceRef || !transition.reason) {
-    throw new Error("EVOLUTION: lifecycle transitions require reason and evidence.");
+    throw new Error('EVOLUTION: lifecycle transitions require reason and evidence.');
   }
 }

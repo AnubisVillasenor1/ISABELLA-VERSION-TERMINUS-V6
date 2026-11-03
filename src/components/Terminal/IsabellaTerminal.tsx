@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState } from 'react';
 import {
   Activity,
   Bot,
@@ -17,13 +17,13 @@ import {
   VolumeX,
   Wallet,
   X,
-} from "lucide-react";
-import { useCrown } from "../../context/CrownContext";
-import { MessageStream } from "./MessageStream";
-import { TerminalCommandLine } from "./TerminalCommandLine";
-import { soundManager } from "../../utils/soundEffects";
-import { ISABELLA_AVATAR_PRIMARY } from "../../data/isabellaAvatar";
-import { SubscriptionPlans } from "../Billing/SubscriptionPlans";
+} from 'lucide-react';
+import { useCrown } from '../../context/CrownContext';
+import { MessageStream } from './MessageStream';
+import { TerminalCommandLine } from './TerminalCommandLine';
+import { soundManager } from '../../utils/soundEffects';
+import { ISABELLA_AVATAR_PRIMARY } from '../../data/isabellaAvatar';
+import { SubscriptionPlans } from '../Billing/SubscriptionPlans';
 
 type NavigationItem = {
   label: string;
@@ -37,16 +37,16 @@ const getSystemStatus = (state: {
   isSpeaking: boolean;
   isListening: boolean;
 }) => {
-  if (state.isSpeaking) return { label: "Hablando", tone: "amber" as const };
-  if (state.isListening) return { label: "Escuchando", tone: "blue" as const };
-  if (state.isProcessing) return { label: "Procesando", tone: "blue" as const };
-  return { label: "Disponible", tone: "green" as const };
+  if (state.isSpeaking) return { label: 'Hablando', tone: 'amber' as const };
+  if (state.isListening) return { label: 'Escuchando', tone: 'blue' as const };
+  if (state.isProcessing) return { label: 'Procesando', tone: 'blue' as const };
+  return { label: 'Disponible', tone: 'green' as const };
 };
 
 const statusStyles = {
-  green: "border-emerald-400/25 bg-emerald-400/10 text-emerald-300",
-  blue: "border-sky-400/25 bg-sky-400/10 text-sky-300",
-  amber: "border-amber-400/25 bg-amber-400/10 text-amber-300",
+  green: 'border-emerald-400/25 bg-emerald-400/10 text-emerald-300',
+  blue: 'border-sky-400/25 bg-sky-400/10 text-sky-300',
+  amber: 'border-amber-400/25 bg-amber-400/10 text-amber-300',
 };
 
 export const IsabellaTerminal: React.FC = () => {
@@ -70,52 +70,52 @@ export const IsabellaTerminal: React.FC = () => {
 
   const status = getSystemStatus(state);
   const latestIsabellaMessage = useMemo(
-    () => [...messages].reverse().find((message) => message.role === "isabella"),
-    [messages],
+    () => [...messages].reverse().find((message) => message.role === 'isabella'),
+    [messages]
   );
 
   const navigationItems: NavigationItem[] = [
     {
-      label: "Conversación",
-      description: "Chat principal",
+      label: 'Conversación',
+      description: 'Chat principal',
       icon: MessageSquareText,
       action: () => undefined,
     },
     {
-      label: "Presencia",
-      description: "Perfil y estado",
+      label: 'Presencia',
+      description: 'Perfil y estado',
       icon: Bot,
-      action: () => setActiveView("presence"),
+      action: () => setActiveView('presence'),
     },
     {
-      label: "Voz",
-      description: "Configuración de audio",
+      label: 'Voz',
+      description: 'Configuración de audio',
       icon: Mic2,
-      action: () => setActiveView("voice_studio"),
+      action: () => setActiveView('voice_studio'),
     },
     {
-      label: "Imágenes",
-      description: "Estudio visual",
+      label: 'Imágenes',
+      description: 'Estudio visual',
       icon: Image,
-      action: () => setActiveView("image_studio"),
+      action: () => setActiveView('image_studio'),
     },
     {
-      label: "Sistemas",
-      description: "Estado operativo",
+      label: 'Sistemas',
+      description: 'Estado operativo',
       icon: LayoutDashboard,
-      action: () => setActiveView("architecture"),
+      action: () => setActiveView('architecture'),
     },
     {
-      label: "Auditoría",
-      description: "Trazabilidad",
+      label: 'Auditoría',
+      description: 'Trazabilidad',
       icon: FileCheck,
-      action: () => setActiveView("traceability"),
+      action: () => setActiveView('traceability'),
     },
     {
-      label: "Hub RDM",
-      description: "Servicios conectados",
+      label: 'Hub RDM',
+      description: 'Servicios conectados',
       icon: Network,
-      action: () => setActiveView("hub"),
+      action: () => setActiveView('hub'),
     },
   ];
 
@@ -188,11 +188,11 @@ export const IsabellaTerminal: React.FC = () => {
                 key={item.label}
                 type="button"
                 onClick={() => handleNavigation(item)}
-                aria-current={active ? "page" : undefined}
-                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 ${active ? "bg-slate-800/90 text-white" : "text-slate-400 hover:bg-slate-900 hover:text-slate-100"}`}
+                aria-current={active ? 'page' : undefined}
+                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 ${active ? 'bg-slate-800/90 text-white' : 'text-slate-400 hover:bg-slate-900 hover:text-slate-100'}`}
               >
                 <Icon
-                  className={`h-4 w-4 shrink-0 ${active ? "text-sky-300" : "text-slate-500"}`}
+                  className={`h-4 w-4 shrink-0 ${active ? 'text-sky-300' : 'text-slate-500'}`}
                   aria-hidden="true"
                 />
                 <span className="min-w-0 flex-1">
@@ -224,7 +224,7 @@ export const IsabellaTerminal: React.FC = () => {
             <span className="block text-[11px] text-slate-500">Administrar suscripción</span>
           </span>
           <ChevronRight
-            className={`h-4 w-4 transition-transform ${showPlans ? "rotate-90" : ""}`}
+            className={`h-4 w-4 transition-transform ${showPlans ? 'rotate-90' : ''}`}
             aria-hidden="true"
           />
         </button>
@@ -315,7 +315,7 @@ export const IsabellaTerminal: React.FC = () => {
               <button
                 type="button"
                 onClick={toggleSpeechSynthesis}
-                className={`rounded-lg p-2 ${state.speechSynthesisEnabled ? "text-amber-300 hover:bg-amber-400/10" : "text-slate-500 hover:bg-slate-900 hover:text-slate-200"}`}
+                className={`rounded-lg p-2 ${state.speechSynthesisEnabled ? 'text-amber-300 hover:bg-amber-400/10' : 'text-slate-500 hover:bg-slate-900 hover:text-slate-200'}`}
                 title="Activar o desactivar voz"
                 aria-label="Activar o desactivar voz"
                 aria-pressed={state.speechSynthesisEnabled}
@@ -333,7 +333,7 @@ export const IsabellaTerminal: React.FC = () => {
                 aria-label="Activar o desactivar sonidos"
                 aria-pressed={state.soundEnabled}
               >
-                FX {state.soundEnabled ? "ON" : "OFF"}
+                FX {state.soundEnabled ? 'ON' : 'OFF'}
               </button>
               <button
                 type="button"
@@ -369,7 +369,7 @@ export const IsabellaTerminal: React.FC = () => {
                     className="hidden text-[11px] text-slate-500 hover:text-slate-300 sm:block"
                     aria-expanded={showWorkspaceInfo}
                   >
-                    {showWorkspaceInfo ? "Ocultar ayuda" : "Cómo funciona"}
+                    {showWorkspaceInfo ? 'Ocultar ayuda' : 'Cómo funciona'}
                   </button>
                 </div>
                 {showWorkspaceInfo && (
@@ -392,7 +392,7 @@ export const IsabellaTerminal: React.FC = () => {
 
           <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-800/80 px-4 py-2.5 text-[10px] text-slate-600 sm:px-6">
             <span>Isabella · Nodo Cero</span>
-            <span>{latestIsabellaMessage?.isabellaState?.mood || "Asistente disponible"}</span>
+            <span>{latestIsabellaMessage?.isabellaState?.mood || 'Asistente disponible'}</span>
           </footer>
         </section>
       </div>

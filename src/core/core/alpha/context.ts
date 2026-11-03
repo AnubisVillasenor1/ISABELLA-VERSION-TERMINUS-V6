@@ -46,7 +46,7 @@ export class ContextBuilder {
     return {
       session: input.session,
       project: input.project,
-      territory: input.territory ?? { territoryName: "Mineral del Monte" },
+      territory: input.territory ?? { territoryName: 'Mineral del Monte' },
       constraints: input.constraints ?? {},
       builtAt: new Date().toISOString(),
     };

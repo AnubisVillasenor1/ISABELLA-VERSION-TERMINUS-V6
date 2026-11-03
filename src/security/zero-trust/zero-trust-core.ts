@@ -2,7 +2,7 @@
  * Zero-Trust Security Core Ω
  * state: engine-generated
  * Part of ISABELLA-Q Ω Cognitive Architecture
- * 
+ *
  * Implements comprehensive zero-trust security:
  * - Identity & Access Management (continuous verification)
  * - Device Trust & Attestation
@@ -14,28 +14,39 @@
  * - Audit & Compliance Logging
  */
 
-import { EventEmitter } from "node:events";
-import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
+import { EventEmitter } from 'node:events';
+import {
+  createHash,
+  createHmac,
+  createPublicKey,
+  constants as cryptoConstants,
+  randomBytes,
+  scryptSync,
+  timingSafeEqual,
+  verify as cryptoVerify,
+  X509Certificate,
+  type KeyObject,
+} from 'node:crypto';
 
-export type TrustLevel = "none" | "low" | "medium" | "high" | "critical";
+export type TrustLevel = 'none' | 'low' | 'medium' | 'high' | 'critical';
 
-export type AuthFactor = 
-  | "password" 
-  | "totp" 
-  | "webauthn" 
-  | "certificate" 
-  | "device" 
-  | "behavioral" 
-  | "location" 
-  | "biometric";
+export type AuthFactor =
+  | 'password'
+  | 'totp'
+  | 'webauthn'
+  | 'certificate'
+  | 'device'
+  | 'behavioral'
+  | 'location'
+  | 'biometric';
 
-export type RiskLevel = "none" | "low" | "medium" | "high" | "critical";
+export type RiskLevel = 'none' | 'low' | 'medium' | 'high' | 'critical';
 
-export type PolicyAction = "allow" | "deny" | "challenge" | "step_up" | "audit";
+export type PolicyAction = 'allow' | 'deny' | 'challenge' | 'step_up' | 'audit';
 
 export interface Identity {
   readonly id: string;
-  readonly type: "user" | "service" | "device" | "agent";
+  readonly type: 'user' | 'service' | 'device' | 'agent';
   readonly attributes: Record<string, unknown>;
   readonly credentials: Credential[];
   trustLevel: TrustLevel;
@@ -62,15 +73,18 @@ export interface Device {
   readonly hardwareFingerprint: string;
   readonly attestation: DeviceAttestation;
   trustScore: number;
-  status: "trusted" | "untrusted" | "quarantined" | "revoked";
+  status: 'trusted' | 'untrusted' | 'quarantined' | 'revoked';
   readonly enrolledAt: number;
   lastSeen: number;
   readonly metadata: Record<string, unknown>;
 }
 
 export interface DeviceAttestation {
-  readonly type: "tpm" | "secure_enclave" | "tee" | "software" | "none";
+  readonly type: 'tpm' | 'secure_enclave' | 'tee' | 'software' | 'none';
+  /** Base64 signature over the server challenge, produced by the attested device key. */
   readonly quote?: string;
+  /** SPKI PEM (or certificate PEM) used to verify the quote. */
+  readonly verificationKey?: string;
   readonly certificateChain?: string[];
   readonly measurements?: string[];
   readonly verifiedAt?: number;
@@ -101,7 +115,7 @@ export interface SessionContext {
 }
 
 export interface SessionBinding {
-  readonly type: "ip" | "device" | "certificate" | "token";
+  readonly type: 'ip' | 'device' | 'certificate' | 'token';
   readonly value: string;
   readonly createdAt: number;
 }
@@ -133,7 +147,8 @@ export interface Policy {
 
 export interface PolicyCondition {
   readonly field: string;
-  readonly operator: "eq" | "neq" | "in" | "nin" | "gt" | "gte" | "lt" | "lte" | "contains" | "matches";
+  readonly operator:
+    'eq' | 'neq' | 'in' | 'nin' | 'gt' | 'gte' | 'lt' | 'lte' | 'contains' | 'matches';
   readonly value: unknown;
 }
 
@@ -168,7 +183,7 @@ export interface ThreatIntel {
 
 export interface ThreatIndicator {
   readonly id: string;
-  readonly type: "ip" | "domain" | "hash" | "url" | "email" | "cidr";
+  readonly type: 'ip' | 'domain' | 'hash' | 'url' | 'email' | 'cidr';
   readonly value: string;
   readonly severity: RiskLevel;
   readonly confidence: number;
@@ -182,7 +197,7 @@ export interface ThreatFeed {
   readonly id: string;
   readonly name: string;
   readonly url: string;
-  readonly format: "stix" | "misp" | "csv" | "json";
+  readonly format: 'stix' | 'misp' | 'csv' | 'json';
   readonly enabled: boolean;
   readonly lastFetched: number;
 }
@@ -194,7 +209,7 @@ export interface AuditEvent {
   readonly sessionId?: string;
   readonly action: string;
   readonly resource: string;
-  readonly result: "success" | "failure" | "challenge" | "denied";
+  readonly result: 'success' | 'failure' | 'challenge' | 'denied';
   readonly riskScore: number;
   readonly context: Record<string, unknown>;
   readonly policyIds: string[];
@@ -205,9 +220,157 @@ export interface SandboxConfig {
   readonly maxCpu: number;
   readonly maxExecutionTime: number;
   readonly allowedSyscalls: string[];
-  readonly networkPolicy: "none" | "internal" | "egress" | "full";
-  readonly fileSystemPolicy: "none" | "read" | "write" | "full";
+  readonly networkPolicy: 'none' | 'internal' | 'egress' | 'full';
+  readonly fileSystemPolicy: 'none' | 'read' | 'write' | 'full';
   readonly allowedBinaries: string[];
+}
+
+const SCRYPT_N = 16_384;
+const SCRYPT_R = 8;
+const SCRYPT_P = 1;
+const SCRYPT_KEY_BYTES = 64;
+
+/**
+ * Hashes a password with a per-credential random salt using scrypt.
+ * The encoded form is self-describing so parameters can be rotated later.
+ */
+export function hashPassword(password: string): string {
+  const salt = randomBytes(16);
+  const derived = scryptSync(password, salt, SCRYPT_KEY_BYTES, {
+    N: SCRYPT_N,
+    r: SCRYPT_R,
+    p: SCRYPT_P,
+  });
+  return `scrypt$${SCRYPT_N}$${SCRYPT_R}$${SCRYPT_P}$${salt.toString('hex')}$${derived.toString('hex')}`;
+}
+
+function verifyScryptHash(stored: string, password: string): boolean {
+  const parts = stored.split('$');
+  if (parts.length !== 6 || parts[0] !== 'scrypt') return false;
+
+  const n = Number(parts[1]);
+  const r = Number(parts[2]);
+  const p = Number(parts[3]);
+  if (!Number.isInteger(n) || !Number.isInteger(r) || !Number.isInteger(p)) return false;
+  if (n < 1_024 || n > 131_072 || r < 1 || r > 32 || p < 1 || p > 16) return false;
+  if (!/^[0-9a-f]+$/i.test(parts[4] ?? '') || !/^[0-9a-f]+$/i.test(parts[5] ?? '')) return false;
+
+  const salt = Buffer.from(parts[4], 'hex');
+  const expected = Buffer.from(parts[5], 'hex');
+  if (salt.length < 8 || expected.length < 32) return false;
+
+  let actual: Buffer;
+  try {
+    actual = scryptSync(password, salt, expected.length, {
+      N: n,
+      r,
+      p,
+      maxmem: 256 * 1024 * 1024,
+    });
+  } catch {
+    return false;
+  }
+  return actual.length === expected.length && timingSafeEqual(actual, expected);
+}
+
+function decodeBase32(secret: string): Buffer {
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  const normalized = secret.replace(/[\s=-]/g, '').toUpperCase();
+  if (!/^[A-Z2-7]+$/.test(normalized)) return Buffer.alloc(0);
+
+  const output: number[] = [];
+  let bits = 0;
+  let value = 0;
+  for (const character of normalized) {
+    const index = alphabet.indexOf(character);
+    if (index < 0) return Buffer.alloc(0);
+    value = (value << 5) | index;
+    bits += 5;
+    if (bits >= 8) {
+      bits -= 8;
+      output.push((value >>> bits) & 0xff);
+    }
+  }
+  return Buffer.from(output);
+}
+
+/** RFC 6238 TOTP (SHA-1, 30-second step, 6 digits) for the given Base32 secret. */
+export function computeTotp(secretBase32: string, timestampMs: number = Date.now()): string {
+  const key = decodeBase32(secretBase32);
+  if (key.length === 0) return '';
+
+  const counter = Math.floor(timestampMs / 30_000);
+  const counterBytes = Buffer.alloc(8);
+  counterBytes.writeBigUInt64BE(BigInt(counter));
+
+  const digest = createHmac('sha1', key).update(counterBytes).digest();
+  const offset = (digest[digest.length - 1] ?? 0) & 0x0f;
+  const binary =
+    (((digest[offset] ?? 0) & 0x7f) << 24) |
+    (((digest[offset + 1] ?? 0) & 0xff) << 16) |
+    (((digest[offset + 2] ?? 0) & 0xff) << 8) |
+    ((digest[offset + 3] ?? 0) & 0xff);
+
+  return (binary % 1_000_000).toString().padStart(6, '0');
+}
+
+function safeEqualString(a: string, b: string): boolean {
+  const left = Buffer.from(a, 'utf8');
+  const right = Buffer.from(b, 'utf8');
+  return left.length === right.length && timingSafeEqual(left, right);
+}
+
+function decodeBase64Url(value: string): Buffer {
+  const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
+  const padding = '='.repeat((4 - (normalized.length % 4)) % 4);
+  return Buffer.from(normalized + padding, 'base64');
+}
+
+function decodeBase64(value: string): Buffer {
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(value)) return Buffer.alloc(0);
+  return Buffer.from(value, 'base64');
+}
+
+function parseJsonObject(value: string): Record<string, unknown> | null {
+  try {
+    const parsed: unknown = JSON.parse(value);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+    return parsed as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+function importPublicKey(value: string): KeyObject {
+  const trimmed = value.trim();
+  if (trimmed.includes('BEGIN CERTIFICATE')) {
+    return new X509Certificate(trimmed).publicKey;
+  }
+  return createPublicKey(trimmed);
+}
+
+function verifyWithPublicKey(key: KeyObject, data: Buffer, signature: Buffer): boolean {
+  if (signature.length === 0) return false;
+  switch (key.asymmetricKeyType) {
+    case 'ed25519':
+    case 'ed448':
+      return cryptoVerify(null, data, key, signature);
+    case 'rsa':
+    case 'rsa-pss':
+      return cryptoVerify(
+        'sha256',
+        data,
+        {
+          key,
+          padding: cryptoConstants.RSA_PKCS1_PADDING,
+        },
+        signature
+      );
+    case 'ec':
+      return cryptoVerify('sha256', data, { key, dsaEncoding: 'der' }, signature);
+    default:
+      return false;
+  }
 }
 
 /**
@@ -216,39 +379,39 @@ export interface SandboxConfig {
 export class IdentityProvider extends EventEmitter {
   private identities: Map<string, Identity> = new Map();
   private credentials: Map<string, Credential> = new Map();
-  
+
   async createIdentity(
-    type: Identity["type"],
+    type: Identity['type'],
     attributes: Record<string, unknown>,
-    initialCredentials: Omit<Credential, "id" | "enrolledAt" | "revoked">[]
+    initialCredentials: Omit<Credential, 'id' | 'enrolledAt' | 'revoked'>[]
   ): Promise<Identity> {
-    const id = `id_${randomBytes(16).toString("hex")}`;
+    const id = `id_${randomBytes(16).toString('hex')}`;
     const now = Date.now();
-    
-    const credentials: Credential[] = initialCredentials.map(c => ({
+
+    const credentials: Credential[] = initialCredentials.map((c) => ({
       ...c,
-      id: `cred_${randomBytes(12).toString("hex")}`,
+      id: `cred_${randomBytes(12).toString('hex')}`,
       enrolledAt: now,
       revoked: false,
     }));
-    
+
     const identity: Identity = {
       id,
       type,
       attributes,
       credentials,
-      trustLevel: "low",
+      trustLevel: 'low',
       createdAt: now,
       lastVerified: now,
       metadata: {},
     };
-    
+
     this.identities.set(id, identity);
     for (const cred of credentials) {
       this.credentials.set(cred.id, cred);
     }
-    
-    this.emit("identity:created", identity);
+
+    this.emit('identity:created', identity);
     return identity;
   }
 
@@ -259,67 +422,194 @@ export class IdentityProvider extends EventEmitter {
     response: string
   ): Promise<{ valid: boolean; factor: AuthFactor }> {
     const identity = this.identities.get(identityId);
-    if (!identity) throw new Error("IDENTITY_NOT_FOUND");
-    
-    const credential = identity.credentials.find(c => c.id === credentialId);
+    if (!identity) throw new Error('IDENTITY_NOT_FOUND');
+
+    const credential = identity.credentials.find((c) => c.id === credentialId);
     if (!credential || credential.revoked) {
-      return { valid: false, factor: credential?.type || "password" };
+      return { valid: false, factor: credential?.type || 'password' };
     }
-    
+
     // Verify based on credential type
     let valid = false;
     switch (credential.type) {
-      case "password":
+      case 'password':
         valid = await this.verifyPassword(credential, response);
         break;
-      case "totp":
+      case 'totp':
         valid = this.verifyTOTP(credential, response);
         break;
-      case "webauthn":
+      case 'webauthn':
         valid = await this.verifyWebAuthn(credential, challenge, response);
         break;
-      case "certificate":
-        valid = await this.verifyCertificate(credential, response);
+      case 'certificate':
+        valid = await this.verifyCertificate(credential, challenge, response);
         break;
-      case "device":
-        valid = await this.verifyDevice(credential, response);
+      case 'device':
+        valid = await this.verifyDevice(credential, challenge, response);
         break;
     }
-    
+
     if (valid) {
       credential.lastUsed = Date.now();
       identity.lastVerified = Date.now();
-      this.emit("credential:verified", { identityId, credentialId, factor: credential.type });
+      this.emit('credential:verified', { identityId, credentialId, factor: credential.type });
     }
-    
+
     return { valid, factor: credential.type };
   }
 
   private async verifyPassword(cred: Credential, response: string): Promise<boolean> {
     if (!cred.secretHash) return false;
-    // Use timing-safe comparison
-    const responseHash = createHash("sha256").update(response).digest("hex");
-    return timingSafeEqual(Buffer.from(cred.secretHash), Buffer.from(responseHash));
+    return verifyScryptHash(cred.secretHash, response);
   }
 
   private verifyTOTP(cred: Credential, response: string): boolean {
-    // TOTP verification would use a library like otplib
-    return response.length === 6 && /^\d{6}$/.test(response);
+    const secret = typeof cred.metadata.totpSecret === 'string' ? cred.metadata.totpSecret : '';
+    if (!secret || !/^\d{6}$/.test(response)) return false;
+
+    const currentStep = Math.floor(Date.now() / 30_000);
+    const lastAcceptedStep =
+      typeof cred.metadata.lastTotpStep === 'number' ? cred.metadata.lastTotpStep : -1;
+
+    for (const drift of [0, -1, 1]) {
+      const step = currentStep + drift;
+      if (step < 1) continue;
+      const candidate = computeTotp(secret, step * 30_000);
+      if (!candidate || !safeEqualString(candidate, response)) continue;
+      if (step <= lastAcceptedStep) return false; // Replay of an already consumed time step.
+      cred.metadata.lastTotpStep = step;
+      return true;
+    }
+    return false;
   }
 
-  private async verifyWebAuthn(cred: Credential, challenge: string, response: string): Promise<boolean> {
-    // WebAuthn verification would use @simplewebauthn/server
-    return true; // placeholder
+  private async verifyWebAuthn(
+    cred: Credential,
+    challenge: string,
+    response: string
+  ): Promise<boolean> {
+    try {
+      const publicKey = cred.publicKey;
+      if (!publicKey) return false;
+
+      const rpId =
+        typeof cred.metadata.rpId === 'string' ? cred.metadata.rpId : process.env.WEBAUTHN_RP_ID;
+      const origin =
+        typeof cred.metadata.origin === 'string'
+          ? cred.metadata.origin
+          : process.env.WEBAUTHN_ORIGIN;
+      // Both values are trust anchors; without them an assertion cannot be bound safely.
+      if (!rpId || !origin) return false;
+
+      const assertion = parseJsonObject(response);
+      if (!assertion) return false;
+      const { authenticatorData, clientDataJSON, signature } = assertion;
+      if (
+        typeof authenticatorData !== 'string' ||
+        typeof clientDataJSON !== 'string' ||
+        typeof signature !== 'string'
+      ) {
+        return false;
+      }
+
+      const authData = decodeBase64Url(authenticatorData);
+      const clientDataBytes = decodeBase64Url(clientDataJSON);
+      const signatureBytes = decodeBase64Url(signature);
+      const clientData = parseJsonObject(clientDataBytes.toString('utf8'));
+      if (!clientData) return false;
+
+      if (clientData.type !== 'webauthn.get') return false;
+      if (
+        typeof clientData.challenge !== 'string' ||
+        !safeEqualString(clientData.challenge, challenge)
+      ) {
+        return false;
+      }
+      if (clientData.origin !== origin || clientData.crossOrigin === true) return false;
+      if (authData.length < 37) return false;
+
+      const expectedRpIdHash = createHash('sha256').update(rpId).digest();
+      if (!timingSafeEqual(authData.subarray(0, 32), expectedRpIdHash)) return false;
+
+      const flags = authData[32] ?? 0;
+      if ((flags & 0x01) === 0) return false; // User presence is mandatory.
+      if (cred.metadata.requireUserVerification === true && (flags & 0x04) === 0) return false;
+
+      const signCount = authData.readUInt32BE(33);
+      const lastSignCount =
+        typeof cred.metadata.signCount === 'number' ? cred.metadata.signCount : 0;
+      if (signCount > 0 && lastSignCount > 0 && signCount <= lastSignCount) return false;
+
+      const key = importPublicKey(publicKey);
+      const signed = Buffer.concat([
+        authData,
+        createHash('sha256').update(clientDataBytes).digest(),
+      ]);
+      const valid = verifyWithPublicKey(key, signed, signatureBytes);
+      if (valid && signCount > 0) cred.metadata.signCount = signCount;
+      return valid;
+    } catch {
+      return false;
+    }
   }
 
-  private async verifyCertificate(cred: Credential, response: string): Promise<boolean> {
-    // Certificate verification
-    return true; // placeholder
+  private async verifyCertificate(
+    cred: Credential,
+    challenge: string,
+    response: string
+  ): Promise<boolean> {
+    try {
+      if (!cred.publicKey) return false;
+      const proof = parseJsonObject(response);
+      if (!proof) return false;
+      const { certificatePem, signature } = proof;
+      if (typeof certificatePem !== 'string' || typeof signature !== 'string') return false;
+
+      const certificate = new X509Certificate(certificatePem);
+      const now = Date.now();
+      if (now < Date.parse(certificate.validFrom) || now > Date.parse(certificate.validTo)) {
+        return false;
+      }
+
+      // The credential pins the expected public key; the certificate must match it.
+      const pinnedKey = importPublicKey(cred.publicKey);
+      const certificateKey = certificate.publicKey.export({ type: 'spki', format: 'der' });
+      const pinnedSpki = pinnedKey.export({ type: 'spki', format: 'der' });
+      if (
+        certificateKey.length !== pinnedSpki.length ||
+        !timingSafeEqual(certificateKey, pinnedSpki)
+      ) {
+        return false;
+      }
+
+      const signatureBytes = decodeBase64(signature);
+      return verifyWithPublicKey(
+        certificate.publicKey,
+        Buffer.from(challenge, 'utf8'),
+        signatureBytes
+      );
+    } catch {
+      return false;
+    }
   }
 
-  private async verifyDevice(cred: Credential, response: string): Promise<boolean> {
-    // Device attestation verification
-    return true; // placeholder
+  private async verifyDevice(
+    cred: Credential,
+    challenge: string,
+    response: string
+  ): Promise<boolean> {
+    try {
+      if (!cred.publicKey) return false;
+      const proof = parseJsonObject(response);
+      if (!proof) return false;
+      const signature = typeof proof.signature === 'string' ? decodeBase64(proof.signature) : null;
+      if (!signature) return false;
+      const attestation = typeof proof.attestation === 'string' ? proof.attestation : '';
+      const payload = Buffer.from(`${challenge}\n${attestation}`, 'utf8');
+      return verifyWithPublicKey(importPublicKey(cred.publicKey), payload, signature);
+    } catch {
+      return false;
+    }
   }
 
   getIdentity(id: string): Identity | undefined {
@@ -331,7 +621,7 @@ export class IdentityProvider extends EventEmitter {
     if (identity) {
       const updated = { ...identity, trustLevel: level };
       this.identities.set(identityId, updated);
-      this.emit("identity:trust_changed", updated);
+      this.emit('identity:trust_changed', updated);
     }
   }
 
@@ -339,7 +629,7 @@ export class IdentityProvider extends EventEmitter {
     const cred = this.credentials.get(credentialId);
     if (cred) {
       this.credentials.set(credentialId, { ...cred, revoked: true });
-      this.emit("credential:revoked", cred);
+      this.emit('credential:revoked', cred);
     }
   }
 }
@@ -350,18 +640,19 @@ export class IdentityProvider extends EventEmitter {
 export class DeviceTrustManager extends EventEmitter {
   private devices: Map<string, Device> = new Map();
   private identityDevices: Map<string, Set<string>> = new Map();
+  private deviceChallenges: Map<string, { challenge: string; expiresAt: number }> = new Map();
 
   async enrollDevice(
     identityId: string,
     platform: string,
     attestation: DeviceAttestation
   ): Promise<Device> {
-    const id = `dev_${randomBytes(16).toString("hex")}`;
-    const fingerprint = createHash("sha256")
+    const id = `dev_${randomBytes(16).toString('hex')}`;
+    const fingerprint = createHash('sha256')
       .update(`${identityId}:${platform}:${JSON.stringify(attestation)}`)
-      .digest("hex")
+      .digest('hex')
       .slice(0, 32);
-    
+
     const now = Date.now();
     const device: Device = {
       id,
@@ -370,74 +661,116 @@ export class DeviceTrustManager extends EventEmitter {
       hardwareFingerprint: fingerprint,
       attestation,
       trustScore: this.calculateInitialTrustScore(attestation),
-      status: attestation.type !== "none" ? "trusted" : "untrusted",
+      status: attestation.type !== 'none' ? 'trusted' : 'untrusted',
       enrolledAt: now,
       lastSeen: now,
       metadata: {},
     };
-    
+
     this.devices.set(id, device);
-    
+
     const identityDevices = this.identityDevices.get(identityId) || new Set();
     identityDevices.add(id);
     this.identityDevices.set(identityId, identityDevices);
-    
-    this.emit("device:enrolled", device);
+
+    this.emit('device:enrolled', device);
     return device;
   }
 
   private calculateInitialTrustScore(attestation: DeviceAttestation): number {
     switch (attestation.type) {
-      case "tpm": return 0.9;
-      case "secure_enclave": return 0.85;
-      case "tee": return 0.8;
-      case "software": return 0.5;
-      default: return 0.2;
+      case 'tpm':
+        return 0.9;
+      case 'secure_enclave':
+        return 0.85;
+      case 'tee':
+        return 0.8;
+      case 'software':
+        return 0.5;
+      default:
+        return 0.2;
     }
   }
 
-  async verifyDevice(deviceId: string, challenge: string): Promise<{ valid: boolean; trustScore: number }> {
+  /** Issues a single-use challenge that the device must sign with its enrolled key. */
+  issueChallenge(deviceId: string, ttlMs = 60_000): string | null {
+    const device = this.devices.get(deviceId);
+    if (!device || device.status === 'revoked') return null;
+    const challenge = randomBytes(32).toString('base64url');
+    this.deviceChallenges.set(deviceId, { challenge, expiresAt: Date.now() + ttlMs });
+    return challenge;
+  }
+
+  async verifyDevice(
+    deviceId: string,
+    challenge: string,
+    response: string
+  ): Promise<{ valid: boolean; trustScore: number }> {
     const device = this.devices.get(deviceId);
     if (!device) return { valid: false, trustScore: 0 };
-    
-    // Verify attestation if present
-    let valid = true;
-    if (device.attestation.type !== "none") {
-      // In production, would verify TPM quote, SEP attestation, etc.
-      valid = await this.verifyAttestation(device.attestation, challenge);
+
+    // Consume the pending challenge on every attempt so a failed proof cannot be ground.
+    const pending = this.deviceChallenges.get(deviceId);
+    this.deviceChallenges.delete(deviceId);
+    const challengeValid =
+      pending !== undefined &&
+      pending.expiresAt >= Date.now() &&
+      safeEqualString(pending.challenge, challenge);
+
+    // A device without an attestation, or a revoked one, never verifies.
+    let valid = false;
+    if (challengeValid && device.status !== 'revoked' && device.attestation.type !== 'none') {
+      valid = await this.verifyAttestation(device.attestation, challenge, response);
     }
-    
+
     if (valid) {
       device.lastSeen = Date.now();
       device.trustScore = Math.min(1, device.trustScore + 0.01);
     } else {
       device.trustScore = Math.max(0, device.trustScore - 0.1);
       if (device.trustScore < 0.3) {
-        device.status = "quarantined";
+        device.status = 'quarantined';
       }
     }
-    
-    this.emit("device:verified", { deviceId, valid, trustScore: device.trustScore });
+
+    this.emit('device:verified', { deviceId, valid, trustScore: device.trustScore });
     return { valid, trustScore: device.trustScore };
   }
 
-  private async verifyAttestation(attestation: DeviceAttestation, challenge: string): Promise<boolean> {
-    // Placeholder for actual attestation verification
-    return true;
+  private async verifyAttestation(
+    attestation: DeviceAttestation,
+    challenge: string,
+    response: string
+  ): Promise<boolean> {
+    try {
+      if (!attestation.quote || !attestation.verificationKey) return false;
+      if (attestation.expiresAt !== undefined && Date.now() > attestation.expiresAt) return false;
+      // The enrollment quote is evidence, not a session credential. Each verification
+      // requires a fresh signature over the current challenge from the device key.
+      const signature = decodeBase64(response);
+      if (signature.length === 0) return false;
+      return verifyWithPublicKey(
+        importPublicKey(attestation.verificationKey),
+        Buffer.from(challenge, 'utf8'),
+        signature
+      );
+    } catch {
+      return false;
+    }
   }
 
   getDevicesForIdentity(identityId: string): Device[] {
     const deviceIds = this.identityDevices.get(identityId) || new Set();
     return Array.from(deviceIds)
-      .map(id => this.devices.get(id))
+      .map((id) => this.devices.get(id))
       .filter((d): d is Device => d !== undefined);
   }
 
   revokeDevice(deviceId: string): void {
     const device = this.devices.get(deviceId);
     if (device) {
-      this.devices.set(deviceId, { ...device, status: "revoked" });
-      this.emit("device:revoked", device);
+      this.devices.set(deviceId, { ...device, status: 'revoked' });
+      this.emit('device:revoked', device);
     }
   }
 }
@@ -449,27 +782,24 @@ export class BehavioralAnalyzer extends EventEmitter {
   private profiles: Map<string, BehavioralProfile> = new Map();
   private readonly windowSize: number = 100; // events to analyze
 
-  async recordEvent(
-    identityId: string,
-    event: BehavioralEvent
-  ): Promise<void> {
+  async recordEvent(identityId: string, event: BehavioralEvent): Promise<void> {
     const profile = this.profiles.get(identityId) || this.createProfile(identityId);
     profile.events.push(event);
-    
+
     // Keep sliding window
     if (profile.events.length > this.windowSize) {
       profile.events.shift();
     }
-    
+
     // Update baselines
     this.updateBaselines(profile);
-    
+
     // Detect anomalies
     const anomalies = this.detectAnomalies(profile, event);
     for (const anomaly of anomalies) {
-      this.emit("anomaly:detected", { identityId, anomaly });
+      this.emit('anomaly:detected', { identityId, anomaly });
     }
-    
+
     this.profiles.set(identityId, profile);
   }
 
@@ -492,18 +822,20 @@ export class BehavioralAnalyzer extends EventEmitter {
 
   private updateBaselines(profile: BehavioralProfile): void {
     // Update typing dynamics baseline
-    const typingEvents = profile.events.filter(e => e.type === "keystroke");
+    const typingEvents = profile.events.filter((e) => e.type === 'keystroke');
     if (typingEvents.length > 10) {
-      const intervals = typingEvents.slice(1).map((e, i) => e.timestamp - typingEvents[i].timestamp);
+      const intervals = typingEvents
+        .slice(1)
+        .map((e, i) => e.timestamp - typingEvents[i].timestamp);
       const mean = intervals.reduce((a, b) => a + b, 0) / intervals.length;
       const stdDev = Math.sqrt(
         intervals.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / intervals.length
       );
       profile.baselines.typing = { mean, stdDev, samples: intervals.length };
     }
-    
+
     // Update time patterns
-    const hours = profile.events.map(e => new Date(e.timestamp).getHours());
+    const hours = profile.events.map((e) => new Date(e.timestamp).getHours());
     const hourCounts = new Map<number, number>();
     for (const h of hours) {
       hourCounts.set(h, (hourCounts.get(h) || 0) + 1);
@@ -511,44 +843,42 @@ export class BehavioralAnalyzer extends EventEmitter {
     profile.baselines.timePatterns = hourCounts;
   }
 
-  private detectAnomalies(
-    profile: BehavioralProfile,
-    event: BehavioralEvent
-  ): BehavioralAnomaly[] {
+  private detectAnomalies(profile: BehavioralProfile, event: BehavioralEvent): BehavioralAnomaly[] {
     const anomalies: BehavioralAnomaly[] = [];
-    
+
     // Typing anomaly
-    if (event.type === "keystroke" && profile.baselines.typing.samples > 20) {
+    if (event.type === 'keystroke' && profile.baselines.typing.samples > 20) {
       const prevEvent = profile.events[profile.events.length - 2];
-      if (prevEvent && prevEvent.type === "keystroke") {
+      if (prevEvent && prevEvent.type === 'keystroke') {
         const interval = event.timestamp - prevEvent.timestamp;
-        const zScore = Math.abs(interval - profile.baselines.typing.mean) / 
+        const zScore =
+          Math.abs(interval - profile.baselines.typing.mean) /
           Math.max(1, profile.baselines.typing.stdDev);
-        
+
         if (zScore > 3) {
           anomalies.push({
-            type: "typing_rhythm",
-            severity: zScore > 5 ? "high" : "medium",
+            type: 'typing_rhythm',
+            severity: zScore > 5 ? 'high' : 'medium',
             score: Math.min(1, zScore / 10),
             evidence: { interval, expected: profile.baselines.typing.mean, zScore },
           });
         }
       }
     }
-    
+
     // Time anomaly
     const hour = new Date(event.timestamp).getHours();
     const hourProb = profile.baselines.timePatterns.get(hour) || 0;
     const totalEvents = profile.events.length;
     if (totalEvents > 50 && hourProb / totalEvents < 0.01) {
       anomalies.push({
-        type: "unusual_time",
-        severity: "medium",
+        type: 'unusual_time',
+        severity: 'medium',
         score: 0.3,
         evidence: { hour, probability: hourProb / totalEvents },
       });
     }
-    
+
     return anomalies;
   }
 
@@ -584,7 +914,7 @@ interface BehavioralEvent {
 
 interface BehavioralAnomaly {
   readonly type: string;
-  readonly severity: "low" | "medium" | "high";
+  readonly severity: 'low' | 'medium' | 'high';
   readonly score: number;
   readonly evidence: Record<string, unknown>;
 }
@@ -599,44 +929,42 @@ export class PolicyEngine extends EventEmitter {
   addPolicy(policy: Policy): void {
     this.policies.set(policy.id, policy);
     this.invalidateCache();
-    this.emit("policy:added", policy);
+    this.emit('policy:added', policy);
   }
 
   removePolicy(policyId: string): void {
     this.policies.delete(policyId);
     this.invalidateCache();
-    this.emit("policy:removed", policyId);
+    this.emit('policy:removed', policyId);
   }
 
-  async evaluate(
-    context: EvaluationContext
-  ): Promise<PolicyDecision> {
+  async evaluate(context: EvaluationContext): Promise<PolicyDecision> {
     const applicablePolicies = this.getApplicablePolicies(context);
-    
+
     // Sort by priority (highest first)
     applicablePolicies.sort((a, b) => b.priority - a.priority);
-    
-    let decision: PolicyAction = "deny"; // Default deny
+
+    let decision: PolicyAction = 'deny'; // Default deny
     const matchedPolicies: string[] = [];
     const obligations: string[] = [];
-    
+
     for (const policy of applicablePolicies) {
       if (this.evaluateConditions(policy.conditions, context)) {
         decision = policy.effect;
         matchedPolicies.push(policy.id);
-        
+
         // Extract obligations from metadata
         if (policy.metadata.obligations) {
           obligations.push(...(policy.metadata.obligations as string[]));
         }
-        
+
         // For explicit allow/deny, stop evaluation
-        if (policy.effect === "allow" || policy.effect === "deny") {
+        if (policy.effect === 'allow' || policy.effect === 'deny') {
           break;
         }
       }
     }
-    
+
     return {
       action: decision,
       matchedPolicies,
@@ -649,25 +977,25 @@ export class PolicyEngine extends EventEmitter {
     const cacheKey = this.getCacheKey(context);
     const cached = this.policyCache.get(cacheKey);
     if (cached) return cached;
-    
-    const policies = Array.from(this.policies.values()).filter(p => 
+
+    const policies = Array.from(this.policies.values()).filter((p) =>
       this.policyMatchesScope(p, context)
     );
-    
+
     this.policyCache.set(cacheKey, policies);
     return policies;
   }
 
   private policyMatchesScope(policy: Policy, context: EvaluationContext): boolean {
     const scope = policy.scope;
-    
+
     if (scope.identities?.length && !scope.identities.includes(context.identityId)) {
       return false;
     }
-    if (scope.roles?.length && !scope.roles.some(r => context.roles.includes(r))) {
+    if (scope.roles?.length && !scope.roles.some((r) => context.roles.includes(r))) {
       return false;
     }
-    if (scope.resources?.length && !scope.resources.some(r => context.resource.startsWith(r))) {
+    if (scope.resources?.length && !scope.resources.some((r) => context.resource.startsWith(r))) {
       return false;
     }
     if (scope.actions?.length && !scope.actions.includes(context.action)) {
@@ -676,22 +1004,22 @@ export class PolicyEngine extends EventEmitter {
     if (scope.environments?.length && !scope.environments.includes(context.environment)) {
       return false;
     }
-    
+
     return true;
   }
 
   private evaluateConditions(conditions: PolicyCondition[], context: EvaluationContext): boolean {
-    return conditions.every(cond => {
+    return conditions.every((cond) => {
       const value = this.getContextValue(context, cond.field);
       return this.compareValues(value, cond.operator, cond.value);
     });
   }
 
   private getContextValue(context: EvaluationContext, field: string): unknown {
-    const parts = field.split(".");
+    const parts = field.split('.');
     let value: unknown = context;
     for (const part of parts) {
-      if (value && typeof value === "object" && part in value) {
+      if (value && typeof value === 'object' && part in value) {
         value = (value as Record<string, unknown>)[part];
       } else {
         return undefined;
@@ -700,19 +1028,36 @@ export class PolicyEngine extends EventEmitter {
     return value;
   }
 
-  private compareValues(actual: unknown, operator: PolicyCondition["operator"], expected: unknown): boolean {
+  private compareValues(
+    actual: unknown,
+    operator: PolicyCondition['operator'],
+    expected: unknown
+  ): boolean {
     switch (operator) {
-      case "eq": return actual === expected;
-      case "neq": return actual !== expected;
-      case "in": return Array.isArray(expected) && expected.includes(actual);
-      case "nin": return Array.isArray(expected) && !expected.includes(actual);
-      case "gt": return typeof actual === "number" && typeof expected === "number" && actual > expected;
-      case "gte": return typeof actual === "number" && typeof expected === "number" && actual >= expected;
-      case "lt": return typeof actual === "number" && typeof expected === "number" && actual < expected;
-      case "lte": return typeof actual === "number" && typeof expected === "number" && actual <= expected;
-      case "contains": return typeof actual === "string" && typeof expected === "string" && actual.includes(expected);
-      case "matches": return typeof actual === "string" && expected instanceof RegExp && expected.test(actual);
-      default: return false;
+      case 'eq':
+        return actual === expected;
+      case 'neq':
+        return actual !== expected;
+      case 'in':
+        return Array.isArray(expected) && expected.includes(actual);
+      case 'nin':
+        return Array.isArray(expected) && !expected.includes(actual);
+      case 'gt':
+        return typeof actual === 'number' && typeof expected === 'number' && actual > expected;
+      case 'gte':
+        return typeof actual === 'number' && typeof expected === 'number' && actual >= expected;
+      case 'lt':
+        return typeof actual === 'number' && typeof expected === 'number' && actual < expected;
+      case 'lte':
+        return typeof actual === 'number' && typeof expected === 'number' && actual <= expected;
+      case 'contains':
+        return (
+          typeof actual === 'string' && typeof expected === 'string' && actual.includes(expected)
+        );
+      case 'matches':
+        return typeof actual === 'string' && expected instanceof RegExp && expected.test(actual);
+      default:
+        return false;
     }
   }
 
@@ -753,67 +1098,70 @@ export class RiskEngine extends EventEmitter {
 
   async assessRisk(context: RiskContext): Promise<RiskAssessment> {
     const factors: RiskFactor[] = [];
-    
+
     // Factor 1: Identity trust
     factors.push({
-      type: "identity_trust",
+      type: 'identity_trust',
       weight: 0.25,
       score: this.trustLevelToScore(context.trustLevel),
       evidence: { trustLevel: context.trustLevel },
     });
-    
+
     // Factor 2: Device trust
     if (context.device) {
       factors.push({
-        type: "device_trust",
+        type: 'device_trust',
         weight: 0.2,
         score: context.device.trustScore,
         evidence: { deviceId: context.device.id, status: context.device.status },
       });
     }
-    
+
     // Factor 3: Session risk
     if (context.session) {
       factors.push({
-        type: "session_risk",
+        type: 'session_risk',
         weight: 0.15,
-        score: context.session.trustLevel === "critical" ? 0 : 0.5,
-        evidence: { sessionId: context.session.id, factorsVerified: context.session.factorsVerified.length },
+        score: context.session.trustLevel === 'critical' ? 0 : 0.5,
+        evidence: {
+          sessionId: context.session.id,
+          factorsVerified: context.session.factorsVerified.length,
+        },
       });
     }
-    
+
     // Factor 4: Behavioral risk
     factors.push({
-      type: "behavioral",
+      type: 'behavioral',
       weight: 0.15,
       score: context.behavioralScore,
       evidence: { score: context.behavioralScore },
     });
-    
+
     // Factor 5: Network/Location risk
     factors.push({
-      type: "network_location",
+      type: 'network_location',
       weight: 0.15,
       score: this.calculateNetworkRisk(context),
       evidence: { ...(context.session?.context ?? {}) },
     });
-    
+
     // Factor 6: Threat intelligence
     const threatScore = this.checkThreatIntel(context);
     factors.push({
-      type: "threat_intel",
+      type: 'threat_intel',
       weight: 0.1,
       score: threatScore,
       evidence: { matches: threatScore > 0 },
     });
-    
+
     // Calculate weighted score
     const totalWeight = factors.reduce((sum, f) => sum + f.weight, 0);
     const score = factors.reduce((sum, f) => sum + f.score * f.weight, 0) / totalWeight;
-    
+
     const level = this.scoreToLevel(score);
     const recommendations = this.generateRecommendations(factors, level);
-    
+
     return {
       score,
       level,
@@ -825,33 +1173,38 @@ export class RiskEngine extends EventEmitter {
 
   private trustLevelToScore(level: TrustLevel): number {
     switch (level) {
-      case "critical": return 1;
-      case "high": return 0.75;
-      case "medium": return 0.5;
-      case "low": return 0.25;
-      default: return 0;
+      case 'critical':
+        return 1;
+      case 'high':
+        return 0.75;
+      case 'medium':
+        return 0.5;
+      case 'low':
+        return 0.25;
+      default:
+        return 0;
     }
   }
 
   private scoreToLevel(score: number): RiskLevel {
-    if (score >= 0.8) return "critical";
-    if (score >= 0.6) return "high";
-    if (score >= 0.4) return "medium";
-    if (score >= 0.2) return "low";
-    return "none";
+    if (score >= 0.8) return 'critical';
+    if (score >= 0.6) return 'high';
+    if (score >= 0.4) return 'medium';
+    if (score >= 0.2) return 'low';
+    return 'none';
   }
 
   private calculateNetworkRisk(context: RiskContext): number {
     let risk = 0;
     const sessionCtx = context.session?.context;
-    
+
     if (sessionCtx) {
       if (sessionCtx.location?.isVpn) risk += 0.2;
       if (sessionCtx.location?.isProxy) risk += 0.3;
       if (sessionCtx.location?.isTor) risk += 0.5;
       risk += (1 - sessionCtx.networkTrust) * 0.3;
     }
-    
+
     return Math.min(1, risk);
   }
 
@@ -859,48 +1212,46 @@ export class RiskEngine extends EventEmitter {
     // Check IP against threat indicators
     const ip = context.session?.context.ipAddress;
     if (!ip) return 0;
-    
-    const match = this.threatIntel.indicators.find(
-      i => i.type === "ip" && i.value === ip
-    );
-    
+
+    const match = this.threatIntel.indicators.find((i) => i.type === 'ip' && i.value === ip);
+
     if (match) {
-      return match.severity === "critical" ? 1 : match.severity === "high" ? 0.7 : 0.4;
+      return match.severity === 'critical' ? 1 : match.severity === 'high' ? 0.7 : 0.4;
     }
-    
+
     return 0;
   }
 
   private generateRecommendations(factors: RiskFactor[], level: RiskLevel): string[] {
     const recs: string[] = [];
-    
-    if (level === "critical" || level === "high") {
-      recs.push("Require step-up authentication");
-      recs.push("Limit session duration");
-      recs.push("Enable continuous monitoring");
+
+    if (level === 'critical' || level === 'high') {
+      recs.push('Require step-up authentication');
+      recs.push('Limit session duration');
+      recs.push('Enable continuous monitoring');
     }
-    
-    const highRiskFactors = factors.filter(f => f.score > 0.7 && f.weight > 0.1);
+
+    const highRiskFactors = factors.filter((f) => f.score > 0.7 && f.weight > 0.1);
     for (const factor of highRiskFactors) {
       switch (factor.type) {
-        case "device_trust":
-          recs.push("Require device re-attestation");
+        case 'device_trust':
+          recs.push('Require device re-attestation');
           break;
-        case "behavioral":
-          recs.push("Challenge with behavioral verification");
+        case 'behavioral':
+          recs.push('Challenge with behavioral verification');
           break;
-        case "network_location":
-          recs.push("Require location verification");
+        case 'network_location':
+          recs.push('Require location verification');
           break;
       }
     }
-    
+
     return recs;
   }
 
   updateThreatIntel(intel: ThreatIntel): void {
     this.threatIntel = intel;
-    this.emit("threat_intel:updated", intel);
+    this.emit('threat_intel:updated', intel);
   }
 }
 
@@ -925,58 +1276,32 @@ export class SandboxRuntime extends EventEmitter {
       maxMemory: config.maxMemory || 128 * 1024 * 1024, // 128MB
       maxCpu: config.maxCpu || 50, // 50%
       maxExecutionTime: config.maxExecutionTime || 30000, // 30s
-      allowedSyscalls: config.allowedSyscalls || ["read", "write", "open", "close", "mmap"],
-      networkPolicy: config.networkPolicy || "none",
-      fileSystemPolicy: config.fileSystemPolicy || "read",
+      allowedSyscalls: config.allowedSyscalls || ['read', 'write', 'open', 'close', 'mmap'],
+      networkPolicy: config.networkPolicy || 'none',
+      fileSystemPolicy: config.fileSystemPolicy || 'read',
       allowedBinaries: config.allowedBinaries || [],
     };
   }
 
   async execute(
-    code: string,
-    input: unknown,
-    options: { timeout?: number; memory?: number } = {}
+    _code: string,
+    _input: unknown,
+    _options: { timeout?: number; memory?: number } = {}
   ): Promise<SandboxResult> {
-    const sandboxId = `sbx_${randomBytes(8).toString("hex")}`;
-    const startTime = Date.now();
-    
-    // In production, would use actual sandbox (gVisor, Firecracker, etc.)
-    // For now, simulate execution
-    const result = await this.simulateExecution(code, input, {
-      timeout: options.timeout || this.config.maxExecutionTime,
-      memory: options.memory || this.config.maxMemory,
-    });
-    
-    const executionTime = Date.now() - startTime;
-    
-    this.emit("sandbox:executed", { sandboxId, executionTime, success: result.success });
-    
-    return {
-      success: result.success,
-      output: result.output,
-      error: result.error,
-      executionTime,
-      memoryUsed: result.memoryUsed,
-      syscalls: result.syscalls,
-    };
-  }
+    const sandboxId = `sbx_${randomBytes(8).toString('hex')}`;
 
-  private async simulateExecution(
-    code: string,
-    input: unknown,
-    options: { timeout: number; memory: number }
-  ): Promise<{ success: boolean; output: unknown; error?: string; memoryUsed: number; syscalls: string[] }> {
-    // Simulated execution - in production would use actual sandbox
-    return new Promise(resolve => {
-      setTimeout(() => {
-        resolve({
-          success: true,
-          output: { result: "executed", input },
-          memoryUsed: Math.floor(options.memory * 0.3),
-          syscalls: ["read", "write"],
-        });
-      }, 10);
-    });
+    // No isolation backend (gVisor, Firecracker, WASM) is configured in this runtime.
+    // Refusing is the only safe outcome; simulating success would fake execution evidence.
+    this.emit('sandbox:refused', { sandboxId, reason: 'SANDBOX_BACKEND_UNAVAILABLE' });
+
+    return {
+      success: false,
+      output: null,
+      error: 'SANDBOX_BACKEND_UNAVAILABLE',
+      executionTime: 0,
+      memoryUsed: 0,
+      syscalls: [],
+    };
   }
 
   getConfig(): SandboxConfig {
@@ -1006,21 +1331,21 @@ export class AuditLogger extends EventEmitter {
   private events: AuditEvent[] = [];
   private readonly maxEvents: number = 100000;
 
-  log(event: Omit<AuditEvent, "id" | "timestamp">): AuditEvent {
+  log(event: Omit<AuditEvent, 'id' | 'timestamp'>): AuditEvent {
     const auditEvent: AuditEvent = {
       ...event,
-      id: `audit_${randomBytes(12).toString("hex")}`,
+      id: `audit_${randomBytes(12).toString('hex')}`,
       timestamp: Date.now(),
     };
-    
+
     this.events.push(auditEvent);
-    
+
     // Trim if needed
     if (this.events.length > this.maxEvents) {
       this.events = this.events.slice(-this.maxEvents);
     }
-    
-    this.emit("audit:logged", auditEvent);
+
+    this.emit('audit:logged', auditEvent);
     return auditEvent;
   }
 
@@ -1029,55 +1354,61 @@ export class AuditLogger extends EventEmitter {
     sessionId?: string;
     action?: string;
     resource?: string;
-    result?: AuditEvent["result"];
+    result?: AuditEvent['result'];
     startTime?: number;
     endTime?: number;
     limit?: number;
   }): AuditEvent[] {
     let results = this.events;
-    
+
     if (filter.identityId) {
-      results = results.filter(e => e.identityId === filter.identityId);
+      results = results.filter((e) => e.identityId === filter.identityId);
     }
     if (filter.sessionId) {
-      results = results.filter(e => e.sessionId === filter.sessionId);
+      results = results.filter((e) => e.sessionId === filter.sessionId);
     }
     if (filter.action) {
-      results = results.filter(e => e.action === filter.action);
+      results = results.filter((e) => e.action === filter.action);
     }
     if (filter.resource) {
-      results = results.filter(e => e.resource === filter.resource);
+      results = results.filter((e) => e.resource === filter.resource);
     }
     if (filter.result) {
-      results = results.filter(e => e.result === filter.result);
+      results = results.filter((e) => e.result === filter.result);
     }
     if (filter.startTime) {
-      results = results.filter(e => e.timestamp >= filter.startTime!);
+      results = results.filter((e) => e.timestamp >= filter.startTime!);
     }
     if (filter.endTime) {
-      results = results.filter(e => e.timestamp <= filter.endTime!);
+      results = results.filter((e) => e.timestamp <= filter.endTime!);
     }
-    
+
     results.sort((a, b) => b.timestamp - a.timestamp);
-    
+
     if (filter.limit) {
       results = results.slice(0, filter.limit);
     }
-    
+
     return results;
   }
 
   getStats() {
     return {
       totalEvents: this.events.length,
-      byResult: this.events.reduce((acc, e) => {
-        acc[e.result] = (acc[e.result] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>),
-      byAction: this.events.reduce((acc, e) => {
-        acc[e.action] = (acc[e.action] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>),
+      byResult: this.events.reduce(
+        (acc, e) => {
+          acc[e.result] = (acc[e.result] || 0) + 1;
+          return acc;
+        },
+        {} as Record<string, number>
+      ),
+      byAction: this.events.reduce(
+        (acc, e) => {
+          acc[e.action] = (acc[e.action] || 0) + 1;
+          return acc;
+        },
+        {} as Record<string, number>
+      ),
     };
   }
 }
@@ -1094,11 +1425,13 @@ export class ZeroTrustCore extends EventEmitter {
   readonly sandbox: SandboxRuntime;
   readonly auditLogger: AuditLogger;
 
-  constructor(config: {
-    sandbox?: Partial<SandboxConfig>;
-  } = {}) {
+  constructor(
+    config: {
+      sandbox?: Partial<SandboxConfig>;
+    } = {}
+  ) {
     super();
-    
+
     this.identityProvider = new IdentityProvider();
     this.deviceManager = new DeviceTrustManager();
     this.behavioralAnalyzer = new BehavioralAnalyzer();
@@ -1106,20 +1439,28 @@ export class ZeroTrustCore extends EventEmitter {
     this.riskEngine = new RiskEngine();
     this.sandbox = new SandboxRuntime(config.sandbox);
     this.auditLogger = new AuditLogger();
-    
+
     this.setupEventHandlers();
   }
 
   private setupEventHandlers(): void {
     // Forward events
-    this.identityProvider.on("credential:verified", e => this.emit("auth:verified", e));
-    this.identityProvider.on("credential:revoked", e => this.emit("auth:revoked", e));
-    this.deviceManager.on("device:enrolled", e => this.emit("device:enrolled", e));
-    this.deviceManager.on("device:verified", e => this.emit("device:verified", e));
-    this.behavioralAnalyzer.on("anomaly:detected", e => this.emit("anomaly:detected", e));
-    this.riskEngine.on("threat_intel:updated", e => this.emit("threat_intel:updated", e));
-    this.sandbox.on("sandbox:executed", e => this.emit("sandbox:executed", e));
-    this.auditLogger.on("audit:logged", e => this.emit("audit:logged", e));
+    this.identityProvider.on('credential:verified', (e) => this.emit('auth:verified', e));
+    this.identityProvider.on('credential:revoked', (e) => this.emit('auth:revoked', e));
+    this.deviceManager.on('device:enrolled', (e) => this.emit('device:enrolled', e));
+    this.deviceManager.on('device:verified', (e) => this.emit('device:verified', e));
+    this.behavioralAnalyzer.on('anomaly:detected', (e) => this.emit('anomaly:detected', e));
+    this.riskEngine.on('threat_intel:updated', (e) => this.emit('threat_intel:updated', e));
+    this.sandbox.on('sandbox:executed', (e) => this.emit('sandbox:executed', e));
+    this.auditLogger.on('audit:logged', (e) => this.emit('audit:logged', e));
+  }
+
+  /**
+   * Issues the single-use challenge a client must sign before calling
+   * authenticateAndAuthorize with a deviceId.
+   */
+  issueDeviceChallenge(deviceId: string): string | null {
+    return this.deviceManager.issueChallenge(deviceId);
   }
 
   /**
@@ -1129,6 +1470,7 @@ export class ZeroTrustCore extends EventEmitter {
     identityId: string;
     credentials: Array<{ credentialId: string; challenge: string; response: string }>;
     deviceId?: string;
+    deviceProof?: { challenge: string; response: string };
     sessionContext: SessionContext;
     resource: string;
     action: string;
@@ -1142,10 +1484,10 @@ export class ZeroTrustCore extends EventEmitter {
   }> {
     const identity = this.identityProvider.getIdentity(params.identityId);
     if (!identity) {
-      throw new Error("IDENTITY_NOT_FOUND");
+      throw new Error('IDENTITY_NOT_FOUND');
     }
 
-    // Verify credentials
+    // Every supplied credential must verify; a single valid factor must not mask bad ones.
     const verifiedFactors: AuthFactor[] = [];
     for (const cred of params.credentials) {
       const result = await this.identityProvider.verifyCredential(
@@ -1154,29 +1496,40 @@ export class ZeroTrustCore extends EventEmitter {
         cred.challenge,
         cred.response
       );
-      if (result.valid) {
-        verifiedFactors.push(result.factor);
-      }
+      if (!result.valid) throw new Error('AUTHENTICATION_FAILED');
+      verifiedFactors.push(result.factor);
     }
 
     if (verifiedFactors.length === 0) {
-      throw new Error("AUTHENTICATION_FAILED");
+      throw new Error('AUTHENTICATION_FAILED');
     }
 
-    // Check device
+    // A claimed device must prove possession of its key with the current challenge.
     let device: Device | undefined;
     if (params.deviceId) {
-      device = this.deviceManager.getDevicesForIdentity(params.identityId)
-        .find(d => d.id === params.deviceId);
-      
-      if (device) {
-        await this.deviceManager.verifyDevice(device.id, "challenge");
-      }
+      device = this.deviceManager
+        .getDevicesForIdentity(params.identityId)
+        .find((d) => d.id === params.deviceId);
+      if (!device) throw new Error('DEVICE_NOT_FOUND');
+
+      const proof = params.deviceProof;
+      if (!proof) throw new Error('DEVICE_PROOF_REQUIRED');
+
+      const verification = await this.deviceManager.verifyDevice(
+        device.id,
+        proof.challenge,
+        proof.response
+      );
+      if (!verification.valid) throw new Error('DEVICE_VERIFICATION_FAILED');
+      device =
+        this.deviceManager
+          .getDevicesForIdentity(params.identityId)
+          .find((d) => d.id === params.deviceId) ?? device;
     }
 
     // Create session
     const session: Session = {
-      id: `sess_${randomBytes(16).toString("hex")}`,
+      id: `sess_${randomBytes(16).toString('hex')}`,
       identityId: params.identityId,
       deviceId: params.deviceId,
       createdAt: Date.now(),
@@ -1186,9 +1539,7 @@ export class ZeroTrustCore extends EventEmitter {
       riskScore: 0,
       factorsVerified: verifiedFactors,
       context: params.sessionContext,
-      bindings: [
-        { type: "ip", value: params.sessionContext.ipAddress, createdAt: Date.now() },
-      ],
+      bindings: [{ type: 'ip', value: params.sessionContext.ipAddress, createdAt: Date.now() }],
     };
 
     // Assess risk
@@ -1224,8 +1575,12 @@ export class ZeroTrustCore extends EventEmitter {
       sessionId: updatedSession.id,
       action: `${params.action}:${params.resource}`,
       resource: params.resource,
-      result: decision.action === "allow" ? "success" : 
-              decision.action === "challenge" ? "challenge" : "denied",
+      result:
+        decision.action === 'allow'
+          ? 'success'
+          : decision.action === 'challenge'
+            ? 'challenge'
+            : 'denied',
       riskScore: risk.score,
       context: { ...params.sessionContext, verifiedFactors },
       policyIds: decision.matchedPolicies,
@@ -1249,11 +1604,15 @@ export class ZeroTrustCore extends EventEmitter {
   /**
    * Execute code in sandbox
    */
-  async executeInSandbox(code: string, input: unknown, options?: { timeout?: number; memory?: number }): Promise<SandboxResult> {
+  async executeInSandbox(
+    code: string,
+    input: unknown,
+    options?: { timeout?: number; memory?: number }
+  ): Promise<SandboxResult> {
     return this.sandbox.execute(code, input, options);
   }
 
-  getAuditLog(filter?: Parameters<AuditLogger["query"]>[0]): AuditEvent[] {
+  getAuditLog(filter?: Parameters<AuditLogger['query']>[0]): AuditEvent[] {
     return this.auditLogger.query(filter || {});
   }
 }
@@ -1266,7 +1625,7 @@ export const defaultZeroTrust = new ZeroTrustCore({
     maxMemory: 256 * 1024 * 1024,
     maxCpu: 50,
     maxExecutionTime: 60000,
-    networkPolicy: "none",
-    fileSystemPolicy: "read",
+    networkPolicy: 'none',
+    fileSystemPolicy: 'read',
   },
 });

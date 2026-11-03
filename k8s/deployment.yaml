@@ -57,17 +57,20 @@ spec:
               app: isabella-genesis
       containers:
         - name: runtime
-          # ISA-355 (P0): reemplazar tag por digest inmutable.
-          #   BLOCKED_ENVIRONMENT -> registry real del cliente (ECR/Harbor/GHCR).
-          #   Sustituir por:  <REGISTRY_REAL>/<REPO>@sha256:<DIGEST_RESUELTO>
-          #   imagePullPolicy: IfNotPresent mientras se resuelve el digest.
-          image: ghcr.io/tamv-online/isabella-genesisai:v40.0.0
+          # ISA-355 (P0): tag `production` lo publica deploy-production.yml en el mismo
+          # registry (ghcr.io/<owner>/isabella-terminus-v6). Para reproducibilidad,
+          # sustituir por el tag SHA validado o por un digest inmutable:
+          #   <REGISTRY_REAL>/<REPO>@sha256:<DIGEST_RESUELTO>
+          image: ghcr.io/osopanda1/isabella-terminus-v6:production
           imagePullPolicy: IfNotPresent
           env:
             - name: NODE_ENV
               value: production
+            # 8080 es el contrato del Dockerfile, docker-compose y este manifiesto.
             - name: PORT
-              value: "3000"
+              value: "8080"
+            - name: BOOKPI_LEDGER_PATH
+              value: /app/data/bookpi-ledger.jsonl
           # ISA-362 (P0): SOLO referencias. Nunca valores literales en el repo.
           # El Secret lo aprovisiona un gestor externo (KMS / External Secrets /
           # Sealed Secrets). Ver k8s/sealed-secret-example.yaml y docs/deployment/README.md.
@@ -76,8 +79,24 @@ spec:
                 name: isabella-genesis-secrets
           ports:
             - name: http
-              containerPort: 3000
+              containerPort: 8080
               protocol: TCP
+          # El root filesystem es de solo lectura (ISA-366), por lo que todo destino
+          # de escritura debe estar montado. BookPI y la persistencia local escriben
+          # en /app/data; los logs y temporales van a emptyDir.
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+            - name: logs
+              mountPath: /app/logs
+            - name: tmp
+              mountPath: /tmp
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 5
+            failureThreshold: 24
           # ISA-357 (P2): liveness independiente de caídas de dependencias externas.
           # /health es un endpoint estático (src/server.ts:378).
           livenessProbe:
@@ -123,3 +142,10 @@ spec:
             capabilities:
               drop:
                 - ALL
+      volumes:
+        - name: data
+          emptyDir: {}
+        - name: logs
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}

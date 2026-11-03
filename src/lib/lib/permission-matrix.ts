@@ -10,51 +10,51 @@
  * (recurso + acción) y la autorización (permiso).
  */
 
-import { PERMISSIONS } from "./rbac";
+import { PERMISSIONS } from './rbac';
 
 /** Recursos del sistema susceptibles de autorización. */
 export type Resource =
-  | "memory"
-  | "ledger"
-  | "audit"
-  | "data:personal"
-  | "governance"
-  | "permission"
-  | "tool"
-  | "sandbox"
-  | "monetization"
-  | "chat"
-  | "session"
-  | "system";
+  | 'memory'
+  | 'ledger'
+  | 'audit'
+  | 'data:personal'
+  | 'governance'
+  | 'permission'
+  | 'tool'
+  | 'sandbox'
+  | 'monetization'
+  | 'chat'
+  | 'session'
+  | 'system';
 
 export const RESOURCES: readonly Resource[] = [
-  "memory",
-  "ledger",
-  "audit",
-  "data:personal",
-  "governance",
-  "permission",
-  "tool",
-  "sandbox",
-  "monetization",
-  "chat",
-  "session",
-  "system",
+  'memory',
+  'ledger',
+  'audit',
+  'data:personal',
+  'governance',
+  'permission',
+  'tool',
+  'sandbox',
+  'monetization',
+  'chat',
+  'session',
+  'system',
 ];
 
 /** Acciones estandarizadas sobre un recurso. */
 export type Action =
-  "read" | "write" | "delete" | "execute" | "verify" | "admin" | "configure" | "list";
+  'read' | 'write' | 'delete' | 'execute' | 'verify' | 'admin' | 'configure' | 'list';
 
 export const ACTIONS: readonly Action[] = [
-  "read",
-  "write",
-  "delete",
-  "execute",
-  "verify",
-  "admin",
-  "configure",
-  "list",
+  'read',
+  'write',
+  'delete',
+  'execute',
+  'verify',
+  'admin',
+  'configure',
+  'list',
 ];
 
 /** Resultado de la consulta de un permiso derivado. */
@@ -71,72 +71,72 @@ type Permission = keyof typeof PERMISSIONS;
  */
 const MATRIX: Record<Resource, Partial<Record<Action, Permission | null>>> = {
   memory: {
-    read: "memory:read:own",
-    write: "memory:write:own",
-    delete: "memory:delete:own",
-    admin: "memory:admin",
+    read: 'memory:read:own',
+    write: 'memory:write:own',
+    delete: 'memory:delete:own',
+    admin: 'memory:admin',
   },
   ledger: {
-    read: "ledger:read:own",
-    write: "ledger:write",
-    verify: "ledger:verify",
-    admin: "ledger:refund",
+    read: 'ledger:read:own',
+    write: 'ledger:write',
+    verify: 'ledger:verify',
+    admin: 'ledger:refund',
     execute: null,
   },
   audit: {
-    read: "audit:read",
-    write: "audit:write",
-    verify: "audit:verify",
+    read: 'audit:read',
+    write: 'audit:write',
+    verify: 'audit:verify',
   },
-  "data:personal": {
-    read: "data:personal:export",
+  'data:personal': {
+    read: 'data:personal:export',
     write: null,
     execute: null,
   },
   governance: {
-    read: "governance:read",
-    write: "governance:write",
-    admin: "governance:write",
+    read: 'governance:read',
+    write: 'governance:write',
+    admin: 'governance:write',
   },
   permission: {
-    write: "permission:grant",
-    delete: "permission:revoke",
-    admin: "governance:write",
-    read: "governance:read",
+    write: 'permission:grant',
+    delete: 'permission:revoke',
+    admin: 'governance:write',
+    read: 'governance:read',
   },
   tool: {
-    list: "tool:list",
-    read: "tool:list",
-    execute: "tool:execute",
+    list: 'tool:list',
+    read: 'tool:list',
+    execute: 'tool:execute',
   },
   sandbox: {
-    execute: "sandbox:run",
-    read: "audit:read",
+    execute: 'sandbox:run',
+    read: 'audit:read',
   },
   monetization: {
-    read: "monetization:read",
-    configure: "monetization:configure",
-    write: "monetization:configure",
-    execute: "monetization:withdraw",
+    read: 'monetization:read',
+    configure: 'monetization:configure',
+    write: 'monetization:configure',
+    execute: 'monetization:withdraw',
   },
   // Chat: turno conversacional. Distinto de system/execute para que Guest
   // pueda chatear sin heredar el acceso a ejecuci_n de sistema.
   chat: {
-    execute: "chat:execute",
-    read: "chat:execute",
+    execute: 'chat:execute',
+    read: 'chat:execute',
   },
   // Sesi_n: lectura de la identidad propia (sin side effects).
   session: {
-    read: "session:read",
-    execute: "session:read",
+    read: 'session:read',
+    execute: 'session:read',
   },
   system: {
-    read: "system:state",
-    write: "system:admin",
-    delete: "system:admin",
+    read: 'system:state',
+    write: 'system:admin',
+    delete: 'system:admin',
     // Ejecuci_n de sistema = permiso operativo expl_cito; nunca telemetr_a.
-    execute: "system:execute",
-    admin: "system:admin",
+    execute: 'system:execute',
+    admin: 'system:admin',
   },
 };
 

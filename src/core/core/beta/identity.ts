@@ -4,7 +4,7 @@
  * Resuelve y verifica identidad de actores y tenants para gobernanza estricta.
  */
 
-export type AssuranceLevel = "AL0" | "AL1" | "AL2" | "AL3";
+export type AssuranceLevel = 'AL0' | 'AL1' | 'AL2' | 'AL3';
 
 export interface IdentityVerification {
   verified: boolean;
@@ -26,16 +26,16 @@ export interface IdentityContext {
 export class IdentityResolver {
   resolve(input: { actorId: string; tenantId: string; sessionId?: string }): IdentityContext {
     return {
-      actorId: input.actorId || "anonymous",
-      tenantId: input.tenantId || "default-tenant",
+      actorId: input.actorId || 'anonymous',
+      tenantId: input.tenantId || 'default-tenant',
       sessionId: input.sessionId,
-      roles: ["user"],
-      scopes: ["chat:read", "chat:write"],
-      assuranceLevel: "AL1",
+      roles: ['user'],
+      scopes: ['chat:read', 'chat:write'],
+      assuranceLevel: 'AL1',
       verification: {
         verified: true,
-        assuranceLevel: "AL1",
-        method: "session_token",
+        assuranceLevel: 'AL1',
+        method: 'session_token',
         verifiedAt: new Date().toISOString(),
       },
     };

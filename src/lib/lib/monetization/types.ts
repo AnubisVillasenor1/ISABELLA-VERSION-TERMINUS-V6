@@ -6,27 +6,27 @@ export const ESCROW_MATURATION_DAYS = 90; // 90 days to clear chargeback liabili
 export const MONETIZATION_SUBSCRIPTION_REQUIRED = true;
 
 export type MonetizationMethod =
-  "referral" | "education" | "territorial" | "evidence" | "professional_reference";
+  'referral' | 'education' | 'territorial' | 'evidence' | 'professional_reference';
 
 export type EarningStatus =
-  | "pending" // In 90-day escrow
-  | "available" // Cleared escrow, ready for withdrawal
-  | "held" // Under fraud review
-  | "reversed" // Chargebacked (Loss shifted to user)
-  | "paid"
-  | "disputed";
+  | 'pending' // In 90-day escrow
+  | 'available' // Cleared escrow, ready for withdrawal
+  | 'held' // Under fraud review
+  | 'reversed' // Chargebacked (Loss shifted to user)
+  | 'paid'
+  | 'disputed';
 
 export type MonetizationBlockReason =
-  | "NO_SUBSCRIPTION"
-  | "IDENTITY_UNVERIFIED"
-  | "PAYMENT_ACCOUNT_UNVERIFIED"
-  | "PROFILE_INCOMPLETE"
-  | "TRAINING_REQUIRED"
-  | "ACTIVITY_REQUIREMENT_MISSING"
-  | "FRAUD_REVIEW"
-  | "SANCTIONED_ACCOUNT"
-  | "MINIMUM_NOT_REACHED"
-  | "INSUFFICIENT_LIQUIDITY_POOL"; // Platform protection
+  | 'NO_SUBSCRIPTION'
+  | 'IDENTITY_UNVERIFIED'
+  | 'PAYMENT_ACCOUNT_UNVERIFIED'
+  | 'PROFILE_INCOMPLETE'
+  | 'TRAINING_REQUIRED'
+  | 'ACTIVITY_REQUIREMENT_MISSING'
+  | 'FRAUD_REVIEW'
+  | 'SANCTIONED_ACCOUNT'
+  | 'MINIMUM_NOT_REACHED'
+  | 'INSUFFICIENT_LIQUIDITY_POOL'; // Platform protection
 
 export interface MonetizationEligibilityInput {
   subscriptionActive: boolean;
@@ -88,7 +88,7 @@ export interface WithdrawalRequest {
   payoutId: string;
   userId: string;
   amountCents: number;
-  status: "scheduled" | "processed" | "held" | "rejected";
+  status: 'scheduled' | 'processed' | 'held' | 'rejected';
   idempotencyKey: string;
   createdAt: string;
 }

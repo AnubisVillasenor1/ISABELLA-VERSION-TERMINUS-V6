@@ -1,6 +1,10 @@
 /** COMMERCE — ingresos confirmados, fórmulas estadísticas y niveles de confianza. */
 
-import type { CommerceConfidenceLevel as ConfidenceLevel, RevenueMetric, RevenueSummary } from "./types";
+import type {
+  CommerceConfidenceLevel as ConfidenceLevel,
+  RevenueMetric,
+  RevenueSummary,
+} from './types';
 
 export interface RevenueComponents {
   grossConfirmed: number;
@@ -12,7 +16,7 @@ export interface RevenueComponents {
 
 function validAmount(value: number): number {
   if (!Number.isFinite(value) || value < 0) {
-    throw new Error("REVENUE: los importes deben ser finitos y no negativos.");
+    throw new Error('REVENUE: los importes deben ser finitos y no negativos.');
   }
   return value;
 }
@@ -23,7 +27,7 @@ export function createRevenueSummary(input: RevenueComponents): RevenueSummary {
   const refunds = validAmount(input.refunds);
   const variableCost = validAmount(input.variableCost);
   if (fees + refunds + variableCost > grossConfirmed) {
-    throw new Error("REVENUE: deducciones superan el ingreso bruto confirmado.");
+    throw new Error('REVENUE: deducciones superan el ingreso bruto confirmado.');
   }
   return {
     grossConfirmed,
@@ -72,20 +76,17 @@ export function marginContribution(netConfirmed: number, grossConfirmed: number)
   return netConfirmed / grossConfirmed;
 }
 
-export function confidenceLevel(
-  observations: number,
-  partialAttribution = false,
-): ConfidenceLevel {
-  if (observations >= 100 && !partialAttribution) return "high";
-  if (observations >= 20) return "medium";
-  return "low";
+export function confidenceLevel(observations: number, partialAttribution = false): ConfidenceLevel {
+  if (observations >= 100 && !partialAttribution) return 'high';
+  if (observations >= 20) return 'medium';
+  return 'low';
 }
 
 export function metric(
   name: string,
   value: number,
   observations: number,
-  partialAttribution = false,
+  partialAttribution = false
 ): RevenueMetric {
   return {
     name,

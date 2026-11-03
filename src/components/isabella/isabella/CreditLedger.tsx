@@ -1,13 +1,13 @@
-import { useState } from "react";
-import { BookOpen, Search, RefreshCw } from "lucide-react";
+import { useState } from 'react';
+import { BookOpen, Search, RefreshCw } from 'lucide-react';
 
 export interface LedgerItem {
   id: string;
   operation: string;
-  category: "inference" | "processing" | "apis" | "skills" | "other" | "REFUND_EVENT";
+  category: 'inference' | 'processing' | 'apis' | 'skills' | 'other' | 'REFUND_EVENT';
   costDecimal: string;
   timestamp: string;
-  status: "settled" | "pending" | "refunded";
+  status: 'settled' | 'pending' | 'refunded';
   node: string;
 }
 
@@ -17,11 +17,11 @@ interface CreditLedgerProps {
 }
 
 export function CreditLedger({ ledger, onRefund }: CreditLedgerProps) {
-  const [filter, setFilter] = useState<string>("all");
-  const [search, setSearch] = useState<string>("");
+  const [filter, setFilter] = useState<string>('all');
+  const [search, setSearch] = useState<string>('');
 
   const filteredItems = ledger.filter((item) => {
-    const matchesFilter = filter === "all" || item.category === filter;
+    const matchesFilter = filter === 'all' || item.category === filter;
     const matchesSearch =
       item.operation.toLowerCase().includes(search.toLowerCase()) ||
       item.id.toLowerCase().includes(search.toLowerCase());
@@ -61,17 +61,17 @@ export function CreditLedger({ ledger, onRefund }: CreditLedgerProps) {
           />
         </div>
         <div className="flex gap-1.5 overflow-x-auto pb-1 sm:pb-0">
-          {["all", "inference", "processing", "apis", "skills"].map((cat) => (
+          {['all', 'inference', 'processing', 'apis', 'skills'].map((cat) => (
             <button
               key={cat}
               onClick={() => setFilter(cat)}
               className={`px-2.5 py-1 rounded-lg font-mono text-[9.5px] uppercase tracking-wider border transition-all ${
                 filter === cat
-                  ? "bg-primary/20 text-platinum border-primary/40"
-                  : "border-border/30 text-muted-foreground hover:text-platinum hover:border-border/60"
+                  ? 'bg-primary/20 text-platinum border-primary/40'
+                  : 'border-border/30 text-muted-foreground hover:text-platinum hover:border-border/60'
               }`}
             >
-              {cat === "all" ? "Todos" : cat}
+              {cat === 'all' ? 'Todos' : cat}
             </button>
           ))}
         </div>
@@ -117,11 +117,11 @@ export function CreditLedger({ ledger, onRefund }: CreditLedgerProps) {
                   <td className="py-3 px-3">
                     <span
                       className={`inline-block px-2 py-0.5 rounded-full text-[9px] uppercase tracking-wider ${
-                        item.status === "settled"
-                          ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                          : item.status === "refunded"
-                            ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
-                            : "bg-blue-500/10 text-blue-400 border border-blue-500/20"
+                        item.status === 'settled'
+                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                          : item.status === 'refunded'
+                            ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                            : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
                       }`}
                     >
                       {item.status}
@@ -129,13 +129,13 @@ export function CreditLedger({ ledger, onRefund }: CreditLedgerProps) {
                   </td>
                   <td
                     className={`py-3 px-3 text-right font-semibold ${
-                      item.status === "refunded" ? "text-amber-400 line-through" : "text-rose-400"
+                      item.status === 'refunded' ? 'text-amber-400 line-through' : 'text-rose-400'
                     }`}
                   >
-                    {item.status === "refunded" ? "+" : "-"}${item.costDecimal}
+                    {item.status === 'refunded' ? '+' : '-'}${item.costDecimal}
                   </td>
                   <td className="py-3 px-3 text-right">
-                    {item.status === "settled" ? (
+                    {item.status === 'settled' ? (
                       <button
                         onClick={() => onRefund(item.id)}
                         className="text-amber-400 hover:text-amber-300 hover:underline text-[10px] flex items-center gap-1 ml-auto justify-end"

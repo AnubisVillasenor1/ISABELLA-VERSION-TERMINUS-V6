@@ -4,7 +4,7 @@
  * Evaluación de riesgos operacionales, financieros y de gobernanza.
  */
 
-import type { RiskLevel } from "../contracts";
+import type { RiskLevel } from '../contracts';
 
 export interface RiskAssessment {
   level: RiskLevel;
@@ -22,36 +22,36 @@ export class RiskEngine {
   }): RiskAssessment {
     if (input.involvesFinancial) {
       return {
-        level: "R3_high",
+        level: 'R3_high',
         requiresApproval: true,
         score: 0.85,
-        factors: ["Operación financiera requiere aprobación explícita."],
+        factors: ['Operación financiera requiere aprobación explícita.'],
       };
     }
 
-    if (input.involvesGovernance || input.classification === "critical") {
+    if (input.involvesGovernance || input.classification === 'critical') {
       return {
-        level: "R3_high",
+        level: 'R3_high',
         requiresApproval: true,
         score: 0.75,
-        factors: ["Operación de gobernanza o clasificación crítica."],
+        factors: ['Operación de gobernanza o clasificación crítica.'],
       };
     }
 
-    if (input.classification === "restricted" || input.classification === "sensitive") {
+    if (input.classification === 'restricted' || input.classification === 'sensitive') {
       return {
-        level: "R2_moderate",
+        level: 'R2_moderate',
         requiresApproval: false,
         score: 0.5,
-        factors: ["Datos sensibles/restringidos procesados en sandbox seguro."],
+        factors: ['Datos sensibles/restringidos procesados en sandbox seguro.'],
       };
     }
 
     return {
-      level: "R1_low",
+      level: 'R1_low',
       requiresApproval: false,
       score: 0.15,
-      factors: ["Operación estándar informativa o de baja criticidad."],
+      factors: ['Operación estándar informativa o de baja criticidad.'],
     };
   }
 }

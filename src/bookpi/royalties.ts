@@ -35,10 +35,11 @@ export interface RoyaltySettlement {
  */
 export function calculateBookPiRoyalties(
   totalRevenueWei: bigint,
-  federationShares: readonly FederationShare[],
+  federationShares: readonly FederationShare[]
 ): RoyaltySplit[] {
-  if (totalRevenueWei < 0n) throw new Error("BOOKPI: totalRevenueWei cannot be negative");
-  if (federationShares.length === 0) throw new Error("BOOKPI: at least one federation share is required");
+  if (totalRevenueWei < 0n) throw new Error('BOOKPI: totalRevenueWei cannot be negative');
+  if (federationShares.length === 0)
+    throw new Error('BOOKPI: at least one federation share is required');
 
   let distributed = 0n;
   return federationShares.map((share, index) => {
@@ -62,7 +63,7 @@ export function calculateBookPiRoyalties(
 /** Liquidación completa con verificación de que la suma de repartos cuadra. */
 export function settleRoyalties(
   totalRevenueWei: bigint,
-  federationShares: readonly FederationShare[],
+  federationShares: readonly FederationShare[]
 ): RoyaltySettlement {
   const splits = calculateBookPiRoyalties(totalRevenueWei, federationShares);
   const distributed = splits.reduce((sum, split) => sum + BigInt(split.payoutAmountWei), 0n);

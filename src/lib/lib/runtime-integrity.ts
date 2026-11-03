@@ -1,7 +1,7 @@
-import { config, getConfigLoadError, resetConfigCache } from "./config";
-import { buildManifest } from "./build-manifest";
-import { capabilityRegistry } from "./capability-registry";
-import { evaluateProductionAuthorities } from "./production-authority";
+import { config, getConfigLoadError, resetConfigCache } from './config';
+import { buildManifest } from './build-manifest';
+import { capabilityRegistry } from './capability-registry';
+import { evaluateProductionAuthorities } from './production-authority';
 
 /**
  * INTEGRIDAD DEL RUNTIME
@@ -11,7 +11,7 @@ import { evaluateProductionAuthorities } from "./production-authority";
  * configuración es inválida o faltan dependencias obligatorias.
  */
 
-export type IntegrityStatus = "ok" | "degraded" | "failed";
+export type IntegrityStatus = 'ok' | 'degraded' | 'failed';
 
 export interface IntegrityResult {
   status: IntegrityStatus;
@@ -32,9 +32,9 @@ export function verifyRuntimeIntegrity(options?: {
     config();
   } catch {
     return {
-      status: "failed",
-      mode: "unknown",
-      configError: getConfigLoadError() ?? "Configuración de runtime inválida.",
+      status: 'failed',
+      mode: 'unknown',
+      configError: getConfigLoadError() ?? 'Configuración de runtime inválida.',
       manifestValid: false,
       requiredCapabilities: {},
       checkedAt: new Date().toISOString(),
@@ -45,29 +45,29 @@ export function verifyRuntimeIntegrity(options?: {
   const configError = getConfigLoadError();
   const mode = cfg.ISABELLA_RUNTIME_MODE;
 
-  let status: IntegrityStatus = configError ? "failed" : "ok";
+  let status: IntegrityStatus = configError ? 'failed' : 'ok';
 
-  const required = ["auth", "tenancy", "audit", "memory", "bookpi", "crown"];
+  const required = ['auth', 'tenancy', 'audit', 'memory', 'bookpi', 'crown'];
   const requiredCapabilities: Record<string, string> = {};
   for (const cap of required) {
     const state = capabilityRegistry.stateOf(cap);
     requiredCapabilities[cap] = state;
     if (strict && !capabilityRegistry.isOperational(cap)) {
-      status = status === "failed" ? "failed" : "degraded";
+      status = status === 'failed' ? 'failed' : 'degraded';
     }
   }
 
-  const manifest = buildManifest("server");
+  const manifest = buildManifest('server');
   const manifestValid = manifest.sourceHash.length === 64;
-  if (!manifestValid) status = "failed";
+  if (!manifestValid) status = 'failed';
 
   try {
     const authorities = evaluateProductionAuthorities();
     if (authorities.criticalFailed) {
-      status = status === "failed" ? "failed" : "degraded";
+      status = status === 'failed' ? 'failed' : 'degraded';
     }
   } catch {
-    status = status === "failed" ? "failed" : "degraded";
+    status = status === 'failed' ? 'failed' : 'degraded';
   }
 
   return {
@@ -82,8 +82,8 @@ export function verifyRuntimeIntegrity(options?: {
 
 export function ensureRuntimeReady(strict = false): IntegrityResult {
   const result = verifyRuntimeIntegrity({ strict });
-  if (result.status === "failed" && strict) {
-    throw new Error(`Runtime no listo: ${result.configError ?? "capacidades faltantes"}`);
+  if (result.status === 'failed' && strict) {
+    throw new Error(`Runtime no listo: ${result.configError ?? 'capacidades faltantes'}`);
   }
   return result;
 }

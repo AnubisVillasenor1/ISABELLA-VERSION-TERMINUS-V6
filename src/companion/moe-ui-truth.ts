@@ -9,9 +9,9 @@
  * es HEURISTIC_LEXICAL y NO satisface el contrato: etiquetarlo como MoE o
  * DeepSeek-V3 es MISLABELED.
  */
-import { satisfiesMoeContract, type RouterFamily } from "../cognition/moe/contract";
+import { satisfiesMoeContract, type RouterFamily } from '../cognition/moe/contract';
 
-export type UiTruthVerdict = "HONEST_LABEL" | "MISLABELED";
+export type UiTruthVerdict = 'HONEST_LABEL' | 'MISLABELED';
 
 export interface UiRouterLabelVerdict {
   readonly verdict: UiTruthVerdict;
@@ -21,30 +21,32 @@ export interface UiRouterLabelVerdict {
 }
 
 const RESERVED_CAPABILITY_MARKERS: readonly string[] = Object.freeze([
-  "moe",
-  "deepseek",
-  "experts",
-  "gate",
-  "top-k",
-  "logits",
-  "router neuronal",
-  "mixture of experts",
+  'moe',
+  'deepseek',
+  'experts',
+  'gate',
+  'top-k',
+  'logits',
+  'router neuronal',
+  'mixture of experts',
 ]);
 
 export function classifyUiRouterLabel(family: RouterFamily, label: string): UiRouterLabelVerdict {
   const normalized = label.toLowerCase();
-  const claimsMoeCapability = RESERVED_CAPABILITY_MARKERS.some((marker) => normalized.includes(marker));
+  const claimsMoeCapability = RESERVED_CAPABILITY_MARKERS.some((marker) =>
+    normalized.includes(marker)
+  );
   const contractSatisfied = satisfiesMoeContract(family);
   if (claimsMoeCapability && !contractSatisfied) {
     return Object.freeze({
-      verdict: "MISLABELED" as const,
+      verdict: 'MISLABELED' as const,
       family,
       label,
       reason: `UI_TRUTH: la familia ${family} no satisface el contrato MoE; el rótulo anuncia una capacidad que no tiene.`,
     });
   }
   return Object.freeze({
-    verdict: "HONEST_LABEL" as const,
+    verdict: 'HONEST_LABEL' as const,
     family,
     label,
     reason: `UI_TRUTH: rótulo coherente con la familia ${family} (satisfiesMoeContract=${contractSatisfied}).`,
@@ -53,5 +55,5 @@ export function classifyUiRouterLabel(family: RouterFamily, label: string): UiRo
 
 export function assertRouterLabelHonest(family: RouterFamily, label: string): void {
   const verdict = classifyUiRouterLabel(family, label);
-  if (verdict.verdict === "MISLABELED") throw new Error(verdict.reason);
+  if (verdict.verdict === 'MISLABELED') throw new Error(verdict.reason);
 }

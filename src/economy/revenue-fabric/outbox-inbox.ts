@@ -5,7 +5,7 @@
  * Implements Transactional Outbox + Inbox for exactly-once effect delivery
  */
 
-import { createHash, timingSafeEqual, randomUUID } from "node:crypto";
+import { createHash, timingSafeEqual, randomUUID } from 'node:crypto';
 
 export type OutboxEvent = {
   id: string;
@@ -14,7 +14,7 @@ export type OutboxEvent = {
   eventType: string;
   eventId: string;
   payload: unknown;
-  status: "PENDING" | "PUBLISHED" | "FAILED" | "DEAD_LETTER";
+  status: 'PENDING' | 'PUBLISHED' | 'FAILED' | 'DEAD_LETTER';
   attempts: number;
   createdAt: string;
   publishedAt?: string;
@@ -108,7 +108,7 @@ export class Outbox {
       eventType,
       eventId,
       payload,
-      status: "PENDING",
+      status: 'PENDING',
       attempts: 0,
       createdAt: now,
     };
@@ -121,7 +121,10 @@ export class Outbox {
     if (!this.running) return;
 
     const pending = Array.from(this.events.values())
-      .filter(e => e.status === "PENDING" || (e.status === "FAILED" && e.attempts < this.config.maxAttempts))
+      .filter(
+        (e) =>
+          e.status === 'PENDING' || (e.status === 'FAILED' && e.attempts < this.config.maxAttempts)
+      )
       .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
       .slice(0, this.config.batchSize);
 
@@ -131,11 +134,12 @@ export class Outbox {
   }
 
   private async processEvent(event: OutboxEvent): Promise<void> {
-    const relevantConsumers = Array.from(this.consumers.values())
-      .filter(c => this.shouldConsume(c, event));
+    const relevantConsumers = Array.from(this.consumers.values()).filter((c) =>
+      this.shouldConsume(c, event)
+    );
 
     if (relevantConsumers.length === 0) {
-      event.status = "PUBLISHED";
+      event.status = 'PUBLISHED';
       event.publishedAt = new Date().toISOString();
       this.events.set(event.id, event);
       return;
@@ -148,13 +152,13 @@ export class Outbox {
     for (const consumer of relevantConsumers) {
       try {
         await consumer.handle(event);
-        
+
         // Record in inbox for idempotency
         this.recordInInbox(consumer.name, event.eventId, event.payload);
       } catch (error) {
         allSucceeded = false;
         lastError = error instanceof Error ? error.message : String(error);
-        
+
         // Check if we should retry this consumer
         const consumerPolicy = consumer.retryPolicy || {
           maxAttempts: this.config.maxAttempts,
@@ -165,21 +169,22 @@ export class Outbox {
 
         if (event.attempts + 1 >= consumerPolicy.maxAttempts) {
           // Move to dead letter
-          event.status = "DEAD_LETTER";
+          event.status = 'DEAD_LETTER';
           event.lastError = `Max attempts reached for consumer ${consumer.name}: ${lastError}`;
         } else {
-          event.status = "FAILED";
+          event.status = 'FAILED';
           event.attempts++;
           event.lastError = `Consumer ${consumer.name} failed: ${lastError}`;
-          
+
           // Schedule retry with exponential backoff
           const delay = Math.min(
-            consumerPolicy.baseDelayMs * Math.pow(consumerPolicy.backoffMultiplier, event.attempts - 1),
+            consumerPolicy.baseDelayMs *
+              Math.pow(consumerPolicy.backoffMultiplier, event.attempts - 1),
             consumerPolicy.maxDelayMs
           );
           setTimeout(() => {
-            if (event.status === "FAILED") {
-              event.status = "PENDING";
+            if (event.status === 'FAILED') {
+              event.status = 'PENDING';
               this.events.set(event.id, event);
             }
           }, delay);
@@ -188,7 +193,7 @@ export class Outbox {
     }
 
     if (allSucceeded) {
-      event.status = "PUBLISHED";
+      event.status = 'PUBLISHED';
       event.publishedAt = new Date().toISOString();
     }
 
@@ -222,25 +227,25 @@ export class Outbox {
   }
 
   getEvent(eventId: string): OutboxEvent | undefined {
-    return Array.from(this.events.values()).find(e => e.eventId === eventId);
+    return Array.from(this.events.values()).find((e) => e.eventId === eventId);
   }
 
   getEventsByAggregate(aggregateType: string, aggregateId: string): readonly OutboxEvent[] {
     return Array.from(this.events.values())
-      .filter(e => e.aggregateType === aggregateType && e.aggregateId === aggregateId)
+      .filter((e) => e.aggregateType === aggregateType && e.aggregateId === aggregateId)
       .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   }
 
   getDeadLetterEvents(): readonly OutboxEvent[] {
     return Array.from(this.events.values())
-      .filter(e => e.status === "DEAD_LETTER")
+      .filter((e) => e.status === 'DEAD_LETTER')
       .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   }
 
   retryDeadLetter(eventId: string): boolean {
     const event = this.events.get(eventId);
-    if (!event || event.status !== "DEAD_LETTER") return false;
-    event.status = "PENDING";
+    if (!event || event.status !== 'DEAD_LETTER') return false;
+    event.status = 'PENDING';
     event.attempts = 0;
     event.lastError = undefined;
     this.events.set(eventId, event);
@@ -271,17 +276,17 @@ export const inbox = new Inbox();
 
 // Event types for Revenue Fabric
 export const REVENUE_EVENTS = {
-  USAGE_RECORDED: "USAGE_RECORDED",
-  PAYMENT_CONFIRMED: "PAYMENT_CONFIRMED",
-  MARKETPLACE_SALE_COMPLETED: "MARKETPLACE_SALE_COMPLETED",
-  SUBSCRIPTION_ACTIVATED: "SUBSCRIPTION_ACTIVATED",
-  AGENT_DEPLOYED: "AGENT_DEPLOYED",
-  SETTLEMENT_POSTED: "SETTLEMENT_POSTED",
-  PAYOUT_REQUESTED: "PAYOUT_REQUESTED",
-  PAYOUT_SETTLED: "PAYOUT_SETTLED",
-  REFUND_REQUESTED: "REFUND_REQUESTED",
-  FRAUD_SIGNAL_DETECTED: "FRAUD_SIGNAL_DETECTED",
-  TRUST_SCORE_UPDATED: "TRUST_SCORE_UPDATED",
-  WALLET_CREDITED: "WALLET_CREDITED",
-  WALLET_DEBITED: "WALLET_DEBITED",
+  USAGE_RECORDED: 'USAGE_RECORDED',
+  PAYMENT_CONFIRMED: 'PAYMENT_CONFIRMED',
+  MARKETPLACE_SALE_COMPLETED: 'MARKETPLACE_SALE_COMPLETED',
+  SUBSCRIPTION_ACTIVATED: 'SUBSCRIPTION_ACTIVATED',
+  AGENT_DEPLOYED: 'AGENT_DEPLOYED',
+  SETTLEMENT_POSTED: 'SETTLEMENT_POSTED',
+  PAYOUT_REQUESTED: 'PAYOUT_REQUESTED',
+  PAYOUT_SETTLED: 'PAYOUT_SETTLED',
+  REFUND_REQUESTED: 'REFUND_REQUESTED',
+  FRAUD_SIGNAL_DETECTED: 'FRAUD_SIGNAL_DETECTED',
+  TRUST_SCORE_UPDATED: 'TRUST_SCORE_UPDATED',
+  WALLET_CREDITED: 'WALLET_CREDITED',
+  WALLET_DEBITED: 'WALLET_DEBITED',
 } as const;

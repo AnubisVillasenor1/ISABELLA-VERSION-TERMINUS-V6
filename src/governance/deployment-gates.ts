@@ -16,26 +16,26 @@
  */
 
 export const DEPLOYMENT_GATES = [
-  "build",
-  "tests",
-  "secret_scan",
-  "dependency_scan",
-  "security_scan",
-  "auth_rls",
-  "smoke",
-  "health_readiness",
-  "canary",
-  "rollback_plan",
+  'build',
+  'tests',
+  'secret_scan',
+  'dependency_scan',
+  'security_scan',
+  'auth_rls',
+  'smoke',
+  'health_readiness',
+  'canary',
+  'rollback_plan',
 ] as const;
 
 export type DeploymentGate = (typeof DEPLOYMENT_GATES)[number];
 
-export type GateStatus = "passed" | "failed" | "skipped";
+export type GateStatus = 'passed' | 'failed' | 'skipped';
 
 export interface DeploymentTarget {
   /** Destino: repositorio de spec, app ejecutable o bibliotecas IKES. */
-  layer: "tamv-spec" | "tamv-app" | "ikes";
-  provider: "github" | "vercel" | "lovable" | "self-hosted";
+  layer: 'tamv-spec' | 'tamv-app' | 'ikes';
+  provider: 'github' | 'vercel' | 'lovable' | 'self-hosted';
   url?: string;
 }
 
@@ -52,7 +52,8 @@ export interface DeploymentAssessment {
   reports: readonly DeploymentGateReport[];
 }
 
-const EXAMPLE_IP = /^(?:0\.0\.0\.0|127\.0\.0\.1|192\.0\.2\.\d+|198\.51\.100\.\d+|203\.0\.113\.\d+|example\.)/i;
+const EXAMPLE_IP =
+  /^(?:0\.0\.0\.0|127\.0\.0\.1|192\.0\.2\.\d+|198\.51\.100\.\d+|203\.0\.113\.\d+|example\.)/i;
 
 /**
  * Evalúa los gates de despliegue. Fail-closed: cualquier gate fallido o ausente
@@ -61,26 +62,39 @@ const EXAMPLE_IP = /^(?:0\.0\.0\.0|127\.0\.0\.1|192\.0\.2\.\d+|198\.51\.100\.\d+
 export function assessDeployment(
   target: DeploymentTarget,
   gates: Readonly<Partial<Record<DeploymentGate, GateStatus>>>,
-  opts: { dnsRecords?: readonly string[] } = {},
+  opts: { dnsRecords?: readonly string[] } = {}
 ): DeploymentAssessment {
   const reports: DeploymentGateReport[] = [];
   const blockers = new Set<string>();
   // Gates de seguridad que se marcan explícitamente como críticos en el reporte.
-  const CRITICAL: readonly DeploymentGate[] = ["secret_scan", "dependency_scan", "security_scan", "rollback_plan"];
+  const CRITICAL: readonly DeploymentGate[] = [
+    'secret_scan',
+    'dependency_scan',
+    'security_scan',
+    'rollback_plan',
+  ];
 
   for (const gate of DEPLOYMENT_GATES) {
-    const status = gates[gate] ?? "skipped";
+    const status = gates[gate] ?? 'skipped';
     const critical = CRITICAL.includes(gate);
     // Fail-closed: cualquier gate que no esté `passed` bloquea el despliegue.
-    if (status !== "passed") blockers.add(gate);
-    reports.push({ gate, status, detail: status === "passed" ? "ok" : critical ? "critical gate not passed" : "not passed" });
+    if (status !== 'passed') blockers.add(gate);
+    reports.push({
+      gate,
+      status,
+      detail: status === 'passed' ? 'ok' : critical ? 'critical gate not passed' : 'not passed',
+    });
   }
 
   const dnsRecords = opts.dnsRecords ?? [];
   const exampleRecords = dnsRecords.filter((record) => EXAMPLE_IP.test(record.trim()));
   if (exampleRecords.length > 0) {
-    blockers.add("dns_example_value_in_production");
-    reports.push({ gate: "health_readiness", status: "failed", detail: `example DNS values: ${exampleRecords.join(", ")}` });
+    blockers.add('dns_example_value_in_production');
+    reports.push({
+      gate: 'health_readiness',
+      status: 'failed',
+      detail: `example DNS values: ${exampleRecords.join(', ')}`,
+    });
   }
 
   return {

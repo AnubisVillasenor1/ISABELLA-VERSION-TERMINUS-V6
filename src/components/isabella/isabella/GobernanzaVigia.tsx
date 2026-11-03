@@ -1,14 +1,14 @@
-import { useState } from "react";
-import { ShieldCheck, Sliders } from "lucide-react";
-import { toast } from "sonner";
+import { useState } from 'react';
+import { ShieldCheck, Sliders } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface GovModule {
   id: string;
   name: string;
   role: string;
-  status: "ACTIVE" | "AUDITING" | "STANDBY";
+  status: 'ACTIVE' | 'AUDITING' | 'STANDBY';
   complianceScore: number | null;
-  mode: "STRICT_ENFORCE" | "MONITOR_ONLY";
+  mode: 'STRICT_ENFORCE' | 'MONITOR_ONLY';
   description: string;
   metricLabel: string;
   metricValue: string;
@@ -17,52 +17,52 @@ interface GovModule {
 export function GobernanzaVigia() {
   const [modules, setModules] = useState<GovModule[]>([
     {
-      id: "atlas",
-      name: "ATLAS Node",
-      role: "Simulador de impacto territorial y ético social",
-      status: "STANDBY",
+      id: 'atlas',
+      name: 'ATLAS Node',
+      role: 'Simulador de impacto territorial y ético social',
+      status: 'STANDBY',
       complianceScore: null,
-      mode: "STRICT_ENFORCE",
+      mode: 'STRICT_ENFORCE',
       description:
-        "Modula la entrega de información para que se alinee rigurosamente con el bienestar comunitario y el canon histórico.",
-      metricLabel: "Índice de Alineación Ética",
-      metricValue: "No verificado",
+        'Modula la entrega de información para que se alinee rigurosamente con el bienestar comunitario y el canon histórico.',
+      metricLabel: 'Índice de Alineación Ética',
+      metricValue: 'No verificado',
     },
     {
-      id: "anubis",
-      name: "ANUBIS Node",
-      role: "Guardián de integridad criptográfica de artefactos",
-      status: "STANDBY",
+      id: 'anubis',
+      name: 'ANUBIS Node',
+      role: 'Guardián de integridad criptográfica de artefactos',
+      status: 'STANDBY',
       complianceScore: null,
-      mode: "STRICT_ENFORCE",
+      mode: 'STRICT_ENFORCE',
       description:
-        "Verifica y firma digitalmente la procedencia e inmutabilidad de archivos, reportes y hashes contables del sistema.",
-      metricLabel: "Integridad de Archivos",
-      metricValue: "No verificado",
+        'Verifica y firma digitalmente la procedencia e inmutabilidad de archivos, reportes y hashes contables del sistema.',
+      metricLabel: 'Integridad de Archivos',
+      metricValue: 'No verificado',
     },
     {
-      id: "themis",
-      name: "THEMIS Node",
-      role: "Motor de auditabilidad algorítmica e historial",
-      status: "STANDBY",
+      id: 'themis',
+      name: 'THEMIS Node',
+      role: 'Motor de auditabilidad algorítmica e historial',
+      status: 'STANDBY',
       complianceScore: null,
-      mode: "MONITOR_ONLY",
+      mode: 'MONITOR_ONLY',
       description:
-        "Genera expedientes estructurados explicables de cada decisión y los enlaza al ledger de BookPI para auditorías externas.",
-      metricLabel: "Expedientes Firmados",
-      metricValue: "No disponible",
+        'Genera expedientes estructurados explicables de cada decisión y los enlaza al ledger de BookPI para auditorías externas.',
+      metricLabel: 'Expedientes Firmados',
+      metricValue: 'No disponible',
     },
     {
-      id: "vigia",
-      name: "VIGIA Sentinel",
-      role: "Firewall y Gate de políticas en vivo",
-      status: "STANDBY",
+      id: 'vigia',
+      name: 'VIGIA Sentinel',
+      role: 'Firewall y Gate de políticas en vivo',
+      status: 'STANDBY',
       complianceScore: null,
-      mode: "STRICT_ENFORCE",
+      mode: 'STRICT_ENFORCE',
       description:
-        "Evalúa vectores de entrada contra restricciones constitucionales, rechazando solicitudes hostiles o inyecciones.",
-      metricLabel: "Veto de Restricción",
-      metricValue: "No disponible",
+        'Evalúa vectores de entrada contra restricciones constitucionales, rechazando solicitudes hostiles o inyecciones.',
+      metricLabel: 'Veto de Restricción',
+      metricValue: 'No disponible',
     },
   ]);
 
@@ -70,7 +70,7 @@ export function GobernanzaVigia() {
     setModules((prev) =>
       prev.map((mod) => {
         if (mod.id === id) {
-          const nextMode = mod.mode === "STRICT_ENFORCE" ? "MONITOR_ONLY" : "STRICT_ENFORCE";
+          const nextMode = mod.mode === 'STRICT_ENFORCE' ? 'MONITOR_ONLY' : 'STRICT_ENFORCE';
           toast.success(`${mod.name} reconfigurado a modo: ${nextMode}`);
           return {
             ...mod,
@@ -79,7 +79,7 @@ export function GobernanzaVigia() {
           };
         }
         return mod;
-      }),
+      })
     );
   };
 
@@ -141,19 +141,19 @@ export function GobernanzaVigia() {
                   type="button"
                   onClick={() => handleToggleMode(mod.id)}
                   className={`px-2 py-1 rounded-lg border font-bold text-[8.5px] uppercase flex items-center gap-1 transition-all ${
-                    mod.mode === "STRICT_ENFORCE"
-                      ? "bg-crown/10 border-crown text-crown"
-                      : "bg-black/40 border-border/10 text-muted-foreground"
+                    mod.mode === 'STRICT_ENFORCE'
+                      ? 'bg-crown/10 border-crown text-crown'
+                      : 'bg-black/40 border-border/10 text-muted-foreground'
                   }`}
                 >
-                  <Sliders className="size-3" />{" "}
-                  {mod.mode === "STRICT_ENFORCE" ? "Estricto" : "Monitor"}
+                  <Sliders className="size-3" />{' '}
+                  {mod.mode === 'STRICT_ENFORCE' ? 'Estricto' : 'Monitor'}
                 </button>
                 <div className="text-right">
                   <span className="text-muted-foreground text-[8.5px] block">PUNTAJE:</span>
                   <strong className="text-emerald-400 font-bold">
                     {mod.complianceScore === null
-                      ? "NO VERIFICADO"
+                      ? 'NO VERIFICADO'
                       : `${mod.complianceScore.toFixed(1)}%`}
                   </strong>
                 </div>

@@ -1,4 +1,4 @@
-import { EthicalKnowledgeSnippet, GovernanceGuideline, TransparencyMarker } from "./index";
+import { EthicalKnowledgeSnippet, GovernanceGuideline, TransparencyMarker } from './index';
 
 // Simple browser-safe hash for the chaotic engine simulation
 function generateHash(str: string): string {
@@ -8,7 +8,7 @@ function generateHash(str: string): string {
     hash = (hash << 5) - hash + chr;
     hash |= 0;
   }
-  return Math.abs(hash).toString(16).padStart(8, "0");
+  return Math.abs(hash).toString(16).padStart(8, '0');
 }
 
 export class EthicalRegistry {
@@ -22,7 +22,7 @@ export class EthicalRegistry {
   public storeSnippet(
     content: string,
     integrityHash: string,
-    entropyLevel: number = 1.0,
+    entropyLevel: number = 1.0
   ): EthicalKnowledgeSnippet {
     const id = crypto.randomUUID();
     const snippet: EthicalKnowledgeSnippet = {
@@ -46,10 +46,10 @@ export class EthicalRegistry {
   public indexGuideline(
     premise: string,
     resolution: string,
-    snippetIds: string[],
+    snippetIds: string[]
   ): GovernanceGuideline {
     const id = crypto.randomUUID();
-    const payload = `${premise}:${resolution}:${snippetIds.sort().join(",")}`;
+    const payload = `${premise}:${resolution}:${snippetIds.sort().join(',')}`;
     const hash = generateHash(payload);
 
     const guideline: GovernanceGuideline = {
@@ -74,7 +74,7 @@ export class EthicalRegistry {
   public addTransparencyMarker(
     targetId: string,
     auditScore: number,
-    flags: string[],
+    flags: string[]
   ): TransparencyMarker {
     const id = crypto.randomUUID();
     const marker: TransparencyMarker = {
@@ -94,7 +94,7 @@ export class EthicalRegistry {
   public getSystemHealth() {
     const totalSnippets = this.snippets.size;
     const anchoredSnippets = new Set(
-      Array.from(this.guidelines.values()).flatMap((g) => g.snippetIds),
+      Array.from(this.guidelines.values()).flatMap((g) => g.snippetIds)
     ).size;
 
     const density = totalSnippets > 0 ? (anchoredSnippets / totalSnippets) * 100 : 0;
@@ -112,7 +112,7 @@ export class EthicalRegistry {
       knowledgeDensity: density, // Percentage
       alignmentCheckScore: avgAuditScore * 100, // Percentage
       activeFlags: Array.from(this.markers.values()).flatMap((m) => m.flags).length,
-      healthStatus: avgAuditScore > 0.8 ? "Optimal" : avgAuditScore > 0.5 ? "Warning" : "Critical",
+      healthStatus: avgAuditScore > 0.8 ? 'Optimal' : avgAuditScore > 0.5 ? 'Warning' : 'Critical',
     };
   }
 }

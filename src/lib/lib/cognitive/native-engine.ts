@@ -3,10 +3,10 @@
  * Deterministic, dependency-light ML plane for FGAIS.
  * No provider/network access. Suitable for local, edge and federated nodes.
  */
-import { createHash, randomUUID } from "node:crypto";
+import { createHash, randomUUID } from 'node:crypto';
 
 export type Task =
-  "classification" | "regression" | "clustering" | "anomaly" | "ranking" | "timeseries";
+  'classification' | 'regression' | 'clustering' | 'anomaly' | 'ranking' | 'timeseries';
 export type Vector = number[];
 export interface Dataset {
   id: string;
@@ -45,26 +45,26 @@ export interface Evaluation {
 const finite = (x: number) => Number.isFinite(x);
 function assertMatrix(X: Vector[]): void {
   if (!X.length || !X.every((r) => r.length > 0 && r.every(finite)))
-    throw new Error("Dataset vacío o no finito");
+    throw new Error('Dataset vacío o no finito');
   const n = X[0].length;
-  if (!X.every((r) => r.length === n)) throw new Error("Dimensiones inconsistentes");
+  if (!X.every((r) => r.length === n)) throw new Error('Dimensiones inconsistentes');
 }
 function assertLabels(y: number[], n: number): void {
-  if (y.length !== n || !y.every(finite)) throw new Error("Labels inválidos");
+  if (y.length !== n || !y.every(finite)) throw new Error('Labels inválidos');
 }
 export function stableSerialize(value: unknown): string {
-  if (value === null || typeof value !== "object") return JSON.stringify(value);
-  if (Array.isArray(value)) return `[${value.map(stableSerialize).join(",")}]`;
+  if (value === null || typeof value !== 'object') return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(stableSerialize).join(',')}]`;
   const o = value as Record<string, unknown>;
   return `{${Object.keys(o)
     .sort()
     .map((k) => `${JSON.stringify(k)}:${stableSerialize(o[k])}`)
-    .join(",")}}`;
+    .join(',')}}`;
 }
 export function sha256(value: unknown): string {
-  return createHash("sha256")
-    .update(typeof value === "string" ? value : stableSerialize(value))
-    .digest("hex");
+  return createHash('sha256')
+    .update(typeof value === 'string' ? value : stableSerialize(value))
+    .digest('hex');
 }
 function dot(a: Vector, b: Vector): number {
   let s = 0;
@@ -88,12 +88,12 @@ export class NativeMLEngine {
   trainClassification(
     X: Vector[],
     y: number[],
-    options: { epochs?: number; learningRate?: number } = {},
+    options: { epochs?: number; learningRate?: number } = {}
   ): ModelArtifact {
     assertMatrix(X);
     assertLabels(y, X.length);
     const classes = [...new Set(y)].sort((a, b) => a - b);
-    if (classes.length < 2) throw new Error("Se requieren al menos dos clases");
+    if (classes.length < 2) throw new Error('Se requieren al menos dos clases');
     if (classes.length > 2) return this.trainOvR(X, y, classes, options);
     const w = new Array(X[0].length).fill(0),
       lr = options.learningRate ?? 0.05,
@@ -111,13 +111,13 @@ export class NativeMLEngine {
       for (let j = 0; j < w.length; j++) w[j] -= (lr * gw[j]) / X.length;
       b -= (lr * gb) / X.length;
     }
-    return this.artifact("classification", "logistic-regression", [w], [b], X, y);
+    return this.artifact('classification', 'logistic-regression', [w], [b], X, y);
   }
   private trainOvR(
     X: Vector[],
     y: number[],
     classes: number[],
-    options: { epochs?: number; learningRate?: number },
+    options: { epochs?: number; learningRate?: number }
   ): ModelArtifact {
     const ws: number[][] = [],
       bs: number[] = [];
@@ -127,12 +127,12 @@ export class NativeMLEngine {
       ws.push(m.weights[0]);
       bs.push(m.bias[0]);
     }
-    return this.artifact("classification", "one-vs-rest-logistic", ws, bs, X, y);
+    return this.artifact('classification', 'one-vs-rest-logistic', ws, bs, X, y);
   }
   trainRegression(
     X: Vector[],
     y: number[],
-    options: { epochs?: number; learningRate?: number } = {},
+    options: { epochs?: number; learningRate?: number } = {}
   ): ModelArtifact {
     assertMatrix(X);
     assertLabels(y, X.length);
@@ -151,12 +151,12 @@ export class NativeMLEngine {
       for (let j = 0; j < w.length; j++) w[j] -= (lr * 2 * gw[j]) / X.length;
       b -= (lr * 2 * gb) / X.length;
     }
-    return this.artifact("regression", "linear-regression", [w], [b], X, y);
+    return this.artifact('regression', 'linear-regression', [w], [b], X, y);
   }
   predict(model: ModelArtifact, X: Vector[]): number[] {
     assertMatrix(X);
-    if (X[0].length !== model.featureCount) throw new Error("Feature count mismatch");
-    if (model.algorithm.includes("logistic")) {
+    if (X[0].length !== model.featureCount) throw new Error('Feature count mismatch');
+    if (model.algorithm.includes('logistic')) {
       return X.map((row) => {
         const scores = model.weights.map((w, i) => sigmoid(dot(w, row) + (model.bias[i] ?? 0)));
         return scores.length === 1
@@ -169,12 +169,12 @@ export class NativeMLEngine {
     return X.map((row) => dot(model.weights[0], row) + model.bias[0]);
   }
   probabilities(model: ModelArtifact, X: Vector[]): number[][] {
-    if (!model.algorithm.includes("logistic")) throw new Error("Probabilities require classifier");
+    if (!model.algorithm.includes('logistic')) throw new Error('Probabilities require classifier');
     return X.map((row) => model.weights.map((w, i) => sigmoid(dot(w, row) + (model.bias[i] ?? 0))));
   }
   kmeans(X: Vector[], k: number, iterations = 50): { centroids: Vector[]; assignments: number[] } {
     assertMatrix(X);
-    if (!Number.isInteger(k) || k < 2 || k > X.length) throw new Error("Invalid k");
+    if (!Number.isInteger(k) || k < 2 || k > X.length) throw new Error('Invalid k');
     const c = X.slice(0, k).map((r) => [...r]);
     const a = new Array(X.length).fill(0);
     for (let it = 0; it < iterations; it++) {
@@ -232,7 +232,7 @@ export class NativeMLEngine {
   drift(
     reference: Vector[],
     current: Vector[],
-    bins = 10,
+    bins = 10
   ): {
     psi: number;
     features: { feature: number; psi: number; drift: boolean }[];
@@ -259,10 +259,10 @@ export class NativeMLEngine {
   evaluateClassification(
     y: number[],
     pred: number[],
-    groups?: { group: string; value: number }[],
+    groups?: { group: string; value: number }[]
   ): Evaluation {
     assertLabels(y, y.length);
-    if (pred.length !== y.length) throw new Error("Prediction length mismatch");
+    if (pred.length !== y.length) throw new Error('Prediction length mismatch');
     const tp = y.filter((v, i) => v === 1 && pred[i] === 1).length,
       fp = y.filter((v, i) => v !== 1 && pred[i] === 1).length,
       fn = y.filter((v, i) => v === 1 && pred[i] !== 1).length,
@@ -278,7 +278,7 @@ export class NativeMLEngine {
         })
       : undefined;
     return {
-      modelId: "evaluation",
+      modelId: 'evaluation',
       accuracy: acc,
       precision,
       recall,
@@ -289,7 +289,7 @@ export class NativeMLEngine {
     };
   }
   evaluateRegression(y: number[], pred: number[]): Evaluation {
-    if (y.length !== pred.length || !y.length) throw new Error("Invalid regression evaluation");
+    if (y.length !== pred.length || !y.length) throw new Error('Invalid regression evaluation');
     const mse = mean(y.map((v, i) => (v - pred[i]) ** 2)),
       rmse = Math.sqrt(mse),
       ym = mean(y),
@@ -297,7 +297,7 @@ export class NativeMLEngine {
       ssTot = y.reduce((s, v) => s + (v - ym) ** 2, 0);
     const r2 = 1 - ssRes / (ssTot || 1);
     return {
-      modelId: "evaluation",
+      modelId: 'evaluation',
       mse,
       rmse,
       r2,
@@ -311,12 +311,12 @@ export class NativeMLEngine {
     weights: number[][],
     bias: number[],
     X: Vector[],
-    y: number[],
+    y: number[]
   ): ModelArtifact {
     const datasetHash = sha256({ X, y }),
       base = {
         modelId: `native-${randomUUID()}`,
-        version: "1.0.0",
+        version: '1.0.0',
         task,
         algorithm,
         weights,
@@ -334,12 +334,12 @@ export function weightedAverage(values: number[][], weights: number[]): number[]
     values.some((v) => v.length !== values[0].length) ||
     weights.length !== values.length
   )
-    throw new Error("Invalid aggregation");
+    throw new Error('Invalid aggregation');
   const total = weights.reduce((s, w) => s + w, 0);
-  if (!(total > 0)) throw new Error("Invalid aggregation weights");
+  if (!(total > 0)) throw new Error('Invalid aggregation weights');
   return values[0].map((_, j) => values.reduce((s, v, i) => s + v[j] * weights[i], 0) / total);
 }
 export function robustMedianAggregate(values: number[][]): number[] {
-  if (!values.length) throw new Error("No updates");
+  if (!values.length) throw new Error('No updates');
   return values[0].map((_, j) => median(values.map((v) => v[j])));
 }

@@ -1,13 +1,13 @@
-import { config } from "@/lib/config";
-import { SecuritySystem } from "@/lib/security";
-import type { IntelligenceProvider, IntelligenceRequest, IntelligenceResponse } from "./contracts";
+import { config } from '@/lib/config';
+import { SecuritySystem } from '@/lib/security';
+import type { IntelligenceProvider, IntelligenceRequest, IntelligenceResponse } from './contracts';
 
 export type FreeAIEndpoint = {
   id: string;
   label: string;
   baseUrl: string;
   model: string;
-  license: "local-open-weight" | "provider-free-tier";
+  license: 'local-open-weight' | 'provider-free-tier';
   requiresKey: boolean;
 };
 
@@ -17,10 +17,10 @@ export type FreeAIEndpoint = {
  * be supplied by the operator so terms, residency, quotas and privacy can be checked.
  */
 export const FREE_AI_CATALOG = [
-  { id: "ollama", label: "Ollama local", license: "local-open-weight" },
-  { id: "llama-cpp", label: "llama.cpp / vLLM", license: "local-open-weight" },
-  { id: "lm-studio", label: "LM Studio local", license: "local-open-weight" },
-  { id: "provider-free-tier", label: "Operator-approved free tier", license: "provider-free-tier" },
+  { id: 'ollama', label: 'Ollama local', license: 'local-open-weight' },
+  { id: 'llama-cpp', label: 'llama.cpp / vLLM', license: 'local-open-weight' },
+  { id: 'lm-studio', label: 'LM Studio local', license: 'local-open-weight' },
+  { id: 'provider-free-tier', label: 'Operator-approved free tier', license: 'provider-free-tier' },
 ] as const;
 
 function parseEndpoints(raw: string | undefined): FreeAIEndpoint[] {
@@ -29,12 +29,12 @@ function parseEndpoints(raw: string | undefined): FreeAIEndpoint[] {
     const value: unknown = JSON.parse(raw);
     if (!Array.isArray(value)) return [];
     return value.flatMap((item): FreeAIEndpoint[] => {
-      if (!item || typeof item !== "object") return [];
+      if (!item || typeof item !== 'object') return [];
       const candidate = item as Record<string, unknown>;
-      const id = typeof candidate.id === "string" ? candidate.id.trim() : "";
-      const baseUrl = typeof candidate.baseUrl === "string" ? candidate.baseUrl.trim() : "";
-      const model = typeof candidate.model === "string" ? candidate.model.trim() : "";
-      const label = typeof candidate.label === "string" ? candidate.label.trim() : id;
+      const id = typeof candidate.id === 'string' ? candidate.id.trim() : '';
+      const baseUrl = typeof candidate.baseUrl === 'string' ? candidate.baseUrl.trim() : '';
+      const model = typeof candidate.model === 'string' ? candidate.model.trim() : '';
+      const label = typeof candidate.label === 'string' ? candidate.label.trim() : id;
       const requiresKey = candidate.requiresKey === true;
       if (!id || !model || !/^https:\/\//i.test(baseUrl) || !/^[a-zA-Z0-9._:/-]+$/.test(model))
         return [];
@@ -42,9 +42,9 @@ function parseEndpoints(raw: string | undefined): FreeAIEndpoint[] {
         {
           id,
           label,
-          baseUrl: baseUrl.replace(/\/$/, ""),
+          baseUrl: baseUrl.replace(/\/$/, ''),
           model,
-          license: requiresKey ? "provider-free-tier" : "local-open-weight",
+          license: requiresKey ? 'provider-free-tier' : 'local-open-weight',
           requiresKey,
         },
       ];
@@ -57,7 +57,7 @@ function parseEndpoints(raw: string | undefined): FreeAIEndpoint[] {
 class FreeCompatibleProvider implements IntelligenceProvider {
   readonly providerId: string;
   readonly modelId: string;
-  readonly capabilities = new Set(["text"] as const);
+  readonly capabilities = new Set(['text'] as const);
   constructor(private readonly endpoint: FreeAIEndpoint) {
     this.providerId = `free-federation:${endpoint.id}`;
     this.modelId = endpoint.model;
@@ -65,7 +65,7 @@ class FreeCompatibleProvider implements IntelligenceProvider {
   async health(): Promise<boolean> {
     try {
       const response = await SecuritySystem.fetchSafeUpstream(`${this.endpoint.baseUrl}/models`, {
-        method: "GET",
+        method: 'GET',
       });
       return response.ok;
     } catch {
@@ -77,8 +77,8 @@ class FreeCompatibleProvider implements IntelligenceProvider {
     const response = await SecuritySystem.fetchSafeUpstream(
       `${this.endpoint.baseUrl}/chat/completions`,
       {
-        method: "POST",
-        headers: { "content-type": "application/json" },
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           model: this.modelId,
           messages: request.messages,
@@ -86,7 +86,7 @@ class FreeCompatibleProvider implements IntelligenceProvider {
           max_tokens: request.maxTokens ?? 2048,
           stream: false,
         }),
-      },
+      }
     );
     if (!response.ok) throw new Error(`free federation upstream returned ${response.status}`);
     const payload = (await response.json()) as {
@@ -94,7 +94,7 @@ class FreeCompatibleProvider implements IntelligenceProvider {
       usage?: { prompt_tokens?: number; completion_tokens?: number };
     };
     const text = payload.choices?.[0]?.message?.content?.trim();
-    if (!text) throw new Error("free federation upstream returned no text");
+    if (!text) throw new Error('free federation upstream returned no text');
     return {
       requestId: request.requestId,
       modelId: this.modelId,
@@ -102,7 +102,7 @@ class FreeCompatibleProvider implements IntelligenceProvider {
       text,
       latencyMs: performance.now() - started,
       degraded: true,
-      risk: "MEDIUM",
+      risk: 'MEDIUM',
       usage: {
         inputTokens: payload.usage?.prompt_tokens,
         outputTokens: payload.usage?.completion_tokens,
@@ -112,7 +112,7 @@ class FreeCompatibleProvider implements IntelligenceProvider {
 }
 
 export function registerFreeAIFederation(
-  register: (provider: IntelligenceProvider) => void,
+  register: (provider: IntelligenceProvider) => void
 ): FreeAIEndpoint[] {
   const runtime = config();
   if (!runtime.FREE_AI_FEDERATION_ENABLED) return [];

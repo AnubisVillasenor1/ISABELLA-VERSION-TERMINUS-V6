@@ -17,7 +17,7 @@ import {
   ANONYMOUS_TENANT_CONTEXT,
   assertTenantBoundary,
   guestTenantContext,
-} from "./tenant-context";
+} from './tenant-context';
 
 /** Contexto de entrada de un request antes de resolver límite de confianza. */
 export interface TenantGuardInput {
@@ -26,7 +26,7 @@ export interface TenantGuardInput {
   username?: string;
   tenantId?: string;
   /** Origen de confianza declarado por el middleware de auth. */
-  resolvedBy?: TenantContext["resolvedBy"];
+  resolvedBy?: TenantContext['resolvedBy'];
   /** Tenant solicitado por el cliente (cabecera x-tenant-id). */
   requestedTenantId?: string;
 }
@@ -45,23 +45,23 @@ export interface TenantGuardResult {
  */
 export function resolveTenantContext(input: TenantGuardInput): TenantGuardResult {
   if (!input.authenticated) {
-    const subject = input.subject || "anon";
+    const subject = input.subject || 'anon';
     return {
       context: guestTenantContext(subject),
       boundaryOk: true,
-      reason: "Request no autenticado: contexto de huésped de privilegio mínimo.",
+      reason: 'Request no autenticado: contexto de huésped de privilegio mínimo.',
     };
   }
 
   // P1: tenantId DEBE provenir exclusivamente de la identidad canónica.
   // Nunca usar requestedTenantId como fallback si la identidad carece de tenant.
-  const canonicalTenantId = input.tenantId || "system";
+  const canonicalTenantId = input.tenantId || 'system';
 
   const context: TenantContext = {
-    subject: input.subject || "unknown",
-    username: input.username || input.subject || "unknown",
+    subject: input.subject || 'unknown',
+    username: input.username || input.subject || 'unknown',
     tenantId: canonicalTenantId,
-    resolvedBy: input.resolvedBy ?? "bearer",
+    resolvedBy: input.resolvedBy ?? 'bearer',
     authenticated: true,
     resolvedAt: new Date().toISOString(),
   };
@@ -87,7 +87,7 @@ export function resolveTenantContext(input: TenantGuardInput): TenantGuardResult
   return {
     context,
     boundaryOk: true,
-    reason: "Frontera de tenant confirmada.",
+    reason: 'Frontera de tenant confirmada.',
   };
 }
 
@@ -96,11 +96,11 @@ export function resolveTenantContext(input: TenantGuardInput): TenantGuardResult
  * no es válida. Conveniente para handlers.
  */
 export class TenantBoundaryError extends Error {
-  readonly code = "TENANT_BOUNDARY_VIOLATION";
+  readonly code = 'TENANT_BOUNDARY_VIOLATION';
   readonly status = 403;
   constructor(reason: string) {
     super(reason);
-    this.name = "TenantBoundaryError";
+    this.name = 'TenantBoundaryError';
   }
 }
 

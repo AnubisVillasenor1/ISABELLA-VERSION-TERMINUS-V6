@@ -1,47 +1,47 @@
 /**
- * IGDS — Contratos canónicos (src/lib/igds/types.ts)
+ * IGDS — Contratos canónicos (src/lib/lib/igds/types.ts)
  * -----------------------------------------------------------------
  * El manifiesto es el modelo conceptual C2PA de Isabella (JSON), NO un
  * contenedor C2PA/CBOR interoperable. El manifiesto se firma; el bundle de
  * verificación permite validarlo offline.
  */
-import type { ContentDigest, DigestAlgorithm } from "./digests";
-import type { SealProfile } from "./profiles";
-import type { SignatureEnvelope } from "./keys";
+import type { ContentDigest, DigestAlgorithm } from './digests';
+import type { SealProfile } from './profiles';
+import type { SignatureEnvelope } from './keys';
 
-export const IGDS_MANIFEST_FORMAT = "c2pa" as const;
-export const IGDS_MANIFEST_ID_PREFIX = "urn:isabella:manifest:" as const;
-export const IGDS_SEAL_LABEL = "ISABELLA-GENESIS-SEAL" as const;
+export const IGDS_MANIFEST_FORMAT = 'c2pa' as const;
+export const IGDS_MANIFEST_ID_PREFIX = 'urn:isabella:manifest:' as const;
+export const IGDS_SEAL_LABEL = 'ISABELLA-GENESIS-SEAL' as const;
 
 export type IgdsActionName =
-  | "created"
-  | "generated"
-  | "edited"
-  | "translated"
-  | "upscaled"
-  | "inpainted"
-  | "dubbed"
-  | "captioned"
-  | "rendered"
-  | "reviewed"
-  | "approved"
-  | "published"
-  | "sealed";
+  | 'created'
+  | 'generated'
+  | 'edited'
+  | 'translated'
+  | 'upscaled'
+  | 'inpainted'
+  | 'dubbed'
+  | 'captioned'
+  | 'rendered'
+  | 'reviewed'
+  | 'approved'
+  | 'published'
+  | 'sealed';
 
 export const IGDS_ACTION_NAMES = [
-  "created",
-  "generated",
-  "edited",
-  "translated",
-  "upscaled",
-  "inpainted",
-  "dubbed",
-  "captioned",
-  "rendered",
-  "reviewed",
-  "approved",
-  "published",
-  "sealed",
+  'created',
+  'generated',
+  'edited',
+  'translated',
+  'upscaled',
+  'inpainted',
+  'dubbed',
+  'captioned',
+  'rendered',
+  'reviewed',
+  'approved',
+  'published',
+  'sealed',
 ] as const satisfies readonly IgdsActionName[];
 
 export interface IgdsAction {
@@ -51,7 +51,7 @@ export interface IgdsAction {
 
 export interface IgdsSource {
   id: string;
-  type: "web" | "document" | "model" | "human" | "dataset";
+  type: 'web' | 'document' | 'model' | 'human' | 'dataset';
   locator?: string;
   retrieved_at?: string;
   digest?: string;
@@ -108,8 +108,8 @@ export interface IgdsManifest {
 }
 
 export interface TimestampToken {
-  protocol: "RFC3161";
-  status: "granted";
+  protocol: 'RFC3161';
+  status: 'granted';
   policy: string;
   gen_time: string;
   serial_number: string;
@@ -118,9 +118,9 @@ export interface TimestampToken {
   encoded_timestamp_token: string;
 }
 
-export type GenesisEntryType = "seal" | "revocation";
+export type GenesisEntryType = 'seal' | 'revocation';
 export type RevocationScope =
-  "all_signatures_after_effective_at" | "target_only" | "all_target_versions";
+  'all_signatures_after_effective_at' | 'target_only' | 'all_target_versions';
 
 export interface GenesisRevocationPayload {
   revocation_id: string;
@@ -157,34 +157,34 @@ export interface GenesisCheckpoint {
 }
 
 export type RevocationTargetType =
-  | "signing_key"
-  | "manifest"
-  | "document"
-  | "genesis_entry"
-  | "watermark_profile"
-  | "trust_source"
-  | "certificate"
-  | "tsa_certificate";
+  | 'signing_key'
+  | 'manifest'
+  | 'document'
+  | 'genesis_entry'
+  | 'watermark_profile'
+  | 'trust_source'
+  | 'certificate'
+  | 'tsa_certificate';
 
 export type RevocationReason =
-  | "key_compromise"
-  | "key_loss"
-  | "unauthorized_use"
-  | "operator_request"
-  | "algorithm_deprecation"
-  | "certificate_misissuance"
-  | "tsa_compromise"
-  | "document_withdrawn"
-  | "policy_violation";
+  | 'key_compromise'
+  | 'key_loss'
+  | 'unauthorized_use'
+  | 'operator_request'
+  | 'algorithm_deprecation'
+  | 'certificate_misissuance'
+  | 'tsa_compromise'
+  | 'document_withdrawn'
+  | 'policy_violation';
 
 export interface RevocationRecord {
-  type: "revocation";
+  type: 'revocation';
   revocation_id: string;
   target_type: RevocationTargetType;
   target_id: string;
   effective_at: string;
   reason: RevocationReason;
-  scope: "all_signatures_after_effective_at" | "target_only" | "all_target_versions";
+  scope: 'all_signatures_after_effective_at' | 'target_only' | 'all_target_versions';
   issued_by: string;
   previous_entry_hash: string;
   entry_hash: string;
@@ -192,13 +192,13 @@ export interface RevocationRecord {
 }
 
 export type TrustStatus =
-  | "valid"
-  | "valid_at_signing_time"
-  | "revoked_before_signing"
-  | "revoked_after_signing"
-  | "unknown_revocation_status"
-  | "invalid_signature"
-  | "timestamp_untrusted";
+  | 'valid'
+  | 'valid_at_signing_time'
+  | 'revoked_before_signing'
+  | 'revoked_after_signing'
+  | 'unknown_revocation_status'
+  | 'invalid_signature'
+  | 'timestamp_untrusted';
 
 export interface IgdsSeal {
   seal_label: typeof IGDS_SEAL_LABEL;
@@ -207,7 +207,7 @@ export interface IgdsSeal {
   issued: string;
   hash_algorithms: DigestAlgorithm[];
   signature_algorithms: string[];
-  registry: "Isabella Genesis";
+  registry: 'Isabella Genesis';
   instruction: string;
 }
 
@@ -219,7 +219,7 @@ export interface IgdsSealPackage {
 
 export interface IgdsVerificationReport {
   document_status: TrustStatus;
-  current_key_status: "valid" | "revoked" | "unknown";
+  current_key_status: 'valid' | 'revoked' | 'unknown';
   profile: SealProfile;
   content_digest: ContentDigest;
   signatures: Array<{
@@ -229,11 +229,11 @@ export interface IgdsVerificationReport {
     signed_digest_matches: boolean;
   }>;
   timestamp: {
-    protocol: "RFC3161";
+    protocol: 'RFC3161';
     message_imprint_matches: boolean;
     tsa_signature_valid: boolean;
     generation_time: string;
-    tsa_certificate_status: "valid_at_timestamp" | "untrusted" | "missing";
+    tsa_certificate_status: 'valid_at_timestamp' | 'untrusted' | 'missing';
   } | null;
   genesis: {
     included: boolean;

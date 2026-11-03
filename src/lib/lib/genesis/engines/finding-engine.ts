@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash } from 'node:crypto';
 import {
   Finding,
   FindingSeverity,
@@ -6,8 +6,8 @@ import {
   validateFinding,
   calculateCVSS,
   calculatePriority,
-} from "../schemas/finding.schema";
-import { ClaimEngine } from "./claim-engine";
+} from '../schemas/finding.schema';
+import { ClaimEngine } from './claim-engine';
 
 export interface FindingEngineConfig {
   claimEngine: ClaimEngine;
@@ -22,7 +22,7 @@ export class FindingEngine {
   }
 
   createFinding(
-    finding: Omit<Finding, "id" | "createdAt" | "updatedAt" | "cvss" | "priority">,
+    finding: Omit<Finding, 'id' | 'createdAt' | 'updatedAt' | 'cvss' | 'priority'>
   ): Finding {
     const id = `GEN-${finding.category}-${Date.now().toString(36).toUpperCase()}`;
     const now = new Date().toISOString();
@@ -96,10 +96,10 @@ export class FindingEngine {
   resolveFinding(id: string, resolution: string): Finding | undefined {
     const current = this.findings.get(id);
     return this.updateFinding(id, {
-      status: "RESOLVED",
+      status: 'RESOLVED',
       remediation: {
         description: resolution,
-        effort: current?.remediation?.effort ?? "MEDIUM",
+        effort: current?.remediation?.effort ?? 'MEDIUM',
         verificationSteps: current?.remediation?.verificationSteps ?? [],
         owner: current?.remediation?.owner,
         dueDate: current?.remediation?.dueDate,
@@ -127,9 +127,9 @@ export class FindingEngine {
         id: f.id,
         severity: f.severity,
         category: f.category,
-      })),
+      }))
     );
-    return createHash("sha3-512").update(content).digest("hex");
+    return createHash('sha3-512').update(content).digest('hex');
   }
 }
 

@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from "react";
-import { PRESETS, type PresetId, type RoutingDecision } from "@/lib/crown-ui";
-import { skillGroups, type IsabellaSkill } from "@/lib/skill-registry";
+import { useState, useRef, useEffect } from 'react';
+import { PRESETS, type PresetId, type RoutingDecision } from '@/lib/crown-ui';
+import { skillGroups, type IsabellaSkill } from '@/lib/skill-registry';
 import {
   CheckCircle2,
   FlaskConical,
@@ -16,8 +16,8 @@ import {
   Cpu,
   ScrollText,
   Wallet,
-} from "lucide-react";
-import { ModuleRail } from "./ModuleRail";
+} from 'lucide-react';
+import { ModuleRail } from './ModuleRail';
 
 /**
  * RIGHT RAILS (src/components/isabella/RightRails.tsx)
@@ -32,15 +32,15 @@ import { ModuleRail } from "./ModuleRail";
  */
 
 const POLICY_LABEL: Record<string, string> = {
-  allowed: "AUTORIZADO",
-  requires_approval: "RATIFICACIÓN HUMANA",
-  denied: "DENEGADO",
+  allowed: 'AUTORIZADO',
+  requires_approval: 'RATIFICACIÓN HUMANA',
+  denied: 'DENEGADO',
 };
 
 const POLICY_COLOR: Record<string, string> = {
-  allowed: "var(--argus)",
-  requires_approval: "var(--orion)",
-  denied: "var(--destructive)",
+  allowed: 'var(--argus)',
+  requires_approval: 'var(--orion)',
+  denied: 'var(--destructive)',
 };
 
 const MONETIZATION_OPTIONS: Array<{
@@ -52,100 +52,100 @@ const MONETIZATION_OPTIONS: Array<{
   glow: string;
 }> = [
   {
-    id: "onboarding",
-    label: "Suscripción y Cuotas",
-    description: "Planes Free/Pro/Sovereign y consumo general",
+    id: 'onboarding',
+    label: 'Suscripción y Cuotas',
+    description: 'Planes Free/Pro/Sovereign y consumo general',
     icon: TrendingUp,
-    href: "/#monetization-onboarding",
-    glow: "crystal-glow-emerald",
+    href: '/#monetization-onboarding',
+    glow: 'crystal-glow-emerald',
   },
   {
-    id: "heads",
-    label: "Núcleos Cognitivos",
-    description: "12 heads dobles Alpha/Beta y telemetría",
+    id: 'heads',
+    label: 'Núcleos Cognitivos',
+    description: '12 heads dobles Alpha/Beta y telemetría',
     icon: Cpu,
-    href: "/#monetization-heads",
-    glow: "crystal-glow-emerald",
+    href: '/#monetization-heads',
+    glow: 'crystal-glow-emerald',
   },
   {
-    id: "ledger",
-    label: "Libro Mayor BookPI",
-    description: "Transacciones inmutables y reembolsos",
+    id: 'ledger',
+    label: 'Libro Mayor BookPI',
+    description: 'Transacciones inmutables y reembolsos',
     icon: ScrollText,
-    href: "/#monetization-ledger",
-    glow: "crystal-glow-emerald",
+    href: '/#monetization-ledger',
+    glow: 'crystal-glow-emerald',
   },
   {
-    id: "sandbox",
-    label: "Sandbox Soberano",
-    description: "Ejecución VM con scopes y límites",
+    id: 'sandbox',
+    label: 'Sandbox Soberano',
+    description: 'Ejecución VM con scopes y límites',
     icon: ShieldCheck,
-    href: "/#monetization-sandbox",
-    glow: "crystal-glow-emerald",
+    href: '/#monetization-sandbox',
+    glow: 'crystal-glow-emerald',
   },
   {
-    id: "upgrades",
-    label: "Mejoras de Motor",
-    description: "PQC, SGX, filtro SOPHIA, mesh P2P",
+    id: 'upgrades',
+    label: 'Mejoras de Motor',
+    description: 'PQC, SGX, filtro SOPHIA, mesh P2P',
     icon: Sparkles,
-    href: "/#monetization-upgrades",
-    glow: "crystal-glow-emerald",
+    href: '/#monetization-upgrades',
+    glow: 'crystal-glow-emerald',
   },
   {
-    id: "special",
-    label: "Simuladores Especiales",
-    description: "Routing neural y auditoría forense",
+    id: 'special',
+    label: 'Simuladores Especiales',
+    description: 'Routing neural y auditoría forense',
     icon: BarChart3,
-    href: "/#monetization-special",
-    glow: "crystal-glow-emerald",
+    href: '/#monetization-special',
+    glow: 'crystal-glow-emerald',
   },
   {
-    id: "tutorials",
-    label: "Guías y Tutoriales",
-    description: "Filosofía, BookPI y soberanía",
+    id: 'tutorials',
+    label: 'Guías y Tutoriales',
+    description: 'Filosofía, BookPI y soberanía',
     icon: GraduationCap,
-    href: "/#monetization-tutorials",
-    glow: "crystal-glow-emerald",
+    href: '/#monetization-tutorials',
+    glow: 'crystal-glow-emerald',
   },
   {
-    id: "audit",
-    label: "Cripto-Auditoría",
-    description: "Verificación SHA-256 y hash chain",
+    id: 'audit',
+    label: 'Cripto-Auditoría',
+    description: 'Verificación SHA-256 y hash chain',
     icon: ShieldCheck,
-    href: "/#monetization-audit",
-    glow: "crystal-glow-emerald",
+    href: '/#monetization-audit',
+    glow: 'crystal-glow-emerald',
   },
   {
-    id: "marketplace",
-    label: "Marketplace",
-    description: "Ofertas, productos y servicios territoriales",
+    id: 'marketplace',
+    label: 'Marketplace',
+    description: 'Ofertas, productos y servicios territoriales',
     icon: Store,
-    href: "/#marketplace",
-    glow: "crystal-glow-emerald",
+    href: '/#marketplace',
+    glow: 'crystal-glow-emerald',
   },
   {
-    id: "offers",
-    label: "Ofertas y Gifts",
-    description: "Gifts, rewards y licenciamiento",
+    id: 'offers',
+    label: 'Ofertas y Gifts',
+    description: 'Gifts, rewards y licenciamiento',
     icon: Gift,
-    href: "/#offers",
-    glow: "crystal-glow-emerald",
+    href: '/#offers',
+    glow: 'crystal-glow-emerald',
   },
   {
-    id: "payouts",
-    label: "Payouts y Retiros",
-    description: "85/15, reservas y disputas — payouts idempotentes",
+    id: 'payouts',
+    label: 'Payouts y Retiros',
+    description: '85/15, reservas y disputas — payouts idempotentes',
     icon: Wallet,
-    href: "/#payouts",
-    glow: "crystal-glow-emerald",
+    href: '/#payouts',
+    glow: 'crystal-glow-emerald',
   },
   {
-    id: "analytics",
-    label: "Analíticas",
-    description: "Uso, consumo y métricas de monetización",
+    id: 'analytics',
+    label: 'Analíticas',
+    description: 'Uso, consumo y métricas de monetización',
     icon: BarChart3,
-    href: "/#analytics",
-    glow: "crystal-glow-emerald",
+    href: '/#analytics',
+    glow: 'crystal-glow-emerald',
   },
 ];
 
@@ -180,7 +180,7 @@ export function RightRails({
   const argusHeaderRef = useRef<HTMLButtonElement | null>(null);
   const [presetFocusIndex, setPresetFocusIndex] = useState(-1);
 
-  const policy = decision?.policy ?? "allowed";
+  const policy = decision?.policy ?? 'allowed';
 
   // Lista de presets para navegación por teclado (fila de radio-buttons).
   const presetIds = PRESETS.map((p) => p.id);
@@ -196,17 +196,17 @@ export function RightRails({
   };
 
   const handlePresetKey = (e: React.KeyboardEvent, index: number) => {
-    if (e.key !== "ArrowDown" && e.key !== "ArrowUp" && e.key !== "Home" && e.key !== "End") {
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp' && e.key !== 'Home' && e.key !== 'End') {
       return;
     }
     e.preventDefault();
     let next = index;
-    if (e.key === "ArrowDown") next = (index + 1) % presetIds.length;
-    else if (e.key === "ArrowUp") next = (index - 1 + presetIds.length) % presetIds.length;
-    else if (e.key === "Home") next = 0;
-    else if (e.key === "End") next = presetIds.length - 1;
+    if (e.key === 'ArrowDown') next = (index + 1) % presetIds.length;
+    else if (e.key === 'ArrowUp') next = (index - 1 + presetIds.length) % presetIds.length;
+    else if (e.key === 'Home') next = 0;
+    else if (e.key === 'End') next = presetIds.length - 1;
     setPresetFocusIndex(next);
-    const buttons = presetRef.current?.querySelectorAll<HTMLButtonElement>("[data-preset-btn]");
+    const buttons = presetRef.current?.querySelectorAll<HTMLButtonElement>('[data-preset-btn]');
     buttons?.[next]?.focus();
   };
 
@@ -214,7 +214,7 @@ export function RightRails({
   useEffect(() => {
     if (presetOpen && presetFocusIndex >= 0) {
       const presetButtons =
-        presetRef.current?.querySelectorAll<HTMLButtonElement>("[data-preset-btn]");
+        presetRef.current?.querySelectorAll<HTMLButtonElement>('[data-preset-btn]');
       presetButtons?.[presetFocusIndex]?.focus();
     }
   }, [presetFocusIndex, presetOpen]);
@@ -234,13 +234,13 @@ export function RightRails({
           <span className="flex items-center gap-2">
             <span
               className="size-1.5 rounded-full animate-breathe"
-              style={{ background: "var(--sophia)" }}
+              style={{ background: 'var(--sophia)' }}
             />
             <h2 className="font-mono text-[10px] uppercase tracking-[0.28em] text-muted-foreground">
               Preset cognitivo
             </h2>
           </span>
-          <Chevron className={presetOpen ? "rotate-180" : ""} />
+          <Chevron className={presetOpen ? 'rotate-180' : ''} />
         </button>
 
         {presetOpen && (
@@ -267,12 +267,12 @@ export function RightRails({
                   tabIndex={index === presetFocusIndex ? 0 : -1}
                   className={`crystal-touch w-full rounded-xl border px-3 py-2 text-left transition-all duration-300 ${
                     on
-                      ? "glow-ring border-primary/60 bg-secondary/50"
-                      : "border-border/50 hover:bg-secondary/25"
+                      ? 'glow-ring border-primary/60 bg-secondary/50'
+                      : 'border-border/50 hover:bg-secondary/25'
                   }`}
                 >
                   <span
-                    className={`block text-[12.5px] ${on ? "text-platinum" : "text-foreground/80"}`}
+                    className={`block text-[12.5px] ${on ? 'text-platinum' : 'text-foreground/80'}`}
                   >
                     {p.name}
                   </span>
@@ -297,12 +297,12 @@ export function RightRails({
           className="w-full flex items-center justify-between px-4 py-3 text-left"
         >
           <span className="flex items-center gap-2">
-            <span className="size-1.5 rounded-full" style={{ background: "var(--argus)" }} />
+            <span className="size-1.5 rounded-full" style={{ background: 'var(--argus)' }} />
             <h2 className="font-mono text-[10px] uppercase tracking-[0.28em] text-muted-foreground">
               Policy Gate · ARGUS
             </h2>
           </span>
-          <Chevron className={argusOpen ? "rotate-180" : ""} />
+          <Chevron className={argusOpen ? 'rotate-180' : ''} />
         </button>
 
         {argusOpen && (
@@ -319,7 +319,7 @@ export function RightRails({
               {POLICY_LABEL[policy]}
             </p>
             <p className="text-[11px] leading-snug text-muted-foreground">
-              {decision?.policyReason ?? "Sin ciclo evaluado en esta sesión."}
+              {decision?.policyReason ?? 'Sin ciclo evaluado en esta sesión.'}
             </p>
             <div className="space-y-1">
               {(decision?.rulesChecked ?? []).map((r) => (
@@ -352,7 +352,7 @@ export function RightRails({
               Skills de Isabella
             </span>
           </span>
-          <Chevron className={skillsOpen ? "rotate-180" : ""} />
+          <Chevron className={skillsOpen ? 'rotate-180' : ''} />
         </button>
         {skillsOpen && (
           <div
@@ -377,7 +377,7 @@ export function RightRails({
                   }
                 >
                   <span>{group.folder}</span>
-                  <Chevron className={openFolders[group.folder] ? "rotate-180" : ""} />
+                  <Chevron className={openFolders[group.folder] ? 'rotate-180' : ''} />
                 </button>
                 {openFolders[group.folder] && (
                   <div className="space-y-1 px-2 pb-2">
@@ -413,7 +413,7 @@ export function RightRails({
               Soberana
             </span>
           </span>
-          <Chevron className={monetizationOpen ? "rotate-180" : ""} />
+          <Chevron className={monetizationOpen ? 'rotate-180' : ''} />
         </button>
         {monetizationOpen && (
           <div
@@ -426,21 +426,21 @@ export function RightRails({
             </p>
             {[
               {
-                key: "Economía",
+                key: 'Economía',
                 items: MONETIZATION_OPTIONS.filter((o) =>
-                  ["onboarding", "ledger", "payouts", "analytics"].includes(o.id),
+                  ['onboarding', 'ledger', 'payouts', 'analytics'].includes(o.id)
                 ),
               },
               {
-                key: "Creador",
+                key: 'Creador',
                 items: MONETIZATION_OPTIONS.filter((o) =>
-                  ["marketplace", "offers", "upgrades", "special"].includes(o.id),
+                  ['marketplace', 'offers', 'upgrades', 'special'].includes(o.id)
                 ),
               },
               {
-                key: "Operación",
+                key: 'Operación',
                 items: MONETIZATION_OPTIONS.filter((o) =>
-                  ["heads", "sandbox", "audit", "tutorials"].includes(o.id),
+                  ['heads', 'sandbox', 'audit', 'tutorials'].includes(o.id)
                 ),
               },
             ].map((group) => (
@@ -460,7 +460,7 @@ export function RightRails({
                   }
                 >
                   <span>{group.key}</span>
-                  <Chevron className={openMonetizationGroups[group.key] ? "rotate-180" : ""} />
+                  <Chevron className={openMonetizationGroups[group.key] ? 'rotate-180' : ''} />
                 </button>
                 {(openMonetizationGroups[group.key] ?? false) && (
                   <div className="space-y-1 px-2 pb-2">
@@ -506,9 +506,9 @@ export function RightRails({
 
 function SkillRow({ skill }: { skill: IsabellaSkill }) {
   const Icon =
-    skill.status === "verified" || skill.status === "implemented"
+    skill.status === 'verified' || skill.status === 'implemented'
       ? CheckCircle2
-      : skill.status === "experimental"
+      : skill.status === 'experimental'
         ? FlaskConical
         : XCircle;
   return (
@@ -525,7 +525,7 @@ function SkillRow({ skill }: { skill: IsabellaSkill }) {
   );
 }
 
-function Chevron({ className = "" }: { className?: string }) {
+function Chevron({ className = '' }: { className?: string }) {
   return (
     <svg
       viewBox="0 0 24 24"

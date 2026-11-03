@@ -7,11 +7,11 @@ El adaptador incluido es **determinista (demo)**; NO es el LLM real de Isabella.
 
 ## Motores
 
-| Turbo | Nitros | Función |
-| --- | --- | --- |
-| **VECTOR** | `PREFIX_CACHE`, `SEMANTIC_CACHE` | Reutilizar trabajo ya validado bajo la misma huella de política. |
+| Turbo           | Nitros                             | Función                                                                  |
+| --------------- | ---------------------------------- | ------------------------------------------------------------------------ |
+| **VECTOR**      | `PREFIX_CACHE`, `SEMANTIC_CACHE`   | Reutilizar trabajo ya validado bajo la misma huella de política.         |
 | **SPECULATIVE** | `DRAFT_MODEL`, `PARALLEL_BRANCHES` | Producir candidatos verificables; un draft nunca es verdad por sí mismo. |
-| **VERITAS** | `VERIFIER_FANOUT`, `EARLY_EXIT` | Verificar en paralelo; `EARLY_EXIT` se prohíbe en riesgo elevado. |
+| **VERITAS**     | `VERIFIER_FANOUT`, `EARLY_EXIT`    | Verificar en paralelo; `EARLY_EXIT` se prohíbe en riesgo elevado.        |
 
 Los modos (`CRUISE`, `BOOST`, `HYPERBOOST`) alteran estrategia y presupuestos, **nunca** eliminan
 el `mandatoryGate` (policy + evidence + safety).

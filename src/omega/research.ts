@@ -16,8 +16,8 @@ export interface ResearchEvaluation {
   id: string;
   statement: string;
   score: number;
-  stage: "scan" | "forecast" | "verify" | "rank";
-  recommendation: "pursue" | "gather_evidence" | "reject";
+  stage: 'scan' | 'forecast' | 'verify' | 'rank';
+  recommendation: 'pursue' | 'gather_evidence' | 'reject';
 }
 
 const DEFAULT_EVIDENCE_THRESHOLD = 0.5;
@@ -28,15 +28,15 @@ const WEIGHT_EVIDENCE = 0.3;
 const WEIGHT_RISK = 0.1;
 
 function unit(value: number): number {
-  if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || value > 1) {
-    throw new Error("RESEARCH_FACTOR_OUT_OF_RANGE");
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 1) {
+    throw new Error('RESEARCH_FACTOR_OUT_OF_RANGE');
   }
   return value;
 }
 
 function thresholdUnit(value: number): number {
-  if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || value > 1) {
-    throw new Error("RESEARCH_THRESHOLD_OUT_OF_RANGE");
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 1) {
+    throw new Error('RESEARCH_THRESHOLD_OUT_OF_RANGE');
   }
   return value;
 }
@@ -52,15 +52,17 @@ function byScoreThenId(a: ResearchEvaluation, b: ResearchEvaluation): number {
   return 0;
 }
 
-function stageFor(recommendation: ResearchEvaluation["recommendation"]): ResearchEvaluation["stage"] {
-  if (recommendation === "pursue") return "rank";
-  if (recommendation === "gather_evidence") return "verify";
-  return "forecast";
+function stageFor(
+  recommendation: ResearchEvaluation['recommendation']
+): ResearchEvaluation['stage'] {
+  if (recommendation === 'pursue') return 'rank';
+  if (recommendation === 'gather_evidence') return 'verify';
+  return 'forecast';
 }
 
 export function runResearchCycle(
   hypotheses: ResearchHypothesis[],
-  options?: { evidenceThreshold?: number },
+  options?: { evidenceThreshold?: number }
 ): { evaluations: ResearchEvaluation[]; selectedId: string | null } {
   const providedThreshold = options?.evidenceThreshold;
   const evidenceThreshold =
@@ -72,7 +74,7 @@ export function runResearchCycle(
     unit(hypothesis.feasibility);
     unit(hypothesis.evidence);
     unit(hypothesis.risk);
-    if (seen.has(hypothesis.id)) throw new Error("RESEARCH_DUPLICATE_ID");
+    if (seen.has(hypothesis.id)) throw new Error('RESEARCH_DUPLICATE_ID');
     seen.add(hypothesis.id);
   }
 
@@ -81,14 +83,14 @@ export function runResearchCycle(
       hypothesis.novelty * WEIGHT_NOVELTY +
         hypothesis.feasibility * WEIGHT_FEASIBILITY +
         hypothesis.evidence * WEIGHT_EVIDENCE +
-        (1 - hypothesis.risk) * WEIGHT_RISK,
+        (1 - hypothesis.risk) * WEIGHT_RISK
     );
-    const recommendation: ResearchEvaluation["recommendation"] =
+    const recommendation: ResearchEvaluation['recommendation'] =
       hypothesis.evidence < evidenceThreshold
-        ? "gather_evidence"
+        ? 'gather_evidence'
         : score >= PURSUE_SCORE_FLOOR
-          ? "pursue"
-          : "reject";
+          ? 'pursue'
+          : 'reject';
     return {
       id: hypothesis.id,
       statement: hypothesis.statement,
@@ -100,7 +102,7 @@ export function runResearchCycle(
 
   evaluations.sort(byScoreThenId);
 
-  const pursuing = evaluations.filter((evaluation) => evaluation.recommendation === "pursue");
+  const pursuing = evaluations.filter((evaluation) => evaluation.recommendation === 'pursue');
   const selectedId = pursuing.length > 0 ? (pursuing[0]?.id ?? null) : null;
 
   return { evaluations, selectedId };

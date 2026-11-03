@@ -4,14 +4,14 @@
 // Requiere revisión humana antes de cualquier estado "verified".
 
 export const NEXUS_PANELS = [
-  "constitution",
-  "simulation",
-  "capital",
-  "civilization",
-  "trust",
-  "memory",
-  "twins",
-  "territory",
+  'constitution',
+  'simulation',
+  'capital',
+  'civilization',
+  'trust',
+  'memory',
+  'twins',
+  'territory',
 ] as const;
 
 export interface NexusPanel {
@@ -26,11 +26,11 @@ export interface NexusView {
 }
 
 function panelLabel(id: string): string {
-  return id.replaceAll("_", " ").replace(/\b\p{L}/gu, (c) => c.toUpperCase());
+  return id.replaceAll('_', ' ').replace(/\b\p{L}/gu, (c) => c.toUpperCase());
 }
 
 export function buildNexusView(input?: { title?: string }): NexusView {
-  const title = input?.title || "Isabella Nexus Ω∞";
+  const title = input?.title || 'Isabella Nexus Ω∞';
   const panels: NexusPanel[] = NEXUS_PANELS.map((id) => ({
     id,
     label: panelLabel(id),

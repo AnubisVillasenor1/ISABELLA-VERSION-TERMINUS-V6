@@ -1,5 +1,5 @@
 /**
- * Temporal Media Core — Tiempo racional exacto (src/lib/temporal/rational.ts)
+ * Temporal Media Core — Tiempo racional exacto (src/lib/lib/temporal/rational.ts)
  * ---------------------------------------------------------------------------
  * El §9 de "Isabella-Engine-Video X" exige que el tiempo NUNCA use flotantes:
  *
@@ -39,7 +39,7 @@ function gcd(a: bigint, b: bigint): bigint {
 export function normalizeRational(time: RationalTime): RationalTime {
   let { numerator, denominator } = time;
   if (denominator === 0n) {
-    throw new Error("Temporal: denominador cero no permitido.");
+    throw new Error('Temporal: denominador cero no permitido.');
   }
   if (denominator < 0n) {
     numerator = -numerator;
@@ -83,7 +83,7 @@ export function multiplyTime(t: RationalTime, scalar: bigint): RationalTime {
 
 export function divideTime(t: RationalTime, scalar: bigint): RationalTime {
   if (scalar === 0n) {
-    throw new Error("Temporal: división por cero.");
+    throw new Error('Temporal: división por cero.');
   }
   return normalizeRational({ numerator: t.numerator, denominator: t.denominator * scalar });
 }
@@ -114,7 +114,7 @@ export function timeToFrames(t: RationalTime, fps: RationalTime): bigint {
  */
 export function roundHalfEven(numerator: bigint, denominator: bigint): bigint {
   if (denominator === 0n) {
-    throw new Error("Temporal: división por cero.");
+    throw new Error('Temporal: división por cero.');
   }
   const negative = numerator < 0n !== denominator < 0n;
   const n = numerator < 0n ? -numerator : numerator;
@@ -133,7 +133,7 @@ export function roundHalfEven(numerator: bigint, denominator: bigint): bigint {
 export function frameToTime(frameIndex: bigint, fps: RationalTime): RationalTime {
   const allowed = normalizeRational(fps);
   if (allowed.numerator <= 0n) {
-    throw new Error("Temporal: fps debe ser positivo.");
+    throw new Error('Temporal: fps debe ser positivo.');
   }
   return normalizeRational({
     numerator: frameIndex * allowed.denominator,
@@ -144,7 +144,7 @@ export function frameToTime(frameIndex: bigint, fps: RationalTime): RationalTime
 /** seconds (float, solo E/S) → RationalTime exacto con la precisión dada. */
 export function secondsToRational(seconds: number, precision: RationalTime): RationalTime {
   if (!Number.isFinite(seconds)) {
-    throw new Error("Temporal: seconds no finito.");
+    throw new Error('Temporal: seconds no finito.');
   }
   const scaled = Math.round(seconds * Number(precision.denominator));
   return normalizeRational({ numerator: BigInt(scaled), denominator: precision.denominator });

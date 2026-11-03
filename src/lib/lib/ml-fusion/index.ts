@@ -9,6 +9,6 @@ export {
   fuseMLSignals,
   applyMLFusion,
   computeInputHash,
-} from "./copilot-ml-engine";
+} from './copilot-ml-engine';
 
-export { type MLMetrics, MLObservabilityEngine, mlObservability } from "./ml-observability";
+export { type MLMetrics, MLObservabilityEngine, mlObservability } from './ml-observability';

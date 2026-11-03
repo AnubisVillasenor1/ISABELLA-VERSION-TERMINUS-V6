@@ -6,15 +6,20 @@
 //
 // Invariante: catalogar, resolver y planificar NO autoriza, NO instala y NO ejecuta.
 // Todo pack sale `enabled: false` y `requiresHumanApproval: true`.
-import { sha256 } from "../skills/canonical-json";
-import type { CustomizationRegistry } from "./registry";
-import type { CustomizationEntry, CustomizationKind, CustomizationScope, CustomizationState } from "./types";
+import { sha256 } from '../skills/canonical-json';
+import type { CustomizationRegistry } from './registry';
+import type {
+  CustomizationEntry,
+  CustomizationKind,
+  CustomizationScope,
+  CustomizationState,
+} from './types';
 
 export const MARKETPLACE_METHOD_ID =
-  "A.YUN.MARKETPLACE.catalog_customizations.v1.0.0.LOW.INSTITUTIONAL" as const;
+  'A.YUN.MARKETPLACE.catalog_customizations.v1.0.0.LOW.INSTITUTIONAL' as const;
 
 export const MARKETPLACE_DISCLAIMER =
-  "Catálogo y marketplace de solo lectura: enumerar, resolver y planificar NO autoriza, NO instala y NO ejecuta." as const;
+  'Catálogo y marketplace de solo lectura: enumerar, resolver y planificar NO autoriza, NO instala y NO ejecuta.' as const;
 
 export interface MarketplaceCatalog {
   readonly methodId: string;
@@ -66,7 +71,7 @@ export interface MarketplacePack {
 export interface MarketplacePlan {
   readonly methodId: string;
   readonly packId: string;
-  readonly status: "PLANNED_NOT_ENABLED";
+  readonly status: 'PLANNED_NOT_ENABLED';
   readonly enabled: false;
   readonly authorizationPerformed: false;
   readonly executionPerformed: false;
@@ -87,7 +92,7 @@ export function buildMarketplaceCatalog(registry: CustomizationRegistry): Market
 
 export function buildMarketplaceSnapshot(
   registry: CustomizationRegistry,
-  inventory: MarketplaceInventory,
+  inventory: MarketplaceInventory
 ): MarketplaceSnapshot {
   const customizationDigest = registry.manifest();
   const digest = sha256({
@@ -110,20 +115,24 @@ export function buildMarketplaceSnapshot(
 /** Resuelve las entradas referenciadas por un pack de plugin contra el registro vivo. */
 export function resolveMarketplacePack(
   entry: CustomizationEntry,
-  registry: CustomizationRegistry,
+  registry: CustomizationRegistry
 ): MarketplacePack {
-  if (entry.kind !== "plugin") throw new Error("MARKETPLACE_PACK_NOT_PLUGIN");
+  if (entry.kind !== 'plugin') throw new Error('MARKETPLACE_PACK_NOT_PLUGIN');
 
   const refs: readonly { id: string; kind: CustomizationKind }[] = [
-    ...entry.bundles.rules.map((id) => ({ id, kind: "rule" as const })),
-    ...entry.bundles.skills.map((id) => ({ id, kind: "skill" as const })),
-    ...entry.bundles.hooks.map((id) => ({ id, kind: "hook" as const })),
-    ...entry.bundles.mcpServers.map((id) => ({ id, kind: "mcp-server" as const })),
+    ...entry.bundles.rules.map((id) => ({ id, kind: 'rule' as const })),
+    ...entry.bundles.skills.map((id) => ({ id, kind: 'skill' as const })),
+    ...entry.bundles.hooks.map((id) => ({ id, kind: 'hook' as const })),
+    ...entry.bundles.mcpServers.map((id) => ({ id, kind: 'mcp-server' as const })),
   ];
 
   const resolution: readonly MarketplaceResolution[] = refs.map((reference) => {
     const found = registry.get(reference.id);
-    return { id: reference.id, kind: reference.kind, present: found !== undefined && found.kind === reference.kind };
+    return {
+      id: reference.id,
+      kind: reference.kind,
+      present: found !== undefined && found.kind === reference.kind,
+    };
   });
   const missing = resolution.filter((item) => !item.present).map((item) => item.id);
   const digest = sha256({ id: entry.id, version: entry.version, entries: resolution });
@@ -146,15 +155,15 @@ export function resolveMarketplacePack(
 export function planMarketplaceEnablement(pack: MarketplacePack): MarketplacePlan {
   const steps = [
     pack.missing.length === 0
-      ? "Todas las entradas del pack están registradas en el catálogo nativo."
-      : `Falta registrar en el catálogo nativo: ${pack.missing.join(", ")}.`,
-    "Revisión humana con nombre (AGENTS.md §7): state draft → verified.",
-    "La instalación/habilitación se aprueba fuera de banda; el runtime no instala ni habilita packs.",
+      ? 'Todas las entradas del pack están registradas en el catálogo nativo.'
+      : `Falta registrar en el catálogo nativo: ${pack.missing.join(', ')}.`,
+    'Revisión humana con nombre (AGENTS.md §7): state draft → verified.',
+    'La instalación/habilitación se aprueba fuera de banda; el runtime no instala ni habilita packs.',
   ];
   return Object.freeze({
     methodId: MARKETPLACE_METHOD_ID,
     packId: pack.id,
-    status: "PLANNED_NOT_ENABLED" as const,
+    status: 'PLANNED_NOT_ENABLED' as const,
     enabled: false as const,
     authorizationPerformed: false as const,
     executionPerformed: false as const,

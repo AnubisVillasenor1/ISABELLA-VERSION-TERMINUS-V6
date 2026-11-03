@@ -5,9 +5,9 @@
  * de latencia y resumen auditable. Es una capa cognitiva determinista auxiliar;
  * no se presenta como sustituto de inferencia generativa.
  */
-import { createHash } from "node:crypto";
-import { config } from "@/lib/config";
-import { runNativePipeline } from "@/lib/ncua/pipeline";
+import { createHash } from 'node:crypto';
+import { config } from '@/lib/config';
+import { runNativePipeline } from '@/lib/ncua/pipeline';
 
 export interface NativeComprehensionInput {
   input: string;
@@ -19,7 +19,7 @@ export interface NativeComprehensionInput {
 export interface NativeComprehensionOutput {
   ok: boolean;
   id: string;
-  inferenceMode: "PRODUCTION_NORMAL" | "MAINTENANCE" | "NATIVE_DECLARED";
+  inferenceMode: 'PRODUCTION_NORMAL' | 'MAINTENANCE' | 'NATIVE_DECLARED';
   intent: { detected: string; confidence: number; margin: number };
   federations: { votesApproved: boolean; vetoActive: boolean; consensusScore: number };
   attention: { consensusApproved: boolean; consensusScore: number; activeFederations: number };
@@ -34,13 +34,13 @@ export function runNativeComprehension(input: NativeComprehensionInput): NativeC
   const runtime = config();
   const mode = runtime.ISABELLA_RUNTIME_MODE;
   const productionLike =
-    runtime.NODE_ENV === "production" || mode === "production" || mode === "staging";
+    runtime.NODE_ENV === 'production' || mode === 'production' || mode === 'staging';
   const started = performance.now();
   // NCUA debe reconocer cualquier proveedor cognitivo autorizado. La versión
   // anterior solo consideraba Gemini y marcaba mantenimiento aunque Groq/XAI
   // fueran los proveedores realmente disponibles.
   const hasProvider = Boolean(
-    runtime.GEMINI_API_KEY || runtime.GROQ_API_KEY || runtime.XAI_API_KEY,
+    runtime.GEMINI_API_KEY || runtime.GROQ_API_KEY || runtime.XAI_API_KEY || runtime.DEEPSEEK_APIKEY
   );
   const result = runNativePipeline(input.input, {
     productionLike,
@@ -51,11 +51,11 @@ export function runNativeComprehension(input: NativeComprehensionInput): NativeC
     tenantId: input.tenantId,
   });
   const latencyMs = Number((performance.now() - started).toFixed(1));
-  const chainHash = createHash("sha256")
-    .update(result.chain.map((record) => record.hash).join("+"))
-    .digest("hex");
+  const chainHash = createHash('sha256')
+    .update(result.chain.map((record) => record.hash).join('+'))
+    .digest('hex');
   return {
-    ok: result.httpStatus === 200 && result.inference.mode !== "MAINTENANCE",
+    ok: result.httpStatus === 200 && result.inference.mode !== 'MAINTENANCE',
     id: result.id,
     inferenceMode: result.inference.mode,
     intent: { ...result.intent },

@@ -14,7 +14,7 @@
  *  - Sin endpoint configurado: no-op documentado (desarrollo local).
  */
 
-import { config } from "./config";
+import { config } from './config';
 
 export interface OtelQueuedLog {
   timestamp: string;
@@ -42,7 +42,7 @@ let timerStarted = false;
 function endpoint(): string | undefined {
   try {
     const url = config().OTEL_EXPORTER_OTLP_ENDPOINT;
-    return url && url.length > 0 ? url.replace(/\/$/, "") : undefined;
+    return url && url.length > 0 ? url.replace(/\/$/, '') : undefined;
   } catch {
     return undefined;
   }
@@ -50,9 +50,9 @@ function endpoint(): string | undefined {
 
 function serviceName(): string {
   try {
-    return config().OTEL_SERVICE_NAME || "isabella-ai";
+    return config().OTEL_SERVICE_NAME || 'isabella-ai';
   } catch {
-    return "isabella-ai";
+    return 'isabella-ai';
   }
 }
 
@@ -64,12 +64,12 @@ function toUnixNano(iso: string): string {
 
 function attribute(key: string, value: unknown): { key: string; value: { stringValue: string } } {
   let rendered: string;
-  if (typeof value === "string") rendered = value;
+  if (typeof value === 'string') rendered = value;
   else {
     try {
-      rendered = JSON.stringify(value) ?? "null";
+      rendered = JSON.stringify(value) ?? 'null';
     } catch {
-      rendered = "[unserializable]";
+      rendered = '[unserializable]';
     }
   }
   return { key, value: { stringValue: rendered.slice(0, 4000) } };
@@ -113,7 +113,7 @@ export async function flushOtelOutbox(): Promise<OtelFlushResult> {
       attempted: false,
       delivered: false,
       count: batch.length,
-      error: "no-endpoint",
+      error: 'no-endpoint',
     };
   }
 
@@ -125,13 +125,13 @@ export async function flushOtelOutbox(): Promise<OtelFlushResult> {
         {
           resource: {
             attributes: [
-              attribute("service.name", serviceName()),
-              attribute("service.version", "v4.2.0"),
+              attribute('service.name', serviceName()),
+              attribute('service.version', 'v4.2.0'),
             ],
           },
           scopeLogs: [
             {
-              scope: { name: "isabella-telemetry" },
+              scope: { name: 'isabella-telemetry' },
               logRecords: batch.map((log) => ({
                 timeUnixNano: toUnixNano(log.timestamp),
                 severityText: log.level.toUpperCase(),
@@ -139,12 +139,12 @@ export async function flushOtelOutbox(): Promise<OtelFlushResult> {
                   stringValue: `${log.moduleId}:${log.coreId}:${log.eventName}`,
                 },
                 attributes: [
-                  attribute("isabella.trace_id", log.traceId),
-                  attribute("isabella.correlation_id", log.correlationId),
-                  attribute("isabella.module", log.moduleId),
-                  attribute("isabella.core", log.coreId),
-                  attribute("isabella.event", log.eventName),
-                  attribute("isabella.payload", log.payload),
+                  attribute('isabella.trace_id', log.traceId),
+                  attribute('isabella.correlation_id', log.correlationId),
+                  attribute('isabella.module', log.moduleId),
+                  attribute('isabella.core', log.coreId),
+                  attribute('isabella.event', log.eventName),
+                  attribute('isabella.payload', log.payload),
                 ],
               })),
             },
@@ -153,8 +153,8 @@ export async function flushOtelOutbox(): Promise<OtelFlushResult> {
       ],
     };
     const response = await fetch(`${url}/v1/logs`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
       body: JSON.stringify(body),
       signal: controller.signal,
     });
@@ -168,7 +168,7 @@ export async function flushOtelOutbox(): Promise<OtelFlushResult> {
     }
     return { attempted: true, delivered: true, count: batch.length };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "unknown";
+    const message = error instanceof Error ? error.message : 'unknown';
     return {
       attempted: true,
       delivered: false,

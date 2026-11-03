@@ -1,7 +1,15 @@
-import { createHash, randomUUID } from "node:crypto";
+import { createHash, randomUUID } from 'node:crypto';
+import {
+  canEarn,
+  creatorShareBpsForTier,
+  MAX_USER_SHARE_BPS,
+  MIN_USER_SHARE_BPS,
+  splitPlatformRevenue,
+} from '../commerce/revenue-share';
+import type { PlanId, SubscriptionStatus } from '../commerce/types';
 
 /**
- * Isabella Sovereign Revenue Fabric v4 — deterministic domain core.
+ * Isabella Sovereign Revenue Fabric v5 — canonical 50–80 creator policy with paid-active gating.
  *
  * Monetary inputs are decimal strings and are converted to integer minor units.
  * This module is an in-process prototype: its hash chain and idempotency registry
@@ -10,24 +18,24 @@ import { createHash, randomUUID } from "node:crypto";
  * not independently verified by this module. No funds are transferred.
  */
 
-export const REVENUE_FABRIC_VERSION = "isabella-revenue-fabric-v4.0.0" as const;
+export const REVENUE_FABRIC_VERSION = 'isabella-revenue-fabric-v5.0.0' as const;
 
 export type RevenueStream =
-  | "SUBSCRIPTION"
-  | "ISA_API"
-  | "SKILL_MARKETPLACE"
-  | "AGENT_MARKETPLACE"
-  | "AGENT_HOSTING"
-  | "AI_CLOUD"
-  | "AGENT_REVENUE_SHARING"
-  | "HYPERAUTOMATION"
-  | "WHITE_LABEL"
-  | "CERTIFICATION"
-  | "DATA_VAULT"
-  | "ECOSYSTEM_TREASURY";
+  | 'SUBSCRIPTION'
+  | 'ISA_API'
+  | 'SKILL_MARKETPLACE'
+  | 'AGENT_MARKETPLACE'
+  | 'AGENT_HOSTING'
+  | 'AI_CLOUD'
+  | 'AGENT_REVENUE_SHARING'
+  | 'HYPERAUTOMATION'
+  | 'WHITE_LABEL'
+  | 'CERTIFICATION'
+  | 'DATA_VAULT'
+  | 'ECOSYSTEM_TREASURY';
 
-export type IETSTier = "STARTER" | "PROFESSIONAL" | "ADVANCED" | "ELITE" | "SOVEREIGN";
-export type PostingDirection = "DEBIT" | "CREDIT";
+export type IETSTier = 'STARTER' | 'PROFESSIONAL' | 'ADVANCED' | 'ELITE' | 'SOVEREIGN';
+export type PostingDirection = 'DEBIT' | 'CREDIT';
 
 export interface IETSComponents {
   readonly referrals: number;
@@ -63,6 +71,9 @@ export interface SettlementInput {
   readonly taxAmount: string;
   readonly gatewayFee: string;
   readonly creatorId?: string;
+  /** Verified server-side plan and subscription state; never trust browser-supplied values. */
+  readonly creatorPlan?: PlanId;
+  readonly creatorSubscriptionStatus?: SubscriptionStatus;
   readonly ietsComponents?: IETSComponents;
   /** Required when gatewayFee is non-zero; must refer to actual PSP settlement evidence. */
   readonly pspSettlementRef?: string;
@@ -109,15 +120,21 @@ export interface RevenueSettlement {
   readonly distributablePool: string;
   readonly creatorRateBps: number;
   readonly platformRateBps: number;
+  readonly creatorId?: string;
+  readonly creatorEligible: boolean;
+  readonly creatorEligibilityReason: string;
   readonly creatorShare: string;
   readonly platformShare: string;
+  readonly platformPhoenixFund?: string;
+  readonly platformInfrastructure?: string;
+  readonly platformDao?: string;
   readonly iets: IETSResult | null;
   readonly policyVersion: string;
   readonly journal: RevenueJournal;
   readonly fundsMoved: false;
 }
 
-const IETS_POLICY_VERSION = "iets-v4.0.0";
+const IETS_POLICY_VERSION = 'iets-v5.0.0';
 const IETS_WEIGHTS: Readonly<Record<keyof IETSComponents, number>> = Object.freeze({
   referrals: 1500,
   revenue: 2500,
@@ -129,56 +146,53 @@ const IETS_WEIGHTS: Readonly<Record<keyof IETSComponents, number>> = Object.free
   compliance: 500,
 });
 
-const TIER_CREATOR_RATES: Readonly<Record<IETSTier, number>> = Object.freeze({
-  STARTER: 5000,
-  PROFESSIONAL: 6000,
-  ADVANCED: 7000,
-  ELITE: 8000,
-  SOVEREIGN: 9000,
-});
-
-const HYPERAUTOMATION_CREATOR_RATES: Readonly<Record<IETSTier, number>> = Object.freeze({
-  STARTER: 8500,
-  PROFESSIONAL: 8200,
-  ADVANCED: 8000,
-  ELITE: 7800,
-  SOVEREIGN: 7500,
-});
-
 const DYNAMIC_STREAMS = new Set<RevenueStream>([
-  "SKILL_MARKETPLACE",
-  "AGENT_MARKETPLACE",
-  "AGENT_REVENUE_SHARING",
-  "HYPERAUTOMATION",
+  'SKILL_MARKETPLACE',
+  'AGENT_MARKETPLACE',
+  'AGENT_REVENUE_SHARING',
+  'HYPERAUTOMATION',
 ]);
 
+function creatorStreamFor(stream: RevenueStream): boolean {
+  return stream === 'ISA_API' || stream === 'DATA_VAULT' || DYNAMIC_STREAMS.has(stream);
+}
+
 const REVENUE_STREAMS = new Set<RevenueStream>([
-  "SUBSCRIPTION", "ISA_API", "SKILL_MARKETPLACE", "AGENT_MARKETPLACE",
-  "AGENT_HOSTING", "AI_CLOUD", "AGENT_REVENUE_SHARING", "HYPERAUTOMATION",
-  "WHITE_LABEL", "CERTIFICATION", "DATA_VAULT", "ECOSYSTEM_TREASURY",
+  'SUBSCRIPTION',
+  'ISA_API',
+  'SKILL_MARKETPLACE',
+  'AGENT_MARKETPLACE',
+  'AGENT_HOSTING',
+  'AI_CLOUD',
+  'AGENT_REVENUE_SHARING',
+  'HYPERAUTOMATION',
+  'WHITE_LABEL',
+  'CERTIFICATION',
+  'DATA_VAULT',
+  'ECOSYSTEM_TREASURY',
 ]);
 
 const ZERO = 0n;
 const BPS = 10_000n;
 
 function assertNonBlank(value: string, field: string, max = 256): void {
-  if (typeof value !== "string" || value.trim().length === 0 || value.length > max) {
+  if (typeof value !== 'string' || value.trim().length === 0 || value.length > max) {
     throw new RangeError(`REVENUE_${field.toUpperCase()}_INVALID`);
   }
 }
 
 function parseMinor(value: string, field: string): bigint {
-  if (typeof value !== "string" || !/^(?:0|[1-9]\d*)(?:\.\d{1,2})?$/.test(value)) {
+  if (typeof value !== 'string' || !/^(?:0|[1-9]\d*)(?:\.\d{1,2})?$/.test(value)) {
     throw new RangeError(`REVENUE_${field.toUpperCase()}_INVALID_DECIMAL`);
   }
-  const [whole = "0", fraction = ""] = value.split(".");
-  return BigInt(whole) * 100n + BigInt((fraction + "00").slice(0, 2));
+  const [whole = '0', fraction = ''] = value.split('.');
+  return BigInt(whole) * 100n + BigInt((fraction + '00').slice(0, 2));
 }
 
 function formatMinor(value: bigint): string {
-  const sign = value < ZERO ? "-" : "";
+  const sign = value < ZERO ? '-' : '';
   const absolute = value < ZERO ? -value : value;
-  return `${sign}${absolute / 100n}.${(absolute % 100n).toString().padStart(2, "0")}`;
+  return `${sign}${absolute / 100n}.${(absolute % 100n).toString().padStart(2, '0')}`;
 }
 
 function roundedRatio(amount: bigint, rateBps: number): bigint {
@@ -192,14 +206,17 @@ function validateRate(rate: number, field: string): void {
 }
 
 function canonicalJson(value: unknown): string {
-  if (value === null || typeof value !== "object") return JSON.stringify(value) ?? "null";
-  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
+  if (value === null || typeof value !== 'object') return JSON.stringify(value) ?? 'null';
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
   const record = value as Record<string, unknown>;
-  return `{${Object.keys(record).sort().map((key) => `${JSON.stringify(key)}:${canonicalJson(record[key])}`).join(",")}}`;
+  return `{${Object.keys(record)
+    .sort()
+    .map((key) => `${JSON.stringify(key)}:${canonicalJson(record[key])}`)
+    .join(',')}}`;
 }
 
 function sha256(value: string): string {
-  return createHash("sha256").update(value).digest("hex");
+  return createHash('sha256').update(value).digest('hex');
 }
 
 export class IsabellaEconomicTrustScore {
@@ -208,7 +225,7 @@ export class IsabellaEconomicTrustScore {
     let weighted = 0;
     for (const key of keys) {
       const value = components[key];
-      if (typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > 100) {
+      if (typeof value !== 'number' || !Number.isInteger(value) || value < 0 || value > 100) {
         throw new RangeError(`IETS_${key.toUpperCase()}_MUST_BE_INTEGER_0_100`);
       }
       weighted += value * IETS_WEIGHTS[key];
@@ -216,10 +233,15 @@ export class IsabellaEconomicTrustScore {
     // Hundredths of a point, rounded once to avoid cumulative floating rounding.
     const score = Math.round(weighted / 100) / 100;
     const tier: IETSTier =
-      score <= 20 ? "STARTER" :
-      score <= 40 ? "PROFESSIONAL" :
-      score <= 60 ? "ADVANCED" :
-      score <= 80 ? "ELITE" : "SOVEREIGN";
+      score <= 20
+        ? 'STARTER'
+        : score <= 40
+          ? 'PROFESSIONAL'
+          : score <= 60
+            ? 'ADVANCED'
+            : score <= 80
+              ? 'ELITE'
+              : 'SOVEREIGN';
     return Object.freeze({
       score,
       tier,
@@ -232,53 +254,59 @@ export class IsabellaEconomicTrustScore {
 export class IsabellaSovereignRevenueFabric {
   private readonly settlements = new Map<string, RevenueSettlement>();
   private readonly journals: RevenueJournal[] = [];
-  private previousHash = "GENESIS";
+  private previousHash = 'GENESIS';
 
-  constructor(private readonly policy: RevenuePolicy = {
-    version: REVENUE_FABRIC_VERSION,
-    emergencyVaultBps: 100,
-    innovationVaultBps: 100,
-    treasuryVaultBps: 100,
-  }) {
-    assertNonBlank(policy.version, "policy_version", 128);
-    validateRate(policy.emergencyVaultBps, "emergency_vault");
-    validateRate(policy.innovationVaultBps, "innovation_vault");
-    validateRate(policy.treasuryVaultBps, "treasury_vault");
+  constructor(
+    private readonly policy: RevenuePolicy = {
+      version: REVENUE_FABRIC_VERSION,
+      emergencyVaultBps: 100,
+      innovationVaultBps: 100,
+      treasuryVaultBps: 100,
+    }
+  ) {
+    assertNonBlank(policy.version, 'policy_version', 128);
+    validateRate(policy.emergencyVaultBps, 'emergency_vault');
+    validateRate(policy.innovationVaultBps, 'innovation_vault');
+    validateRate(policy.treasuryVaultBps, 'treasury_vault');
     if (policy.emergencyVaultBps + policy.innovationVaultBps + policy.treasuryVaultBps > 10_000) {
-      throw new RangeError("REVENUE_VAULT_RATES_EXCEED_100_PERCENT");
+      throw new RangeError('REVENUE_VAULT_RATES_EXCEED_100_PERCENT');
     }
   }
 
   settle(input: SettlementInput): RevenueSettlement {
     this.validateInput(input);
     const amounts = {
-      gross: parseMinor(input.grossAmount, "gross_amount"),
-      directCost: parseMinor(input.directCost, "direct_cost"),
-      tax: parseMinor(input.taxAmount, "tax_amount"),
-      gatewayFee: parseMinor(input.gatewayFee, "gateway_fee"),
+      gross: parseMinor(input.grossAmount, 'gross_amount'),
+      directCost: parseMinor(input.directCost, 'direct_cost'),
+      tax: parseMinor(input.taxAmount, 'tax_amount'),
+      gatewayFee: parseMinor(input.gatewayFee, 'gateway_fee'),
     };
-    if (amounts.gross <= ZERO) throw new RangeError("REVENUE_GROSS_MUST_BE_POSITIVE");
+    if (amounts.gross <= ZERO) throw new RangeError('REVENUE_GROSS_MUST_BE_POSITIVE');
     const deductions = amounts.directCost + amounts.tax + amounts.gatewayFee;
-    if (deductions > amounts.gross) throw new RangeError("REVENUE_DEDUCTIONS_EXCEED_GROSS");
-    const fingerprint = sha256(canonicalJson({
-      revenueStream: input.revenueStream,
-      currency: input.currency,
-      grossMinor: amounts.gross.toString(),
-      directCostMinor: amounts.directCost.toString(),
-      taxMinor: amounts.tax.toString(),
-      gatewayFeeMinor: amounts.gatewayFee.toString(),
-      creatorId: input.creatorId ?? null,
-      ietsComponents: input.ietsComponents ?? null,
-      pspSettlementRef: input.pspSettlementRef ?? null,
-      taxEvidenceRef: input.taxEvidenceRef ?? null,
-      consentEvidenceRef: input.consentEvidenceRef ?? null,
-      dataLicenceEvidenceRef: input.dataLicenceEvidenceRef ?? null,
-      dataVaultCreatorRateBps: input.dataVaultCreatorRateBps ?? null,
-    }));
+    if (deductions > amounts.gross) throw new RangeError('REVENUE_DEDUCTIONS_EXCEED_GROSS');
+    const fingerprint = sha256(
+      canonicalJson({
+        revenueStream: input.revenueStream,
+        currency: input.currency,
+        grossMinor: amounts.gross.toString(),
+        directCostMinor: amounts.directCost.toString(),
+        taxMinor: amounts.tax.toString(),
+        gatewayFeeMinor: amounts.gatewayFee.toString(),
+        creatorId: input.creatorId ?? null,
+        creatorPlan: input.creatorPlan ?? null,
+        creatorSubscriptionStatus: input.creatorSubscriptionStatus ?? null,
+        ietsComponents: input.ietsComponents ?? null,
+        pspSettlementRef: input.pspSettlementRef ?? null,
+        taxEvidenceRef: input.taxEvidenceRef ?? null,
+        consentEvidenceRef: input.consentEvidenceRef ?? null,
+        dataLicenceEvidenceRef: input.dataLicenceEvidenceRef ?? null,
+        dataVaultCreatorRateBps: input.dataVaultCreatorRateBps ?? null,
+      })
+    );
     const prior = this.settlements.get(input.idempotencyKey);
     if (prior) {
       if (this.fingerprintForSettlement.get(input.idempotencyKey) !== fingerprint) {
-        throw new Error("REVENUE_IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_PAYLOAD");
+        throw new Error('REVENUE_IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_PAYLOAD');
       }
       return prior;
     }
@@ -287,32 +315,123 @@ export class IsabellaSovereignRevenueFabric {
     const emergencyMinor = roundedRatio(operatingIncomeMinor, this.policy.emergencyVaultBps);
     const innovationMinor = roundedRatio(operatingIncomeMinor, this.policy.innovationVaultBps);
     const treasuryMinor = roundedRatio(operatingIncomeMinor, this.policy.treasuryVaultBps);
-    const distributableMinor = operatingIncomeMinor - emergencyMinor - innovationMinor - treasuryMinor;
-    const iets = input.ietsComponents ? IsabellaEconomicTrustScore.calculate(input.ietsComponents) : null;
+    const distributableMinor =
+      operatingIncomeMinor - emergencyMinor - innovationMinor - treasuryMinor;
+    const iets = input.ietsComponents
+      ? IsabellaEconomicTrustScore.calculate(input.ietsComponents)
+      : null;
     const creatorRateBps = this.resolveCreatorRate(input, iets);
     const platformRateBps = 10_000 - creatorRateBps;
+    const eligibility =
+      input.creatorPlan && input.creatorSubscriptionStatus
+        ? canEarn(input.creatorPlan, input.creatorSubscriptionStatus)
+        : null;
+    const creatorEligible = creatorRateBps > 0 && eligibility?.eligible === true;
+    const creatorEligibilityReason = !creatorStreamFor(input.revenueStream)
+      ? 'PLATFORM_ONLY_STREAM'
+      : !eligibility
+        ? 'CREATOR_ELIGIBILITY_CONTEXT_MISSING'
+        : eligibility.eligible
+          ? 'ELIGIBLE'
+          : (eligibility.reason ?? 'INELIGIBLE').toUpperCase();
     const creatorShareMinor = roundedRatio(distributableMinor, creatorRateBps);
     const platformShareMinor = distributableMinor - creatorShareMinor;
+    const platformShareCents = Number(platformShareMinor);
+    if (!Number.isSafeInteger(platformShareCents))
+      throw new RangeError('REVENUE_PLATFORM_SHARE_OUT_OF_SAFE_RANGE');
+    const platformAllocation = splitPlatformRevenue(platformShareCents);
+    const phoenixMinor = BigInt(platformAllocation.phoenixFundCents);
+    const infrastructureMinor = BigInt(platformAllocation.infrastructureCents);
+    const daoMinor = BigInt(platformAllocation.daoCents);
 
-    const allocationTotal = amounts.directCost + amounts.tax + amounts.gatewayFee +
-      emergencyMinor + innovationMinor + treasuryMinor + creatorShareMinor + platformShareMinor;
-    if (allocationTotal !== amounts.gross) throw new Error("REVENUE_ALLOCATION_INVARIANT_FAILED");
+    const allocationTotal =
+      amounts.directCost +
+      amounts.tax +
+      amounts.gatewayFee +
+      emergencyMinor +
+      innovationMinor +
+      treasuryMinor +
+      creatorShareMinor +
+      phoenixMinor +
+      infrastructureMinor +
+      daoMinor;
+    if (allocationTotal !== amounts.gross) throw new Error('REVENUE_ALLOCATION_INVARIANT_FAILED');
 
     const postings: LedgerPosting[] = [
-      this.posting("SETTLEMENT_CLEARING", "DEBIT", amounts.gross, input.currency, "Gross received; allocation clearing"),
-      this.posting("DIRECT_COST_ALLOCATED", "CREDIT", amounts.directCost, input.currency, "Verified attributable direct cost"),
-      this.posting("TAX_PAYABLE", "CREDIT", amounts.tax, input.currency, "Externally determined tax amount"),
-      this.posting("PSP_FEE_ALLOCATED", "CREDIT", amounts.gatewayFee, input.currency, "PSP fee from settlement evidence"),
-      this.posting("EMERGENCY_VAULT", "CREDIT", emergencyMinor, input.currency, "Emergency reserve"),
-      this.posting("INNOVATION_VAULT", "CREDIT", innovationMinor, input.currency, "Innovation reserve"),
-      this.posting("TREASURY_VAULT", "CREDIT", treasuryMinor, input.currency, "Treasury reserve"),
-      this.posting("CREATOR_PAYABLE", "CREDIT", creatorShareMinor, input.currency, "Creator/provider share"),
-      this.posting("PLATFORM_ALLOCATION", "CREDIT", platformShareMinor, input.currency, "Platform allocation"),
+      this.posting(
+        'SETTLEMENT_CLEARING',
+        'DEBIT',
+        amounts.gross,
+        input.currency,
+        'Gross received; allocation clearing'
+      ),
+      this.posting(
+        'DIRECT_COST_ALLOCATED',
+        'CREDIT',
+        amounts.directCost,
+        input.currency,
+        'Verified attributable direct cost'
+      ),
+      this.posting(
+        'TAX_PAYABLE',
+        'CREDIT',
+        amounts.tax,
+        input.currency,
+        'Externally determined tax amount'
+      ),
+      this.posting(
+        'PSP_FEE_ALLOCATED',
+        'CREDIT',
+        amounts.gatewayFee,
+        input.currency,
+        'PSP fee from settlement evidence'
+      ),
+      this.posting(
+        'EMERGENCY_VAULT',
+        'CREDIT',
+        emergencyMinor,
+        input.currency,
+        'Emergency reserve'
+      ),
+      this.posting(
+        'INNOVATION_VAULT',
+        'CREDIT',
+        innovationMinor,
+        input.currency,
+        'Innovation reserve'
+      ),
+      this.posting('TREASURY_VAULT', 'CREDIT', treasuryMinor, input.currency, 'Treasury reserve'),
+      this.posting(
+        'CREATOR_PAYABLE',
+        'CREDIT',
+        creatorShareMinor,
+        input.currency,
+        'Creator/provider share'
+      ),
+      this.posting('PHOENIX_FUND', 'CREDIT', phoenixMinor, input.currency, '20% of platform share'),
+      this.posting(
+        'INFRASTRUCTURE_REVENUE',
+        'CREDIT',
+        infrastructureMinor,
+        input.currency,
+        '30% of platform share'
+      ),
+      this.posting(
+        'DAO_TREASURY',
+        'CREDIT',
+        daoMinor,
+        input.currency,
+        'Remaining 50% of platform share'
+      ),
     ].filter((posting) => BigInt(posting.amountMinor) > ZERO);
 
-    const debitTotal = postings.filter((p) => p.direction === "DEBIT").reduce((n, p) => n + BigInt(p.amountMinor), ZERO);
-    const creditTotal = postings.filter((p) => p.direction === "CREDIT").reduce((n, p) => n + BigInt(p.amountMinor), ZERO);
-    if (debitTotal !== creditTotal) throw new Error("REVENUE_LEDGER_NOT_BALANCED");
+    const debitTotal = postings
+      .filter((p) => p.direction === 'DEBIT')
+      .reduce((n, p) => n + BigInt(p.amountMinor), ZERO);
+    const creditTotal = postings
+      .filter((p) => p.direction === 'CREDIT')
+      .reduce((n, p) => n + BigInt(p.amountMinor), ZERO);
+    if (debitTotal !== creditTotal) throw new Error('REVENUE_LEDGER_NOT_BALANCED');
 
     const occurredAt = new Date().toISOString();
     const journalBody = {
@@ -345,8 +464,14 @@ export class IsabellaSovereignRevenueFabric {
       distributablePool: formatMinor(distributableMinor),
       creatorRateBps,
       platformRateBps,
+      creatorId: creatorEligible ? input.creatorId : undefined,
+      creatorEligible,
+      creatorEligibilityReason,
       creatorShare: formatMinor(creatorShareMinor),
       platformShare: formatMinor(platformShareMinor),
+      platformPhoenixFund: formatMinor(phoenixMinor),
+      platformInfrastructure: formatMinor(infrastructureMinor),
+      platformDao: formatMinor(daoMinor),
       iets,
       policyVersion: this.policy.version,
       journal,
@@ -363,57 +488,100 @@ export class IsabellaSovereignRevenueFabric {
   private readonly fingerprintForSettlement = new Map<string, string>();
 
   private validateInput(input: SettlementInput): void {
-    if (!input || typeof input !== "object") throw new RangeError("REVENUE_INPUT_REQUIRED");
-    assertNonBlank(input.idempotencyKey, "idempotency_key", 200);
-    if (!REVENUE_STREAMS.has(input.revenueStream)) throw new RangeError("REVENUE_STREAM_INVALID");
-    if (typeof input.currency !== "string" || !/^[A-Z]{3}$/.test(input.currency)) throw new RangeError("REVENUE_CURRENCY_INVALID");
-    parseMinor(input.grossAmount, "gross_amount");
-    parseMinor(input.directCost, "direct_cost");
-    parseMinor(input.taxAmount, "tax_amount");
-    parseMinor(input.gatewayFee, "gateway_fee");
-    if (input.gatewayFee !== "0" && input.gatewayFee !== "0.0" && input.gatewayFee !== "0.00") {
-      assertNonBlank(input.pspSettlementRef ?? "", "psp_settlement_ref", 512);
+    if (!input || typeof input !== 'object') throw new RangeError('REVENUE_INPUT_REQUIRED');
+    assertNonBlank(input.idempotencyKey, 'idempotency_key', 200);
+    if (!REVENUE_STREAMS.has(input.revenueStream)) throw new RangeError('REVENUE_STREAM_INVALID');
+    if (typeof input.currency !== 'string' || !/^[A-Z]{3}$/.test(input.currency))
+      throw new RangeError('REVENUE_CURRENCY_INVALID');
+    parseMinor(input.grossAmount, 'gross_amount');
+    parseMinor(input.directCost, 'direct_cost');
+    parseMinor(input.taxAmount, 'tax_amount');
+    parseMinor(input.gatewayFee, 'gateway_fee');
+    if (input.gatewayFee !== '0' && input.gatewayFee !== '0.0' && input.gatewayFee !== '0.00') {
+      assertNonBlank(input.pspSettlementRef ?? '', 'psp_settlement_ref', 512);
     }
-    if (input.taxAmount !== "0" && input.taxAmount !== "0.0" && input.taxAmount !== "0.00") {
-      assertNonBlank(input.taxEvidenceRef ?? "", "tax_evidence_ref", 512);
+    if (input.taxAmount !== '0' && input.taxAmount !== '0.0' && input.taxAmount !== '0.00') {
+      assertNonBlank(input.taxEvidenceRef ?? '', 'tax_evidence_ref', 512);
     }
-    if (input.revenueStream === "DATA_VAULT") {
-      assertNonBlank(input.consentEvidenceRef ?? "", "consent_evidence_ref", 512);
-      assertNonBlank(input.dataLicenceEvidenceRef ?? "", "data_licence_evidence_ref", 512);
-      validateRate(input.dataVaultCreatorRateBps ?? -1, "data_vault_creator");
+    if (input.revenueStream === 'DATA_VAULT') {
+      assertNonBlank(input.consentEvidenceRef ?? '', 'consent_evidence_ref', 512);
+      assertNonBlank(input.dataLicenceEvidenceRef ?? '', 'data_licence_evidence_ref', 512);
+      const creatorRate = input.dataVaultCreatorRateBps ?? -1;
+      validateRate(creatorRate, 'data_vault_creator');
+      if (creatorRate < MIN_USER_SHARE_BPS || creatorRate > MAX_USER_SHARE_BPS) {
+        throw new RangeError('REVENUE_CREATOR_RATE_OUT_OF_POLICY');
+      }
     }
     if (DYNAMIC_STREAMS.has(input.revenueStream) && !input.ietsComponents) {
-      throw new RangeError("REVENUE_IETS_REQUIRED_FOR_DYNAMIC_STREAM");
+      throw new RangeError('REVENUE_IETS_REQUIRED_FOR_DYNAMIC_STREAM');
     }
     if (input.ietsComponents) IsabellaEconomicTrustScore.calculate(input.ietsComponents);
-    if (input.revenueStream === "ISA_API" || input.revenueStream === "DATA_VAULT" ||
-        (DYNAMIC_STREAMS.has(input.revenueStream) && this.rateFor(input.revenueStream, input.ietsComponents ? IsabellaEconomicTrustScore.calculate(input.ietsComponents) : null) > 0)) {
-      assertNonBlank(input.creatorId ?? "", "creator_id", 256);
+    const creatorRevenueStream =
+      input.revenueStream === 'ISA_API' ||
+      input.revenueStream === 'DATA_VAULT' ||
+      DYNAMIC_STREAMS.has(input.revenueStream);
+    if (creatorRevenueStream) {
+      assertNonBlank(input.creatorId ?? '', 'creator_id', 256);
+      if (!input.creatorPlan || !input.creatorSubscriptionStatus) {
+        throw new Error('REVENUE_CREATOR_ELIGIBILITY_REQUIRED');
+      }
     }
   }
 
   private resolveCreatorRate(input: SettlementInput, iets: IETSResult | null): number {
-    if (input.revenueStream === "DATA_VAULT") return input.dataVaultCreatorRateBps as number;
-    return this.rateFor(input.revenueStream, iets);
+    if (
+      input.revenueStream === 'SUBSCRIPTION' ||
+      input.revenueStream === 'AGENT_HOSTING' ||
+      input.revenueStream === 'AI_CLOUD' ||
+      input.revenueStream === 'WHITE_LABEL' ||
+      input.revenueStream === 'CERTIFICATION' ||
+      input.revenueStream === 'ECOSYSTEM_TREASURY'
+    )
+      return 0;
+
+    if (
+      !input.creatorPlan ||
+      !input.creatorSubscriptionStatus ||
+      !canEarn(input.creatorPlan, input.creatorSubscriptionStatus).eligible
+    )
+      return 0;
+
+    const rate =
+      input.revenueStream === 'DATA_VAULT'
+        ? (input.dataVaultCreatorRateBps as number)
+        : this.rateFor(input.revenueStream, iets);
+    if (rate < MIN_USER_SHARE_BPS || rate > MAX_USER_SHARE_BPS) {
+      throw new RangeError('REVENUE_CREATOR_RATE_OUT_OF_POLICY');
+    }
+    return rate;
   }
 
   private rateFor(stream: RevenueStream, iets: IETSResult | null): number {
     switch (stream) {
-      case "ISA_API": return 7000;
-      case "SKILL_MARKETPLACE":
-      case "AGENT_MARKETPLACE":
-      case "AGENT_REVENUE_SHARING":
-        if (!iets) throw new Error("REVENUE_IETS_REQUIRED_FOR_DYNAMIC_STREAM");
-        return TIER_CREATOR_RATES[iets.tier];
-      case "HYPERAUTOMATION":
-        if (!iets) throw new Error("REVENUE_IETS_REQUIRED_FOR_DYNAMIC_STREAM");
-        return HYPERAUTOMATION_CREATOR_RATES[iets.tier];
-      case "DATA_VAULT": return 0; // Overridden by the explicit, consent-bound rate.
-      default: return 0;
+      case 'ISA_API':
+        return 7500;
+      case 'SKILL_MARKETPLACE':
+      case 'AGENT_MARKETPLACE':
+      case 'AGENT_REVENUE_SHARING':
+        if (!iets) throw new Error('REVENUE_IETS_REQUIRED_FOR_DYNAMIC_STREAM');
+        return creatorShareBpsForTier(iets.tier);
+      case 'HYPERAUTOMATION':
+        if (!iets) throw new Error('REVENUE_IETS_REQUIRED_FOR_DYNAMIC_STREAM');
+        return creatorShareBpsForTier(iets.tier, 'hyperautomation');
+      case 'DATA_VAULT':
+        return 0; // Overridden by the explicit, consent-bound rate.
+      default:
+        return 0;
     }
   }
 
-  private posting(account: string, direction: PostingDirection, amount: bigint, currency: string, memo: string): LedgerPosting {
+  private posting(
+    account: string,
+    direction: PostingDirection,
+    amount: bigint,
+    currency: string,
+    memo: string
+  ): LedgerPosting {
     return Object.freeze({ account, direction, amountMinor: amount.toString(), currency, memo });
   }
 
@@ -425,19 +593,37 @@ export class IsabellaSovereignRevenueFabric {
     return this.settlements.get(key);
   }
 
-  verifyLedgerIntegrity(): { readonly valid: boolean; readonly journalCount: number; readonly headHash: string } {
-    let previousHash = "GENESIS";
+  verifyLedgerIntegrity(): {
+    readonly valid: boolean;
+    readonly journalCount: number;
+    readonly headHash: string;
+  } {
+    let previousHash = 'GENESIS';
     for (const journal of this.journals) {
-      if (journal.previousHash !== previousHash) return { valid: false, journalCount: this.journals.length, headHash: this.previousHash };
+      if (journal.previousHash !== previousHash)
+        return { valid: false, journalCount: this.journals.length, headHash: this.previousHash };
       const { entryHash, ...body } = journal;
-      if (sha256(canonicalJson(body)) !== entryHash) return { valid: false, journalCount: this.journals.length, headHash: this.previousHash };
-      const debits = journal.postings.filter((p) => p.direction === "DEBIT").reduce((n, p) => n + BigInt(p.amountMinor), ZERO);
-      const credits = journal.postings.filter((p) => p.direction === "CREDIT").reduce((n, p) => n + BigInt(p.amountMinor), ZERO);
-      if (debits !== credits || debits.toString() !== journal.debitTotalMinor || credits.toString() !== journal.creditTotalMinor) {
+      if (sha256(canonicalJson(body)) !== entryHash)
+        return { valid: false, journalCount: this.journals.length, headHash: this.previousHash };
+      const debits = journal.postings
+        .filter((p) => p.direction === 'DEBIT')
+        .reduce((n, p) => n + BigInt(p.amountMinor), ZERO);
+      const credits = journal.postings
+        .filter((p) => p.direction === 'CREDIT')
+        .reduce((n, p) => n + BigInt(p.amountMinor), ZERO);
+      if (
+        debits !== credits ||
+        debits.toString() !== journal.debitTotalMinor ||
+        credits.toString() !== journal.creditTotalMinor
+      ) {
         return { valid: false, journalCount: this.journals.length, headHash: this.previousHash };
       }
       previousHash = entryHash;
     }
-    return { valid: previousHash === this.previousHash, journalCount: this.journals.length, headHash: this.previousHash };
+    return {
+      valid: previousHash === this.previousHash,
+      journalCount: this.journals.length,
+      headHash: this.previousHash,
+    };
   }
 }

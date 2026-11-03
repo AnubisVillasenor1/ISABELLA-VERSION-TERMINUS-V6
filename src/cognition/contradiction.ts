@@ -16,14 +16,14 @@
  * atenúa por prioridad de fuente (trust tier); a igualdad de tier queda
  * `UNRESOLVED` para arbitraje humano. El motor no concede autoridad ni verdad.
  */
-import { sha256 } from "../skills/canonical-json";
-import type { ProvenanceSource } from "../memory/provenance";
+import { sha256 } from '../skills/canonical-json';
+import type { ProvenanceSource } from '../memory/provenance';
 
-export type ClaimPolarity = "affirm" | "deny";
-export type ContradictionReason = "opposite_polarity" | "opposite_object";
-export type ContradictionResolution = "UNRESOLVED" | "RESOLVED_BY_TRUST_TIER";
+export type ClaimPolarity = 'affirm' | 'deny';
+export type ContradictionReason = 'opposite_polarity' | 'opposite_object';
+export type ContradictionResolution = 'UNRESOLVED' | 'RESOLVED_BY_TRUST_TIER';
 
-type TrustTier = ProvenanceSource["trustTier"];
+type TrustTier = ProvenanceSource['trustTier'];
 
 export interface CanonicalClaim {
   readonly claimId: string;
@@ -64,7 +64,7 @@ const TIER_RANK: Record<TrustTier, number> = {
   UNVERIFIED: 1,
 };
 
-const normalize = (value: string): string => value.trim().toLowerCase().replace(/\s+/g, " ");
+const normalize = (value: string): string => value.trim().toLowerCase().replace(/\s+/g, ' ');
 
 function rank(claim: CanonicalClaim): number {
   return claim.trustTier ? TIER_RANK[claim.trustTier] : 0;
@@ -72,7 +72,7 @@ function rank(claim: CanonicalClaim): number {
 
 export function detectContradictions(
   claims: readonly CanonicalClaim[],
-  options: ContradictionOptions = {},
+  options: ContradictionOptions = {}
 ): ContradictionReport {
   const functional = new Set((options.functionalRelations ?? []).map(normalize));
   const contradictions: ContradictionPair[] = [];
@@ -87,38 +87,49 @@ export function detectContradictions(
       if (normalize(left.relation) !== normalize(right.relation)) continue;
 
       const sameObject = normalize(left.object) === normalize(right.object);
-      const oppositePolarity = (left.polarity ?? "affirm") !== (right.polarity ?? "affirm");
+      const oppositePolarity = (left.polarity ?? 'affirm') !== (right.polarity ?? 'affirm');
 
       let reason: ContradictionReason | null = null;
-      if (oppositePolarity && sameObject) reason = "opposite_polarity";
-      else if (!sameObject && functional.has(normalize(left.relation))) reason = "opposite_object";
+      if (oppositePolarity && sameObject) reason = 'opposite_polarity';
+      else if (!sameObject && functional.has(normalize(left.relation))) reason = 'opposite_object';
       if (!reason) continue;
 
       const rankLeft = rank(left);
       const rankRight = rank(right);
       if (rankLeft === rankRight) {
-        contradictions.push({ left: left.claimId, right: right.claimId, reason, resolution: "UNRESOLVED" });
+        contradictions.push({
+          left: left.claimId,
+          right: right.claimId,
+          reason,
+          resolution: 'UNRESOLVED',
+        });
       } else {
         contradictions.push({
           left: left.claimId,
           right: right.claimId,
           reason,
-          resolution: "RESOLVED_BY_TRUST_TIER",
+          resolution: 'RESOLVED_BY_TRUST_TIER',
           winner: rankLeft > rankRight ? left.claimId : right.claimId,
         });
       }
     }
   }
 
-  const unresolved = contradictions.filter((pair) => pair.resolution === "UNRESOLVED").length;
+  const unresolved = contradictions.filter((pair) => pair.resolution === 'UNRESOLVED').length;
   const digest = sha256(
     contradictions.map((pair) => ({
       left: pair.left,
       right: pair.right,
       reason: pair.reason,
       resolution: pair.resolution,
-    })),
+    }))
   );
 
-  return { contradictions, count: contradictions.length, unresolved, consistent: contradictions.length === 0, digest };
+  return {
+    contradictions,
+    count: contradictions.length,
+    unresolved,
+    consistent: contradictions.length === 0,
+    digest,
+  };
 }

@@ -4,7 +4,7 @@
  * Evaluación de políticas constitucionales y control de acceso soberano.
  */
 
-import type { CrownDecision, DataClassification, RiskLevel } from "../contracts";
+import type { CrownDecision, DataClassification, RiskLevel } from '../contracts';
 
 export interface PolicyContext {
   identity: {
@@ -30,7 +30,7 @@ export class PolicyEngine {
     // Verificación de scopes solicitados
     if (context.requestedCapabilities && context.requestedCapabilities.length > 0) {
       for (const cap of context.requestedCapabilities) {
-        if (!context.identity.scopes.includes(cap) && !context.identity.scopes.includes("all")) {
+        if (!context.identity.scopes.includes(cap) && !context.identity.scopes.includes('all')) {
           scopeDenials.push(cap);
         }
       }
@@ -39,11 +39,11 @@ export class PolicyEngine {
     if (scopeDenials.length > 0) {
       return {
         decisionId: crypto.randomUUID(),
-        result: "deny",
+        result: 'deny',
         riskLevel: context.risk.level,
         classification: context.classification,
-        policyIds: ["POL-SCOPE-ENFORCEMENT"],
-        reason: `Scopes denegados: ${scopeDenials.join(", ")}`,
+        policyIds: ['POL-SCOPE-ENFORCEMENT'],
+        reason: `Scopes denegados: ${scopeDenials.join(', ')}`,
         scopeDenials,
         reviewRequired: false,
         reversible: false,
@@ -54,11 +54,11 @@ export class PolicyEngine {
     if (context.risk.requiresApproval) {
       return {
         decisionId: crypto.randomUUID(),
-        result: "review",
+        result: 'review',
         riskLevel: context.risk.level,
         classification: context.classification,
-        policyIds: ["POL-HUMAN-IN-THE-LOOP"],
-        reason: "La operación requiere confirmación humana según política CROWN.",
+        policyIds: ['POL-HUMAN-IN-THE-LOOP'],
+        reason: 'La operación requiere confirmación humana según política CROWN.',
         scopeDenials: [],
         reviewRequired: true,
         reversible: true,
@@ -68,11 +68,11 @@ export class PolicyEngine {
 
     return {
       decisionId: crypto.randomUUID(),
-      result: "allow",
+      result: 'allow',
       riskLevel: context.risk.level,
       classification: context.classification,
-      policyIds: ["POL-DEFAULT-ALLOW"],
-      reason: "Operación autorizada por política CROWN estándar.",
+      policyIds: ['POL-DEFAULT-ALLOW'],
+      reason: 'Operación autorizada por política CROWN estándar.',
       scopeDenials: [],
       reviewRequired: false,
       reversible: true,

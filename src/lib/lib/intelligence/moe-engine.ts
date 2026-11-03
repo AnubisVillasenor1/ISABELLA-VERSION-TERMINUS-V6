@@ -1,4 +1,4 @@
-import type { IntelligenceProvider, IntelligenceRequest, IntelligenceResponse } from "./contracts";
+import type { IntelligenceProvider, IntelligenceRequest, IntelligenceResponse } from './contracts';
 
 export interface MoEExpert {
   readonly modelId: string;
@@ -11,7 +11,7 @@ export interface MoERoute {
   requestId: string;
   selected: MoEExpert[];
   topK: number;
-  strategy: "capability-weighted-top-k";
+  strategy: 'capability-weighted-top-k';
 }
 export interface MoERunResult {
   route: MoERoute;
@@ -20,7 +20,7 @@ export interface MoERunResult {
   executedExpertCount: number;
 }
 function capabilityScore(expert: MoEExpert, request: IntelligenceRequest): number {
-  const modality = request.modality ?? "text";
+  const modality = request.modality ?? 'text';
   return (
     (expert.capabilities.includes(modality) ? 0.35 : 0) +
     (request.preferredModel === expert.modelId ? 0.25 : 0) +
@@ -34,7 +34,7 @@ export function createMoERoute(
     string,
     { modalities: readonly string[]; enabled: boolean; productionApproved: boolean }
   >,
-  topK = 3,
+  topK = 3
 ): MoERoute {
   const experts = [...providers.entries()]
     .map(([modelId, provider]) => {
@@ -51,22 +51,22 @@ export function createMoERoute(
     .sort(
       (a, b) =>
         capabilityScore(b, request) - capabilityScore(a, request) ||
-        a.modelId.localeCompare(b.modelId),
+        a.modelId.localeCompare(b.modelId)
     );
   return {
     requestId: request.requestId,
     selected: experts.slice(0, Math.max(1, Math.min(topK, 5))),
     topK: Math.max(1, Math.min(topK, 5)),
-    strategy: "capability-weighted-top-k",
+    strategy: 'capability-weighted-top-k',
   };
 }
 function utility(response: IntelligenceResponse): number {
   const riskPenalty =
-    response.risk === "CRITICAL"
+    response.risk === 'CRITICAL'
       ? 1
-      : response.risk === "HIGH"
+      : response.risk === 'HIGH'
         ? 0.5
-        : response.risk === "MEDIUM"
+        : response.risk === 'MEDIUM'
           ? 0.2
           : 0;
   const degradationPenalty = response.degraded ? 0.35 : 0;
@@ -82,7 +82,7 @@ function utility(response: IntelligenceResponse): number {
 export async function executeMoE(
   request: IntelligenceRequest,
   route: MoERoute,
-  providers: ReadonlyMap<string, IntelligenceProvider>,
+  providers: ReadonlyMap<string, IntelligenceProvider>
 ): Promise<MoERunResult> {
   const responses = (
     await Promise.all(
@@ -94,12 +94,12 @@ export async function executeMoE(
         } catch {
           return null;
         }
-      }),
+      })
     )
   ).filter((value): value is IntelligenceResponse => value !== null);
-  if (!responses.length) throw new Error("moe_inference_unavailable:no_expert_succeeded");
+  if (!responses.length) throw new Error('moe_inference_unavailable:no_expert_succeeded');
   const selected = [...responses].sort(
-    (a, b) => utility(b) - utility(a) || a.modelId.localeCompare(b.modelId),
+    (a, b) => utility(b) - utility(a) || a.modelId.localeCompare(b.modelId)
   )[0];
   return { route, responses, selected, executedExpertCount: responses.length };
 }

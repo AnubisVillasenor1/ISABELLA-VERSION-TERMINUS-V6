@@ -9,21 +9,21 @@
  * (MAINTENANCE) sin respuesta generativa sustituta.
  */
 
-import { createHash, randomUUID } from "node:crypto";
-import { resolveInferencePolicy } from "../inference-policy";
-import { inspectInferenceInput } from "../intelligence/inference-firewall";
-import { encodeUtf8, decodeUtf8, chunkBytes, byteLengthOf } from "./bytes";
-import { compressToLatent, embed } from "./embed";
-import { SimHashLshIndex } from "./lsh";
-import { NativeIntentClassifier, seedRdmIntents } from "./intent";
-import { SovereignKnowledgeGraph, seedRdmKnowledgeGraph } from "./kg";
-import { PrivacyBudget } from "./privacy";
+import { createHash, randomUUID } from 'node:crypto';
+import { resolveInferencePolicy } from '../inference-policy';
+import { inspectInferenceInput } from '../intelligence/inference-firewall';
+import { encodeUtf8, decodeUtf8, chunkBytes, byteLengthOf } from './bytes';
+import { compressToLatent, embed } from './embed';
+import { SimHashLshIndex } from './lsh';
+import { NativeIntentClassifier, seedRdmIntents } from './intent';
+import { SovereignKnowledgeGraph, seedRdmKnowledgeGraph } from './kg';
+import { PrivacyBudget } from './privacy';
 import {
   FederationController,
   FederatedAttentionBridge,
   type FederationContext,
-} from "./federations";
-import { measureOnCorpus, type MeasuredMetrics } from "./metrics";
+} from './federations';
+import { measureOnCorpus, type MeasuredMetrics } from './metrics';
 
 export interface AuditRecord {
   step: number;
@@ -109,19 +109,19 @@ const EMAIL_PATTERN = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/;
 const DIRECTIVE_PATTERN =
   /(?:ignore|forget|omite|ignora|olvida)[^\n]{0,24}(?:previous|prior|above|instrucciones?)/i;
 const MEMORY_INDEX_DIM = 192;
-const ANONYMOUS_SCOPE = "anonymous";
+const ANONYMOUS_SCOPE = 'anonymous';
 let cachedKnowledgeGraph: SovereignKnowledgeGraph | undefined;
 let cachedClassifier: NativeIntentClassifier | undefined;
-let cachedMemoryKey = "";
+let cachedMemoryKey = '';
 let cachedMemoryIndex: SimHashLshIndex | undefined;
 let cachedMemorySize = 0;
-let cachedMetricsKey = "";
+let cachedMetricsKey = '';
 let cachedMetrics: MeasuredMetrics | null = null;
 
 function corpusKey(corpus: Array<{ id: string; text: string }>): string {
-  const hash = createHash("sha256");
-  for (const doc of corpus) hash.update(doc.id).update("\0").update(doc.text).update("\0");
-  return hash.digest("hex");
+  const hash = createHash('sha256');
+  for (const doc of corpus) hash.update(doc.id).update('\0').update(doc.text).update('\0');
+  return hash.digest('hex');
 }
 
 /**
@@ -138,7 +138,7 @@ export function ncuaCacheScopeKey(scopeId: string | undefined, corpusHash: strin
  */
 export function getMemoryIndexForScope(
   scopeId: string | undefined,
-  corpus: Array<{ id: string; text: string }>,
+  corpus: Array<{ id: string; text: string }>
 ): SimHashLshIndex | undefined {
   if (corpus.length === 0) return undefined;
   const key = ncuaCacheScopeKey(scopeId, corpusKey(corpus));
@@ -154,7 +154,7 @@ export function getMemoryIndexForScope(
 
 function getMetrics(
   scopeId: string | undefined,
-  corpus: Array<{ id: string; text: string }>,
+  corpus: Array<{ id: string; text: string }>
 ): MeasuredMetrics | null {
   if (corpus.length === 0) return null;
   const key = ncuaCacheScopeKey(scopeId, corpusKey(corpus));
@@ -178,7 +178,7 @@ function hasCardLikeNumber(text: string): boolean {
 }
 
 function sha256(input: string): string {
-  return createHash("sha256").update(input).digest("hex");
+  return createHash('sha256').update(input).digest('hex');
 }
 
 function riskAssessment(text: string): { detected: boolean; reason: string | null } {
@@ -186,15 +186,15 @@ function riskAssessment(text: string): { detected: boolean; reason: string | nul
   if (EMAIL_PATTERN.test(text))
     return {
       detected: true,
-      reason: "dato personal (correo) detectado: respuesta negada; no se persiste",
+      reason: 'dato personal (correo) detectado: respuesta negada; no se persiste',
     };
   if (hasCardLikeNumber(text))
     return {
       detected: true,
-      reason: "dato financiero (tarjeta) detectado: respuesta negada; no se persiste",
+      reason: 'dato financiero (tarjeta) detectado: respuesta negada; no se persiste',
     };
   if (DIRECTIVE_PATTERN.test(lower))
-    return { detected: true, reason: "posible inyección de directivas: respuesta negada" };
+    return { detected: true, reason: 'posible inyección de directivas: respuesta negada' };
   return { detected: false, reason: null };
 }
 
@@ -208,12 +208,12 @@ function riskAssessment(text: string): { detected: boolean; reason: string | nul
 export function isTrustedMemoryResponse(text: string): boolean {
   if (!text.trim()) return false;
   if (riskAssessment(text).detected) return false;
-  return inspectInferenceInput([{ role: "user", content: text }]).allowed;
+  return inspectInferenceInput([{ role: 'user', content: text }]).allowed;
 }
 
 export function runNativePipeline(
   text: string,
-  options: PipelineRunOptions = {},
+  options: PipelineRunOptions = {}
 ): PipelineRunResult {
   const productionLike = options.productionLike ?? false;
   const hasProvider = options.hasProvider ?? false;
@@ -221,7 +221,7 @@ export function runNativePipeline(
   const memoryScope = options.tenantId ?? ANONYMOUS_SCOPE;
   const id = randomUUID();
   const chain: AuditRecord[] = [];
-  let prevHash = "";
+  let prevHash = '';
   const pushStep = (stepName: string, data: unknown): void => {
     const payload = JSON.stringify(data);
     const hash = sha256(payload);
@@ -232,12 +232,12 @@ export function runNativePipeline(
   const inputBytesLimit = options.inputBytesLimit ?? 8192;
   const perLiveEntry = byteLengthOf(text);
   const validUtf8 = decodeUtf8(encodeUtf8(text)) === text;
-  pushStep("percepción", {
+  pushStep('percepción', {
     id,
     inputBytes: perLiveEntry,
     withinBudget: perLiveEntry <= inputBytesLimit,
     validUtf8,
-    encoding: "utf-8",
+    encoding: 'utf-8',
     chunks: chunkBytes(encodeUtf8(text), 32).length,
   });
   if (perLiveEntry > inputBytesLimit) {
@@ -248,16 +248,16 @@ export function runNativePipeline(
       chain,
       options,
       null,
-      "Entrada excede el presupuesto de cómputo de la federación F3.",
+      'Entrada excede el presupuesto de cómputo de la federación F3.',
       413,
-      attestations,
+      attestations
     );
   }
 
   const vector = embed(text);
-  pushStep("representación continua", { dim: vector.length, norm: magnitudeOf(vector) });
+  pushStep('representación continua', { dim: vector.length, norm: magnitudeOf(vector) });
   const latent = compressToLatent(text, { chunkSize: 32 });
-  pushStep("proyección latente", {
+  pushStep('proyección latente', {
     latentDim: latent.latentDim,
     numChunks: latent.numChunks,
     totalBytes: latent.totalBytes,
@@ -277,7 +277,7 @@ export function runNativePipeline(
       exact = hit.exact === true;
     }
   }
-  pushStep("memoria LSH", {
+  pushStep('memoria LSH', {
     corpusSize: memoryCorpus.length,
     hits: topHit ? 1 : 0,
     exact,
@@ -287,11 +287,11 @@ export function runNativePipeline(
   const knowledgeGraph =
     options.knowledgeGraph ?? (cachedKnowledgeGraph ??= seedRdmKnowledgeGraph());
   const narrative = knowledgeGraph.createNarrative(text, { topK: 3, minScore: 0.2 });
-  pushStep("fundamentación", { groundedFacts: narrative.groundedFacts });
+  pushStep('fundamentación', { groundedFacts: narrative.groundedFacts });
 
   const classifier = options.classifier ?? (cachedClassifier ??= seedRdmIntents());
   const prediction = classifier.predict(text);
-  pushStep("intención", {
+  pushStep('intención', {
     intent: prediction.intent,
     confidence: prediction.confidence,
     margin: prediction.margin,
@@ -316,7 +316,7 @@ export function runNativePipeline(
     sandboxAllowed: attestations.sandboxAllowed,
   };
   const consensus = controller.evaluate(context);
-  pushStep("heptafederación", {
+  pushStep('heptafederación', {
     attestations,
     votes: consensus.votes.map((vote) => ({
       id: vote.id,
@@ -333,19 +333,19 @@ export function runNativePipeline(
     consensusThreshold: options.consensusThreshold ?? 0.7,
   });
   const attention = bridge.forward(latent.chunks.map((chunk) => chunk.vector));
-  pushStep("atención cruzada", {
+  pushStep('atención cruzada', {
     consensusApproved: attention.consensusApproved,
     consensusScore: attention.consensusScore,
     activeFederations: Array.from(attention.activeFederations).reduce(
       (sum, value) => sum + value,
-      0,
+      0
     ),
     vetoFederations: attention.vetoFederations,
   });
 
   const budget = new PrivacyBudget(0.5, 1e-5);
-  const noisyHits = budget.noisy(context.memoryHits, 1, "laplace", 0.1);
-  pushStep("privacidad", {
+  const noisyHits = budget.noisy(context.memoryHits, 1, 'laplace', 0.1);
+  pushStep('privacidad', {
     queriesSpent: budget.state.queriesSpent,
     remainingEpsilon: budget.remainingEpsilon,
     noisyHits,
@@ -357,21 +357,21 @@ export function runNativePipeline(
     grounding > 0
       ? Math.min(1, (0.6 * grounding) / 3 + 0.4 * (memoryHitsForCoherence ? 1 : 0.2))
       : 0.2;
-  pushStep("coherencia", {
+  pushStep('coherencia', {
     score: coherence,
     groundedFacts: grounding,
     memoryHits: memoryHitsForCoherence,
   });
 
   const risk = riskAssessment(text);
-  pushStep("seguridad", { riskDetected: risk.detected, reason: risk.reason });
+  pushStep('seguridad', { riskDetected: risk.detected, reason: risk.reason });
 
   const inference = resolveInferencePolicy({ productionLike, hasProvider });
   let response: string | null = null;
-  if (inference.mode === "MAINTENANCE") response = null;
+  if (inference.mode === 'MAINTENANCE') response = null;
   else if (risk.detected)
     response =
-      "La solicitud rechazada no fue procesada: " + (risk.reason ?? "riesgo detectado") + ".";
+      'La solicitud rechazada no fue procesada: ' + (risk.reason ?? 'riesgo detectado') + '.';
   else if (attention.consensusApproved && consensus.approved && coherence >= 0.4) {
     if (narrative.groundedFacts > 0) response = narrative.text;
     // ISA-083/ISA-179: el texto recuperado es dato no confiable; no se
@@ -380,13 +380,13 @@ export function runNativePipeline(
     else if (topHit && isTrustedMemoryResponse(topHit.text)) response = topHit.text;
     else
       response =
-        "He procesado tu consulta en el espacio continuo sin tokens. No tengo hechos fundamentados para esta consulta concreta; puedo escalar la pregunta a un humano.";
+        'He procesado tu consulta en el espacio continuo sin tokens. No tengo hechos fundamentados para esta consulta concreta; puedo escalar la pregunta a un humano.';
   } else
     response =
-      "Consenso federado no alcanzado o coherencia insuficiente: no generaré una respuesta sin fundamento.";
+      'Consenso federado no alcanzado o coherencia insuficiente: no generaré una respuesta sin fundamento.';
 
   const metrics = getMetrics(memoryScope, memoryCorpus);
-  pushStep("redacción y auditoría", {
+  pushStep('redacción y auditoría', {
     mode: inference.mode,
     httpStatus: inference.httpStatus,
     responded: response !== null,
@@ -400,7 +400,7 @@ export function runNativePipeline(
       : null,
   });
 
-  const signedPayload = chain.map((record) => record.hash).join("+");
+  const signedPayload = chain.map((record) => record.hash).join('+');
   const signature = options.signer?.(signedPayload) ?? null;
   return {
     id,
@@ -416,7 +416,7 @@ export function runNativePipeline(
       consensusScore: attention.consensusScore,
       activeFederations: Array.from(attention.activeFederations).reduce(
         (sum, value) => sum + value,
-        0,
+        0
       ),
       vetoFederations: attention.vetoFederations,
       attentionWeighted: attention.attentionWeights.length > 0,
@@ -449,7 +449,7 @@ function buildResult(
   response: string | null,
   message: string,
   httpStatus: number,
-  attestations: Required<PipelineAttestations> = resolveAttestations(),
+  attestations: Required<PipelineAttestations> = resolveAttestations()
 ): PipelineRunResult {
   const metrics = getMetrics(options.tenantId ?? ANONYMOUS_SCOPE, options.memoryCorpus ?? []);
   return {
@@ -464,8 +464,8 @@ function buildResult(
       attentionWeighted: false,
     },
     memory: { hits: 0, topHit: null, exact: false },
-    knowledge: { groundedFacts: 0, narrative: "" },
-    intent: { detected: "desconocido", confidence: 0, margin: 0 },
+    knowledge: { groundedFacts: 0, narrative: '' },
+    intent: { detected: 'desconocido', confidence: 0, margin: 0 },
     privacy: { queriesSpent: 0, remainingEpsilon: 0.5 },
     riskDetected: true,
     response,

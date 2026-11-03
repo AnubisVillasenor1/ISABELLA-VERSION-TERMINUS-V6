@@ -19,21 +19,21 @@
  * ============================================================================
  */
 
-import * as crypto from "node:crypto";
-import { QupAuditSealer } from "../qup-v3-engine";
+import * as crypto from 'node:crypto';
+import { QupAuditSealer } from '../qup-v3-engine';
 
 export type QuantumGateType =
-  | "RX"
-  | "RY"
-  | "RZ"
-  | "Hadamard"
-  | "PhaseShift"
-  | "CNOT"
-  | "CZ"
-  | "SWAP"
-  | "Rot"
-  | "IsingXX"
-  | "IsingZZ";
+  | 'RX'
+  | 'RY'
+  | 'RZ'
+  | 'Hadamard'
+  | 'PhaseShift'
+  | 'CNOT'
+  | 'CZ'
+  | 'SWAP'
+  | 'Rot'
+  | 'IsingXX'
+  | 'IsingZZ';
 
 export interface ParameterizedGate {
   type: QuantumGateType;
@@ -42,7 +42,7 @@ export interface ParameterizedGate {
   paramIndices?: number[]; // indices in parameter vector for gradient computation
 }
 
-export type PauliObservable = "X" | "Y" | "Z" | "Identity";
+export type PauliObservable = 'X' | 'Y' | 'Z' | 'Identity';
 
 export interface QuantumMeasurement {
   wire: number;
@@ -51,10 +51,10 @@ export interface QuantumMeasurement {
 }
 
 export interface PennyLaneQNodeConfig {
-  device: "default.qubit" | "lightning.qubit" | "braket.aws.qubit" | "qiskit.ibmq";
+  device: 'default.qubit' | 'lightning.qubit' | 'braket.aws.qubit' | 'qiskit.ibmq';
   qubits: number;
   shots?: number | null; // null => analytic exact statevector
-  diffMethod: "parameter-shift" | "finite-diff" | "adjoint";
+  diffMethod: 'parameter-shift' | 'finite-diff' | 'adjoint';
 }
 
 export interface Complex {
@@ -70,7 +70,7 @@ export class PennyLaneBridge {
   public static simulateStatevector(
     qubits: number,
     gates: ParameterizedGate[],
-    parameters: number[] = [],
+    parameters: number[] = []
   ): Complex[] {
     const dim = 1 << qubits;
     const state: Complex[] = new Array(dim).fill(null).map((_, i) => ({
@@ -102,11 +102,11 @@ export class PennyLaneBridge {
     qubits: number,
     type: QuantumGateType,
     wires: number[],
-    params: number[],
+    params: number[]
   ): void {
     const dim = 1 << qubits;
 
-    if (type === "Hadamard") {
+    if (type === 'Hadamard') {
       const target = wires[0];
       const invSqrt2 = 1.0 / Math.SQRT2;
       for (let i = 0; i < dim; i++) {
@@ -118,7 +118,7 @@ export class PennyLaneBridge {
           state[j] = { re: (u.re - v.re) * invSqrt2, im: (u.im - v.im) * invSqrt2 };
         }
       }
-    } else if (type === "RX") {
+    } else if (type === 'RX') {
       const target = wires[0];
       const theta = params[0] || 0;
       const cos = Math.cos(theta / 2);
@@ -139,7 +139,7 @@ export class PennyLaneBridge {
           };
         }
       }
-    } else if (type === "RY") {
+    } else if (type === 'RY') {
       const target = wires[0];
       const theta = params[0] || 0;
       const cos = Math.cos(theta / 2);
@@ -160,7 +160,7 @@ export class PennyLaneBridge {
           };
         }
       }
-    } else if (type === "RZ") {
+    } else if (type === 'RZ') {
       const target = wires[0];
       const theta = params[0] || 0;
       const phi = theta / 2;
@@ -184,7 +184,7 @@ export class PennyLaneBridge {
           };
         }
       }
-    } else if (type === "CNOT") {
+    } else if (type === 'CNOT') {
       const ctrl = wires[0];
       const target = wires[1];
       for (let i = 0; i < dim; i++) {
@@ -196,7 +196,7 @@ export class PennyLaneBridge {
           state[j] = tmp;
         }
       }
-    } else if (type === "CZ") {
+    } else if (type === 'CZ') {
       const ctrl = wires[0];
       const target = wires[1];
       for (let i = 0; i < dim; i++) {
@@ -214,7 +214,7 @@ export class PennyLaneBridge {
   public static expectationValue(
     state: Complex[],
     qubits: number,
-    measurements: QuantumMeasurement[],
+    measurements: QuantumMeasurement[]
   ): number {
     let totalExp = 0.0;
     const dim = 1 << qubits;
@@ -223,13 +223,13 @@ export class PennyLaneBridge {
       const weight = m.weight !== undefined ? m.weight : 1.0;
       let obsExp = 0.0;
 
-      if (m.observable === "Z") {
+      if (m.observable === 'Z') {
         for (let i = 0; i < dim; i++) {
           const prob = state[i].re * state[i].re + state[i].im * state[i].im;
           const eigenvalue = (i & (1 << m.wire)) === 0 ? 1.0 : -1.0;
           obsExp += eigenvalue * prob;
         }
-      } else if (m.observable === "X") {
+      } else if (m.observable === 'X') {
         for (let i = 0; i < dim; i++) {
           if ((i & (1 << m.wire)) === 0) {
             const j = i | (1 << m.wire);
@@ -237,7 +237,7 @@ export class PennyLaneBridge {
             obsExp += 2 * (state[i].re * state[j].re + state[i].im * state[j].im);
           }
         }
-      } else if (m.observable === "Identity") {
+      } else if (m.observable === 'Identity') {
         obsExp = 1.0;
       }
 
@@ -256,7 +256,7 @@ export class PennyLaneBridge {
     qubits: number,
     gates: ParameterizedGate[],
     parameters: number[],
-    measurements: QuantumMeasurement[],
+    measurements: QuantumMeasurement[]
   ): { gradients: number[]; currentLoss: number } {
     const shift = Math.PI / 2;
     const baseState = this.simulateStatevector(qubits, gates, parameters);
@@ -292,53 +292,53 @@ export class PennyLaneBridge {
     config: PennyLaneQNodeConfig,
     gates: ParameterizedGate[],
     parameters: number[],
-    measurements: QuantumMeasurement[],
+    measurements: QuantumMeasurement[]
   ): string {
     const lines: string[] = [
-      "# ============================================================================",
-      "# ISABELLA AI GENESIS v4.2.0 — PENNYLANE QUANTUM BRIDGE EXPORT",
-      "# Sovereign Territorial Digital Twin / Ecosistema TAMV Nodo Cero",
-      "# ============================================================================",
-      "import pennylane as qml",
-      "from pennylane import numpy as np",
-      "",
+      '# ============================================================================',
+      '# ISABELLA AI GENESIS v4.2.0 — PENNYLANE QUANTUM BRIDGE EXPORT',
+      '# Sovereign Territorial Digital Twin / Ecosistema TAMV Nodo Cero',
+      '# ============================================================================',
+      'import pennylane as qml',
+      'from pennylane import numpy as np',
+      '',
       `# Dispositivo cuántico configurado: ${config.device}`,
-      `dev = qml.device("${config.device}", wires=${config.qubits}${config.shots ? `, shots=${config.shots}` : ""})`,
-      "",
+      `dev = qml.device("${config.device}", wires=${config.qubits}${config.shots ? `, shots=${config.shots}` : ''})`,
+      '',
       `@qml.qnode(dev, diff_method="${config.diffMethod}")`,
-      "def isabella_circuit(params):",
+      'def isabella_circuit(params):',
     ];
 
     gates.forEach((gate) => {
-      if (gate.type === "Hadamard") {
+      if (gate.type === 'Hadamard') {
         lines.push(`    qml.Hadamard(wires=${gate.wires[0]})`);
-      } else if (gate.type === "RX" || gate.type === "RY" || gate.type === "RZ") {
+      } else if (gate.type === 'RX' || gate.type === 'RY' || gate.type === 'RZ') {
         const pIdx = gate.paramIndices ? gate.paramIndices[0] : 0;
         lines.push(`    qml.${gate.type}(params[${pIdx}], wires=${gate.wires[0]})`);
-      } else if (gate.type === "CNOT") {
+      } else if (gate.type === 'CNOT') {
         lines.push(`    qml.CNOT(wires=[${gate.wires[0]}, ${gate.wires[1]}])`);
-      } else if (gate.type === "CZ") {
+      } else if (gate.type === 'CZ') {
         lines.push(`    qml.CZ(wires=[${gate.wires[0]}, ${gate.wires[1]}])`);
       }
     });
 
     const obsStr = measurements
       .map((m) => `qml.expval(qml.Pauli${m.observable}(${m.wire}))`)
-      .join(", ");
-    lines.push(`    return ${obsStr.length ? obsStr : "qml.state()"}`);
-    lines.push("");
+      .join(', ');
+    lines.push(`    return ${obsStr.length ? obsStr : 'qml.state()'}`);
+    lines.push('');
     lines.push(`# Parámetros iniciales optimizados`);
     lines.push(
-      `initial_params = np.array([${parameters.map((p) => p.toFixed(6)).join(", ")}], requires_grad=True)`,
+      `initial_params = np.array([${parameters.map((p) => p.toFixed(6)).join(', ')}], requires_grad=True)`
     );
-    lines.push("");
+    lines.push('');
     lines.push(`if __name__ == "__main__":`);
     lines.push(`    cost = isabella_circuit(initial_params)`);
     lines.push(`    print(f"Expectation Value: {cost}")`);
     lines.push(`    grad_fn = qml.grad(isabella_circuit)`);
     lines.push(`    print(f"Quantum Parameter-Shift Gradients: {grad_fn(initial_params)}")`);
 
-    return lines.join("\n");
+    return lines.join('\n');
   }
 
   /**
@@ -350,7 +350,7 @@ export class PennyLaneBridge {
     initialParams: number[],
     measurements: QuantumMeasurement[],
     steps = 15,
-    learningRate = 0.2,
+    learningRate = 0.2
   ): {
     optimizedParams: number[];
     initialCost: number;
@@ -366,7 +366,7 @@ export class PennyLaneBridge {
         qubits,
         gates,
         currentParams,
-        measurements,
+        measurements
       );
       costHistory.push(currentLoss);
 
@@ -398,7 +398,7 @@ export class PennyLaneBridge {
     userId: string,
     qubits: number,
     depth: number,
-    objective: "vqe_hamiltonian" | "qml_classification" | "bell_state_tomography",
+    objective: 'vqe_hamiltonian' | 'qml_classification' | 'bell_state_tomography'
   ): Promise<{
     jobId: string;
     backend: string;
@@ -417,20 +417,20 @@ export class PennyLaneBridge {
 
     // Capa de Hadamards
     for (let q = 0; q < qubits; q++) {
-      gates.push({ type: "Hadamard", wires: [q], params: [] });
+      gates.push({ type: 'Hadamard', wires: [q], params: [] });
     }
 
     // Capas rotacionales y entrelazamiento
     for (let d = 0; d < depth; d++) {
       for (let q = 0; q < qubits; q++) {
         gates.push({
-          type: "RY",
+          type: 'RY',
           wires: [q],
           params: [0.1],
           paramIndices: [paramCount++],
         });
         gates.push({
-          type: "RZ",
+          type: 'RZ',
           wires: [q],
           params: [0.1],
           paramIndices: [paramCount++],
@@ -439,7 +439,7 @@ export class PennyLaneBridge {
       // Entrelazamiento en anillo
       for (let q = 0; q < qubits; q++) {
         gates.push({
-          type: "CNOT",
+          type: 'CNOT',
           wires: [q, (q + 1) % qubits],
           params: [],
         });
@@ -452,10 +452,10 @@ export class PennyLaneBridge {
     // 3. Medición del Hamiltoniano objetivo
     const measurements: QuantumMeasurement[] = [];
     for (let q = 0; q < qubits; q++) {
-      measurements.push({ wire: q, observable: "Z", weight: 1.0 });
+      measurements.push({ wire: q, observable: 'Z', weight: 1.0 });
     }
     if (qubits >= 2) {
-      measurements.push({ wire: 0, observable: "X", weight: 0.5 });
+      measurements.push({ wire: 0, observable: 'X', weight: 0.5 });
     }
 
     // 4. Ejecutar optimización analítica Parameter-Shift
@@ -464,13 +464,13 @@ export class PennyLaneBridge {
     // 5. Generar script PennyLane completo
     const pennylaneScript = this.generatePennyLaneScript(
       {
-        device: "lightning.qubit",
+        device: 'lightning.qubit',
         qubits,
-        diffMethod: "parameter-shift",
+        diffMethod: 'parameter-shift',
       },
       gates,
       optimization.optimizedParams,
-      measurements,
+      measurements
     );
 
     // 6. Sello de auditoría de QUP
@@ -490,7 +490,7 @@ export class PennyLaneBridge {
 
     return {
       jobId,
-      backend: "pennylane.lightning.qubit (QNode Hybrid)",
+      backend: 'pennylane.lightning.qubit (QNode Hybrid)',
       pennylaneScript,
       fidelity: optimization.fidelity,
       initialEnergy: optimization.initialCost,

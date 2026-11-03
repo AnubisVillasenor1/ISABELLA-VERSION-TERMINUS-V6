@@ -10,7 +10,10 @@ export function createTraceContext(traceId: string, requestId: string): TraceCon
   return { traceId, requestId, spans: [] };
 }
 
-export function beginSpan(ctx: TraceContext, stage: string): { end: (durationMs?: number) => void } {
+export function beginSpan(
+  ctx: TraceContext,
+  stage: string
+): { end: (durationMs?: number) => void } {
   const startedAt = new Date();
   let closed = false;
   return {
