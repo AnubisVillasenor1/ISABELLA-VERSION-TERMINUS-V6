@@ -96,10 +96,10 @@ export function probeInferenceProvider(env: EnvLike): DependencyEvidence {
   const configured = singleKeyConfigured || huggingFaceConfigured;
   return {
     dependency: "inference-provider",
-    status: configured ? "healthy" : "degraded",
+    status: "degraded",
     required: false,
     detail: configured
-      ? "At least one external provider credential is configured; reachability and quota are not verified here."
+      ? "At least one external provider credential is configured; reachability, quota, and a real inference response are not verified here."
       : "No external provider credential configured; only the local fallback engine is available.",
   };
 }
@@ -108,10 +108,10 @@ export function probeAtlasPersistence(env: EnvLike): DependencyEvidence {
   const configured = isConfigured(env, ["POSTGRES_URL", "POSTGRES_URL_NON_POOLING", "SUPABASE_URL"]);
   return {
     dependency: "atlas-persistence",
-    status: configured ? "healthy" : "degraded",
+    status: "degraded",
     required: false,
     detail: configured
-      ? "A persistence URL is configured; a live query, RLS and multi-tenant isolation are not performed here."
+      ? "A persistence URL is configured; a live query, RLS, and multi-tenant isolation are not verified by this shallow probe."
       : "No Postgres/Supabase persistence URL configured; Atlas storage is unavailable.",
   };
 }

@@ -24,11 +24,13 @@ describe("deep dependency readiness", () => {
     expect(report.evidence).toHaveLength(5);
   });
 
-  it("reports ready only when every dependency probe is healthy", () => {
+  it("does not confuse configured credentials with verified reachability", () => {
     const report = collectDependencyReadiness(fullyConfigured, writableFilesystem);
-    expect(report.readiness.ready).toBe(true);
+    expect(report.readiness.ready).toBe(false);
+    expect(report.readiness.status).toBe("degraded");
     expect(report.readiness.blockers).toEqual([]);
-    expect(report.dependencies.every((dependency) => dependency.status === "healthy")).toBe(true);
+    expect(report.evidence.find((entry) => entry.dependency === "inference-provider")?.status).toBe("degraded");
+    expect(report.evidence.find((entry) => entry.dependency === "atlas-persistence")?.status).toBe("degraded");
   });
 
   it("fails closed when the configured ledger path is not writable", () => {
@@ -61,9 +63,10 @@ describe("deep dependency readiness", () => {
     expect(evidence.required).toBe(true);
   });
 
-  it("recognizes an Ollama Cloud credential as a configured inference provider", () => {
+  it("recognizes an Ollama Cloud credential without claiming live verification", () => {
     const report = collectDependencyReadiness({ OLLAMA_API_KEY: "configured" }, writableFilesystem);
     const inference = report.evidence.find((entry) => entry.dependency === "inference-provider");
-    expect(inference?.status).toBe("healthy");
+    expect(inference?.status).toBe("degraded");
+    expect(inference?.detail).toContain("reachability");
   });
 });
