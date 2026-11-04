@@ -74,11 +74,12 @@ jobs:
       - name: Guard docs/STATUS.md freshness
         run: node scripts/generate-status.mjs --check
 
-      # Advisory until the layers are green in CI: these modules are excluded from the main typecheck
-      # (see tsconfig.json). Remove `continue-on-error` and the exclusions together once clean.
-      - name: TypeCheck excluded layers (advisory)
+      # Blocking since 2026-11-03: the 15 layer exclusions were removed from tsconfig.json (they
+      # typecheck clean), so those modules are now roots of the main typecheck. This job still
+      # uniquely covers `src/lib/native-ml`, which stays behind the `src/lib` exclusion, and it
+      # fails fast if someone re-adds an exclusion without retiring it here.
+      - name: TypeCheck layers not reachable from the main program
         run: pnpm run typecheck:layers
-        continue-on-error: true
 
   security-scan:
     name: Security Scan
@@ -443,7 +444,7 @@ jobs:
           path: evidence/
 
       - name: Verify deploy gate (fail closed)
-        run: node scripts/verify-deploy-gate.mjs --dir evidence
+        run: node scripts/verify-deploy-gate.mjs --dir evidence --sha ${{ github.sha }}
 
       - name: Manual Production Deploy
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v-pinned from tag v1

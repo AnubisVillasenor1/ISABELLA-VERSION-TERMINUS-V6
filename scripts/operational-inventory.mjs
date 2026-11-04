@@ -57,7 +57,7 @@ for (const file of files.filter((file) => code.test(file))) {
   const ast = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
   const edges = [];
   let markerCount = 0;
-  for (const _ of text.matchAll(markers)) markerCount++;
+  markerCount += Array.from(text.matchAll(markers)).length;
   function addImport(specifier, typeOnly, node) {
     if (!specifier.startsWith('.')) return;
     const resolved = ts.resolveModuleName(

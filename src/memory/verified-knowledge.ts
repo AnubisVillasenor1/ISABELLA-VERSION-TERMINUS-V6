@@ -223,7 +223,13 @@ export function createVerifiedKnowledgeBackend(
   switch (provider) {
     case 'mongodb': {
       const uri = env.MONGODB_URI?.trim();
-      if (!uri) throw new Error('VERIFIED_KNOWLEDGE_MONGODB_URI_MISSING');
+      if (!uri) {
+        throw new Error(
+          'VERIFIED_KNOWLEDGE_MONGODB_URI_MISSING: set MONGODB_URI, or point ' +
+            'ISABELLA_VERIFIED_KNOWLEDGE_BACKEND at supabase. The `memory` backend is ' +
+            'valid for local development only; deploy-readiness blocks it in production.'
+        );
+      }
       return new MongoVerifiedKnowledgeBackend({
         uri,
         databaseName: env.MONGODB_DATABASE?.trim() || undefined,

@@ -23,7 +23,7 @@ async function exists(relative) {
 }
 const pkgText = await read("package.json");
 let pkg = null;
-try { pkg = pkgText ? JSON.parse(pkgText) : null; } catch {}
+try { pkg = pkgText ? JSON.parse(pkgText) : null; } catch { /* package.json ilegible: RA-001 lo reporta como BLOCKER */ }
 add("RA-001", "BLOCKER", !!pkg, "package.json existe y es JSON válido.", ["package.json"]);
 if (pkg) {
   add("RA-002", "BLOCKER", typeof pkg.scripts?.typecheck === "string", "Existe un script de typecheck ejecutable.", ["package.json:scripts.typecheck"]);

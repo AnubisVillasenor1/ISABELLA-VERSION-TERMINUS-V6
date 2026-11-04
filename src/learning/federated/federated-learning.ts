@@ -498,14 +498,16 @@ export class ActiveLearningEngine extends EventEmitter {
         case 'entropy':
           scores[i] = -probs.reduce((sum, p) => sum + (p > 0 ? p * Math.log(p) : 0), 0);
           break;
-        case 'margin':
+        case 'margin': {
           const sorted = [...probs].sort((a, b) => b - a);
           scores[i] = 1 - (sorted[0] - sorted[1]); // Smaller margin = higher uncertainty
           break;
-        case 'variance':
+        }
+        case 'variance': {
           const mean = probs.reduce((a, b) => a + b, 0) / probs.length;
           scores[i] = probs.reduce((sum, p) => sum + (p - mean) ** 2, 0) / probs.length;
           break;
+        }
       }
     }
 

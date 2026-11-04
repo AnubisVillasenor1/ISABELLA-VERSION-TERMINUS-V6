@@ -6,33 +6,18 @@ generator: scripts/generate-status.mjs
 
 No editar a mano: `node scripts/generate-status.mjs` regenera este archivo y `--check` lo valida en CI.
 
-- Áreas de `src/` excluidas del typecheck principal: 21
+- Áreas de `src/` excluidas del typecheck principal: 6
 
 ## Áreas fuera del typecheck principal
 
 | Área | Cubierta por `tsconfig.layers.json` |
 | --- | --- |
 | `src/authz-runtime` | no |
-| `src/cognition/moe` | sí |
-| `src/cognition/rag` | sí |
 | `src/components` | no |
 | `src/core` | no |
-| `src/economy/revenue-fabric/storage.ts` | sí |
-| `src/federation/tamv` | sí |
 | `src/hooks` | no |
 | `src/hypercore-runtime` | no |
-| `src/learning/federated` | sí |
 | `src/lib` | parcial (src/lib/native-ml) |
-| `src/memory/mesh` | sí |
-| `src/multimodal` | sí |
-| `src/observability` | sí |
-| `src/pipeline/hyper-turbo` | sí |
-| `src/routes/revenue-fabric.ts` | sí |
-| `src/security/bookpi-integrity.ts` | sí |
-| `src/security/http-hardening.ts` | sí |
-| `src/security/pqc` | sí |
-| `src/security/secret-scanner.ts` | sí |
-| `src/ui/integration.ts` | sí |
 
 Una capa excluida del typecheck principal **no puede declararse lista para producción** (CAPABILITY ≠ PRODUCTION).
 
