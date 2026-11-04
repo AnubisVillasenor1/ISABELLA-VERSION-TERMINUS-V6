@@ -9,6 +9,10 @@
 #      o si el SBOM no existe.
 #   4. `deploy`            — `environment: production` (aprobación humana se
 #      configura en el entorno de GitHub, no se puede forzar desde YAML).
+#      Dentro del job, antes de publicar nada: `vercel pull --environment=production`
+#      trae la configuración real del proyecto y `scripts/deploy-readiness.ts` la
+#      evalúa con `VERCEL=1` (contrato serverless). Un `DEPLOY_READINESS_BLOCKED`
+#      detiene la imagen `:production` y el despliegue.
 #
 # Despliegue automático: se dispara al COMPLETAR el workflow "CI/CD Pipeline - ISABELLA GENESIS ZERO-OPEX v3"
 # (`workflow_run`). Un `push` a main no puede consumir artefactos de otro
@@ -199,6 +203,50 @@ jobs:
           owner="$(echo "${GITHUB_REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')"
           echo "name=ghcr.io/${owner}/isabella-terminus-v6" >> "$GITHUB_OUTPUT"
 
+      # Configuración primero, imagen después: `vercel pull` trae el entorno de producción
+      # del proyecto y `deploy:readiness` lo evalúa ANTES de publicar la etiqueta
+      # `:production`. Así un gate bloqueado no deja en GHCR una imagen que un
+      # operador de k8s pueda desplegar creyendo que pasó la revisión.
+      - name: Set up pnpm
+        uses: pnpm/action-setup@a3252b78c470c02df07e9d59298aecedc3ccdd6d # v-pinned from tag v3
+        with:
+          version: "10.28.0"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0 (medido: refs/tags/v4.4.0)
+        with:
+          node-version: "24"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Vercel is the serverless target (vercel.json + api/index.js). It runs only when the three
+      # credentials exist; otherwise the job reports the gap instead of pretending it deployed.
+      - name: Pull production environment from Vercel
+        id: pull
+        if: ${{ env.VERCEL_TOKEN != '' && env.VERCEL_ORG_ID != '' && env.VERCEL_PROJECT_ID != '' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes vercel@latest pull --yes --environment=production --token "${VERCEL_TOKEN}"
+          # `vercel pull` no escribe el archivo si el proyecto no tiene ninguna variable de
+          # producción: eso es un gate sin material, no un despliegue limpio.
+          [[ -f .env.production ]] || { echo "::error::El proyecto de producción no tiene variables de entorno configuradas; deploy:readiness no puede evaluarse."; exit 1; }
+
+      # El archivo queda en el workspace (`.gitignore` lo cubre con `.env.*`) y nunca se
+      # imprime: el script lee KEY=VALUE y sólo emite identificadores y veredictos.
+      # VERCEL=1 fuerza el contrato serverless del gate; sin esa bandera un almacén de
+      # claves o de federación en fichero pasaría la revisión y perdería su estado en el
+      # primer arranque en frío.
+      - name: Deploy readiness gate (producción real, valores nunca impresos)
+        id: readiness
+        if: ${{ steps.pull.outcome == 'success' }}
+        shell: bash
+        env:
+          VERCEL: "1"
+        run: pnpm exec tsx scripts/deploy-readiness.ts .env.production
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v-pinned from tag v3
 
@@ -211,6 +259,7 @@ jobs:
 
       # Deployable artifact: the exact image the compose/k8s manifests run, tagged by the verified SHA.
       - name: Build and push production image
+        id: image
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v-pinned from tag v6
         with:
           context: .
@@ -222,38 +271,27 @@ jobs:
           cache-to: type=gha,mode=max
           provenance: true
 
-      - name: Set up pnpm
-        uses: pnpm/action-setup@a3252b78c470c02df07e9d59298aecedc3ccdd6d # v-pinned from tag v3
-        with:
-          version: "10.28.0"
-
-      - name: Set up Node.js
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v-pinned from tag v4
-        with:
-          node-version: "24"
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      # Vercel is the serverless target (vercel.json + api/index.js). It runs only when the three
-      # credentials exist; otherwise the job reports the gap instead of pretending it deployed.
       - name: Deploy to Vercel (prebuilt)
         id: vercel
         if: ${{ env.VERCEL_TOKEN != '' && env.VERCEL_ORG_ID != '' && env.VERCEL_PROJECT_ID != '' }}
         shell: bash
         run: |
           set -euo pipefail
-          npx --yes vercel@latest pull --yes --environment=production --token "${VERCEL_TOKEN}"
           npx --yes vercel@latest build --prod --token "${VERCEL_TOKEN}"
           url="$(npx --yes vercel@latest deploy --prebuilt --prod --token "${VERCEL_TOKEN}")"
           echo "url=${url}" >> "$GITHUB_OUTPUT"
 
       - name: Post-deploy smoke (fail closed)
+        id: smoke
         if: ${{ steps.vercel.outputs.url != '' }}
         env:
           SMOKE_BASE_URL: ${{ steps.vercel.outputs.url }}
-          SMOKE_REQUIRE_READINESS: "false"   # despliegue de borrador; no certifica produccion
+          # Nivel por defecto: CERTIFICADO. La compuerta de configuración corre antes de
+          # publicar, así que exigir GET /api/v1/readyz = 200 con readiness.ready=true es
+          # coherente con lo que el pipeline ya afirmó. Bajarlo a borrador tiene que ser
+          # una declaración explícita (variable de repo `SMOKE_TIER=draft`), y el descenso
+          # aparece nombrado en la summary: un borrador no es una certificación.
+          SMOKE_REQUIRE_READINESS: ${{ vars.SMOKE_TIER == 'draft' && 'false' || 'true' }}
         run: pnpm run smoke:production
 
       - name: Deployment summary
@@ -263,13 +301,36 @@ jobs:
           THE_SHA: ${{ needs.validate-source.outputs.the_sha }}
           VERCEL_URL_OUT: ${{ steps.vercel.outputs.url }}
           IMAGE: ${{ steps.img.outputs.name }}
+          IMAGE_OUTCOME: ${{ steps.image.outcome }}
+          READINESS_OUTCOME: ${{ steps.readiness.outcome }}
+          SMOKE_OUTCOME: ${{ steps.smoke.outcome }}
+          SMOKE_TIER_LABEL: ${{ vars.SMOKE_TIER == 'draft' && 'draft-contract' || 'certified-production' }}
         run: |
           {
             echo "## Deploy Production Ω"
             echo "- SHA verificado: \`${THE_SHA}\`"
-            echo "- Imagen publicada: \`${IMAGE}:${THE_SHA}\` (y \`:production\`)"
+            # Un gate `skipped` no es un gate aprobado: se nombra como lo que es. Y un
+            # gate fallado no se atribuye a «credenciales faltantes» a ciegas: el paso
+            # ya nombró los identificadores (nunca los valores).
+            case "${READINESS_OUTCOME:-}" in
+              success) echo "- Deploy readiness (configuración real de producción): **superada**";;
+              failure) echo "- Deploy readiness (configuración real de producción): **BLOQUEADA** — la configuración del proyecto no cumple el contrato; ver los IDs `DR-*`/`PF-*` del paso. Este SHA no se publicó";;
+              *) echo "- Deploy readiness (configuración real de producción): **no evaluada** (faltan VERCEL_TOKEN / VERCEL_ORG_ID / VERCEL_PROJECT_ID en el entorno \`production\`)";;
+            esac
+            if [ "${IMAGE_OUTCOME:-}" = "success" ]; then
+              echo "- Imagen publicada: \`${IMAGE}:${THE_SHA}\` (y \`:production\`)"
+            else
+              echo "- Imagen: **no publicada**"
+            fi
             if [ -n "${VERCEL_URL_OUT:-}" ]; then
-              echo "- Vercel: desplegado y con smoke verificado en ${VERCEL_URL_OUT}"
+              echo "- Vercel: desplegado en ${VERCEL_URL_OUT}"
+              case "${SMOKE_OUTCOME:-}" in
+                success) echo "- Smoke post-despliegue: **${SMOKE_TIER_LABEL}** — superado";;
+                failure) echo "- Smoke post-despliegue: **${SMOKE_TIER_LABEL}** — FALLÓ; el despliegue queda **no certificado**";;
+                *) echo "- Smoke post-despliegue: **no ejecutado**";;
+              esac
+            elif [ "${READINESS_OUTCOME:-}" = "failure" ]; then
+              echo "- Vercel: **no desplegado** (la compuerta de readiness bloqueó el paso)"
             else
               echo "- Vercel: **no desplegado** (faltan VERCEL_TOKEN / VERCEL_ORG_ID / VERCEL_PROJECT_ID en el entorno \`production\`)"
             fi

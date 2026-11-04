@@ -390,4 +390,87 @@ describe('contrato de workflows de producción', () => {
       ).toBe(true);
     }
   });
+
+  it('el job de producción evalúa deploy:readiness antes de publicar nada', () => {
+    const deployWf = workflows.find((w) => w.file === 'deploy-production.yml');
+    expect(deployWf, 'no existe deploy-production.yml').toBeDefined();
+    const job = deployWf!.jobs.find((j) => j.environment === 'production');
+    expect(job, 'ningún job de deploy-production.yml declara environment: production').toBeDefined();
+
+    const steps = job!.steps;
+    const at = (pred: (s: Step) => boolean, label: string): number => {
+      const i = steps.findIndex(pred);
+      expect(i, `no hay ningún step que ${label}`).toBeGreaterThanOrEqual(0);
+      return i;
+    };
+    const pull = at(
+      (s) => s.run.includes('vercel@latest pull') && s.run.includes('--environment=production'),
+      'trae el entorno de producción de Vercel'
+    );
+    const gate = at(
+      (s) => s.run.includes('scripts/deploy-readiness.ts'),
+      'ejecuta scripts/deploy-readiness.ts'
+    );
+    const image = at(
+      (s) => /build-push-action/.test(String(s.uses)),
+      'publica la imagen de producción'
+    );
+    const vercel = at((s) => s.run.includes('vercel@latest deploy'), 'despliega en Vercel');
+
+    // El gate consume la configuración real del proyecto, no la del runner: sin el
+    // archivo que trae `pull`, process.env de Actions no tiene ninguna de las
+    // variables y el veredicto sería un BLOCKED decorativo.
+    expect(steps[gate].run, 'deploy:readiness debe evaluar .env.production').toMatch(
+      /\.env\.production/
+    );
+    expect(steps[gate].run, 'el gate no debe volcar el contenido del entorno').not.toMatch(
+      /\bcat\b|printenv/
+    );
+    expect(gate, 'la readiness corre después de traer el entorno').toBeGreaterThan(pull);
+    // Orden con propósito: si la readiness va después del push, GHCR queda con la
+    // etiqueta `:production` de un SHA que la compuerta rechazó.
+    expect(gate, 'la readiness corre antes de publicar la imagen').toBeLessThan(image);
+    expect(gate, 'la readiness corre antes de desplegar en Vercel').toBeLessThan(vercel);
+
+    // `VERCEL` define el contrato serverless del gate (durabilidad del almacén de
+    // claves y de federación). El parser de este contrato no captura `env:`, así que
+    // se comprueba el YAML crudo.
+    const dir = WORKFLOWS_DIR.pathname.replace(/^\/([A-Za-z]:)/, '$1');
+    const raw = readFileSync(`${dir}/deploy-production.yml`, 'utf8');
+    expect(
+      /Deploy readiness gate[\s\S]{0,240}?\bVERCEL:\s*["']?1["']?/.test(raw),
+      'el gate no fuerza el contrato serverless (VERCEL=1): un almacén en fichero pasaría'
+    ).toBe(true);
+  });
+
+  it('el smoke post-despliegue corre en nivel certificado por defecto y nombra su nivel', () => {
+    const deployWf = workflows.find((w) => w.file === 'deploy-production.yml');
+    const job = deployWf!.jobs.find((j) => j.environment === 'production');
+    const steps = job!.steps;
+    const vercel = steps.findIndex((s) => s.run.includes('vercel@latest deploy'));
+    const smoke = steps.findIndex((s) => s.run.includes('smoke:production'));
+    expect(smoke, 'ningún step ejecuta la compuerta de smoke post-despliegue').toBeGreaterThanOrEqual(0);
+    expect(smoke, 'el smoke corre antes de desplegar, sobre una URL que aún no existe').toBeGreaterThan(
+      vercel
+    );
+
+    const dir = WORKFLOWS_DIR.pathname.replace(/^\/([A-Za-z]:)/, '$1');
+    const raw = readFileSync(`${dir}/deploy-production.yml`, 'utf8');
+
+    // Un literal `"false"` en esta línea convertiría todo el pipeline en una
+    // certificación de borrador. Como la compuerta de configuración ya corre ANTES
+    // de publicar, exigir `readyz` 200 con `readiness.ready=true` es lo coherente
+    // con lo que el pipeline afirma; bajar de nivel tiene que ser una decisión
+    // explícita fuera del YAML (variable de repo `SMOKE_TIER=draft`).
+    const tierLines = raw.match(/^\s*SMOKE_REQUIRE_READINESS:.*$/gm) ?? [];
+    expect(tierLines.length, 'el nivel del smoke debe declararse una sola vez').toBe(1);
+    expect(tierLines[0], 'SMOKE_REQUIRE_READINESS fijado a un nivel inferior').toMatch(
+      /\$\{\{.*vars\.SMOKE_TIER.*'true'\s*\}\}/
+    );
+
+    // «Smoke superado» sin decir en qué nivel corre es una afirmación más fuerte que
+    // la evidencia, y dar por hecho que el step pasó lo es más que leer su outcome.
+    expect(raw, 'la summary no nombra el nivel en que corrió el smoke').toMatch(/SMOKE_TIER_LABEL/);
+    expect(raw, 'la summary no lee el outcome del step de smoke').toMatch(/steps\.smoke\.outcome/);
+  });
 });

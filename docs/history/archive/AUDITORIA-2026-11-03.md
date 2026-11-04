@@ -161,8 +161,9 @@ Orden por dependencia. Ningún punto es código.
    propósito) y `APP_PUBLIC_URL`.
 5. Decidir si `readyz` en 503 con degradación honesta es el estado inicial aceptable, o si se exige
    proveedor durable antes del primer despliegue.
-6. Autorizar el commit/push: en esta sesión no hay credenciales de GitHub, así que **nada de lo
-   anterior está publicado**.
+6. Autorizar el commit/push. Estado actual: la tanda de §2 **ya está publicada** (`5468bc3`, y
+   `origin/main` coincide con `HEAD`); lo cableado después de esa publicación se describe en §8 y
+   espera su propio commit/push.
 
 ## §6 Nota de seguridad
 
@@ -188,9 +189,102 @@ Orden por dependencia. Ningún punto es código.
   `src/pipeline/hyper-turbo/hyper-turbo-pipelines.ts`, `src/multimodal/stepaudio/stepaudio-music.ts` —
   scoping de `switch`, directivas muertas y `StepAudioError` desdoblado en
   `StepAudioErrorPayload` (forma del cable) frente a la clase que se lanza.
-- `test/deployment/hardening-guards.test.ts`, `test/deployment/openapi-contract.test.ts` — regex de
-  indentación YAML con `{2}`/`{4}` en lugar de espacios contados.
+- `test/deployment/hardening-guards.test.ts`, `test/deployment/openapi-contract.test.ts` — los
+  literales `no-regex-spaces` se reescriben cuantificando el **espacio**, no el ancla:
+  `/^ {2}[a-z_-]+:\s*$/m` y `/^ {4}(get|post|…):\s*$/`. (Una primera versión con `^{2}` habría
+  cuantificado el principio de línea y vacío el guard; corregido antes de publicar y verificado con
+  las 13 pruebas de esos dos archivos.)
 - `test/routes/learning-train-disclosure.test.ts` — prueba nueva (3 casos).
 - `docs/api/route-inventory.json`, `docs/STATUS.md` — regenerados por sus generadores canónicos.
 - `README.md`, `CITATION.cff`, `src/memory/verified-knowledge.ts`, `src/server.ts` — correcciones de
   estado/afirmación de la tanda anterior.
+
+## §8 Tanda posterior: `deploy:readiness` deja de ser decorativa
+
+Medida sobre el árbol actual, después de `5468bc3`. No anula §1–§7: los suma.
+
+**El problema.** `package.json` declaraba `deploy:readiness` y `.github/workflows/deploy-production.yml`
+no lo invocaba en ninguna parte. La compuerta existía como capacidad, no como autoridad: un SHA con la
+configuración productiva rota podía publicarse en GHCR con la etiqueta `:production` y desplegado en
+Vercel sin que nadie la corriera (AGENTS.md §1: CAPABILITY ≠ AUTHORITY ≠ EXECUTION ≠ EVIDENCE).
+
+**Lo que se cableó** (`.github/workflows/deploy-production.yml`, job `deploy`, `environment: production`):
+
+| Orden | Step | Qué asegura |
+|---|---|---|
+| 5 | `Pull production environment from Vercel` | `vercel pull --environment=production`; si el proyecto no tiene ninguna variable, **falla** en vez de evaluar un gate con vacío |
+| 6 | `Deploy readiness gate (producción real, valores nunca impresos)` | `pnpm exec tsx scripts/deploy-readiness.ts .env.production` con `VERCEL: "1"` |
+| 9 | `Build and push production image` | sólo se alcanza si la compuerta no bloqueó |
+| 10 | `Deploy to Vercel (prebuilt)` | ídem |
+| 11 | `Post-deploy smoke (fail closed)` | nivel **certificado** por defecto (`SMOKE_REQUIRE_READINESS` derivado de `vars.SMOKE_TIER`) |
+
+Tres decisiones de diseño, cada una con su razón:
+
+1. **Antes de publicar, no después.** Si la readiness fuera posterior al `build-push-action`, GHCR
+   quedaría con la etiqueta `:production` de un SHA rechazado, y un operador de k8s podría desplegarla
+   creyendo que pasó la revisión.
+2. **`.env.production`, no `process.env` del runner.** Las variables de producción viven en el proyecto
+   de Vercel; evaluar el gate contra el entorno de Actions daría un `BLOCKED` decorativo (todo ausente)
+   o un verde falso si alguien copia secretos al runner. El archivo lo escribe `vercel pull`, lo cubre
+   `.gitignore` con `.env.*` (`.gitignore:6-8`) y nunca se imprime: `scripts/deploy-readiness.ts:7,14`
+   lee `argv[2]` y sólo emite identificadores `DR-*`/`PF-*` y veredictos.
+3. **`VERCEL=1` dentro del step del gate.** Define el contrato *serverless* de durabilidad
+   (`checkDurableStore` en `src/health/deploy-readiness.ts`). Sin esa bandera, un almacén de claves o de
+   federación en fichero pasa la revisión y pierde su estado en el primer arranque en frío.
+
+**Dos bloqueos que no tienen forma de credencial** (el owner no los va a resolver con una clave):
+
+- `.env.example:85` y `:96` fijan `ISABELLA_API_KEY_STORE=file` e `ISABELLA_FEDERATION_STORE=file`. Para
+  el objetivo Vercel la compuerta los rechaza; quien copie ese archivo como entorno de producción
+  obtiene un `BLOCKED` esperado, no un defecto del gate. No se cambió el ejemplo: es correcto para el
+  camino de contenedor, donde `docker-compose.yml:214-217` usa los mismos almacenes respaldados por el
+  volumen nombrado `bookpi-data:/app/data` (`docker-compose.yml:230`), que sí es durable.
+- `BOOKPI_LEDGER_PATH` (aviso `PF-BOOKPI-VOLATILE` en `src/health/preflight.ts:129`) queda silenciado
+  por `VERCEL=1`: en serverless no hay ruta donde persistir, así que el gate exige un almacén externo
+  (`DR-*`), no un path.
+
+**El smoke dejó de poder afirmar más que su evidencia.** Antes el step fijaba
+`SMOKE_REQUIRE_READINESS: "false"` (borrador) y la summary decía «smoke verificado» sin nombrar el nivel;
+además anunciaba «Imagen publicada» sin leer el outcome del `build-push-action`. Ahora: el nivel por
+defecto es certificado, bajarlo exige declarar `SMOKE_TIER=draft` como variable de repo, la summary nombra
+el tier en que corrió (`SMOKE_TIER_LABEL`), y tanto imagen como smoke se reportan desde
+`steps.image.outcome` / `steps.smoke.outcome`. Un gate `skipped` se reporta como *no evaluada*, nunca como
+aprobado.
+
+**Contrato ejecutable.** Séptima y octava invariantes en
+`test/deployment/workflow-contract.test.ts`: el gate corre después del `pull` y antes de la imagen y del
+despliegue, consume `.env.production`, no hace `cat`/`printenv`, y fuerza `VERCEL=1`; el smoke corre en
+nivel certificado por defecto y la summary lee su outcome. No-vacuidad probada por mutación: fijar
+`SMOKE_REQUIRE_READINESS: "false"` hace fallar el test (`SMOKE_REQUIRE_READINESS fijado a un nivel
+inferior`) y sustituir `SMOKE_OUTCOME` por `"success"` hace fallar el test (`la summary no lee el outcome
+del step de smoke`). Ambas mutaciones se revirtieron; `git diff` del workflow no las contiene.
+
+**Puertas medidas de nuevo** (este árbol, con las dos invariantes y el workflow editado):
+
+| Puerta | Resultado |
+|---|---|
+| Parse YAML real del workflow (`js-yaml`) | `PARSE_OK`; orden `pull=5 gate=6 image=9 vercel=10 smoke=11`, `GATE_ENV={"VERCEL":"1"}` |
+| `vitest run test/deployment/` | **122/122** en 20 archivos (antes de esta tanda: 121 en 20) |
+| `vitest run` (suite completa) | **2711 pruebas passed / 0 failed**, 389/390 archivos |
+| `check:env` / `check:sops` | `ENV_EXAMPLE_OK keys=224 read_in_src=113` / `SOPS_PLACEHOLDERS_OK` |
+| `typecheck` + `typecheck:layers` | exit 0 ambos |
+| `eslint src scripts test --max-warnings=0` | exit 0 |
+| `prettier --check "src/**"` | exit 0 (ámbito real del gate, `ci.yml:63`) |
+
+El archivo que no carga es el mismo que en §1: `test/atlas/hcu-store.test.ts` falla al *importar*
+`@supabase/functions-js`, que requiere `tslib`. `tslib@2.8.1` está fijado en `pnpm-lock.yaml:2320` pero no
+está materializado en `node_modules/.pnpm` de esta máquina: instalación local incompleta, no código — CI
+hace `pnpm install --frozen-lockfile`, y ninguno de los tres archivos de esta tanda lo alcanza.
+| `tsc --noEmit` | exit 0 |
+| `eslint test/deployment/workflow-contract.test.ts` | exit 0 |
+| `prettier --check` sobre el workflow y `test/**` | fuera del gate: `format:check` sólo cubre `src/**` (`package.json`), y `ci.yml:63` ejecuta ese script |
+
+**Nota de ejecución.** En esta máquina no hay `corepack`/`pnpm` en el PATH, así que las puertas se
+corrieron con `npx`/`node` sobre los mismos binarios de `node_modules/.bin` que CI usa bajo `pnpm`. CI
+sigue ejecutando `pnpm run …`; lo que cambia es el lanzador local, no el veredicto.
+
+**Sigue sin ser cierto.** Ninguno de estos cambios despliega nada: la rama `main` está publicada, pero
+`deploy-production.yml` no puede correr con éxito mientras falten los elementos de §5 (Actions
+desbloqueado, proyecto Vercel con sus tres credenciales, y las credenciales de persistencia). Con esas
+piezas ausentes, el resultado esperado del pipeline es **readiness BLOQUEADA con los IDs `DR-*`/`PF-*`
+nombrados**, que es exactamente lo que el cableado nuevo hace visible.
