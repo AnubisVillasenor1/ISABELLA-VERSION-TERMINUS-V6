@@ -114,7 +114,10 @@ export function runPreflight(env: Env): PreflightReport {
       );
     }
   }
-  if (trimmed(env, 'LOCAL_VISION_BASE_URL') !== undefined && trimmed(env, 'LOCAL_VISION_API_KEY') === undefined) {
+  if (
+    trimmed(env, 'LOCAL_VISION_BASE_URL') !== undefined &&
+    trimmed(env, 'LOCAL_VISION_API_KEY') === undefined
+  ) {
     add(
       'PF-LOCAL-VISION-KEY-MISSING',
       production ? 'ERROR' : 'WARN',

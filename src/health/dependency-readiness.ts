@@ -98,7 +98,7 @@ export function probeInferenceProvider(env: EnvLike): DependencyEvidence {
   const configured = singleKeyConfigured || huggingFaceConfigured;
   return {
     dependency: 'inference-provider',
-    status: configured ? 'healthy' : 'degraded',
+    status: 'degraded',
     required: false,
     detail: configured
       ? 'At least one external provider credential is configured; reachability and quota are not verified here.'
@@ -114,7 +114,7 @@ export function probeAtlasPersistence(env: EnvLike): DependencyEvidence {
   ]);
   return {
     dependency: 'atlas-persistence',
-    status: configured ? 'healthy' : 'degraded',
+    status: 'degraded',
     required: false,
     detail: configured
       ? 'A persistence URL is configured; a live query, RLS and multi-tenant isolation are not performed here.'
