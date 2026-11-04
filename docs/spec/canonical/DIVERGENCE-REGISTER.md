@@ -144,3 +144,89 @@ falla el build si alguna capacidad queda fuera del canon.
   para fijar numeración canónica, lenguaje y criptografía objetivo. La quinta
   entrega (BLAKE3/ZSTD/XChaCha20) queda **SPECIFIED**, nunca simulada.
 
+## DIV-0004 — Corpus externo pide «PEDAGOG» y ocho controles ISA que el repo no conoce
+
+- **Estado:** abierto · **Severidad:** media · **Detectado:** 2026-11-03
+- **Procedencia del documento:** **no vive en el repo.** Llega de archivos sueltos en
+  `C:\Users\tamvo\OneDrive` (carpeta «Archivos de Microsoft Copilot Chat» y su entorno). Se
+  declara aquí antes de dictaminar, porque un hueco citado desde un documento externo no es
+  una regresión del repositorio.
+- **Especificación (según ese corpus):** un módulo/área «PEDAGOG» y una puerta «Pedagogía»,
+  más los controles `ISA-014`, `ISA-015`, `ISA-017`, `ISA-019`, `ISA-021`, `ISA-022`,
+  `ISA-024`, `ISA-025`.
+- **Medida en el árbol actual (`5e6fe2f5`):** `pedagog` en cualquier forma, sensible o
+  insensible a mayúsculas, **0 coincidencias** en todo el repo incluidos `docs/`. Esos ocho
+  identificadores, **0 coincidencias** en `src/**`. Los controles ISA que sí existen usan
+  otros rangos: ISA-002…013, ISA-016, ISA-077 (`src/cognition/**`), ISA-159, ISA-199/203/205,
+  ISA-210, ISA-216/217 (`src/commerce/**`), ISA-259, ISA-371, ISA-451/455/457/458
+  (`src/companion/**`), ISA-500.
+- **Naturaleza de la divergencia:** el corpus numera una serie de controles que el repo nunca
+  adoptó. No hay un homónimo «que sí hace lo afirmado con otro nombre» — se buscó.
+- **Dictamen:** **NO IMPLEMENTADO**.
+- **Opciones para arbitraje humano (ninguna aplicada):** (A) reconocer la serie ISA-014…025
+  como canon y escribir los controles que faltan; (B) declarar que el canon de identificadores
+  es el del repo y corregir el corpus; (C) publicar el corpus dentro de `docs/spec/` para que
+  la comparación sea versionable.
+- **Acción tomada por ahora:** archivar. No se crea `src/pedagog/` ni se inventan ocho
+  controles para darle razón al documento (AGENTS.md §6: capacidad nueva es diseño, exige
+  decisión humana).
+
+## DIV-0005 — La lista `exclude` de tsconfig no es una frontera de cobertura
+
+- **Estado:** arbitrado en parte (se promueven las capas verdes; el texto de STATUS sigue
+  derivado de la lista) · **Severidad:** alta · **Detectado:** 2026-11-03
+- **Especificación del repo:** `docs/STATUS.md`, generada por `scripts/generate-status.mjs:14`
+  desde `tsconfig.json:exclude`, titula «Áreas fuera del typecheck principal» y sentencia que
+  una capa excluida «no puede declararse lista para producción». `ci.yml` llamaba *advisory* al
+  job de capas «hasta que estén verdes».
+- **Medida:** con `tsc --listFilesOnly`, el programa contenía **621** archivos bajo `src/` antes
+  de retirar las 15 exclusiones y **625** después. Un archivo importado desde una raíz entra al
+  programa aunque figure en `exclude`, así que la tabla de STATUS describía una frontera que el
+  compilador no estaba aplicando. Además, esas 15 capas ya daban exit 0 en
+  `tsconfig.layers.json` **antes** del cambio.
+- **Acción tomada:** `tsconfig.json:exclude` pasa de 23 a 8 entradas (sólo las seis áreas que
+  están realmente fuera y el par `node_modules`/`dist`); `ci.yml` retira `continue-on-error`.
+  `docs/STATUS.md` regenerada. El guard
+  `test/deployment/hardening-guards.test.ts:38` (coherencia tsconfig↔layers) sigue en verde.
+- **Pendiente de arbitraje humano:** la cobertura real que no da el typecheck principal son
+  **508 de 1133** archivos `.ts/.tsx` de `src/` (44,8 %), concentrados en `src/lib/lib` (323) y
+  `src/components/**` (~150). Ninguna de esas cifras está en STATUS.md hoy, y ninguna debe
+  leerse como «el repo no typechea»: son subtrees que no alcanzan las puertas.
+
+## DIV-0006 — ~150 componentes `.tsx` sin React y sin opción `jsx`
+
+- **Estado:** abierto · **Severidad:** alta · **Detectado:** 2026-11-03
+- **Especificación:** `package.json` declara puertas de lint/format sobre `{ts,tsx,js,jsx}` y
+  `README.md` presenta superficies de UI; `src/components/**` contiene ~150 archivos `.tsx`.
+- **Medida:** `tsconfig.json` no define `compilerOptions.jsx`. El grafo de dependencias no
+  incluye `react`, `react-dom`, `@types/react` ni `@types/react-dom` (ausentes en
+  `package.json` y en `node_modules/.pnpm`). Un sondeo con `"jsx"` activado devolvió 21 561
+  errores, de los que 12 244 son `TS7026` (no existe `JSX.IntrinsicElements`) y 7 769 `TS17004`
+  (falta `--jsx`). `tsconfig.build.json` excluye `src/components` y ninguna ruta del servidor
+  los importa: la UI servida vive en `src/ui/*.js`.
+- **Naturaleza de la divergencia:** hay código implementado que **no puede** pasar por la
+  escalera `IMPLEMENTED → TESTED`, porque falta el sustrato (framework y opción de compilado).
+  No es un fallo de esas clases; es una capacidad declarada en el árbol pero inverificable.
+- **Dictamen:** **IMPLEMENTED pero NO VERIFICABLE** — no asciende a `TESTED` ni a `VERIFIED`.
+- **Opciones para arbitraje humano:** (A) adoptar React + `@types/react` y `"jsx": "react-jsx"`,
+  con la pasada de errores que eso abra; (B) retirar `src/components/**` y declarar `src/ui/*.js`
+  como única superficie; (C) dejarlo como archivo histórico y etiquetarlo como tal en STATUS.
+- **Acción tomada:** archivar. No se añade React por cuenta propia (decisión de pila, AGENTS.md
+  §6) y no se borran 150 archivos rastreados sin orden del owner.
+
+## DIV-0007 — Árbol espejo byte a byte en `src/components/isabella/`
+
+- **Estado:** abierto · **Severidad:** media · **Detectado:** 2026-11-03
+- **Medida:** `diff -rq src/components/isabella src/components/isabella/isabella` no reporta
+  ninguna diferencia de contenido: 38 componentes duplicados. Ningún import del repo apunta a
+  `isabella/isabella` (buscado en `src`, `test`, `scripts`). Forma de directorio doble, sin
+  duplicación de contenido, en `src/lib/lib`, `src/core/core`, `src/hooks/hooks`,
+  `src/components/ui/ui`, `src/components/navigation/navigation`, `src/components/intro/intro`,
+  `src/authz-runtime/authz-runtime`, `src/hypercore-runtime/hypercore-runtime`.
+- **Riesgo concreto:** infla conteos de capacidad cuando un inventario se hace por archivo y no
+  por registro (AGENTS.md §1: CAPABILITY ≠ EXECUTION), y conserva copias que no evolucionan
+  juntas.
+- **Acción tomada:** archivar y reportar. El borrado es candidato mecánico de 38 archivos
+  rastreados; se hace sólo con orden del owner, porque tocar el árbol de UI se confunde con la
+  decisión pendiente de DIV-0006.
+

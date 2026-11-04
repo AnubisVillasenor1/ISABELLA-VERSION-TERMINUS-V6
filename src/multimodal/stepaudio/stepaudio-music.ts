@@ -76,7 +76,8 @@ export interface StepAudioQueryResponse {
   };
 }
 
-export interface StepAudioError {
+/** Forma del error en el cable (JSON de la API), no la excepción que se lanza. */
+export interface StepAudioErrorPayload {
   readonly message: string;
   type: string;
 }
@@ -157,7 +158,7 @@ export class StepAudioClient extends EventEmitter {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      const error: StepAudioError = errorData.error || {
+      const error: StepAudioErrorPayload = errorData.error || {
         message: response.statusText,
         type: `http_${response.status}`,
       };

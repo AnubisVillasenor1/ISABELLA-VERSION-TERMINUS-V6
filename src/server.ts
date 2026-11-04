@@ -1040,7 +1040,9 @@ async function generateFromKeylessProvider(
   }
 }
 
-// Verified knowledge store (Supabase-backed when configured, in-memory otherwise).
+// Verified knowledge store. Defaults to the durable `mongodb` backend and refuses to boot
+// without MONGODB_URI; `ISABELLA_VERIFIED_KNOWLEDGE_BACKEND=memory` is the development
+// override (what scripts/runtime-smoke.mjs sets). Deploy readiness blocks `memory` in production.
 const verifiedKnowledgeStore = new VerifiedKnowledgeStore();
 // Session memory for conversational continuity (bounded, in-process).
 const sessionMemory = new SessionMemory({
@@ -6726,6 +6728,14 @@ app.get('/api/v1/governance/audit', (req, res) => {
 });
 
 // Federated Learning endpoints
+//
+// `src/learning/federated/federated-learning.ts` es un SIMULADOR: sus métricas
+// (loss, accuracy, klDiv, clipfrac) salen de `Math.random()` y `runRound` no
+// verifica la firma de ningún aporte. El camino real y probado es
+// `aggregateRobust` en `src/lib/native-ml/federation-robust.ts:59`, que hoy sólo
+// consumen los tests. Mientras la ruta sirva el simulador, la respuesta se
+// etiqueta: AGENTS.md §4 prohíbe presentar un número generado por el proceso
+// como un pipeline verificado.
 app.post('/api/v1/learning/train', async (req, res) => {
   if (!authorizeApiToken(req, res, 'GENESIS_ADMIN_API_TOKEN')) return;
   try {
@@ -6747,7 +6757,16 @@ app.post('/api/v1/learning/train', async (req, res) => {
       default:
         return res.status(400).json({ success: false, error: 'INVALID_LEARNING_TYPE' });
     }
-    res.json({ success: true, data: result });
+    res.json({
+      success: true,
+      evidence: {
+        simulated: true,
+        metricsSource: 'Math.random',
+        signatureVerified: false,
+        note: 'Simulación de pipeline de aprendizaje; ningún modelo fue entrenado ni agregado de forma verificable.',
+      },
+      data: result,
+    });
   } catch (e) {
     res.status(400).json({ success: false, error: e instanceof Error ? e.message : 'ERROR' });
   }

@@ -113,7 +113,7 @@ function checkSecretLiterals() {
 
 function checkProviderSecrets() {
   const files = listFiles(SRC, (f) => f.endsWith(".ts"));
-  const re = /(sk-[A-Za-z0-9]{16,}|ghp_[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_\-]{20,}|xox[baprs]-[A-Za-z0-9-]+)/;
+  const re = /(sk-[A-Za-z0-9]{16,}|ghp_[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{20,}|xox[baprs]-[A-Za-z0-9-]+)/;
   const hits = [];
   for (const file of files) {
     for (const m of collectMatches(file, re)) hits.push(`${rel(file)}:${m.line} → ${m.text}`);
