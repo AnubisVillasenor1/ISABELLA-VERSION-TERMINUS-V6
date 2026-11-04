@@ -8,8 +8,8 @@
  *        → LOGO_REVEAL → HEARTBEAT → HUMMINGBIRD → INTERFACE
  */
 
-import { useEffect, useRef, useCallback, useState } from "react";
-import * as THREE from "three";
+import { useEffect, useRef, useCallback, useState } from 'react';
+import * as THREE from 'three';
 import {
   type IntroPhase,
   type IntroState,
@@ -19,8 +19,8 @@ import {
   createInitialState,
   getPerformanceLimits,
   TOTAL_DURATION,
-} from "./timeline";
-import { COLORS_THREE, STAR_LAYERS } from "./colors";
+} from './timeline';
+import { COLORS_THREE, STAR_LAYERS } from './colors';
 
 interface CinematicIntroProps {
   onComplete: () => void;
@@ -40,7 +40,7 @@ export function CinematicIntro({
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const clockRef = useRef(new THREE.Clock());
   const frameRef = useRef<number>(0);
-  const [currentPhase, setCurrentPhase] = useState<IntroPhase>("VOID");
+  const [currentPhase, setCurrentPhase] = useState<IntroPhase>('VOID');
   const [progress, setProgress] = useState(0);
   const skipRef = useRef(false);
 
@@ -70,7 +70,7 @@ export function CinematicIntro({
   useEffect(() => {
     if (!containerRef.current) return;
 
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const state = createInitialState(reducedMotion);
     stateRef.current = state;
 
@@ -84,9 +84,7 @@ export function CinematicIntro({
     // Scene
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(COLORS_THREE.voidBlack);
-    scene.fog = limits.fog
-      ? new THREE.FogExp2(COLORS_THREE.deepSpace, 0.012)
-      : undefined;
+    scene.fog = limits.fog ? new THREE.FogExp2(COLORS_THREE.deepSpace, 0.012) : undefined;
     sceneRef.current = scene;
 
     // Camera
@@ -94,7 +92,7 @@ export function CinematicIntro({
       54,
       window.innerWidth / window.innerHeight,
       0.1,
-      200,
+      200
     );
     camera.position.set(0, 0, 48);
     camera.lookAt(0, 0, 0);
@@ -104,7 +102,7 @@ export function CinematicIntro({
     const renderer = new THREE.WebGLRenderer({
       antialias: true,
       alpha: false,
-      powerPreference: "high-performance",
+      powerPreference: 'high-performance',
     });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, limits.pixelRatio));
@@ -150,7 +148,7 @@ export function CinematicIntro({
       mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
       mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
     };
-    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener('mousemove', onMouseMove);
 
     // Resize
     const onResize = () => {
@@ -158,10 +156,10 @@ export function CinematicIntro({
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
     };
-    window.addEventListener("resize", onResize);
+    window.addEventListener('resize', onResize);
 
     // Animation loop
-    let lastPhase: IntroPhase = "VOID";
+    let lastPhase: IntroPhase = 'VOID';
 
     const animate = () => {
       const delta = clockRef.current.getDelta();
@@ -226,8 +224,8 @@ export function CinematicIntro({
     frameRef.current = requestAnimationFrame(animate);
 
     return () => {
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("resize", onResize);
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('resize', onResize);
       cleanup();
     };
   }, [cleanup, onComplete, onPhaseChange, skipOnReducedMotion]);
@@ -239,7 +237,7 @@ export function CinematicIntro({
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2">
         <div className="flex items-center gap-3">
           <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-white/40">
-            {currentPhase.replace(/_/g, " ")}
+            {currentPhase.replace(/_/g, ' ')}
           </span>
           <div className="h-px w-24 bg-white/10">
             <div
@@ -284,8 +282,8 @@ function createStarfield2D(count: number): THREE.Points {
   }
 
   const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-  geometry.setAttribute("size", new THREE.BufferAttribute(sizes, 1));
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
 
   const material = new THREE.PointsMaterial({
     color: 0xffffff,
@@ -311,7 +309,7 @@ function createStarfield3D(count: number): THREE.Points {
   }
 
   const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
 
   const material = new THREE.PointsMaterial({
     color: 0xaaccff,
@@ -358,17 +356,12 @@ function createComets(particleCount: number) {
   ];
 
   return cometDefs.map((def) => {
-    const curve = new THREE.CatmullRomCurve3([
-      def.start,
-      def.controlA,
-      def.controlB,
-      def.end,
-    ]);
+    const curve = new THREE.CatmullRomCurve3([def.start, def.controlA, def.controlB, def.end]);
 
     const trailPositions = new Float32Array(particleCount * 3);
     const trailSizes = new Float32Array(particleCount);
     const trailGeometry = new THREE.BufferGeometry();
-    trailGeometry.setAttribute("position", new THREE.BufferAttribute(trailPositions, 3));
+    trailGeometry.setAttribute('position', new THREE.BufferAttribute(trailPositions, 3));
 
     const trailMaterial = new THREE.PointsMaterial({
       color: def.color,
@@ -443,7 +436,7 @@ function createLogoPlaceholder(): THREE.Group {
       color: COLORS_THREE.whiteLight,
       transparent: true,
       opacity: 0,
-    }),
+    })
   );
 
   const innerShape = new THREE.Mesh(
@@ -453,7 +446,7 @@ function createLogoPlaceholder(): THREE.Group {
       transparent: true,
       opacity: 0,
       wireframe: true,
-    }),
+    })
   );
 
   group.add(outerRing);
@@ -467,7 +460,8 @@ function createHeart(): THREE.Group {
 
   // Heart shape using curves
   const heartShape = new THREE.Shape();
-  const x = 0, y = 0;
+  const x = 0,
+    y = 0;
   heartShape.moveTo(x, y + 0.35);
   heartShape.bezierCurveTo(x, y + 0.35, x - 0.05, y + 0.5, x - 0.25, y + 0.5);
   heartShape.bezierCurveTo(x - 0.55, y + 0.5, x - 0.55, y + 0.175, x - 0.55, y + 0.175);
@@ -499,20 +493,20 @@ function createHeart(): THREE.Group {
   return group;
 }
 
-function createHummingbird(detail: "full" | "simplified" | "sprite"): THREE.Group {
+function createHummingbird(detail: 'full' | 'simplified' | 'sprite'): THREE.Group {
   const group = new THREE.Group();
 
-  if (detail === "sprite") {
-    const canvas = document.createElement("canvas");
+  if (detail === 'sprite') {
+    const canvas = document.createElement('canvas');
     canvas.width = 64;
     canvas.height = 64;
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext('2d');
     if (ctx) {
-      ctx.fillStyle = "#34D399";
+      ctx.fillStyle = '#34D399';
       ctx.beginPath();
       ctx.ellipse(32, 32, 20, 12, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = "#22D3EE";
+      ctx.fillStyle = '#22D3EE';
       ctx.beginPath();
       ctx.ellipse(48, 32, 8, 4, 0, 0, Math.PI * 2);
       ctx.fill();
@@ -621,7 +615,7 @@ function createInterfaceElements() {
         color: COLORS_THREE.emeraldLife,
         transparent: true,
         opacity: 0,
-      }),
+      })
     );
     dot.position.copy(pos);
     group.add(dot);
@@ -634,18 +628,13 @@ function createInterfaceElements() {
 // UPDATE FUNCTIONS
 // ============================================================================
 
-function updateStarfield2D(
-  stars: THREE.Points,
-  time: number,
-  _delta: number,
-  phase: IntroPhase,
-) {
+function updateStarfield2D(stars: THREE.Points, time: number, _delta: number, phase: IntroPhase) {
   const material = stars.material as THREE.PointsMaterial;
 
-  if (phase === "VOID") {
+  if (phase === 'VOID') {
     const voidProgress = Math.min(1, time / 5);
     material.opacity = voidProgress * 0.3;
-  } else if (phase === "STELLAR_FIELD") {
+  } else if (phase === 'STELLAR_FIELD') {
     const starProgress = Math.min(1, (time - 5) / 7);
     material.opacity = 0.3 + starProgress * 0.5;
   } else {
@@ -663,17 +652,12 @@ function updateStarfield2D(
   }
 }
 
-function updateStarfield3D(
-  stars: THREE.Points,
-  time: number,
-  _delta: number,
-  phase: IntroPhase,
-) {
+function updateStarfield3D(stars: THREE.Points, time: number, _delta: number, phase: IntroPhase) {
   const material = stars.material as THREE.PointsMaterial;
 
-  if (phase === "VOID") {
+  if (phase === 'VOID') {
     material.opacity = 0;
-  } else if (phase === "STELLAR_FIELD") {
+  } else if (phase === 'STELLAR_FIELD') {
     const starProgress = Math.min(1, (time - 5) / 7);
     material.opacity = starProgress * 0.6;
   } else {
@@ -689,9 +673,9 @@ function updateComets(
   comets: ReturnType<typeof createComets>,
   time: number,
   _delta: number,
-  phase: IntroPhase,
+  phase: IntroPhase
 ) {
-  if (phase !== "COMET_PASSAGE") {
+  if (phase !== 'COMET_PASSAGE') {
     for (const comet of comets) {
       comet.coreMaterial.opacity = 0;
       comet.trailMaterial.opacity = 0;
@@ -735,9 +719,9 @@ function updateCoreRings(
   core: ReturnType<typeof createCoreRings>,
   time: number,
   _delta: number,
-  phase: IntroPhase,
+  phase: IntroPhase
 ) {
-  if (phase !== "COGNITIVE_CORE" && phase !== "LOGO_REVEAL") {
+  if (phase !== 'COGNITIVE_CORE' && phase !== 'LOGO_REVEAL') {
     for (const ring of core.meshes) {
       ring.material.opacity = 0;
     }
@@ -758,13 +742,14 @@ function updateCoreRings(
   }
 }
 
-function updateLogo(
-  logo: THREE.Group,
-  time: number,
-  _delta: number,
-  phase: IntroPhase,
-) {
-  if (phase !== "LOGO_REVEAL" && phase !== "HEARTBEAT" && phase !== "HUMMINGBIRD_ENTRY" && phase !== "HUMMINGBIRD_ASCENT" && phase !== "INTERFACE_REVEAL") {
+function updateLogo(logo: THREE.Group, time: number, _delta: number, phase: IntroPhase) {
+  if (
+    phase !== 'LOGO_REVEAL' &&
+    phase !== 'HEARTBEAT' &&
+    phase !== 'HUMMINGBIRD_ENTRY' &&
+    phase !== 'HUMMINGBIRD_ASCENT' &&
+    phase !== 'INTERFACE_REVEAL'
+  ) {
     logo.visible = false;
     return;
   }
@@ -794,9 +779,14 @@ function updateHeart(
   time: number,
   _delta: number,
   phase: IntroPhase,
-  heartLight: THREE.PointLight,
+  heartLight: THREE.PointLight
 ) {
-  if (phase !== "HEARTBEAT" && phase !== "HUMMINGBIRD_ENTRY" && phase !== "HUMMINGBIRD_ASCENT" && phase !== "INTERFACE_REVEAL") {
+  if (
+    phase !== 'HEARTBEAT' &&
+    phase !== 'HUMMINGBIRD_ENTRY' &&
+    phase !== 'HUMMINGBIRD_ASCENT' &&
+    phase !== 'INTERFACE_REVEAL'
+  ) {
     heart.visible = false;
     heartLight.intensity = 0;
     return;
@@ -831,13 +821,8 @@ function updateHeart(
   }
 }
 
-function updateHummingbird(
-  bird: THREE.Group,
-  time: number,
-  _delta: number,
-  phase: IntroPhase,
-) {
-  if (phase !== "HUMMINGBIRD_ENTRY" && phase !== "HUMMINGBIRD_ASCENT") {
+function updateHummingbird(bird: THREE.Group, time: number, _delta: number, phase: IntroPhase) {
+  if (phase !== 'HUMMINGBIRD_ENTRY' && phase !== 'HUMMINGBIRD_ASCENT') {
     bird.visible = false;
     return;
   }
@@ -884,9 +869,9 @@ function updateInterface(
   iface: ReturnType<typeof createInterfaceElements>,
   time: number,
   _delta: number,
-  phase: IntroPhase,
+  phase: IntroPhase
 ) {
-  if (phase !== "INTERFACE_REVEAL") {
+  if (phase !== 'INTERFACE_REVEAL') {
     iface.group.visible = false;
     return;
   }
@@ -900,7 +885,7 @@ function updateInterface(
       const mat = obj.material as THREE.LineBasicMaterial;
       mat.opacity = interfaceProgress * 0.5;
     }
-    if (obj instanceof THREE.Mesh && obj.geometry.type === "SphereGeometry") {
+    if (obj instanceof THREE.Mesh && obj.geometry.type === 'SphereGeometry') {
       const delay = dotIndex * 0.15;
       const dotProgress = Math.max(0, Math.min(1, (interfaceProgress - delay) / 0.3));
       (obj.material as THREE.MeshBasicMaterial).opacity = dotProgress;

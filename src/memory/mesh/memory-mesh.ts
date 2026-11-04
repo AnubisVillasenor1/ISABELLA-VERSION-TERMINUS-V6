@@ -2,7 +2,7 @@
  * Memory Mesh - Multi-Backend Sovereign Memory System
  * state: engine-generated
  * Part of ISABELLA-Q Ω Cognitive Architecture
- * 
+ *
  * Provides unified access to:
  * - Episodic Memory (Redis/PostgreSQL)
  * - Semantic Memory (Qdrant/pgvector)
@@ -11,23 +11,13 @@
  * - Provenance Memory (Immutable Ledger)
  */
 
-import { EventEmitter } from "node:events";
-import { createHash, randomBytes } from "node:crypto";
+import { EventEmitter } from 'node:events';
+import { createHash, randomBytes } from 'node:crypto';
 
-export type MemoryType = 
-  | "episodic" 
-  | "semantic" 
-  | "procedural" 
-  | "long_term" 
-  | "provenance";
+export type MemoryType = 'episodic' | 'semantic' | 'procedural' | 'long_term' | 'provenance';
 
-export type MemoryBackend = 
-  | "redis" 
-  | "postgresql" 
-  | "qdrant" 
-  | "neo4j" 
-  | "object_storage" 
-  | "ledger";
+export type MemoryBackend =
+  'redis' | 'postgresql' | 'qdrant' | 'neo4j' | 'object_storage' | 'ledger';
 
 export interface MemoryRecord {
   readonly id: string;
@@ -104,14 +94,14 @@ export interface MemoryMeshConfig {
 
 const DEFAULT_CONFIG: MemoryMeshConfig = {
   backends: [],
-  defaultBackend: "postgresql",
-  embeddingModel: "nomic-embed-text-v1.5",
+  defaultBackend: 'postgresql',
+  embeddingModel: 'nomic-embed-text-v1.5',
   embeddingDimensions: 768,
   chunkSize: 1000,
   chunkOverlap: 200,
   maxRecordsPerQuery: 100,
   enableProvenance: true,
-  provenanceBackend: "ledger",
+  provenanceBackend: 'ledger',
   autoConsolidation: true,
   consolidationIntervalMs: 3600000, // 1 hour
   importanceThreshold: 0.3,
@@ -155,24 +145,53 @@ export abstract class MemoryBackendAdapter {
 export interface Transaction {
   readonly id: string;
   readonly backend: MemoryBackendAdapter;
-  readonly operations: Array<{ type: "insert" | "update" | "delete"; record: MemoryRecord }>;
+  readonly operations: Array<{ type: 'insert' | 'update' | 'delete'; record: MemoryRecord }>;
   commit(): Promise<void>;
   rollback(): Promise<void>;
+}
+
+/** Minimal structural shapes of the optional drivers (the real packages are injected at deploy time). */
+interface RedisClientLike {
+  quit(): Promise<unknown>;
+}
+interface PgClientLike {
+  query(sql: string): Promise<unknown>;
+  release(): void;
+}
+interface PgPoolLike {
+  end(): Promise<void>;
+  connect(): Promise<PgClientLike>;
+}
+interface Neo4jSessionLike {
+  commitTransaction(): Promise<void>;
+  rollbackTransaction(): Promise<void>;
+  close(): Promise<void>;
+}
+interface Neo4jDriverLike {
+  close(): Promise<void>;
+  session(): Neo4jSessionLike;
+}
+
+/** A backend whose driver was never injected must fail loudly, not with `Cannot read properties of null`. */
+function requireDriver<T>(driver: T | null, backend: string): T {
+  if (driver === null)
+    throw new Error(`BACKEND_NOT_CONNECTED: ${backend} driver has not been initialized`);
+  return driver;
 }
 
 /**
  * Redis Backend - Episodic Memory (Fast, TTL-based)
  */
 export class RedisBackend extends MemoryBackendAdapter {
-  readonly type: MemoryBackend = "redis";
+  readonly type: MemoryBackend = 'redis';
   readonly config: MemoryBackendConfig;
 
-  private client: any = null; // Redis client
+  private client: RedisClientLike | null = null; // Redis client
   private connected: boolean = false;
 
   constructor(config: MemoryBackendConfig) {
     super();
-    this.config = { ...config, type: "redis", poolSize: config.poolSize || 10 };
+    this.config = { ...config, type: 'redis', poolSize: config.poolSize || 10 };
   }
 
   async initialize(): Promise<void> {
@@ -250,8 +269,12 @@ export class RedisBackend extends MemoryBackendAdapter {
       id: crypto.randomUUID(),
       backend: this,
       operations: [],
-      async commit() { /* EXEC */ },
-      async rollback() { /* DISCARD */ },
+      async commit() {
+        /* EXEC */
+      },
+      async rollback() {
+        /* DISCARD */
+      },
     };
   }
 
@@ -268,15 +291,15 @@ export class RedisBackend extends MemoryBackendAdapter {
  * PostgreSQL Backend - Relational + Vector (pgvector)
  */
 export class PostgresBackend extends MemoryBackendAdapter {
-  readonly type: MemoryBackend = "postgresql";
+  readonly type: MemoryBackend = 'postgresql';
   readonly config: MemoryBackendConfig;
 
-  private pool: any = null; // pg Pool
+  private pool: PgPoolLike | null = null; // pg Pool
   private connected: boolean = false;
 
   constructor(config: MemoryBackendConfig) {
     super();
-    this.config = { ...config, type: "postgresql", poolSize: config.poolSize || 20 };
+    this.config = { ...config, type: 'postgresql', poolSize: config.poolSize || 20 };
   }
 
   async initialize(): Promise<void> {
@@ -350,14 +373,20 @@ export class PostgresBackend extends MemoryBackendAdapter {
   }
 
   async beginTransaction(): Promise<Transaction> {
-    const client = await this.pool.connect();
+    const client = await requireDriver(this.pool, 'postgres').connect();
     await client.query('BEGIN');
     return {
       id: crypto.randomUUID(),
       backend: this,
       operations: [],
-      async commit() { await client.query('COMMIT'); client.release(); },
-      async rollback() { await client.query('ROLLBACK'); client.release(); },
+      async commit() {
+        await client.query('COMMIT');
+        client.release();
+      },
+      async rollback() {
+        await client.query('ROLLBACK');
+        client.release();
+      },
     };
   }
 
@@ -374,15 +403,15 @@ export class PostgresBackend extends MemoryBackendAdapter {
  * Qdrant Backend - Semantic/Vector Memory
  */
 export class QdrantBackend extends MemoryBackendAdapter {
-  readonly type: MemoryBackend = "qdrant";
+  readonly type: MemoryBackend = 'qdrant';
   readonly config: MemoryBackendConfig;
 
-  private client: any = null;
+  private client: unknown = null;
   private connected: boolean = false;
 
   constructor(config: MemoryBackendConfig) {
     super();
-    this.config = { ...config, type: "qdrant" };
+    this.config = { ...config, type: 'qdrant' };
   }
 
   async initialize(): Promise<void> {
@@ -434,7 +463,7 @@ export class QdrantBackend extends MemoryBackendAdapter {
     // upsert vector
   }
 
-async searchByEmbedding(
+  async searchByEmbedding(
     embedding: Float32Array,
     filter: Partial<MemoryQuery>,
     limit: number
@@ -464,17 +493,17 @@ async searchByEmbedding(
 
 /**
  * Neo4j Backend - Procedural/Graph Memory
-*/
+ */
 export class Neo4jBackend extends MemoryBackendAdapter {
-  readonly type: MemoryBackend = "neo4j";
+  readonly type: MemoryBackend = 'neo4j';
   readonly config: MemoryBackendConfig;
 
-  private driver: any = null;
+  private driver: Neo4jDriverLike | null = null;
   private connected: boolean = false;
 
   constructor(config: MemoryBackendConfig) {
     super();
-    this.config = { ...config, type: "neo4j" };
+    this.config = { ...config, type: 'neo4j' };
   }
 
   async initialize(): Promise<void> {
@@ -537,13 +566,19 @@ export class Neo4jBackend extends MemoryBackendAdapter {
   }
 
   async beginTransaction(): Promise<Transaction> {
-    const session = this.driver.session();
+    const session = requireDriver(this.driver, 'neo4j').session();
     return {
       id: crypto.randomUUID(),
       backend: this,
       operations: [],
-      async commit() { await session.commitTransaction(); await session.close(); },
-      async rollback() { await session.rollbackTransaction(); await session.close(); },
+      async commit() {
+        await session.commitTransaction();
+        await session.close();
+      },
+      async rollback() {
+        await session.rollbackTransaction();
+        await session.close();
+      },
     };
   }
 
@@ -560,15 +595,15 @@ export class Neo4jBackend extends MemoryBackendAdapter {
  * Object Storage Backend - Long-term Memory (Cold Storage)
  */
 export class ObjectStorageBackend extends MemoryBackendAdapter {
-  readonly type: MemoryBackend = "object_storage";
+  readonly type: MemoryBackend = 'object_storage';
   readonly config: MemoryBackendConfig;
 
-  private client: any = null;
+  private client: unknown = null;
   private connected: boolean = false;
 
   constructor(config: MemoryBackendConfig) {
     super();
-    this.config = { ...config, type: "object_storage" };
+    this.config = { ...config, type: 'object_storage' };
   }
 
   async initialize(): Promise<void> {
@@ -651,15 +686,15 @@ export class ObjectStorageBackend extends MemoryBackendAdapter {
  * Immutable Ledger Backend - Provenance Memory
  */
 export class LedgerBackend extends MemoryBackendAdapter {
-  readonly type: MemoryBackend = "ledger";
+  readonly type: MemoryBackend = 'ledger';
   readonly config: MemoryBackendConfig;
 
-  private ledger: any = null; // BookPI or similar
+  private ledger: unknown = null; // BookPI or similar (not yet wired)
   private connected: boolean = false;
 
   constructor(config: MemoryBackendConfig) {
     super();
-    this.config = { ...config, type: "ledger" };
+    this.config = { ...config, type: 'ledger' };
   }
 
   async initialize(): Promise<void> {
@@ -688,11 +723,11 @@ export class LedgerBackend extends MemoryBackendAdapter {
   }
 
   async update(id: string, updates: Partial<MemoryRecord>): Promise<void> {
-    throw new Error("LEDGER_IMMUTABLE: Cannot update immutable ledger");
+    throw new Error('LEDGER_IMMUTABLE: Cannot update immutable ledger');
   }
 
   async delete(id: string): Promise<void> {
-    throw new Error("LEDGER_IMMUTABLE: Cannot delete from immutable ledger");
+    throw new Error('LEDGER_IMMUTABLE: Cannot delete from immutable ledger');
   }
 
   async query(query: MemoryQuery): Promise<MemorySearchResult> {
@@ -765,17 +800,17 @@ export class MemoryMesh extends EventEmitter {
 
   private createBackendAdapter(config: MemoryBackendConfig): MemoryBackendAdapter {
     switch (config.type) {
-      case "redis":
+      case 'redis':
         return new RedisBackend(config);
-      case "postgresql":
+      case 'postgresql':
         return new PostgresBackend(config);
-      case "qdrant":
+      case 'qdrant':
         return new QdrantBackend(config);
-      case "neo4j":
+      case 'neo4j':
         return new Neo4jBackend(config);
-      case "object_storage":
+      case 'object_storage':
         return new ObjectStorageBackend(config);
-      case "ledger":
+      case 'ledger':
         return new LedgerBackend(config);
       default:
         throw new Error(`UNKNOWN_BACKEND: ${config.type}`);
@@ -793,7 +828,7 @@ export class MemoryMesh extends EventEmitter {
         throw new Error(`BACKEND_UNHEALTHY: ${type}`);
       }
     }
-    
+
     // Initialize provenance if enabled
     if (this.config.enableProvenance) {
       const provenanceBackend = this.backends.get(this.config.provenanceBackend);
@@ -802,7 +837,7 @@ export class MemoryMesh extends EventEmitter {
       }
     }
 
-    this.emit("initialized");
+    this.emit('initialized');
   }
 
   /**
@@ -811,13 +846,13 @@ export class MemoryMesh extends EventEmitter {
   async store(record: MemoryRecord): Promise<void> {
     const backend = this.getBackendForType(record.type);
     await backend.store(record);
-    
+
     // Also store provenance if enabled
     if (this.config.enableProvenance) {
       await this.storeProvenance(record);
     }
-    
-    this.emit("stored", record);
+
+    this.emit('stored', record);
   }
 
   async storeBatch(records: ReadonlyArray<MemoryRecord>): Promise<void> {
@@ -829,19 +864,19 @@ export class MemoryMesh extends EventEmitter {
       list.push(record);
       byBackend.set(backendType, list);
     }
-    
+
     for (const [backendType, records] of byBackend) {
       const backend = this.getBackendForBackendType(backendType);
       await backend.storeBatch(records);
     }
-    
+
     if (this.config.enableProvenance) {
       for (const record of records) {
         await this.storeProvenance(record);
       }
     }
-    
-    this.emit("batchStored", records);
+
+    this.emit('batchStored', records);
   }
 
   private getBackendForBackendType(backendType: MemoryBackend): MemoryBackendAdapter {
@@ -891,28 +926,28 @@ export class MemoryMesh extends EventEmitter {
    */
   async query(query: MemoryQuery): Promise<MemorySearchResult> {
     const startTime = Date.now();
-    
+
     let backend: MemoryBackendAdapter;
     if (query.type) {
       backend = this.getBackendForType(query.type);
     } else {
       // Query all backends and merge results
       const results = await Promise.all(
-        Array.from(this.backends.values()).map(b => b.query(query))
+        Array.from(this.backends.values()).map((b) => b.query(query))
       );
-      
-      const allRecords = results.flatMap(r => r.records);
+
+      const allRecords = results.flatMap((r) => r.records);
       allRecords.sort((a, b) => b.importance - a.importance || b.createdAt - a.createdAt);
-      
+
       const queryTimeMs = Date.now() - startTime;
-      
+
       return {
         records: allRecords.slice(0, query.limit || this.config.maxRecordsPerQuery),
         totalCount: allRecords.length,
         queryTimeMs,
       };
     }
-    
+
     return backend.query(query);
   }
 
@@ -924,11 +959,11 @@ export class MemoryMesh extends EventEmitter {
     filter: Partial<MemoryQuery> = {},
     limit: number = this.config.maxRecordsPerQuery
   ): Promise<ReadonlyArray<{ record: MemoryRecord; score: number }>> {
-    const vectorBackend = this.backends.get("qdrant") || this.backends.get("postgresql");
+    const vectorBackend = this.backends.get('qdrant') || this.backends.get('postgresql');
     if (!vectorBackend) {
-      throw new Error("NO_VECTOR_BACKEND_AVAILABLE");
+      throw new Error('NO_VECTOR_BACKEND_AVAILABLE');
     }
-    
+
     return vectorBackend.searchByEmbedding(embedding, filter, limit);
   }
 
@@ -946,15 +981,15 @@ export class MemoryMesh extends EventEmitter {
 
   private getBackendTypeForType(type: MemoryType): MemoryBackend {
     switch (type) {
-      case "episodic":
-        return "redis";
-      case "semantic":
-        return "qdrant";
-      case "procedural":
-        return "neo4j";
-      case "long_term":
-        return "object_storage";
-      case "provenance":
+      case 'episodic':
+        return 'redis';
+      case 'semantic':
+        return 'qdrant';
+      case 'procedural':
+        return 'neo4j';
+      case 'long_term':
+        return 'object_storage';
+      case 'provenance':
         return this.config.provenanceBackend;
       default:
         return this.config.defaultBackend;
@@ -971,10 +1006,10 @@ export class MemoryMesh extends EventEmitter {
   private async storeProvenance(record: MemoryRecord): Promise<void> {
     const provenanceBackend = this.backends.get(this.config.provenanceBackend);
     if (!provenanceBackend) return;
-    
+
     const provenanceRecord: MemoryRecord = {
       ...record,
-      type: "provenance",
+      type: 'provenance',
       metadata: {
         ...record.metadata,
         originalType: record.type,
@@ -982,19 +1017,21 @@ export class MemoryMesh extends EventEmitter {
         provenanceHash: await this.computeProvenanceHash(record),
       },
     };
-    
+
     await provenanceBackend.store(provenanceRecord);
   }
 
   private async computeProvenanceHash(record: MemoryRecord): Promise<string> {
-    const hash = createHash("sha3-512");
-    hash.update(JSON.stringify({
-      id: record.id,
-      content: record.content,
-      embedding: record.embedding ? Array.from(record.embedding) : null,
-      createdAt: record.createdAt,
-    }));
-    return hash.digest("hex");
+    const hash = createHash('sha3-512');
+    hash.update(
+      JSON.stringify({
+        id: record.id,
+        content: record.content,
+        embedding: record.embedding ? Array.from(record.embedding) : null,
+        createdAt: record.createdAt,
+      })
+    );
+    return hash.digest('hex');
   }
 
   /**
@@ -1025,17 +1062,20 @@ export class MemoryMesh extends EventEmitter {
       query,
       limit: limit * 2,
     } as MemoryQuery);
-    
+
     // Get vector search results
     const vectorResults = await this.searchByEmbedding(embedding, filter, limit * 2);
-    
+
     // Merge and re-rank
-    const merged = new Map<string, { record: MemoryRecord; textScore: number; vectorScore: number }>();
-    
+    const merged = new Map<
+      string,
+      { record: MemoryRecord; textScore: number; vectorScore: number }
+    >();
+
     for (const record of textResults.records) {
       merged.set(record.id, { record, textScore: 1, vectorScore: 0 });
     }
-    
+
     for (const { record, score } of vectorResults) {
       const existing = merged.get(record.id);
       if (existing) {
@@ -1044,7 +1084,7 @@ export class MemoryMesh extends EventEmitter {
         merged.set(record.id, { record, textScore: 0, vectorScore: score });
       }
     }
-    
+
     // Combine scores
     const results = Array.from(merged.values())
       .map(({ record, textScore, vectorScore }) => ({
@@ -1053,7 +1093,7 @@ export class MemoryMesh extends EventEmitter {
       }))
       .sort((a, b) => b.score - a.score)
       .slice(0, limit);
-    
+
     return results;
   }
 
@@ -1067,11 +1107,17 @@ export class MemoryMesh extends EventEmitter {
         return { type, ...stats };
       })
     );
-    
+
     return {
       totalRecords: stats.reduce((sum, s) => sum + s.recordCount, 0),
-      byType: stats.reduce((acc, s) => ({ ...acc, [s.type]: s.recordCount }), {} as Record<MemoryType, number>),
-      byBackend: stats.reduce((acc, s) => ({ ...acc, [s.type]: s.sizeBytes }), {} as Record<MemoryBackend, number>),
+      byType: stats.reduce(
+        (acc, s) => ({ ...acc, [s.type]: s.recordCount }),
+        {} as Record<MemoryType, number>
+      ),
+      byBackend: stats.reduce(
+        (acc, s) => ({ ...acc, [s.type]: s.sizeBytes }),
+        {} as Record<MemoryBackend, number>
+      ),
       totalSizeBytes: stats.reduce((sum, s) => sum + s.sizeBytes, 0),
       avgImportance: 0, // Would need to compute
       oldestRecord: 0,
@@ -1085,19 +1131,19 @@ export class MemoryMesh extends EventEmitter {
   async consolidate(): Promise<{ moved: number; archived: number }> {
     let moved = 0;
     let archived = 0;
-    
-    const episodicBackend = this.backends.get("redis");
-    const longTermBackend = this.backends.get("object_storage");
-    
+
+    const episodicBackend = this.backends.get('redis');
+    const longTermBackend = this.backends.get('object_storage');
+
     if (!episodicBackend || !longTermBackend) return { moved: 0, archived: 0 };
-    
+
     const cutoffTime = Date.now() - this.config.maxAgeMs;
     const importanceThreshold = this.config.importanceThreshold;
-    
+
     // In production, would query for old/low-importance records
     // and move them to object storage
-    
-    this.emit("consolidated", { moved, archived });
+
+    this.emit('consolidated', { moved, archived });
     return { moved, archived };
   }
 
@@ -1105,9 +1151,12 @@ export class MemoryMesh extends EventEmitter {
    * Start automatic consolidation
    */
   private startConsolidation(): void {
+    // Igual que en ObservabilityStack: el bucle de consolidación debe seguir el ciclo de
+    // vida del servidor, no sostenerlo. Sin `unref()` el proceso nunca termina solo.
     this.consolidationTimer = setInterval(() => {
-      this.consolidate().catch(err => this.emit("error", err));
+      this.consolidate().catch((err) => this.emit('error', err));
     }, this.config.consolidationIntervalMs);
+    this.consolidationTimer.unref();
   }
 
   /**
@@ -1124,7 +1173,7 @@ export class MemoryMesh extends EventEmitter {
    * Health check all backends
    */
   async healthCheck(): Promise<Record<MemoryBackend, boolean>> {
-    const results: Record<MemoryBackend, boolean> = {} as any;
+    const results: Record<MemoryBackend, boolean> = {} as Record<MemoryBackend, boolean>;
     for (const [type, backend] of this.backends) {
       results[type] = await backend.healthCheck();
     }
@@ -1154,16 +1203,22 @@ export class MemoryMesh extends EventEmitter {
  */
 export const defaultMemoryMesh = new MemoryMesh({
   backends: [
-    { type: "redis", connectionString: process.env.REDIS_URL || "redis://localhost:6379" },
-    { type: "postgresql", connectionString: process.env.DATABASE_URL || "postgresql://localhost:5432/isabella" },
-    { type: "qdrant", connectionString: process.env.QDRANT_URL || "http://localhost:6333" },
-    { type: "neo4j", connectionString: process.env.NEO4J_URI || "bolt://localhost:7687" },
-    { type: "object_storage", connectionString: process.env.S3_ENDPOINT || "http://localhost:9000" },
-    { type: "ledger", connectionString: "bookpi://local" },
+    { type: 'redis', connectionString: process.env.REDIS_URL || 'redis://localhost:6379' },
+    {
+      type: 'postgresql',
+      connectionString: process.env.DATABASE_URL || 'postgresql://localhost:5432/isabella',
+    },
+    { type: 'qdrant', connectionString: process.env.QDRANT_URL || 'http://localhost:6333' },
+    { type: 'neo4j', connectionString: process.env.NEO4J_URI || 'bolt://localhost:7687' },
+    {
+      type: 'object_storage',
+      connectionString: process.env.S3_ENDPOINT || 'http://localhost:9000',
+    },
+    { type: 'ledger', connectionString: 'bookpi://local' },
   ],
-  defaultBackend: "postgresql",
-  embeddingModel: "nomic-embed-text-v1.5",
+  defaultBackend: 'postgresql',
+  embeddingModel: 'nomic-embed-text-v1.5',
   embeddingDimensions: 768,
   enableProvenance: true,
-  provenanceBackend: "ledger",
+  provenanceBackend: 'ledger',
 });

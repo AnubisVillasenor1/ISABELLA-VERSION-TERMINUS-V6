@@ -11,11 +11,11 @@
  */
 
 export const SOPHIA_LEVELS = [
-  "E0_AXIOM",
-  "E1_VERIFIED",
-  "E2_INFERRED",
-  "E3_HYPOTHETICAL",
-  "E4_UNFOUNDED",
+  'E0_AXIOM',
+  'E1_VERIFIED',
+  'E2_INFERRED',
+  'E3_HYPOTHETICAL',
+  'E4_UNFOUNDED',
 ] as const;
 
 export type SophiaLevel = (typeof SOPHIA_LEVELS)[number];
@@ -62,12 +62,11 @@ export function assessEpistemicState(signals: SophiaSignals): SophiaAssessment {
   const unsupportedPenalty = clamp01(signals.unsupportedClaims / 5);
   const contradictionPenalty = clamp01(signals.contradictions / 3);
 
-  const raw =
-    corroboration * 0.4 +
-    reproducibility * 0.35 +
-    method * 0.25;
+  const raw = corroboration * 0.4 + reproducibility * 0.35 + method * 0.25;
 
-  const eri = Math.round(Math.max(0, raw - unsupportedPenalty * 0.3 - contradictionPenalty * 0.4) * 100);
+  const eri = Math.round(
+    Math.max(0, raw - unsupportedPenalty * 0.3 - contradictionPenalty * 0.4) * 100
+  );
 
   // El nivel epistemológico refleja la calidad de la evidencia. El ERI es una
   // métrica de resonancia separada (puerta de promoción), no un requisito del
@@ -75,24 +74,29 @@ export function assessEpistemicState(signals: SophiaSignals): SophiaAssessment {
   // alcance 95. La puerta ERI se expone aparte en `passesThreshold`.
   let level: SophiaLevel;
   if (signals.declaredAxiom === true && signals.contradictions === 0 && eri >= ERI_THRESHOLD) {
-    level = "E0_AXIOM";
-    reasons.push("axioma declarado explícitamente");
-  } else if (signals.corroboratingSources >= 2 && reproducibility >= 0.8 && signals.contradictions === 0) {
-    level = "E1_VERIFIED";
-    reasons.push("evidencia independiente y reproducible");
+    level = 'E0_AXIOM';
+    reasons.push('axioma declarado explícitamente');
+  } else if (
+    signals.corroboratingSources >= 2 &&
+    reproducibility >= 0.8 &&
+    signals.contradictions === 0
+  ) {
+    level = 'E1_VERIFIED';
+    reasons.push('evidencia independiente y reproducible');
   } else if (signals.corroboratingSources >= 1 && signals.contradictions === 0) {
-    level = "E2_INFERRED";
-    reasons.push("inferencia con al menos una fuente");
+    level = 'E2_INFERRED';
+    reasons.push('inferencia con al menos una fuente');
   } else if (signals.unsupportedClaims > 0 || signals.contradictions > 0) {
-    level = "E4_UNFOUNDED";
-    reasons.push("afirmaciones sin respaldo o contradictorias");
+    level = 'E4_UNFOUNDED';
+    reasons.push('afirmaciones sin respaldo o contradictorias');
   } else {
-    level = "E3_HYPOTHETICAL";
-    reasons.push("hipótesis sin corroboración suficiente");
+    level = 'E3_HYPOTHETICAL';
+    reasons.push('hipótesis sin corroboración suficiente');
   }
 
   if (signals.contradictions > 0) reasons.push(`${signals.contradictions} contradicciones`);
-  if (signals.unsupportedClaims > 0) reasons.push(`${signals.unsupportedClaims} afirmaciones sin respaldo`);
+  if (signals.unsupportedClaims > 0)
+    reasons.push(`${signals.unsupportedClaims} afirmaciones sin respaldo`);
 
   return { level, eri, passesThreshold: eri >= ERI_THRESHOLD, reasons };
 }

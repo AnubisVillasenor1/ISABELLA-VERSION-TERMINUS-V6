@@ -1,6 +1,6 @@
-import { createHash } from "node:crypto";
-import { NeonRepository } from "@/lib/persistence/adapters/neon-adapter";
-import type { DatasetIdentity, TrainingRun } from "./types";
+import { createHash } from 'node:crypto';
+import { NeonRepository } from '@/lib/persistence/adapters/neon-adapter';
+import type { DatasetIdentity, TrainingRun } from './types';
 
 export interface RegisteredModel {
   id: string;
@@ -12,7 +12,7 @@ export interface RegisteredModel {
   algorithm: string;
   datasetIds: string[];
   modelHash: string;
-  approvalStatus: "PENDING_REVIEW" | "APPROVED" | "REJECTED" | "REVOKED";
+  approvalStatus: 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED' | 'REVOKED';
   createdAt: string;
 }
 export interface EvaluationRun {
@@ -24,7 +24,7 @@ export interface EvaluationRun {
   metrics: Record<string, number>;
   baseline: Record<string, number>;
   artifactHash: string;
-  status: "RUNNING" | "PASSED" | "FAILED";
+  status: 'RUNNING' | 'PASSED' | 'FAILED';
   createdAt: string;
 }
 interface DbDataset {
@@ -35,7 +35,7 @@ interface DbDataset {
   license: string;
   schemaHash: string;
   contentHash: string;
-  status: DatasetIdentity["status"];
+  status: DatasetIdentity['status'];
   createdAt: string;
 }
 interface DbTrainingRun {
@@ -45,7 +45,7 @@ interface DbTrainingRun {
   algorithm: string;
   hyperparameters: Record<string, unknown>;
   seed: number;
-  status: TrainingRun["status"];
+  status: TrainingRun['status'];
   sourceCommit: string;
   inputHash: string;
   outputHash?: string;
@@ -53,23 +53,23 @@ interface DbTrainingRun {
   completedAt?: string;
 }
 
-const datasets = new NeonRepository<DbDataset>("fgais_datasets");
-const models = new NeonRepository<RegisteredModel>("fgais_models");
-const training = new NeonRepository<DbTrainingRun>("fgais_training_runs");
-const evaluations = new NeonRepository<EvaluationRun>("fgais_evaluations");
+const datasets = new NeonRepository<DbDataset>('fgais_datasets');
+const models = new NeonRepository<RegisteredModel>('fgais_models');
+const training = new NeonRepository<DbTrainingRun>('fgais_training_runs');
+const evaluations = new NeonRepository<EvaluationRun>('fgais_evaluations');
 
 function hashObject(value: unknown): string {
-  return createHash("sha256").update(JSON.stringify(value)).digest("hex");
+  return createHash('sha256').update(JSON.stringify(value)).digest('hex');
 }
 
 export async function registerDataset(
   tenantId: string,
-  dataset: DatasetIdentity,
+  dataset: DatasetIdentity
 ): Promise<DatasetIdentity> {
-  if (dataset.status !== "VALIDATED")
-    throw new Error("Only validated datasets may enter the training registry");
+  if (dataset.status !== 'VALIDATED')
+    throw new Error('Only validated datasets may enter the training registry');
   if (!dataset.license.trim() || !dataset.contentHash || !dataset.schemaHash)
-    throw new Error("Dataset provenance is incomplete");
+    throw new Error('Dataset provenance is incomplete');
   await datasets.create(tenantId, {
     id: dataset.datasetId,
     version: dataset.version,
@@ -86,18 +86,18 @@ export async function registerDataset(
 
 export async function registerModel(
   tenantId: string,
-  model: RegisteredModel,
+  model: RegisteredModel
 ): Promise<RegisteredModel> {
-  if (model.approvalStatus !== "PENDING_REVIEW")
-    throw new Error("New models must start PENDING_REVIEW");
+  if (model.approvalStatus !== 'PENDING_REVIEW')
+    throw new Error('New models must start PENDING_REVIEW');
   if (!model.modelHash || model.datasetIds.length === 0)
-    throw new Error("Model provenance is incomplete");
+    throw new Error('Model provenance is incomplete');
   return models.create(tenantId, model);
 }
 
 export async function createTrainingRun(
   tenantId: string,
-  input: Omit<TrainingRun, "inputHash">,
+  input: Omit<TrainingRun, 'inputHash'>
 ): Promise<TrainingRun> {
   const run: TrainingRun = { ...input, inputHash: hashObject(input) };
   await training.create(tenantId, {
@@ -119,10 +119,10 @@ export async function createTrainingRun(
 
 export async function recordEvaluation(
   tenantId: string,
-  evaluation: EvaluationRun,
+  evaluation: EvaluationRun
 ): Promise<EvaluationRun> {
   if (!evaluation.protocolHash || !evaluation.artifactHash)
-    throw new Error("Evaluation evidence is incomplete");
+    throw new Error('Evaluation evidence is incomplete');
   return evaluations.create(tenantId, evaluation);
 }
 

@@ -10,8 +10,8 @@
  * `keys.ts`); revocation is honoured from the ring AND from the injected
  * `IsaXRevocationRegistry`. Every operation emits an audit event.
  */
-import { Ed25519Signer, verifyEd25519 } from "../post-quantum";
-import { nonce } from "../nonce";
+import { Ed25519Signer, verifyEd25519 } from '../post-quantum';
+import { nonce } from '../nonce';
 import {
   ISA_X_DEFAULT_CLOCK_SKEW_MS,
   IsaXError,
@@ -20,15 +20,15 @@ import {
   isaXSigningInput,
   scopeMatches,
   utf8,
-} from "./protocol";
+} from './protocol';
 import {
   createIsaXKeyRing,
   generateIsaXKeyMaterial,
   type IsaXKeyMaterial,
   type IsaXKeyRing,
-} from "./keys";
-import type { IsaXReason, IsaXRequest } from "./protocol";
-import { requireKeyUsable, type IsaXRevocationRegistry } from "./revocation";
+} from './keys';
+import type { IsaXReason, IsaXRequest } from './protocol';
+import { requireKeyUsable, type IsaXRevocationRegistry } from './revocation';
 
 export interface IsaXSignature {
   readonly version: string;
@@ -59,19 +59,19 @@ export interface IsaXVerifyOptions {
 }
 
 export type IsaXVerifyFailureReason =
-  | "UNKNOWN_KEY"
-  | "KEY_REVOKED"
-  | "SCOPE_REJECTED"
-  | "TIMESTAMP_SKEW"
-  | "BAD_SIGNATURE"
-  | "MALFORMED"
-  | "PROTOCOL_MISMATCH";
+  | 'UNKNOWN_KEY'
+  | 'KEY_REVOKED'
+  | 'SCOPE_REJECTED'
+  | 'TIMESTAMP_SKEW'
+  | 'BAD_SIGNATURE'
+  | 'MALFORMED'
+  | 'PROTOCOL_MISMATCH';
 
 export type IsaXVerifyResult =
-  | { readonly ok: true; readonly reason: "OK"; readonly signature: IsaXSignature }
+  | { readonly ok: true; readonly reason: 'OK'; readonly signature: IsaXSignature }
   | { readonly ok: false; readonly reason: IsaXVerifyFailureReason; readonly detail?: string };
 
-export type IsaXAuditAction = "sign" | "verify" | "rotate" | "revoke";
+export type IsaXAuditAction = 'sign' | 'verify' | 'rotate' | 'revoke';
 export type IsaXAuditReason = IsaXReason;
 
 export interface IsaXAuditEvent {
@@ -105,7 +105,7 @@ export interface IsaXSignerOptions {
 
 function failure(
   reason: IsaXVerifyFailureReason,
-  detail: string,
+  detail: string
 ): { ok: false; reason: IsaXVerifyFailureReason; detail?: string } {
   return { ok: false, reason, detail };
 }
@@ -133,21 +133,21 @@ export function createIsaXSigner(options: IsaXSignerOptions = {}): IsaXSigner {
   async function sign(signOptions: IsaXSignOptions): Promise<IsaXSignature> {
     const timestamp = signOptions.timestamp ?? now();
     if (!Number.isFinite(timestamp)) {
-      throw new IsaXError("ISA_X_MALFORMED", "signing timestamp must be finite");
+      throw new IsaXError('ISA_X_MALFORMED', 'signing timestamp must be finite');
     }
     const keyId = signOptions.keyId ?? ring.active()?.keyId;
-    if (!keyId) throw new IsaXError("ISA_X_NO_ACTIVE_KEY", "no ACTIVE signing key available");
+    if (!keyId) throw new IsaXError('ISA_X_NO_ACTIVE_KEY', 'no ACTIVE signing key available');
     if (!ring.canSign(keyId)) {
-      throw new IsaXError("ISA_X_KEY_NOT_ACTIVE", `key '${keyId}' is not the ACTIVE signing key`);
+      throw new IsaXError('ISA_X_KEY_NOT_ACTIVE', `key '${keyId}' is not the ACTIVE signing key`);
     }
     if (revocation) requireKeyUsable(revocation, keyId);
     const signer = signers.get(keyId);
-    if (!signer) throw new IsaXError("ISA_X_UNKNOWN_KEY", `no signing material for '${keyId}'`);
+    if (!signer) throw new IsaXError('ISA_X_UNKNOWN_KEY', `no signing material for '${keyId}'`);
 
     const signatureNonce = signOptions.nonce ?? nonce();
     const canonical = canonicalRequest(signOptions.request);
     const input = isaXSigningInput({
-      version: "1.1",
+      version: '1.1',
       keyId,
       scope: signOptions.scope,
       timestamp,
@@ -156,14 +156,22 @@ export function createIsaXSigner(options: IsaXSignerOptions = {}): IsaXSigner {
     });
     const bytes = await signer.sign(utf8(input));
     const signature: IsaXSignature = {
-      version: "1.1",
+      version: '1.1',
       keyId,
       scope: signOptions.scope,
       timestamp,
       nonce: signatureNonce,
-      signature: Buffer.from(bytes).toString("base64url"),
+      signature: Buffer.from(bytes).toString('base64url'),
     };
-    audit({ action: "sign", ok: true, reason: "OK", keyId, scope: signOptions.scope, at: timestamp, nonce: signatureNonce });
+    audit({
+      action: 'sign',
+      ok: true,
+      reason: 'OK',
+      keyId,
+      scope: signOptions.scope,
+      at: timestamp,
+      nonce: signatureNonce,
+    });
     return Object.freeze(signature);
   }
 
@@ -173,32 +181,83 @@ export function createIsaXSigner(options: IsaXSignerOptions = {}): IsaXSigner {
     const skew = verifyOptions.clockSkewMs ?? clockSkewMs;
 
     if (!Number.isFinite(signature.timestamp)) {
-      audit({ action: "verify", ok: false, reason: "MALFORMED", keyId: signature.keyId, scope: signature.scope, at: verifiedAt });
-      return failure("MALFORMED", "signature timestamp is not finite");
+      audit({
+        action: 'verify',
+        ok: false,
+        reason: 'MALFORMED',
+        keyId: signature.keyId,
+        scope: signature.scope,
+        at: verifiedAt,
+      });
+      return failure('MALFORMED', 'signature timestamp is not finite');
     }
     try {
       assertSupportedVersion(signature.version);
     } catch {
-      audit({ action: "verify", ok: false, reason: "PROTOCOL_MISMATCH", keyId: signature.keyId, scope: signature.scope, at: verifiedAt });
-      return failure("PROTOCOL_MISMATCH", `unsupported version '${signature.version}'`);
+      audit({
+        action: 'verify',
+        ok: false,
+        reason: 'PROTOCOL_MISMATCH',
+        keyId: signature.keyId,
+        scope: signature.scope,
+        at: verifiedAt,
+      });
+      return failure('PROTOCOL_MISMATCH', `unsupported version '${signature.version}'`);
     }
 
     const metadata = ring.get(signature.keyId);
     if (!metadata) {
-      audit({ action: "verify", ok: false, reason: "UNKNOWN_KEY", keyId: signature.keyId, scope: signature.scope, at: verifiedAt });
-      return failure("UNKNOWN_KEY", `unknown signing key '${signature.keyId}'`);
+      audit({
+        action: 'verify',
+        ok: false,
+        reason: 'UNKNOWN_KEY',
+        keyId: signature.keyId,
+        scope: signature.scope,
+        at: verifiedAt,
+      });
+      return failure('UNKNOWN_KEY', `unknown signing key '${signature.keyId}'`);
     }
     if (!ring.canVerify(signature.keyId) || (revocation?.isKeyRevoked(signature.keyId) ?? false)) {
-      audit({ action: "verify", ok: false, reason: "KEY_REVOKED", keyId: signature.keyId, scope: signature.scope, at: verifiedAt });
-      return failure("KEY_REVOKED", `signing key '${signature.keyId}' is revoked or not verifiable`);
+      audit({
+        action: 'verify',
+        ok: false,
+        reason: 'KEY_REVOKED',
+        keyId: signature.keyId,
+        scope: signature.scope,
+        at: verifiedAt,
+      });
+      return failure(
+        'KEY_REVOKED',
+        `signing key '${signature.keyId}' is revoked or not verifiable`
+      );
     }
     if (!scopeMatches(signature.scope, verifyOptions.expectedScope)) {
-      audit({ action: "verify", ok: false, reason: "SCOPE_REJECTED", keyId: signature.keyId, scope: signature.scope, at: verifiedAt });
-      return failure("SCOPE_REJECTED", `signature scope '${signature.scope}' does not satisfy '${verifyOptions.expectedScope}'`);
+      audit({
+        action: 'verify',
+        ok: false,
+        reason: 'SCOPE_REJECTED',
+        keyId: signature.keyId,
+        scope: signature.scope,
+        at: verifiedAt,
+      });
+      return failure(
+        'SCOPE_REJECTED',
+        `signature scope '${signature.scope}' does not satisfy '${verifyOptions.expectedScope}'`
+      );
     }
     if (Math.abs(verifiedAt - signature.timestamp) > skew) {
-      audit({ action: "verify", ok: false, reason: "TIMESTAMP_SKEW", keyId: signature.keyId, scope: signature.scope, at: verifiedAt });
-      return failure("TIMESTAMP_SKEW", `signature ${Math.abs(verifiedAt - signature.timestamp)}ms outside the ${skew}ms window`);
+      audit({
+        action: 'verify',
+        ok: false,
+        reason: 'TIMESTAMP_SKEW',
+        keyId: signature.keyId,
+        scope: signature.scope,
+        at: verifiedAt,
+      });
+      return failure(
+        'TIMESTAMP_SKEW',
+        `signature ${Math.abs(verifiedAt - signature.timestamp)}ms outside the ${skew}ms window`
+      );
     }
 
     const canonical = canonicalRequest(verifyOptions.request);
@@ -212,16 +271,35 @@ export function createIsaXSigner(options: IsaXSignerOptions = {}): IsaXSigner {
     });
     let valid = false;
     try {
-      valid = await verifyEd25519(metadata.publicKeyPem, utf8(input), Buffer.from(signature.signature, "base64url"));
+      valid = await verifyEd25519(
+        metadata.publicKeyPem,
+        utf8(input),
+        Buffer.from(signature.signature, 'base64url')
+      );
     } catch {
       valid = false;
     }
     if (!valid) {
-      audit({ action: "verify", ok: false, reason: "BAD_SIGNATURE", keyId: signature.keyId, scope: signature.scope, at: verifiedAt });
-      return failure("BAD_SIGNATURE", "Ed25519 verification failed");
+      audit({
+        action: 'verify',
+        ok: false,
+        reason: 'BAD_SIGNATURE',
+        keyId: signature.keyId,
+        scope: signature.scope,
+        at: verifiedAt,
+      });
+      return failure('BAD_SIGNATURE', 'Ed25519 verification failed');
     }
-    audit({ action: "verify", ok: true, reason: "OK", keyId: signature.keyId, scope: signature.scope, at: verifiedAt, nonce: signature.nonce });
-    return { ok: true, reason: "OK", signature };
+    audit({
+      action: 'verify',
+      ok: true,
+      reason: 'OK',
+      keyId: signature.keyId,
+      scope: signature.scope,
+      at: verifiedAt,
+      nonce: signature.nonce,
+    });
+    return { ok: true, reason: 'OK', signature };
   }
 
   return {
@@ -234,11 +312,11 @@ export function createIsaXSigner(options: IsaXSignerOptions = {}): IsaXSigner {
       const result = ring.rotate(newKey, now());
       loadMaterial(newKey);
       audit({
-        action: "rotate",
+        action: 'rotate',
         ok: true,
-        reason: "OK",
+        reason: 'OK',
         keyId: result.newActive.keyId,
-        scope: "*",
+        scope: '*',
         at: now(),
       });
       return {
@@ -247,11 +325,11 @@ export function createIsaXSigner(options: IsaXSignerOptions = {}): IsaXSigner {
         retiredKeyId: result.retired?.keyId,
       };
     },
-    revokeKey(keyId, reason = "compromised") {
+    revokeKey(keyId, reason = 'compromised') {
       ring.revoke(keyId, reason, now());
       signers.delete(keyId);
       if (revocation) revocation.revokeKey(keyId, reason);
-      audit({ action: "revoke", ok: true, reason: "OK", keyId, scope: "*", at: now() });
+      audit({ action: 'revoke', ok: true, reason: 'OK', keyId, scope: '*', at: now() });
     },
   };
 }

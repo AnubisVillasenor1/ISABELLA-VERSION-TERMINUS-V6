@@ -22,11 +22,7 @@ export interface TaskDefinition<T = unknown> {
 }
 
 export type TaskGraphIssueCode =
-  | "EMPTY_ID"
-  | "DUPLICATE_ID"
-  | "UNKNOWN_DEPENDENCY"
-  | "SELF_DEPENDENCY"
-  | "CYCLE";
+  'EMPTY_ID' | 'DUPLICATE_ID' | 'UNKNOWN_DEPENDENCY' | 'SELF_DEPENDENCY' | 'CYCLE';
 
 export interface TaskGraphIssue {
   code: TaskGraphIssueCode;
@@ -35,22 +31,22 @@ export interface TaskGraphIssue {
 }
 
 export class TaskGraphError extends Error {
-  readonly code = "TASK_GRAPH_INVALID";
+  readonly code = 'TASK_GRAPH_INVALID';
   readonly issues: readonly TaskGraphIssue[];
   constructor(issues: readonly TaskGraphIssue[]) {
-    super(`TASK_GRAPH_INVALID: ${issues.map((issue) => issue.message).join(" ")}`);
-    this.name = "TaskGraphError";
+    super(`TASK_GRAPH_INVALID: ${issues.map((issue) => issue.message).join(' ')}`);
+    this.name = 'TaskGraphError';
     this.issues = issues;
   }
 }
 
 export class TaskTimeoutError extends Error {
-  readonly code = "TASK_TIMEOUT";
+  readonly code = 'TASK_TIMEOUT';
   readonly taskId: string;
   readonly timeoutMs: number;
   constructor(taskId: string, timeoutMs: number) {
     super(`TASK_TIMEOUT: '${taskId}' excedió ${timeoutMs} ms.`);
-    this.name = "TaskTimeoutError";
+    this.name = 'TaskTimeoutError';
     this.taskId = taskId;
     this.timeoutMs = timeoutMs;
   }
@@ -68,11 +64,11 @@ export function buildTaskGraph(tasks: readonly TaskDefinition[]): TaskGraph {
 
   for (const task of tasks) {
     if (!task.id || task.id.trim().length === 0) {
-      issues.push({ code: "EMPTY_ID", message: "Una tarea no tiene id." });
+      issues.push({ code: 'EMPTY_ID', message: 'Una tarea no tiene id.' });
       continue;
     }
     if (byId.has(task.id)) {
-      issues.push({ code: "DUPLICATE_ID", message: `Id duplicado '${task.id}'.`, taskId: task.id });
+      issues.push({ code: 'DUPLICATE_ID', message: `Id duplicado '${task.id}'.`, taskId: task.id });
       continue;
     }
     byId.set(task.id, task);
@@ -81,10 +77,14 @@ export function buildTaskGraph(tasks: readonly TaskDefinition[]): TaskGraph {
   for (const task of byId.values()) {
     for (const dependency of task.dependsOn ?? []) {
       if (dependency === task.id) {
-        issues.push({ code: "SELF_DEPENDENCY", message: `'${task.id}' depende de sí misma.`, taskId: task.id });
+        issues.push({
+          code: 'SELF_DEPENDENCY',
+          message: `'${task.id}' depende de sí misma.`,
+          taskId: task.id,
+        });
       } else if (!byId.has(dependency)) {
         issues.push({
-          code: "UNKNOWN_DEPENDENCY",
+          code: 'UNKNOWN_DEPENDENCY',
           message: `'${task.id}' depende de '${dependency}', que no existe.`,
           taskId: task.id,
         });
@@ -128,7 +128,7 @@ export function buildTaskGraph(tasks: readonly TaskDefinition[]): TaskGraph {
   if (order.length !== byId.size) {
     const cyclic = [...byId.keys()].filter((id) => !order.includes(id));
     throw new TaskGraphError([
-      { code: "CYCLE", message: `Dependencia cíclica entre: ${cyclic.join(", ")}.` },
+      { code: 'CYCLE', message: `Dependencia cíclica entre: ${cyclic.join(', ')}.` },
     ]);
   }
 
@@ -144,7 +144,7 @@ export interface RetryOptions {
 
 export async function runWithRetries<T>(
   fn: () => Promise<T> | T,
-  options: RetryOptions,
+  options: RetryOptions
 ): Promise<{ value: T; attempts: number }> {
   const retries = Math.max(0, Math.floor(options.retries));
   const delayMs = options.delayMs ?? 0;
@@ -168,7 +168,7 @@ export async function runWithRetries<T>(
 export function runWithTimeout<T>(
   factory: (signal: AbortSignal) => Promise<T>,
   timeoutMs: number | undefined,
-  taskId = "task",
+  taskId = 'task'
 ): Promise<T> {
   if (!timeoutMs || timeoutMs <= 0) return factory(new AbortController().signal);
   const controller = new AbortController();
@@ -202,7 +202,7 @@ export interface TaskGraphRunResult {
 
 export async function runTaskGraph(
   tasks: readonly TaskDefinition[],
-  options: RunTaskGraphOptions = {},
+  options: RunTaskGraphOptions = {}
 ): Promise<TaskGraphRunResult> {
   const startedAt = Date.now();
   const graph = buildTaskGraph(tasks);
@@ -226,13 +226,13 @@ export async function runTaskGraph(
               runWithTimeout(
                 (signal) => Promise.resolve(task.run({ id, results, signal })),
                 timeoutFor(task),
-                id,
+                id
               ),
             {
               retries: retriesFor(task),
               delayMs: options.retryDelayMs ?? 0,
               onRetry: (error, tries) => options.onTaskFailure?.(id, error, tries),
-            },
+            }
           );
           results.set(id, attempt.value);
           order.push(id);
@@ -241,7 +241,7 @@ export async function runTaskGraph(
           options.onTaskFailure?.(id, error, retriesFor(task) + 1);
           throw error;
         }
-      }),
+      })
     );
   }
 

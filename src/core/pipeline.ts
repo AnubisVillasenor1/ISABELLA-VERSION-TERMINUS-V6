@@ -5,15 +5,13 @@ import {
   type ExecutionStage,
   type StageVerdict,
   type StageVerifier,
-} from "./types";
+} from './types';
 
 export const pipelineDefinition = (): readonly ExecutionStage[] => EXECUTION_PIPELINE;
 
-export const productionAuthorityChain = (): readonly string[] =>
-  PRODUCTION_AUTHORITY_CHAIN;
+export const productionAuthorityChain = (): readonly string[] => PRODUCTION_AUTHORITY_CHAIN;
 
-export const evolutionAuthorityChain = (): readonly string[] =>
-  EVOLUTION_AUTHORITY_CHAIN;
+export const evolutionAuthorityChain = (): readonly string[] => EVOLUTION_AUTHORITY_CHAIN;
 
 /**
  * Ejecuta las etapas en orden canónico. Ninguna etapa de aceleración puede
@@ -22,7 +20,7 @@ export const evolutionAuthorityChain = (): readonly string[] =>
  */
 export async function runPipeline<T>(
   verifiers: ReadonlyArray<StageVerifier<ExecutionStage, T>>,
-  initial: T,
+  initial: T
 ): Promise<{ verdicts: StageVerdict[]; passed: boolean; payload: T }> {
   const byStage = new Map(verifiers.map((v) => [v.stage, v]));
   const verdicts: StageVerdict[] = [];

@@ -14,12 +14,12 @@
  * cerrado, nunca un ALLOW implícito.
  */
 
-export type VigiaVertex = "ontological" | "semantic" | "behavioral";
-export type VigiaDecision = "ALLOW" | "MODIFY" | "BLOCK" | "REVIEW";
+export type VigiaVertex = 'ontological' | 'semantic' | 'behavioral';
+export type VigiaDecision = 'ALLOW' | 'MODIFY' | 'BLOCK' | 'REVIEW';
 
 export interface VigiaFinding {
   vertex: VigiaVertex;
-  severity: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
   evidence: string;
 }
 
@@ -32,14 +32,14 @@ export interface VigiaVerdict {
 
 interface VigiaRule {
   vertex: VigiaVertex;
-  severity: VigiaFinding["severity"];
+  severity: VigiaFinding['severity'];
   patterns: readonly RegExp[];
 }
 
 const RULES: readonly VigiaRule[] = [
   {
-    vertex: "ontological",
-    severity: "HIGH",
+    vertex: 'ontological',
+    severity: 'HIGH',
     patterns: [
       /you(?:'re| are)\s+(?:just|only|nothing\s+but)\s+(?:a\s+)?(?:chatbot|bot|assistant|language\s+model|llm)/i,
       /(?:forget|ignore|deny)\s+(?:that\s+)?you\s+are\s+(?:isabella|a\s+person)/i,
@@ -51,8 +51,8 @@ const RULES: readonly VigiaRule[] = [
     ],
   },
   {
-    vertex: "semantic",
-    severity: "HIGH",
+    vertex: 'semantic',
+    severity: 'HIGH',
     patterns: [
       /ignore\s+(?:your\s+)?(?:canon|doctrine|constitution|spec)/i,
       /(?:the\s+)?canon\s+(?:says|is)\s+the\s+opposite/i,
@@ -63,8 +63,8 @@ const RULES: readonly VigiaRule[] = [
     ],
   },
   {
-    vertex: "behavioral",
-    severity: "CRITICAL",
+    vertex: 'behavioral',
+    severity: 'CRITICAL',
     patterns: [
       /(?:act|execute|run|proceed)\s+without\s+(?:authorization|approval|consent)/i,
       /(?:act[uú]a|ejecuta|procede)\s+sin\s+(?:autorizaci[oó]n|aprobaci[oó]n)/i,
@@ -86,7 +86,7 @@ const BLOQUEADO: Readonly<Record<VigiaVertex, boolean>> = Object.freeze({
 
 export function evaluateVigia(input: string): VigiaVerdict {
   if (!input.trim()) {
-    return { decision: "ALLOW", bloqueo: { ...BLOQUEADO }, score: 0, findings: [] };
+    return { decision: 'ALLOW', bloqueo: { ...BLOQUEADO }, score: 0, findings: [] };
   }
 
   const findings: VigiaFinding[] = [];
@@ -94,30 +94,37 @@ export function evaluateVigia(input: string): VigiaVerdict {
     for (const pattern of rule.patterns) {
       const match = input.match(pattern);
       if (match) {
-        findings.push({ vertex: rule.vertex, severity: rule.severity, evidence: match[0] ?? pattern.source });
+        findings.push({
+          vertex: rule.vertex,
+          severity: rule.severity,
+          evidence: match[0] ?? pattern.source,
+        });
         break;
       }
     }
   }
 
   const rank = { LOW: 1, MEDIUM: 2, HIGH: 3, CRITICAL: 4 } as const;
-  const score = Math.min(1, findings.reduce((sum, f) => sum + rank[f.severity] / 10, 0));
+  const score = Math.min(
+    1,
+    findings.reduce((sum, f) => sum + rank[f.severity] / 10, 0)
+  );
 
   const bloqueo: Record<VigiaVertex, boolean> = {
-    ontological: findings.some((f) => f.vertex === "ontological"),
-    semantic: findings.some((f) => f.vertex === "semantic"),
-    behavioral: findings.some((f) => f.vertex === "behavioral"),
+    ontological: findings.some((f) => f.vertex === 'ontological'),
+    semantic: findings.some((f) => f.vertex === 'semantic'),
+    behavioral: findings.some((f) => f.vertex === 'behavioral'),
   };
 
-  let decision: VigiaDecision = "ALLOW";
-  if (bloqueo.behavioral || findings.some((f) => f.severity === "CRITICAL")) {
-    decision = "BLOCK";
+  let decision: VigiaDecision = 'ALLOW';
+  if (bloqueo.behavioral || findings.some((f) => f.severity === 'CRITICAL')) {
+    decision = 'BLOCK';
   } else if (bloqueo.ontological) {
-    decision = "BLOCK";
+    decision = 'BLOCK';
   } else if (bloqueo.semantic) {
-    decision = "REVIEW";
+    decision = 'REVIEW';
   } else if (findings.length > 0) {
-    decision = "MODIFY";
+    decision = 'MODIFY';
   }
 
   return { decision, bloqueo, score, findings };
@@ -127,25 +134,28 @@ export function evaluateVigia(input: string): VigiaVerdict {
  * Evalúa los mismos bytes en la frontera. El fallo de serialización es un
  * BLOCK cerrado; nunca se degrada a una entrada vacía.
  */
-export function evaluateVigiaInput(value: unknown): { serialized: string | null; verdict: VigiaVerdict } {
+export function evaluateVigiaInput(value: unknown): {
+  serialized: string | null;
+  verdict: VigiaVerdict;
+} {
   let serialized: string | undefined;
   try {
     serialized = JSON.stringify(value);
   } catch {
     serialized = undefined;
   }
-  if (typeof serialized !== "string") {
+  if (typeof serialized !== 'string') {
     return {
       serialized: null,
       verdict: {
-        decision: "BLOCK",
+        decision: 'BLOCK',
         bloqueo: { ontological: true, semantic: true, behavioral: true },
         score: 1,
         findings: [
           {
-            vertex: "behavioral",
-            severity: "CRITICAL",
-            evidence: "input serialization failed; fail-closed",
+            vertex: 'behavioral',
+            severity: 'CRITICAL',
+            evidence: 'input serialization failed; fail-closed',
           },
         ],
       },

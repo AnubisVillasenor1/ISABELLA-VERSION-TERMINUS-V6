@@ -1,6 +1,6 @@
-import { createHash } from "node:crypto";
+import { createHash } from 'node:crypto';
 
-export type AionState = "LEARNING" | "NORMAL" | "SUSPICIOUS" | "CRITICAL";
+export type AionState = 'LEARNING' | 'NORMAL' | 'SUSPICIOUS' | 'CRITICAL';
 
 export interface ArgusObservation {
   latencyMs: number;
@@ -79,10 +79,10 @@ export class ArgusAionBehavioralSentinel {
 
   observe(observation: ArgusObservation): AionAssessment {
     if (!validObservation(observation)) {
-      return this.assessment("CRITICAL", 1, ["invalid_observation"]);
+      return this.assessment('CRITICAL', 1, ['invalid_observation']);
     }
     if (observation.sequence <= this.lastSequence || observation.timestamp < this.lastTimestamp) {
-      return this.assessment("CRITICAL", 1, ["sequence_or_time_regression"]);
+      return this.assessment('CRITICAL', 1, ['sequence_or_time_regression']);
     }
 
     const deviations = {
@@ -99,19 +99,19 @@ export class ArgusAionBehavioralSentinel {
       deviations.latency * 0.34 +
         deviations.risk * 0.31 +
         deviations.veto * 0.25 +
-        deviations.policy * 0.1,
+        deviations.policy * 0.1
     );
     const reasons = Object.entries(deviations)
       .filter(([, value]) => value >= 0.5)
       .map(([key]) => `${key}_deviation`);
     const state: AionState =
       this.baseline.latency.length < this.minimumSamples
-        ? "LEARNING"
+        ? 'LEARNING'
         : score >= 0.8
-          ? "CRITICAL"
+          ? 'CRITICAL'
           : score >= 0.45
-            ? "SUSPICIOUS"
-            : "NORMAL";
+            ? 'SUSPICIOUS'
+            : 'NORMAL';
 
     this.lastSequence = observation.sequence;
     this.lastTimestamp = observation.timestamp;
@@ -126,8 +126,8 @@ export class ArgusAionBehavioralSentinel {
     return {
       state:
         this.baseline.latency.length < this.minimumSamples
-          ? ("LEARNING" as const)
-          : ("NORMAL" as const),
+          ? ('LEARNING' as const)
+          : ('NORMAL' as const),
       size: this.baseline.latency.length,
       lastSequence: this.lastSequence,
     };
@@ -141,11 +141,11 @@ export class ArgusAionBehavioralSentinel {
     state: AionState,
     anomalyScore: number,
     reasons: string[],
-    observation?: ArgusObservation,
+    observation?: ArgusObservation
   ): AionAssessment {
-    const observationDigest = createHash("sha256")
+    const observationDigest = createHash('sha256')
       .update(JSON.stringify(observation ?? { state, anomalyScore, reasons }))
-      .digest("hex");
+      .digest('hex');
     return {
       state,
       anomalyScore,
@@ -174,11 +174,11 @@ export class ArgusAionBehaviorSentinel {
     policyVersion: string;
     decisionDigest: string;
   }) {
-    if (sample.sequence <= this.lastSequence) throw new Error("aion_behavior_invalid_sequence");
+    if (sample.sequence <= this.lastSequence) throw new Error('aion_behavior_invalid_sequence');
     this.lastSequence = sample.sequence;
-    if (sample.sequence < 1) throw new Error("aion_behavior_invalid_sequence");
+    if (sample.sequence < 1) throw new Error('aion_behavior_invalid_sequence');
     if (!/^[a-f0-9]{64}$/u.test(sample.decisionDigest)) {
-      throw new Error("aion_behavior_invalid_integrity");
+      throw new Error('aion_behavior_invalid_integrity');
     }
     const assessment = this.sentinel.observe({
       sequence: sample.sequence,
@@ -193,7 +193,7 @@ export class ArgusAionBehaviorSentinel {
       ...assessment,
       status: assessment.state,
       sampleCount: assessment.baselineSize,
-      policyChanged: assessment.reasons.includes("policy_deviation"),
+      policyChanged: assessment.reasons.includes('policy_deviation'),
       latencyDeviation: assessment.anomalyScore,
       riskDeviation: assessment.anomalyScore,
       vetoDeviation: assessment.anomalyScore,

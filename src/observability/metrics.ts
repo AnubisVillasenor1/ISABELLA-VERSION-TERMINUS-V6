@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash } from 'node:crypto';
 
 export interface MetricsSnapshot {
   readonly requestCount: number;
@@ -28,14 +28,18 @@ export class MetricsRegistry {
   private readonly latencyWindowSize: number;
 
   constructor(latencyWindowSize = DEFAULT_LATENCY_WINDOW) {
-    if (!Number.isInteger(latencyWindowSize) || latencyWindowSize < 100 || latencyWindowSize > 100_000) {
-      throw new Error("METRICS: latencyWindowSize must be an integer between 100 and 100000");
+    if (
+      !Number.isInteger(latencyWindowSize) ||
+      latencyWindowSize < 100 ||
+      latencyWindowSize > 100_000
+    ) {
+      throw new Error('METRICS: latencyWindowSize must be an integer between 100 and 100000');
     }
     this.latencyWindowSize = latencyWindowSize;
   }
 
   recordRequest(elapsedMs: number, options: RecordRequestOptions = {}): void {
-    if (typeof elapsedMs !== "number" || !Number.isFinite(elapsedMs) || elapsedMs < 0) return;
+    if (typeof elapsedMs !== 'number' || !Number.isFinite(elapsedMs) || elapsedMs < 0) return;
     this.requestCount += 1;
     this.latencies.push(elapsedMs);
     if (this.latencies.length > this.latencyWindowSize) {
@@ -59,7 +63,8 @@ export class MetricsRegistry {
       requestCount: this.requestCount,
       errorCount: this.errorCount,
       avgResponseTimeMs: Number(avg.toFixed(2)),
-      errorRate: this.requestCount === 0 ? 0 : Number((this.errorCount / this.requestCount).toFixed(4)),
+      errorRate:
+        this.requestCount === 0 ? 0 : Number((this.errorCount / this.requestCount).toFixed(4)),
       memoryUsageBytes,
       memoryUsageMb: Number((memoryUsageBytes / (1024 * 1024)).toFixed(2)),
       p50ResponseTimeMs: Number(percentile(sorted, 50).toFixed(2)),
@@ -71,11 +76,14 @@ export class MetricsRegistry {
 }
 
 export function createMetricsSnapshotHash(snapshot: MetricsSnapshot): string {
-  return createHash("sha256").update(JSON.stringify(snapshot)).digest("hex").slice(0, 12);
+  return createHash('sha256').update(JSON.stringify(snapshot)).digest('hex').slice(0, 12);
 }
 
 function percentile(sortedValues: readonly number[], p: number): number {
   if (sortedValues.length === 0) return 0;
-  const index = Math.min(sortedValues.length - 1, Math.max(0, Math.ceil((p / 100) * sortedValues.length) - 1));
+  const index = Math.min(
+    sortedValues.length - 1,
+    Math.max(0, Math.ceil((p / 100) * sortedValues.length) - 1)
+  );
   return sortedValues[index] ?? 0;
 }

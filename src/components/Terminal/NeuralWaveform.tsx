@@ -1,5 +1,5 @@
-import React from "react";
-import { OscilloscopeWaveform } from "../AudioVisualizer/OscilloscopeWaveform";
+import React from 'react';
+import { OscilloscopeWaveform } from '../AudioVisualizer/OscilloscopeWaveform';
 
 interface NeuralWaveformProps {
   height?: number;

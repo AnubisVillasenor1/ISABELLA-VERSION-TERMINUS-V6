@@ -6,14 +6,14 @@
  * Los paneles se despliegan desde sus lados correspondientes.
  */
 
-import type { ReactNode } from "react";
-import { NavigationStateProvider } from "./NavigationStateProvider";
-import { NavigationTrigger } from "./NavigationTrigger";
-import { NavigationPanel } from "./NavigationPanel";
-import { ContextNavbar } from "./ContextNavbar";
-import { WorkspaceNavbar } from "./WorkspaceNavbar";
-import { GovernanceNavbar } from "./GovernanceNavbar";
-import { MonetizationNavbar } from "./MonetizationNavbar";
+import type { ReactNode } from 'react';
+import { NavigationStateProvider } from './NavigationStateProvider';
+import { NavigationTrigger } from './NavigationTrigger';
+import { NavigationPanel } from './NavigationPanel';
+import { ContextNavbar } from './ContextNavbar';
+import { WorkspaceNavbar } from './WorkspaceNavbar';
+import { GovernanceNavbar } from './GovernanceNavbar';
+import { MonetizationNavbar } from './MonetizationNavbar';
 
 interface NavigationShellProps {
   children: ReactNode;
@@ -24,9 +24,9 @@ interface NavigationShellProps {
 
 export function NavigationShell({
   children,
-  projectName = "Mineral del Monte",
-  territory = "Hidalgo",
-  userName = "Edwin",
+  projectName = 'Mineral del Monte',
+  territory = 'Hidalgo',
+  userName = 'Edwin',
 }: NavigationShellProps) {
   return (
     <NavigationStateProvider>
@@ -94,12 +94,7 @@ export function NavigationShell({
         <main className="nav-main">{children}</main>
 
         {/* Accessible announcement region */}
-        <div
-          id="nav-announcement"
-          className="sr-only"
-          aria-live="polite"
-          aria-atomic="true"
-        />
+        <div id="nav-announcement" className="sr-only" aria-live="polite" aria-atomic="true" />
       </div>
     </NavigationStateProvider>
   );

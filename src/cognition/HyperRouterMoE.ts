@@ -67,36 +67,79 @@ interface EmbeddingGenerator {
 
 class SimpleComplexityScorer {
   private keywordWeights: Map<string, number> = new Map([
-    ['explain', 10], ['analyze', 15], ['compare', 12], ['optimize', 18],
-    ['debug', 20], ['refactor', 22], ['architect', 25], ['design', 18],
-    ['implement', 15], ['algorithm', 20], ['complex', 25], ['distributed', 20],
-    ['concurrent', 18], ['async', 12], ['recursive', 15], ['dynamic', 12],
-    ['pattern', 10], ['best practice', 12], ['trade-off', 15], ['tradeoff', 15],
-    ['security', 15], ['vulnerability', 20], ['exploit', 25], ['audit', 20],
-    ['scale', 18], ['performance', 15], ['memory leak', 20], ['deadlock', 22],
-    ['race condition', 25], ['consensus', 20], ['byzantine', 25], ['raft', 18],
-    ['paxos', 22], ['cryptography', 20], ['encryption', 15], ['zero-knowledge', 25],
-    ['blockchain', 18], ['smart contract', 20], ['solidity', 15], ['rust', 12],
-    ['go', 10], ['python', 8], ['typescript', 10], ['javascript', 8],
-    ['react', 10], ['vue', 8], ['angular', 10], ['node', 8],
-    ['docker', 10], ['kubernetes', 15], ['k8s', 15], ['terraform', 15],
-    ['aws', 10], ['gcp', 10], ['azure', 10], ['ci/cd', 12], ['pipeline', 10],
+    ['explain', 10],
+    ['analyze', 15],
+    ['compare', 12],
+    ['optimize', 18],
+    ['debug', 20],
+    ['refactor', 22],
+    ['architect', 25],
+    ['design', 18],
+    ['implement', 15],
+    ['algorithm', 20],
+    ['complex', 25],
+    ['distributed', 20],
+    ['concurrent', 18],
+    ['async', 12],
+    ['recursive', 15],
+    ['dynamic', 12],
+    ['pattern', 10],
+    ['best practice', 12],
+    ['trade-off', 15],
+    ['tradeoff', 15],
+    ['security', 15],
+    ['vulnerability', 20],
+    ['exploit', 25],
+    ['audit', 20],
+    ['scale', 18],
+    ['performance', 15],
+    ['memory leak', 20],
+    ['deadlock', 22],
+    ['race condition', 25],
+    ['consensus', 20],
+    ['byzantine', 25],
+    ['raft', 18],
+    ['paxos', 22],
+    ['cryptography', 20],
+    ['encryption', 15],
+    ['zero-knowledge', 25],
+    ['blockchain', 18],
+    ['smart contract', 20],
+    ['solidity', 15],
+    ['rust', 12],
+    ['go', 10],
+    ['python', 8],
+    ['typescript', 10],
+    ['javascript', 8],
+    ['react', 10],
+    ['vue', 8],
+    ['angular', 10],
+    ['node', 8],
+    ['docker', 10],
+    ['kubernetes', 15],
+    ['k8s', 15],
+    ['terraform', 15],
+    ['aws', 10],
+    ['gcp', 10],
+    ['azure', 10],
+    ['ci/cd', 12],
+    ['pipeline', 10],
   ]);
 
   score(prompt: string): number {
     const lowerPrompt = prompt.toLowerCase();
     let score = 0;
-    
+
     // Base score por longitud
     score += Math.min(prompt.length / 50, 30);
-    
+
     // Score por palabras clave técnicas
     for (const [keyword, weight] of this.keywordWeights) {
       if (lowerPrompt.includes(keyword)) {
         score += weight;
       }
     }
-    
+
     // Score por patrones de código
     const codePatterns = [
       /function\s+\w+/g,
@@ -108,17 +151,17 @@ class SimpleComplexityScorer {
       /Promise</g,
       /async\s*\(/g,
     ];
-    
+
     for (const pattern of codePatterns) {
       const matches = prompt.match(pattern);
       if (matches) score += matches.length * 5;
     }
-    
+
     // Score por estructura compleja
     if (prompt.includes('```')) score += 10;
     if (prompt.split('\n').length > 20) score += 15;
     if (prompt.includes('TODO') || prompt.includes('FIXME')) score += 5;
-    
+
     return Math.min(Math.max(score, 0), 100);
   }
 }
@@ -139,9 +182,9 @@ class OllamaEmbeddingGenerator implements EmbeddingGenerator {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ model: this.model, prompt: text }),
       });
-      
+
       if (!response.ok) throw new Error(`Embedding failed: ${response.statusText}`);
-      
+
       const data = await response.json();
       return data.embedding;
     } catch (error) {
@@ -160,7 +203,7 @@ class OllamaEmbeddingGenerator implements EmbeddingGenerator {
     }
     // Normalizar
     const norm = Math.sqrt(embedding.reduce((sum, v) => sum + v * v, 0));
-    return embedding.map(v => v / (norm || 1));
+    return embedding.map((v) => v / (norm || 1));
   }
 }
 
@@ -185,24 +228,60 @@ export class HyperRouterMoE {
         ramHigh: 90,
       },
       localModels: config.localModels ?? [
-        { name: 'llama3.3:8b', provider: 'ollama', maxContextLength: 8192, complexityRange: [0, 25], priority: 1 },
-        { name: 'qwen2.5-coder:14b', provider: 'ollama', maxContextLength: 32768, complexityRange: [26, 50], priority: 2 },
-        { name: 'deepseek-r1:32b', provider: 'ollama', maxContextLength: 32768, complexityRange: [51, 100], priority: 3 },
+        {
+          name: 'llama3.3:8b',
+          provider: 'ollama',
+          maxContextLength: 8192,
+          complexityRange: [0, 25],
+          priority: 1,
+        },
+        {
+          name: 'qwen2.5-coder:14b',
+          provider: 'ollama',
+          maxContextLength: 32768,
+          complexityRange: [26, 50],
+          priority: 2,
+        },
+        {
+          name: 'deepseek-r1:32b',
+          provider: 'ollama',
+          maxContextLength: 32768,
+          complexityRange: [51, 100],
+          priority: 3,
+        },
       ],
       fallbackModels: config.fallbackModels ?? [
-        { name: 'llama-3.3-70b-versatile', provider: 'groq', apiKeyEnv: 'GROQ_API_KEY', maxContextLength: 8192, enabled: true },
-        { name: 'gemini-1.5-flash', provider: 'gemini', apiKeyEnv: 'GEMINI_API_KEY', maxContextLength: 1000000, enabled: true },
-        { name: 'meta-llama/llama-3.1-405b-instruct', provider: 'openrouter', apiKeyEnv: 'OPENROUTER_API_KEY', maxContextLength: 128000, enabled: true },
+        {
+          name: 'llama-3.3-70b-versatile',
+          provider: 'groq',
+          apiKeyEnv: 'GROQ_API_KEY',
+          maxContextLength: 8192,
+          enabled: true,
+        },
+        {
+          name: 'gemini-1.5-flash',
+          provider: 'gemini',
+          apiKeyEnv: 'GEMINI_API_KEY',
+          maxContextLength: 1000000,
+          enabled: true,
+        },
+        {
+          name: 'meta-llama/llama-3.1-405b-instruct',
+          provider: 'openrouter',
+          apiKeyEnv: 'OPENROUTER_API_KEY',
+          maxContextLength: 128000,
+          enabled: true,
+        },
       ],
     };
-    
+
     this.scorer = new SimpleComplexityScorer();
     this.embeddingGenerator = new OllamaEmbeddingGenerator();
   }
 
   async initialize(db?: PostgresMultimodelAdapter): Promise<void> {
     if (this.initialized) return;
-    
+
     this.db = db || getPostgresMultimodelAdapter();
     await this.db.initialize();
     await this.registerModels();
@@ -223,14 +302,17 @@ export class HyperRouterMoE {
 
   async route(request: GenerationRequest): Promise<RoutingDecision> {
     if (!this.initialized) await this.initialize();
-    
+
     const complexityScore = this.scorer.score(request.prompt);
-    
+
     // 1. Verificar caché semántica (si no se fuerza bypass)
     if (!request.bypassCache) {
       const embedding = await this.embeddingGenerator.generate(request.prompt);
-      const cacheResult = await this.db.querySemanticCache(embedding, this.config.semanticCacheThreshold);
-      
+      const cacheResult = await this.db.querySemanticCache(
+        embedding,
+        this.config.semanticCacheThreshold
+      );
+
       if (cacheResult.hit) {
         await this.db.recordRoutingDecision(
           this.hashPrompt(request.prompt),
@@ -247,52 +329,56 @@ export class HyperRouterMoE {
         };
       }
     }
-    
+
     // 2. Verificar recursos del sistema
     const resources = await this.getSystemResources();
-    const isOverloaded = resources.cpuPercent > this.config.resourceThresholds.cpuHigh || 
-                         resources.ramPercent > this.config.resourceThresholds.ramHigh;
-    
+    const isOverloaded =
+      resources.cpuPercent > this.config.resourceThresholds.cpuHigh ||
+      resources.ramPercent > this.config.resourceThresholds.ramHigh;
+
     // 3. Seleccionar modelo por complejidad
     let selectedModel: ModelConfig | FallbackModelConfig | null = null;
     let reasoning = '';
-    
+
     if (isOverloaded) {
       // Sistema sobrecargado -> usar fallback nube
-      selectedModel = this.config.fallbackModels.find(m => m.enabled) || null;
+      selectedModel = this.config.fallbackModels.find((m) => m.enabled) || null;
       reasoning = `System overloaded (CPU: ${resources.cpuPercent}%, RAM: ${resources.ramPercent}%) - using cloud fallback`;
     } else if (request.forceModel) {
       // Modelo forzado
-      selectedModel = [...this.config.localModels, ...this.config.fallbackModels]
-        .find(m => m.name === request.forceModel) || null;
+      selectedModel =
+        [...this.config.localModels, ...this.config.fallbackModels].find(
+          (m) => m.name === request.forceModel
+        ) || null;
       reasoning = `Model forced by request: ${request.forceModel}`;
     } else {
       // Selección por complejidad
       if (complexityScore <= this.config.complexityThresholds.llama8b) {
-        selectedModel = this.config.localModels.find(m => m.name === 'llama3.3:8b') || null;
+        selectedModel = this.config.localModels.find((m) => m.name === 'llama3.3:8b') || null;
         reasoning = `Low complexity (${complexityScore}) -> Llama 3.3 8B`;
       } else if (complexityScore <= this.config.complexityThresholds.qwen14b) {
-        selectedModel = this.config.localModels.find(m => m.name === 'qwen2.5-coder:14b') || null;
+        selectedModel = this.config.localModels.find((m) => m.name === 'qwen2.5-coder:14b') || null;
         reasoning = `Medium complexity (${complexityScore}) -> Qwen 2.5 Coder 14B`;
       } else {
-        selectedModel = this.config.localModels.find(m => m.name === 'deepseek-r1:32b') || null;
+        selectedModel = this.config.localModels.find((m) => m.name === 'deepseek-r1:32b') || null;
         reasoning = `High complexity (${complexityScore}) -> DeepSeek-R1 32B`;
       }
     }
-    
+
     if (!selectedModel) {
       // Fallback final
-      selectedModel = this.config.fallbackModels.find(m => m.enabled) || this.config.localModels[0];
+      selectedModel =
+        this.config.fallbackModels.find((m) => m.enabled) || this.config.localModels[0];
       reasoning = 'Default fallback';
     }
-    
+
     await this.db.recordRoutingDecision(
       this.hashPrompt(request.prompt),
       complexityScore,
       selectedModel.name,
       0
     );
-    
+
     return {
       selectedModel: selectedModel.name,
       provider: selectedModel.provider,
@@ -305,10 +391,13 @@ export class HyperRouterMoE {
   async generate(request: GenerationRequest): Promise<GenerationResponse> {
     const startTime = Date.now();
     const decision = await this.route(request);
-    
+
     if (decision.fromCache) {
       const embedding = await this.embeddingGenerator.generate(request.prompt);
-      const cacheResult = await this.db.querySemanticCache(embedding, this.config.semanticCacheThreshold);
+      const cacheResult = await this.db.querySemanticCache(
+        embedding,
+        this.config.semanticCacheThreshold
+      );
       return {
         text: cacheResult.response?.text || cacheResult.response || '',
         model: 'semantic-cache',
@@ -318,10 +407,10 @@ export class HyperRouterMoE {
         complexityScore: decision.complexityScore,
       };
     }
-    
+
     let responseText = '';
     let tokensUsed = 0;
-    
+
     try {
       if (decision.provider === 'ollama') {
         const result = await this.callOllama(decision.selectedModel, request);
@@ -342,13 +431,18 @@ export class HyperRouterMoE {
       } else {
         throw new Error(`Unknown provider: ${decision.provider}`);
       }
-      
+
       // Guardar en caché semántica
       const embedding = await this.embeddingGenerator.generate(request.prompt);
-      await this.db.storeSemanticCache(request.prompt, embedding, { text: responseText }, this.config.semanticCacheTTL);
-      
+      await this.db.storeSemanticCache(
+        request.prompt,
+        embedding,
+        { text: responseText },
+        this.config.semanticCacheTTL
+      );
+
       await this.db.updateRoutingMetrics(decision.selectedModel, true, Date.now() - startTime);
-      
+
       return {
         text: responseText,
         model: decision.selectedModel,
@@ -363,7 +457,10 @@ export class HyperRouterMoE {
     }
   }
 
-  private async callOllama(model: string, request: GenerationRequest): Promise<{ text: string; tokensUsed: number }> {
+  private async callOllama(
+    model: string,
+    request: GenerationRequest
+  ): Promise<{ text: string; tokensUsed: number }> {
     const baseUrl = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
     const response = await fetch(`${baseUrl}/api/generate`, {
       method: 'POST',
@@ -378,20 +475,23 @@ export class HyperRouterMoE {
         },
       }),
     });
-    
+
     if (!response.ok) throw new Error(`Ollama error: ${response.statusText}`);
     const data = await response.json();
     return { text: data.response || '', tokensUsed: data.eval_count || 0 };
   }
 
-  private async callGroq(model: string, request: GenerationRequest): Promise<{ text: string; tokensUsed: number }> {
+  private async callGroq(
+    model: string,
+    request: GenerationRequest
+  ): Promise<{ text: string; tokensUsed: number }> {
     const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) throw new Error('GROQ_API_KEY not configured');
-    
+
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -401,19 +501,22 @@ export class HyperRouterMoE {
         temperature: request.temperature ?? 0.7,
       }),
     });
-    
+
     if (!response.ok) throw new Error(`Groq error: ${response.statusText}`);
     const data = await response.json();
-    return { 
-      text: data.choices[0]?.message?.content || '', 
-      tokensUsed: data.usage?.total_tokens || 0 
+    return {
+      text: data.choices[0]?.message?.content || '',
+      tokensUsed: data.usage?.total_tokens || 0,
     };
   }
 
-  private async callGemini(model: string, request: GenerationRequest): Promise<{ text: string; tokensUsed: number }> {
+  private async callGemini(
+    model: string,
+    request: GenerationRequest
+  ): Promise<{ text: string; tokensUsed: number }> {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) throw new Error('GEMINI_API_KEY not configured');
-    
+
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
       {
@@ -426,24 +529,28 @@ export class HyperRouterMoE {
             temperature: request.temperature ?? 0.7,
           },
         }),
-      });
-    
+      }
+    );
+
     if (!response.ok) throw new Error(`Gemini error: ${response.statusText}`);
     const data = await response.json();
-    return { 
-      text: data.candidates[0]?.content?.parts[0]?.text || '', 
-      tokensUsed: data.usageMetadata?.totalTokenCount || 0 
+    return {
+      text: data.candidates[0]?.content?.parts[0]?.text || '',
+      tokensUsed: data.usageMetadata?.totalTokenCount || 0,
     };
   }
 
-  private async callOpenRouter(model: string, request: GenerationRequest): Promise<{ text: string; tokensUsed: number }> {
+  private async callOpenRouter(
+    model: string,
+    request: GenerationRequest
+  ): Promise<{ text: string; tokensUsed: number }> {
     const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) throw new Error('OPENROUTER_API_KEY not configured');
-    
+
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
         'HTTP-Referer': 'https://isabella.tamv.online',
         'X-Title': 'Isabella Genesis',
@@ -455,12 +562,12 @@ export class HyperRouterMoE {
         temperature: request.temperature ?? 0.7,
       }),
     });
-    
+
     if (!response.ok) throw new Error(`OpenRouter error: ${response.statusText}`);
     const data = await response.json();
-    return { 
-      text: data.choices[0]?.message?.content || '', 
-      tokensUsed: data.usage?.total_tokens || 0 
+    return {
+      text: data.choices[0]?.message?.content || '',
+      tokensUsed: data.usage?.total_tokens || 0,
     };
   }
 
@@ -479,7 +586,10 @@ export class HyperRouterMoE {
     database: unknown;
     resources: { cpuPercent: number; ramPercent: number };
     models: { local: number; fallback: number };
-    config: { cacheThreshold: number; complexityThresholds: HyperRouterConfig['complexityThresholds'] };
+    config: {
+      cacheThreshold: number;
+      complexityThresholds: HyperRouterConfig['complexityThresholds'];
+    };
   }> {
     const dbHealth = await this.db.healthCheck();
     const resources = await this.getSystemResources();
@@ -489,7 +599,7 @@ export class HyperRouterMoE {
       resources,
       models: {
         local: this.config.localModels.length,
-        fallback: this.config.fallbackModels.filter(m => m.enabled).length,
+        fallback: this.config.fallbackModels.filter((m) => m.enabled).length,
       },
       config: {
         cacheThreshold: this.config.semanticCacheThreshold,
@@ -509,7 +619,10 @@ export function getHyperRouter(config?: Partial<HyperRouterConfig>): HyperRouter
   return hyperRouterInstance;
 }
 
-export async function initializeHyperRouter(config?: Partial<HyperRouterConfig>, db?: PostgresMultimodelAdapter): Promise<HyperRouterMoE> {
+export async function initializeHyperRouter(
+  config?: Partial<HyperRouterConfig>,
+  db?: PostgresMultimodelAdapter
+): Promise<HyperRouterMoE> {
   const router = getHyperRouter(config);
   await router.initialize(db);
   return router;

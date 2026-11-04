@@ -18,15 +18,15 @@
  * importar desde esta autoridad, no desde crown.ts directamente.
  */
 
-export * from "./crown";
-export { CROWN_V6, NODES_12, MODULES_12, EXTENDED_MODULES, MODULE_TO_NODE } from "./crown-v6";
-export type { NodeId } from "./crown-v6";
+export * from './crown';
+export { CROWN_V6, NODES_12, MODULES_12, EXTENDED_MODULES, MODULE_TO_NODE } from './crown-v6';
+export type { NodeId } from './crown-v6';
 
 /** Registro de la autoridad (catálogo CROWN v6). */
-export const CROWN_RUNTIME_AUTHORITY = "CROWN_V6" as const;
-export const CROWN_AUTHORITY_VERSION = "6.0.0-fusion" as const;
+export const CROWN_RUNTIME_AUTHORITY = 'CROWN_V6' as const;
+export const CROWN_AUTHORITY_VERSION = '6.0.0-fusion' as const;
 /** Versión del compatibility adapter de los 5 módulos base (quien evalúa de verdad). */
-export const CROWN_COMPAT_ADAPTER_VERSION = "2.0.0" as const;
+export const CROWN_COMPAT_ADAPTER_VERSION = '2.0.0' as const;
 /**
  * Falso: los módulos extendidos de v6 (7) NO están cableados al pipeline de
  * decisión. Se expone como constante para que ningún consumidor pueda

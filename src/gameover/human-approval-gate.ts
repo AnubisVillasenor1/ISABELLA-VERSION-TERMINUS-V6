@@ -21,18 +21,44 @@ export interface HumanApprovalResult {
 
 export function evaluateHumanApproval(input: HumanApprovalInput): HumanApprovalResult {
   if (!input.required) {
-    return Object.freeze({ required: false, satisfied: true, approver: null, reason: "HUMAN_APPROVAL_NOT_REQUIRED" });
+    return Object.freeze({
+      required: false,
+      satisfied: true,
+      approver: null,
+      reason: 'HUMAN_APPROVAL_NOT_REQUIRED',
+    });
   }
-  const approver = typeof input.requestedApprover === "string" && input.requestedApprover.trim() ? input.requestedApprover.trim() : null;
+  const approver =
+    typeof input.requestedApprover === 'string' && input.requestedApprover.trim()
+      ? input.requestedApprover.trim()
+      : null;
   if (!approver) {
-    return Object.freeze({ required: true, satisfied: false, approver: null, reason: "HUMAN_APPROVER_REQUIRED" });
+    return Object.freeze({
+      required: true,
+      satisfied: false,
+      approver: null,
+      reason: 'HUMAN_APPROVER_REQUIRED',
+    });
   }
-  const principal = typeof input.authenticatedPrincipal === "string" && input.authenticatedPrincipal.trim() ? input.authenticatedPrincipal.trim() : null;
+  const principal =
+    typeof input.authenticatedPrincipal === 'string' && input.authenticatedPrincipal.trim()
+      ? input.authenticatedPrincipal.trim()
+      : null;
   if (!principal) {
-    return Object.freeze({ required: true, satisfied: false, approver, reason: "HUMAN_AUTHENTICATED_PRINCIPAL_REQUIRED" });
+    return Object.freeze({
+      required: true,
+      satisfied: false,
+      approver,
+      reason: 'HUMAN_AUTHENTICATED_PRINCIPAL_REQUIRED',
+    });
   }
   if (principal !== approver) {
-    return Object.freeze({ required: true, satisfied: false, approver, reason: "HUMAN_APPROVER_MISMATCH" });
+    return Object.freeze({
+      required: true,
+      satisfied: false,
+      approver,
+      reason: 'HUMAN_APPROVER_MISMATCH',
+    });
   }
-  return Object.freeze({ required: true, satisfied: true, approver, reason: "HUMAN_APPROVED" });
+  return Object.freeze({ required: true, satisfied: true, approver, reason: 'HUMAN_APPROVED' });
 }

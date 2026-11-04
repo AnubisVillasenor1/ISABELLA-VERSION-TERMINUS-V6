@@ -3,9 +3,9 @@
  * Estado: implementación operativa contra Stripe Issuing + Neon RLS; sin fallback simulado
  * Simetría doc↔código: este archivo respalda M13.3 y M13.4 del doc canónico
  */
-import Stripe from "stripe";
-import { config } from "../config";
-import { createBookpiPostgresRepository } from "../repositories/bookpi-postgres-repository";
+import Stripe from 'stripe';
+import { config } from '../config';
+import { createBookpiPostgresRepository } from '../repositories/bookpi-postgres-repository';
 
 export type CattleyaTier = 0 | 1 | 2 | 3; // Básica, Regular, Especial, Coleccionable
 export const CATTLEYA_MAX_SCORE = 2000;
@@ -49,16 +49,16 @@ export interface CattleyaSplitCalculation {
 export function calculateCattleyaSplit(amountUsd: number): CattleyaSplitCalculation {
   const safeAmount = Math.max(amountUsd, 0);
   const creatorUsd = parseFloat(
-    ((safeAmount * CATTLEYA_SPLIT_PERCENTAGES.creator) / 100).toFixed(2),
+    ((safeAmount * CATTLEYA_SPLIT_PERCENTAGES.creator) / 100).toFixed(2)
   );
   const platformUsd = parseFloat(
-    ((safeAmount * CATTLEYA_SPLIT_PERCENTAGES.platform) / 100).toFixed(2),
+    ((safeAmount * CATTLEYA_SPLIT_PERCENTAGES.platform) / 100).toFixed(2)
   );
   const backupFundUsd = parseFloat(
-    ((safeAmount * CATTLEYA_SPLIT_PERCENTAGES.backupFund) / 100).toFixed(2),
+    ((safeAmount * CATTLEYA_SPLIT_PERCENTAGES.backupFund) / 100).toFixed(2)
   );
   const communityFundUsd = parseFloat(
-    ((safeAmount * CATTLEYA_SPLIT_PERCENTAGES.communityFund) / 100).toFixed(2),
+    ((safeAmount * CATTLEYA_SPLIT_PERCENTAGES.communityFund) / 100).toFixed(2)
   );
   const totalRetentionUsd = parseFloat((platformUsd + backupFundUsd + communityFundUsd).toFixed(2));
 
@@ -78,17 +78,17 @@ export function calculateCattleyaSplit(amountUsd: number): CattleyaSplitCalculat
 }
 
 export const COMMISSION_BY_TIER: Record<string, number> = {
-  "plan-nodo-cero-enterprise": 0.12, // Celestial (12%)
-  "plan-merchant": 0.15, // Gremial (15%)
-  "plan-citizen": 0.18, // Creador (18%)
-  "plan-visitor": 0.2, // Estándar / Visitante (20%)
+  'plan-nodo-cero-enterprise': 0.12, // Celestial (12%)
+  'plan-merchant': 0.15, // Gremial (15%)
+  'plan-citizen': 0.18, // Creador (18%)
+  'plan-visitor': 0.2, // Estándar / Visitante (20%)
 };
 
 function getStripe(): Stripe | null {
   const key = config().STRIPE_SECRET_KEY;
   if (!key) return null;
   try {
-    return new Stripe(key, { apiVersion: "2022-11-15" as Stripe.LatestApiVersion });
+    return new Stripe(key, { apiVersion: '2022-11-15' as Stripe.LatestApiVersion });
   } catch {
     return null;
   }
@@ -109,26 +109,26 @@ export async function createVirtualCard(input: {
   let stripeCardId: string, last4: string, brand: string, expMonth: number, expYear: number;
 
   if (!stripe) {
-    throw new Error("stripe_issuing_unconfigured");
+    throw new Error('stripe_issuing_unconfigured');
   }
   {
     const cardholder = await stripe.issuing.cardholders.create({
       name: input.cardholderName,
-      type: "individual",
-      status: "active",
+      type: 'individual',
+      status: 'active',
       billing: {
-        address: { line1: "N/A", city: "Real del Monte", country: "MX", postal_code: "42130" },
+        address: { line1: 'N/A', city: 'Real del Monte', country: 'MX', postal_code: '42130' },
       },
     });
     const card = await stripe.issuing.cards.create({
       cardholder: cardholder.id,
-      currency: "usd",
-      type: "virtual",
-      spending_controls: { spending_limits: [{ amount: spendingLimitDaily, interval: "daily" }] },
+      currency: 'usd',
+      type: 'virtual',
+      spending_controls: { spending_limits: [{ amount: spendingLimitDaily, interval: 'daily' }] },
     });
     stripeCardId = card.id;
-    last4 = card.last4 ?? "0000";
-    brand = card.brand ?? "visa";
+    last4 = card.last4 ?? '0000';
+    brand = card.brand ?? 'visa';
     expMonth = card.exp_month ?? 12;
     expYear = card.exp_year ?? 2028;
   }
@@ -140,25 +140,25 @@ export async function createVirtualCard(input: {
       tenantId: input.tenantId,
       userId: input.userId,
       operation: `CATTLEYA_CREATE:${stripeCardId}`,
-      category: "other",
+      category: 'other',
       cost: 0,
       tokens: 0,
-      status: "settled",
+      status: 'settled',
     });
   } catch (e) {
     // Rollback crítico: si BookPI falla, cancela la tarjeta Stripe para evitar inconsistencia financiera
     try {
       const stripeRollback = getStripe();
-      if (stripeRollback && stripeCardId && !stripeCardId.startsWith("card_mock_")) {
+      if (stripeRollback && stripeCardId && !stripeCardId.startsWith('card_mock_')) {
         await stripeRollback.issuing.cards
-          .update(stripeCardId, { status: "inactive" })
+          .update(stripeCardId, { status: 'inactive' })
           .catch(() => {});
         console.warn(`[CATTLEYA] Rollback: tarjeta ${stripeCardId} inactivada por fallo BookPI`);
       }
     } catch (rollbackErr) {
-      console.error("[CATTLEYA] Rollback falló:", (rollbackErr as Error).message);
+      console.error('[CATTLEYA] Rollback falló:', (rollbackErr as Error).message);
     }
-    console.warn("[CATTLEYA] BookPI audit failed, tarjeta revertida:", (e as Error).message);
+    console.warn('[CATTLEYA] BookPI audit failed, tarjeta revertida:', (e as Error).message);
     throw new Error(`CATTLEYA_BOOKPI_ROLLBACK: ${(e as Error).message}`);
   }
 
@@ -172,8 +172,8 @@ export async function createVirtualCard(input: {
       exp_month: expMonth,
       exp_year: expYear,
       spending_limit_daily: spendingLimitDaily,
-      status: "active" as const,
-      fundsProtection: "NON_CUSTODIAL_GUARANTEE_UNBLOCKED",
+      status: 'active' as const,
+      fundsProtection: 'NON_CUSTODIAL_GUARANTEE_UNBLOCKED',
     },
   };
 }
@@ -188,7 +188,7 @@ export function commissionForPlan(
   options?: {
     loyaltyDiscountPct?: number;
     reputationScore?: number;
-  },
+  }
 ): { rate: number; allowed: boolean; loyaltyDiscountAppliedPct: number } {
   const baseRate = COMMISSION_BY_TIER[planId] ?? 0.2;
 

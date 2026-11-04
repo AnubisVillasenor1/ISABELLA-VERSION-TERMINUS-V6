@@ -3,15 +3,15 @@
  * state: engine-generated
  */
 
-import { createHash } from "node:crypto";
+import { createHash } from 'node:crypto';
 
 export interface BookPIEvent {
   readonly id: string;
   readonly timestamp: string;
   readonly type: string;
   readonly methodId: string;
-  readonly riskTier: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
-  readonly status: "ADMITTED" | "BLOCKED_BY_POLICY" | "EXECUTED" | "COMMITTED";
+  readonly riskTier: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  readonly status: 'ADMITTED' | 'BLOCKED_BY_POLICY' | 'EXECUTED' | 'COMMITTED';
   readonly previousHash: string;
   readonly hash: string;
 }
@@ -26,27 +26,26 @@ export interface VerificationResult {
 
 export interface BookPIConfig {
   readonly genesisHash: string;
-  readonly hashAlgorithm: "sha256" | "sha3-512" | "blake3";
+  readonly hashAlgorithm: 'sha256' | 'sha3-512' | 'blake3';
 }
 
 const DEFAULT_CONFIG: BookPIConfig = {
-  genesisHash: "GENESIS",
-  hashAlgorithm: "sha256",
+  genesisHash: 'GENESIS',
+  hashAlgorithm: 'sha256',
 };
 
 function stableStringify(obj: unknown): string {
-  return JSON.stringify(obj, (_, v) => 
-    typeof v === "bigint" ? v.toString() : 
-    typeof v === "symbol" ? v.toString() : v
+  return JSON.stringify(obj, (_, v) =>
+    typeof v === 'bigint' ? v.toString() : typeof v === 'symbol' ? v.toString() : v
   );
 }
 
-function hash(data: string, algorithm: "sha256" | "sha3-512" | "blake3" = "sha256"): string {
-  if (algorithm === "blake3") {
+function hash(data: string, algorithm: 'sha256' | 'sha3-512' | 'blake3' = 'sha256'): string {
+  if (algorithm === 'blake3') {
     // Blake3 not available in Node.js core, fallback to sha256
-    return createHash("sha256").update(data).digest("hex");
+    return createHash('sha256').update(data).digest('hex');
   }
-  return createHash(algorithm).update(data).digest("hex");
+  return createHash(algorithm).update(data).digest('hex');
 }
 
 export class BookPIIntegrityVerifier {
@@ -66,22 +65,26 @@ export class BookPIIntegrityVerifier {
 
     for (let i = 0; i < events.length; i++) {
       const event = events[i];
-      
+
       // 1. Verificar hash del evento actual
       const eventHash = this.computeEventHash(event);
       if (event.hash !== eventHash) {
-        errors.push(`Event ${i} (${event.id}): hash mismatch - expected ${eventHash}, got ${event.hash}`);
+        errors.push(
+          `Event ${i} (${event.id}): hash mismatch - expected ${eventHash}, got ${event.hash}`
+        );
       }
 
       // 2. Verificar enlace con evento anterior
       if (event.previousHash !== expectedPreviousHash) {
-        errors.push(`Event ${i} (${event.id}): broken chain - expected previous hash ${expectedPreviousHash}, got ${event.previousHash}`);
+        errors.push(
+          `Event ${i} (${event.id}): broken chain - expected previous hash ${expectedPreviousHash}, got ${event.previousHash}`
+        );
       }
 
       if (errors.length === 0 || errors[errors.length - 1].startsWith(`Event ${i}`) === false) {
         validCount++;
       }
-      
+
       expectedPreviousHash = event.hash;
     }
 
@@ -129,14 +132,12 @@ export class BookPIIntegrityVerifier {
     rootHash: string
   ): boolean {
     let currentHash = leafHash;
-    
+
     for (const step of proof) {
-      const combined = step.left 
-        ? step.hash + currentHash 
-        : currentHash + step.hash;
+      const combined = step.left ? step.hash + currentHash : currentHash + step.hash;
       currentHash = this.hash(combined);
     }
-    
+
     return currentHash === rootHash;
   }
 
@@ -148,15 +149,15 @@ export class BookPIIntegrityVerifier {
     leafIndex: number
   ): { leafHash: string; proof: { hash: string; left: boolean }[] } | null {
     if (leafIndex < 0 || leafIndex >= events.length) return null;
-    
-    const leaves = events.map(e => this.computeEventHash(e));
+
+    const leaves = events.map((e) => this.computeEventHash(e));
     const leafHash = leaves[leafIndex];
     const proof: { hash: string; left: boolean }[] = [];
-    
+
     // Construir árbol Merkle y generar prueba
     let currentLevel = leaves;
     let currentIndex = leafIndex;
-    
+
     while (currentLevel.length > 1) {
       const nextLevel: string[] = [];
       for (let i = 0; i < currentLevel.length; i += 2) {
@@ -167,39 +168,35 @@ export class BookPIIntegrityVerifier {
           nextLevel.push(currentLevel[i]);
         }
       }
-      
+
       // Determinar si el índice actual es par (izquierda) o impar (derecha)
       const isLeft = currentIndex % 2 === 0;
       const siblingIndex = isLeft ? currentIndex + 1 : currentIndex - 1;
-      
+
       if (siblingIndex < currentLevel.length) {
         proof.push({
           hash: currentLevel[siblingIndex],
           left: isLeft,
         });
       }
-      
+
       currentLevel = nextLevel;
       currentIndex = Math.floor(currentIndex / 2);
     }
-    
+
     return { leafHash, proof };
   }
 
   /**
    * Verifica consistencia entre dos tamaños de árbol (RFC 6962)
    */
-  verifyConsistency(
-    events: readonly BookPIEvent[],
-    oldSize: number,
-    newSize: number
-  ): boolean {
+  verifyConsistency(events: readonly BookPIEvent[], oldSize: number, newSize: number): boolean {
     if (oldSize > newSize || oldSize === 0) return false;
     if (oldSize === newSize) return true;
-    
+
     const oldRoot = this.computeRootHash(events.slice(0, oldSize));
     const newRoot = this.computeRootHash(events.slice(0, newSize));
-    
+
     // Para simplicidad, verificamos que la raíz antigua está en el nuevo árbol
     // Implementación completa requeriría prueba de consistencia RFC 6962
     return oldRoot === newRoot; // Simplificado
@@ -207,9 +204,9 @@ export class BookPIIntegrityVerifier {
 
   private computeRootHash(events: readonly BookPIEvent[]): string {
     if (events.length === 0) return this.config.genesisHash;
-    
-    let currentLevel = events.map(e => this.computeEventHash(e));
-    
+
+    let currentLevel = events.map((e) => this.computeEventHash(e));
+
     while (currentLevel.length > 1) {
       const nextLevel: string[] = [];
       for (let i = 0; i < currentLevel.length; i += 2) {
@@ -221,7 +218,7 @@ export class BookPIIntegrityVerifier {
       }
       currentLevel = nextLevel;
     }
-    
+
     return currentLevel[0] || this.config.genesisHash;
   }
 

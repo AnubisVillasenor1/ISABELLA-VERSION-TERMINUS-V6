@@ -1,5 +1,5 @@
 /**
- * NODE VM EXECUTOR (src/lib/sandbox/node-vm-executor.ts)
+ * NODE VM EXECUTOR (src/lib/lib/sandbox/node-vm-executor.ts)
  * -----------------------------------------------------------------
  * Ejecutor REAL de cómputo aislado para tareas JavaScript puras:
  *  - Contexto V8 congelado: solo `Math` y `JSON` (sin `process`,
@@ -13,7 +13,7 @@
  * requiere un ejecutor de contenedores real.
  */
 
-import vm from "node:vm";
+import vm from 'node:vm';
 
 export interface VmTask {
   /** Expresión JavaScript pura (se evalúa como expresión, sin sentencias). */
@@ -71,21 +71,21 @@ function estimateGas(code: string, outputChars: number): number {
  * fail-closed si el código es rechazado, excede el timeout o falla.
  */
 export async function runNodeVmTask(task: VmTask): Promise<VmResult> {
-  const language = task.language ?? "javascript";
-  if (language !== "javascript") {
+  const language = task.language ?? 'javascript';
+  if (language !== 'javascript') {
     throw new Error(
-      `Runtime no soportado en el ejecutor local: '${language}'. Solo 'javascript' puro (sin I/O).`,
+      `Runtime no soportado en el ejecutor local: '${language}'. Solo 'javascript' puro (sin I/O).`
     );
   }
-  if (typeof task.code !== "string" || task.code.length === 0 || task.code.length > 20_000) {
-    throw new Error("Código vacío o mayor a 20KB.");
+  if (typeof task.code !== 'string' || task.code.length === 0 || task.code.length > 20_000) {
+    throw new Error('Código vacío o mayor a 20KB.');
   }
   const staticRejection = staticRejectReason(task.code);
   if (staticRejection) throw new Error(staticRejection);
 
   const timeoutMs = Math.min(
     Math.max(task.timeoutMs ?? VM_DEFAULT_TIMEOUT_MS, 50),
-    VM_MAX_TIMEOUT_MS,
+    VM_MAX_TIMEOUT_MS
   );
   const maxOutput = task.maxOutputChars ?? VM_MAX_OUTPUT_CHARS;
 
@@ -111,10 +111,10 @@ export async function runNodeVmTask(task: VmTask): Promise<VmResult> {
   }
 
   let output: string;
-  if (typeof raw === "string") output = raw;
+  if (typeof raw === 'string') output = raw;
   else {
     try {
-      output = JSON.stringify(raw) ?? "undefined";
+      output = JSON.stringify(raw) ?? 'undefined';
     } catch {
       output = String(raw);
     }
@@ -122,7 +122,7 @@ export async function runNodeVmTask(task: VmTask): Promise<VmResult> {
   if (output.length > maxOutput) output = `${output.slice(0, maxOutput)}…[truncado]`;
   return {
     output,
-    memoryConsumedBytes: Buffer.byteLength(output, "utf8") + Buffer.byteLength(task.code, "utf8"),
+    memoryConsumedBytes: Buffer.byteLength(output, 'utf8') + Buffer.byteLength(task.code, 'utf8'),
     gasTokensConsumed: estimateGas(task.code, output.length),
   };
 }

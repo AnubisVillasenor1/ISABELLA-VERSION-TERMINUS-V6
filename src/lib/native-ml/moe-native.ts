@@ -24,10 +24,10 @@
  * Transformer paper) the gradient flows only through P_e:
  * ∂L_aux/∂logit_e = E · P_e · (f_e − Σ_k f_k · P_k).
  */
-import { createHash } from "node:crypto";
-import type { ModelIdentity, NativeMLHooks } from "./types";
+import { createHash } from 'node:crypto';
+import type { ModelIdentity, NativeMLHooks } from './types';
 
-export type MoeNativeMode = "regression" | "classification";
+export type MoeNativeMode = 'regression' | 'classification';
 
 export interface MoeNativeConfig {
   inputDim: number;
@@ -86,6 +86,18 @@ export interface MoePrediction {
   gateWeights: number[];
   overflow: boolean;
   fallbackUsed: boolean;
+}
+
+/** Real (computed) router balance diagnostics for a batch of inputs. */
+export interface MoeRoutingDiagnostics {
+  readonly entropy: number;
+  readonly entropyNormalized: number;
+  readonly gini: number;
+  readonly loadMin: number;
+  readonly loadMax: number;
+  readonly loadStd: number;
+  readonly meanProbabilities: readonly number[];
+  readonly hardLoads: readonly number[];
 }
 
 export interface MoeBatchOptions {
@@ -152,7 +164,7 @@ const DEFAULT_EPOCHS = 120;
 const DEFAULT_BATCH_SIZE = 16;
 
 function sha256(value: unknown): string {
-  return createHash("sha256").update(JSON.stringify(value)).digest("hex");
+  return createHash('sha256').update(JSON.stringify(value)).digest('hex');
 }
 
 /** Deterministic 32-bit PRNG (mulberry32). Seeded only — never Math.random. */
@@ -201,34 +213,34 @@ function requireFinite(value: number, code: string): void {
 
 function validateHyperParams(config: MoeNativeConfig): MoeNativeHyperParams {
   if (!Number.isInteger(config.inputDim) || config.inputDim < 1) {
-    throw new Error("moe_input_dim_invalid");
+    throw new Error('moe_input_dim_invalid');
   }
   if (!Number.isInteger(config.expertCount) || config.expertCount < 2) {
-    throw new Error("moe_expert_count_invalid");
+    throw new Error('moe_expert_count_invalid');
   }
   if (!Number.isInteger(config.topK) || config.topK < 1 || config.topK > config.expertCount) {
-    throw new Error("moe_topk_invalid");
+    throw new Error('moe_topk_invalid');
   }
-  if (config.mode !== "regression" && config.mode !== "classification") {
-    throw new Error("moe_mode_invalid");
+  if (config.mode !== 'regression' && config.mode !== 'classification') {
+    throw new Error('moe_mode_invalid');
   }
-  if (!Number.isInteger(config.seed)) throw new Error("moe_seed_invalid");
+  if (!Number.isInteger(config.seed)) throw new Error('moe_seed_invalid');
   const learningRate = config.learningRate ?? DEFAULT_LEARNING_RATE;
   const auxLossCoefficient = config.auxLossCoefficient ?? DEFAULT_AUX_COEFFICIENT;
   const capacityFactor = config.capacityFactor ?? DEFAULT_CAPACITY_FACTOR;
   const epochs = config.epochs ?? DEFAULT_EPOCHS;
   const batchSize = config.batchSize ?? DEFAULT_BATCH_SIZE;
   if (!(learningRate > 0) || !Number.isFinite(learningRate)) {
-    throw new Error("moe_learning_rate_invalid");
+    throw new Error('moe_learning_rate_invalid');
   }
   if (!(auxLossCoefficient >= 0) || !Number.isFinite(auxLossCoefficient)) {
-    throw new Error("moe_aux_coefficient_invalid");
+    throw new Error('moe_aux_coefficient_invalid');
   }
   if (!(capacityFactor > 0) || !Number.isFinite(capacityFactor)) {
-    throw new Error("moe_capacity_factor_invalid");
+    throw new Error('moe_capacity_factor_invalid');
   }
-  if (!Number.isInteger(epochs) || epochs < 1) throw new Error("moe_epochs_invalid");
-  if (!Number.isInteger(batchSize) || batchSize < 1) throw new Error("moe_batch_size_invalid");
+  if (!Number.isInteger(epochs) || epochs < 1) throw new Error('moe_epochs_invalid');
+  if (!Number.isInteger(batchSize) || batchSize < 1) throw new Error('moe_batch_size_invalid');
   return {
     inputDim: config.inputDim,
     expertCount: config.expertCount,
@@ -245,28 +257,28 @@ function validateHyperParams(config: MoeNativeConfig): MoeNativeHyperParams {
 
 function validateVector(vector: number[], expectedLength: number, code: string): void {
   if (vector.length !== expectedLength) throw new Error(code);
-  for (const value of vector) requireFinite(value, "moe_input_not_finite");
+  for (const value of vector) requireFinite(value, 'moe_input_not_finite');
 }
 
 function validateDataset(
   dataset: MoeNativeDataset,
-  hyper: MoeNativeHyperParams,
+  hyper: MoeNativeHyperParams
 ): { domainLabels: number[] | null; domainCount: number } {
   const { features, labels, domainLabels } = dataset;
-  if (!Array.isArray(features) || features.length < 2) throw new Error("moe_dataset_empty");
-  if (labels.length !== features.length) throw new Error("moe_dataset_cardinality_mismatch");
-  for (const row of features) validateVector(row, hyper.inputDim, "moe_feature_dimension_mismatch");
+  if (!Array.isArray(features) || features.length < 2) throw new Error('moe_dataset_empty');
+  if (labels.length !== features.length) throw new Error('moe_dataset_cardinality_mismatch');
+  for (const row of features) validateVector(row, hyper.inputDim, 'moe_feature_dimension_mismatch');
   for (const label of labels) {
-    requireFinite(label, "moe_label_not_finite");
-    if (hyper.mode === "classification" && label !== 0 && label !== 1) {
-      throw new Error("moe_label_class_invalid");
+    requireFinite(label, 'moe_label_not_finite');
+    if (hyper.mode === 'classification' && label !== 0 && label !== 1) {
+      throw new Error('moe_label_class_invalid');
     }
   }
   if (!domainLabels) return { domainLabels: null, domainCount: 0 };
-  if (domainLabels.length !== features.length) throw new Error("moe_domain_labels_invalid");
+  if (domainLabels.length !== features.length) throw new Error('moe_domain_labels_invalid');
   let domainCount = 0;
   for (const domain of domainLabels) {
-    if (!Number.isInteger(domain) || domain < 0) throw new Error("moe_domain_labels_invalid");
+    if (!Number.isInteger(domain) || domain < 0) throw new Error('moe_domain_labels_invalid');
     if (domain + 1 > domainCount) domainCount = domain + 1;
   }
   return { domainLabels, domainCount };
@@ -274,6 +286,7 @@ function validateDataset(
 
 export class MoeNativeModel {
   readonly hyper: MoeNativeHyperParams;
+  // Not `readonly`: fromArtifact restores trained weights in place after hash verification.
   private readonly routerW: number[][];
   private readonly routerB: number[];
   private readonly expertW: number[][];
@@ -285,17 +298,17 @@ export class MoeNativeModel {
     const random = mulberry32(seed);
     const scale = 1 / Math.sqrt(inputDim);
     this.routerW = Array.from({ length: expertCount }, () =>
-      Array.from({ length: inputDim }, () => (random() * 2 - 1) * scale),
+      Array.from({ length: inputDim }, () => (random() * 2 - 1) * scale)
     );
     this.routerB = Array.from({ length: expertCount }, () => (random() * 2 - 1) * scale);
     this.expertW = Array.from({ length: expertCount }, () =>
-      Array.from({ length: inputDim }, () => (random() * 2 - 1) * 0.1),
+      Array.from({ length: inputDim }, () => (random() * 2 - 1) * 0.1)
     );
     this.expertB = Array.from({ length: expertCount }, () => (random() * 2 - 1) * 0.1);
   }
 
   private validateInput(vector: number[]): void {
-    validateVector(vector, this.hyper.inputDim, "moe_input_dimension_mismatch");
+    validateVector(vector, this.hyper.inputDim, 'moe_input_dimension_mismatch');
   }
 
   private expertValue(expertIndex: number, vector: number[]): number {
@@ -310,7 +323,8 @@ export class MoeNativeModel {
     this.validateInput(vector);
     const logits = this.routerW.map(
       (weights, expertIndex) =>
-        this.routerB[expertIndex]! + weights.reduce((sum, weight, j) => sum + weight * vector[j]!, 0),
+        this.routerB[expertIndex]! +
+        weights.reduce((sum, weight, j) => sum + weight * vector[j]!, 0)
     );
     return { logits, probabilities: softmax(logits) };
   }
@@ -331,7 +345,7 @@ export class MoeNativeModel {
   private forwardToken(
     vector: number[],
     hasCapacity: (expertIndex: number) => boolean,
-    fallbackExpertId: number,
+    fallbackExpertId: number
   ): {
     value: number;
     probability: number | null;
@@ -354,7 +368,7 @@ export class MoeNativeModel {
     }
     const acceptedMass = available.reduce(
       (sum, expertIndex) => sum + probabilities[expertIndex]!,
-      0,
+      0
     );
     const normalizer = fallbackUsed ? 1 : acceptedMass;
     let combined = 0;
@@ -364,7 +378,7 @@ export class MoeNativeModel {
       gateWeights.push(weight);
       combined += weight * this.expertValue(expertIndex, vector);
     }
-    const probability = this.hyper.mode === "classification" ? sigmoid(combined) : null;
+    const probability = this.hyper.mode === 'classification' ? sigmoid(combined) : null;
     return {
       value: probability === null ? combined : probability,
       probability,
@@ -389,10 +403,10 @@ export class MoeNativeModel {
   }
 
   predictBatch(inputs: number[][], options: MoeBatchOptions = {}): MoeBatchPrediction {
-    if (!Array.isArray(inputs) || inputs.length === 0) throw new Error("moe_batch_empty");
+    if (!Array.isArray(inputs) || inputs.length === 0) throw new Error('moe_batch_empty');
     const capacityFactor = options.capacityFactor ?? this.hyper.capacityFactor;
     if (!(capacityFactor > 0) || !Number.isFinite(capacityFactor)) {
-      throw new Error("moe_capacity_factor_invalid");
+      throw new Error('moe_capacity_factor_invalid');
     }
     const fallbackExpertId = options.fallbackExpertId ?? 0;
     if (
@@ -400,11 +414,11 @@ export class MoeNativeModel {
       fallbackExpertId < 0 ||
       fallbackExpertId >= this.hyper.expertCount
     ) {
-      throw new Error("moe_fallback_expert_invalid");
+      throw new Error('moe_fallback_expert_invalid');
     }
     const capacity = Math.max(
       1,
-      Math.floor((capacityFactor * inputs.length) / this.hyper.expertCount),
+      Math.floor((capacityFactor * inputs.length) / this.hyper.expertCount)
     );
     const used = new Array<number>(this.hyper.expertCount).fill(0);
     const outputs: number[] = [];
@@ -417,7 +431,7 @@ export class MoeNativeModel {
       const result = this.forwardToken(
         input,
         (expertIndex) => used[expertIndex]! < capacity,
-        fallbackExpertId,
+        fallbackExpertId
       );
       if (result.fallbackUsed) fallbackUsed = true;
       if (result.overflow) overflow = true;
@@ -430,7 +444,7 @@ export class MoeNativeModel {
     }
     return {
       outputs,
-      probabilities: this.hyper.mode === "classification" ? probabilities : null,
+      probabilities: this.hyper.mode === 'classification' ? probabilities : null,
       assignments,
       overflow,
       fallbackUsed,
@@ -460,6 +474,110 @@ export class MoeNativeModel {
     });
   }
 
+  /**
+   * Restores a trained model from a previously exported artifact. Fails closed
+   * on any shape mismatch and verifies the artifact hash so a tampered or
+   * truncated artifact is never silently loaded as a valid model.
+   */
+  static fromArtifact(config: MoeNativeConfig, artifact: MoeModelArtifact): MoeNativeModel {
+    const model = new MoeNativeModel(config);
+    const { inputDim, expertCount } = model.hyper;
+    const expectMatrix = (matrix: number[][], code: string): void => {
+      if (!Array.isArray(matrix) || matrix.length !== expertCount) throw new Error(code);
+      for (const row of matrix) {
+        if (!Array.isArray(row) || row.length !== inputDim) throw new Error(code);
+        for (const value of row) requireFinite(value, code);
+      }
+    };
+    const expectVector = (vector: number[], code: string): void => {
+      if (!Array.isArray(vector) || vector.length !== expertCount) throw new Error(code);
+      for (const value of vector) requireFinite(value, code);
+    };
+    expectMatrix(artifact.routerWeights, 'moe_artifact_router_weights_invalid');
+    expectVector(artifact.routerBias, 'moe_artifact_router_bias_invalid');
+    expectMatrix(artifact.expertWeights, 'moe_artifact_expert_weights_invalid');
+    expectVector(artifact.expertBias, 'moe_artifact_expert_bias_invalid');
+    const restored: MoeModelArtifact = {
+      routerWeights: artifact.routerWeights.map((row) => [...row]),
+      routerBias: [...artifact.routerBias],
+      expertWeights: artifact.expertWeights.map((row) => [...row]),
+      expertBias: [...artifact.expertBias],
+      artifactHash: artifact.artifactHash,
+    };
+    if (restored.artifactHash !== model.artifactHashFrom(restored)) {
+      throw new Error('moe_artifact_hash_mismatch');
+    }
+    model.routerW.splice(0, model.routerW.length, ...restored.routerWeights.map((row) => [...row]));
+    model.routerB.splice(0, model.routerB.length, ...restored.routerBias);
+    model.expertW.splice(0, model.expertW.length, ...restored.expertWeights.map((row) => [...row]));
+    model.expertB.splice(0, model.expertB.length, ...restored.expertBias);
+    return model;
+  }
+
+  /** Recomputes the artifact hash from a candidate payload (used by fromArtifact). */
+  private artifactHashFrom(
+    artifact: Pick<
+      MoeModelArtifact,
+      'routerWeights' | 'routerBias' | 'expertWeights' | 'expertBias'
+    >
+  ): string {
+    return sha256({
+      inputDim: this.hyper.inputDim,
+      expertCount: this.hyper.expertCount,
+      topK: this.hyper.topK,
+      mode: this.hyper.mode,
+      routerWeights: artifact.routerWeights,
+      routerBias: artifact.routerBias,
+      expertWeights: artifact.expertWeights,
+      expertBias: artifact.expertBias,
+    });
+  }
+
+  /**
+   * Router diagnostics over a batch: Shannon entropy of the mean gate
+   * distribution (how much routing mass is spread) and the Gini coefficient of
+   * hard-assignment loads (how imbalanced expert utilization is). Both are
+   * computed from real routing, not declared. `entropyNormalized` divides by
+   * ln(E) so 1 means uniform routing and 0 means all mass on one expert.
+   */
+  routingDiagnostics(inputs: number[][]): MoeRoutingDiagnostics {
+    if (!Array.isArray(inputs) || inputs.length === 0) throw new Error('moe_batch_empty');
+    const { expertCount, topK } = this.hyper;
+    const meanProbability = new Array<number>(expertCount).fill(0);
+    const hardCounts = new Array<number>(expertCount).fill(0);
+    for (const input of inputs) {
+      const { probabilities } = this.gate(input);
+      const selected = selectTopK(probabilities, topK);
+      hardCounts[selected[0]!]! += 1;
+      for (let e = 0; e < expertCount; e++)
+        meanProbability[e]! += probabilities[e]! / inputs.length;
+    }
+    let entropy = 0;
+    for (const p of meanProbability) if (p > 0) entropy -= p * Math.log(p);
+    const entropyNormalized = expertCount > 1 ? entropy / Math.log(expertCount) : 0;
+    const sorted = [...hardCounts].sort((a, b) => a - b);
+    const total = sorted.reduce((sum, value) => sum + value, 0);
+    let gini = 0;
+    if (total > 0) {
+      let weighted = 0;
+      for (let i = 0; i < sorted.length; i++) weighted += (i + 1) * sorted[i]!;
+      gini = (2 * weighted) / (expertCount * total) - (expertCount + 1) / expertCount;
+    }
+    const loads = hardCounts.map((count) => count / inputs.length);
+    return Object.freeze({
+      entropy: entropy,
+      entropyNormalized,
+      gini: Math.max(0, Math.min(1, gini)),
+      loadMin: Math.min(...loads),
+      loadMax: Math.max(...loads),
+      loadStd: Math.sqrt(
+        loads.reduce((acc, load) => acc + (load - 1 / expertCount) ** 2, 0) / expertCount
+      ),
+      meanProbabilities: Object.freeze([...meanProbability]),
+      hardLoads: Object.freeze([...loads]),
+    });
+  }
+
   private epochStats(order: number[], dataset: MoeNativeDataset): MoeBatchEvaluation {
     const { features, labels } = dataset;
     const { expertCount, topK, batchSize, mode } = this.hyper;
@@ -481,7 +599,7 @@ export class MoeNativeModel {
         for (const expertIndex of selected) {
           combined += (probabilities[expertIndex]! / mass) * this.expertValue(expertIndex, vector);
         }
-        if (mode === "regression") {
+        if (mode === 'regression') {
           const error = combined - target;
           taskSum += error * error;
         } else {
@@ -531,7 +649,7 @@ export class MoeNativeModel {
           combined += (probabilities[selected[i]!]! / mass) * expertOutputs[i]!;
         }
         let ds: number;
-        if (mode === "regression") {
+        if (mode === 'regression') {
           ds = 2 * (combined - target);
         } else {
           ds = sigmoid(combined) - target;
@@ -563,12 +681,13 @@ export class MoeNativeModel {
         inner += fMean[expertIndex]! * pMean[expertIndex]!;
       }
       const dAux = pMean.map(
-        (probability, expertIndex) => expertCount * probability * (fMean[expertIndex]! - inner),
+        (probability, expertIndex) => expertCount * probability * (fMean[expertIndex]! - inner)
       );
       const inverse = 1 / size;
       for (let expertIndex = 0; expertIndex < expertCount; expertIndex++) {
         const auxGradient = auxLossCoefficient * dAux[expertIndex]!;
-        this.routerB[expertIndex]! -= learningRate * (gRouterB[expertIndex]! * inverse + auxGradient);
+        this.routerB[expertIndex]! -=
+          learningRate * (gRouterB[expertIndex]! * inverse + auxGradient);
         this.expertB[expertIndex]! -= learningRate * gExpertB[expertIndex]! * inverse;
         for (let j = 0; j < inputDim; j++) {
           this.routerW[expertIndex]![j]! -=
@@ -587,7 +706,7 @@ export class MoeNativeModel {
     const counts = new Array<number>(expertCount).fill(0);
     const domainCounts: number[][] | null = domainLabels
       ? Array.from({ length: Math.max(...domainLabels) + 1 }, () =>
-          new Array<number>(expertCount).fill(0),
+          new Array<number>(expertCount).fill(0)
         )
       : null;
     let correct = 0;
@@ -601,7 +720,7 @@ export class MoeNativeModel {
       hardAssignments[i] = hard;
       counts[hard]! += 1;
       if (domainLabels && domainCounts) domainCounts[domainLabels[i]!]![hard]! += 1;
-      if (this.hyper.mode === "classification") {
+      if (this.hyper.mode === 'classification') {
         const predicted = prediction.value >= 0.5 ? 1 : 0;
         if (predicted === labels[i]!) correct += 1;
         if (labels[i]! === 1) positive += 1;
@@ -629,7 +748,7 @@ export class MoeNativeModel {
     }
     const total = features.length;
     const loads = counts.map((count) => count / total);
-    const classification = this.hyper.mode === "classification";
+    const classification = this.hyper.mode === 'classification';
     return {
       taskLoss: stats.taskLoss,
       auxLoss: stats.auxLoss,
@@ -644,16 +763,16 @@ export class MoeNativeModel {
 
   private assertFiniteParameters(): void {
     for (const row of [...this.routerW, ...this.expertW]) {
-      for (const value of row) requireFinite(value, "moe_training_diverged");
+      for (const value of row) requireFinite(value, 'moe_training_diverged');
     }
     for (const value of [...this.routerB, ...this.expertB]) {
-      requireFinite(value, "moe_training_diverged");
+      requireFinite(value, 'moe_training_diverged');
     }
   }
 
   async train(dataset: MoeNativeDataset, options: MoeTrainOptions): Promise<MoeTrainingResult> {
-    if (!options.ownerId) throw new Error("moe_owner_required");
-    if (!options.territoryId) throw new Error("moe_territory_required");
+    if (!options.ownerId) throw new Error('moe_owner_required');
+    if (!options.territoryId) throw new Error('moe_territory_required');
     const { domainLabels } = validateDataset(dataset, this.hyper);
     const datasetHash = sha256({
       features: dataset.features,
@@ -668,11 +787,11 @@ export class MoeNativeModel {
       seed: this.hyper.seed,
     }).slice(0, 16)}`;
     const decision = await options.hooks?.authorize?.({
-      action: "native_ml.moe.train",
+      action: 'native_ml.moe.train',
       territoryId: options.territoryId,
       modelId,
     });
-    if (decision && decision.decision !== "ALLOW") {
+    if (decision && decision.decision !== 'ALLOW') {
       throw new Error(`native_ml_${decision.decision.toLowerCase()}`);
     }
     const order = dataset.features.map((_, index) => index);
@@ -691,7 +810,7 @@ export class MoeNativeModel {
       this.assertFiniteParameters();
       const stats = this.epochStats(
         dataset.features.map((_, index) => index),
-        dataset,
+        dataset
       );
       lossHistory.push(stats.taskLoss);
       auxLossHistory.push(stats.auxLoss);
@@ -735,17 +854,17 @@ export class MoeNativeModel {
     }).slice(0, 24)}`;
     const model: ModelIdentity = {
       modelId,
-      version: "0.1.0",
+      version: '0.1.0',
       territoryId: options.territoryId,
       ownerId: options.ownerId,
       task: this.hyper.mode,
-      algorithm: "native-moe-topk-sgd",
+      algorithm: 'native-moe-topk-sgd',
       datasetIds: [`moe-dataset-${datasetHash.slice(0, 16)}`],
       modelHash: artifact.artifactHash,
       createdAt: new Date().toISOString(),
-      approvalStatus: "PENDING_REVIEW",
+      approvalStatus: 'PENDING_REVIEW',
     };
-    await options.hooks?.audit?.("native_ml.moe.training_completed", {
+    await options.hooks?.audit?.('native_ml.moe.training_completed', {
       modelId,
       trainingHash,
       artifactHash: artifact.artifactHash,
@@ -774,7 +893,7 @@ export function createMoeNative(config: MoeNativeConfig): MoeNativeModel {
 export async function trainMoeNative(
   config: MoeNativeConfig,
   dataset: MoeNativeDataset,
-  options: MoeTrainOptions,
+  options: MoeTrainOptions
 ): Promise<{ model: MoeNativeModel; result: MoeTrainingResult }> {
   const model = new MoeNativeModel(config);
   const result = await model.train(dataset, options);

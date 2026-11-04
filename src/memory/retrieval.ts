@@ -1,5 +1,5 @@
-import type { IKESEngine, KnowledgeClaim } from "./ikes";
-import type { VectorStore } from "./vector";
+import type { IKESEngine, KnowledgeClaim } from './ikes';
+import type { VectorStore } from './vector';
 
 export interface RetrievalResult {
   claims: KnowledgeClaim[];
@@ -10,12 +10,13 @@ export class GovernedRetriever {
   constructor(
     private readonly ikes: IKESEngine,
     private readonly vectors: VectorStore,
-    private readonly embed: (q: string) => Promise<readonly number[]>,
+    private readonly embed: (q: string) => Promise<readonly number[]>
   ) {}
 
   async retrieve(query: string, limit = 8): Promise<RetrievalResult> {
-    if (!query.trim()) throw new Error("RETRIEVAL: empty query rejected");
-    if (!Number.isInteger(limit) || limit < 1 || limit > 100) throw new Error("RETRIEVAL: invalid limit");
+    if (!query.trim()) throw new Error('RETRIEVAL: empty query rejected');
+    if (!Number.isInteger(limit) || limit < 1 || limit > 100)
+      throw new Error('RETRIEVAL: invalid limit');
 
     const claims = this.ikes.retrieve(query).slice(0, limit);
     const queryVector = await this.embed(query);

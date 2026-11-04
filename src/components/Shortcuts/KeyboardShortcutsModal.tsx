@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 import {
   Keyboard,
   X,
@@ -11,14 +11,14 @@ import {
   Search,
   Check,
   Command,
-} from "lucide-react";
-import { soundManager } from "../../utils/soundEffects";
-import { useCrown } from "../../context/CrownContext";
+} from 'lucide-react';
+import { soundManager } from '../../utils/soundEffects';
+import { useCrown } from '../../context/CrownContext';
 
 interface ShortcutItem {
   keys: string[];
   description: string;
-  category: "terminal" | "audio" | "navigation" | "system";
+  category: 'terminal' | 'audio' | 'navigation' | 'system';
   actionName?: string;
   recommended?: boolean;
 }
@@ -26,124 +26,124 @@ interface ShortcutItem {
 const SHORTCUT_LIST: ShortcutItem[] = [
   // Terminal & Prompting
   {
-    keys: ["Ctrl", "Enter"],
-    description: "Enviar mensaje / Despachar prompt a Isabella (también ⌘+Enter)",
-    category: "terminal",
+    keys: ['Ctrl', 'Enter'],
+    description: 'Enviar mensaje / Despachar prompt a Isabella (también ⌘+Enter)',
+    category: 'terminal',
     recommended: true,
   },
   {
-    keys: ["Enter"],
-    description: "Despachar mensaje si el cursor está en el prompt",
-    category: "terminal",
+    keys: ['Enter'],
+    description: 'Despachar mensaje si el cursor está en el prompt',
+    category: 'terminal',
   },
   {
-    keys: ["Shift", "Enter"],
-    description: "Insertar nueva línea en el campo de texto",
-    category: "terminal",
+    keys: ['Shift', 'Enter'],
+    description: 'Insertar nueva línea en el campo de texto',
+    category: 'terminal',
   },
   {
-    keys: ["Ctrl", "K"],
-    description: "Limpiar terminal y reiniciar historial de pantalla (⌘+K)",
-    category: "terminal",
+    keys: ['Ctrl', 'K'],
+    description: 'Limpiar terminal y reiniciar historial de pantalla (⌘+K)',
+    category: 'terminal',
     recommended: true,
   },
   {
-    keys: ["Ctrl", "L"],
-    description: "Enfocar el campo de texto (Prompt) desde cualquier vista (⌘+L)",
-    category: "terminal",
+    keys: ['Ctrl', 'L'],
+    description: 'Enfocar el campo de texto (Prompt) desde cualquier vista (⌘+L)',
+    category: 'terminal',
     recommended: true,
   },
   {
-    keys: ["↑", "↓"],
-    description: "Navegar por el historial de comandos ejecutados en la CLI",
-    category: "terminal",
+    keys: ['↑', '↓'],
+    description: 'Navegar por el historial de comandos ejecutados en la CLI',
+    category: 'terminal',
   },
 
   // Audio & Voz
   {
-    keys: ["Ctrl", "M"],
-    description: "Activar / Pausar micrófono (Dictado de voz a texto)",
-    category: "audio",
+    keys: ['Ctrl', 'M'],
+    description: 'Activar / Pausar micrófono (Dictado de voz a texto)',
+    category: 'audio',
     recommended: true,
   },
   {
-    keys: ["Ctrl", "Shift", "S"],
-    description: "Detener reproducción de voz actual de Isabella",
-    category: "audio",
+    keys: ['Ctrl', 'Shift', 'S'],
+    description: 'Detener reproducción de voz actual de Isabella',
+    category: 'audio',
   },
   {
-    keys: ["Ctrl", "Shift", "V"],
-    description: "Alternar narración por voz automática (ON / OFF)",
-    category: "audio",
+    keys: ['Ctrl', 'Shift', 'V'],
+    description: 'Alternar narración por voz automática (ON / OFF)',
+    category: 'audio',
   },
   {
-    keys: ["Ctrl", "Shift", "F"],
-    description: "Alternar efectos de sonido sintéticos (FX ON / OFF)",
-    category: "audio",
+    keys: ['Ctrl', 'Shift', 'F'],
+    description: 'Alternar efectos de sonido sintéticos (FX ON / OFF)',
+    category: 'audio',
   },
 
   // Navigation
   {
-    keys: ["Alt", "1"],
-    description: "Ir a la vista Terminal CROWN (o Ctrl+1)",
-    category: "navigation",
+    keys: ['Alt', '1'],
+    description: 'Ir a la vista Terminal CROWN (o Ctrl+1)',
+    category: 'navigation',
     recommended: true,
   },
   {
-    keys: ["Alt", "2"],
-    description: "Ir a la vista Presencia de Isabella (o Ctrl+2)",
-    category: "navigation",
+    keys: ['Alt', '2'],
+    description: 'Ir a la vista Presencia de Isabella (o Ctrl+2)',
+    category: 'navigation',
     recommended: true,
   },
   {
-    keys: ["Alt", "3"],
-    description: "Ir al Estudio Visual / Galería de Arte (o Ctrl+3)",
-    category: "navigation",
+    keys: ['Alt', '3'],
+    description: 'Ir al Estudio Visual / Galería de Arte (o Ctrl+3)',
+    category: 'navigation',
   },
   {
-    keys: ["Alt", "4"],
-    description: "Ir al Estudio Acústico de Voz (o Ctrl+4)",
-    category: "navigation",
+    keys: ['Alt', '4'],
+    description: 'Ir al Estudio Acústico de Voz (o Ctrl+4)',
+    category: 'navigation',
   },
   {
-    keys: ["Alt", "5"],
-    description: "Ir al Diagrama de Arquitectura y Sinapsis (o Ctrl+5)",
-    category: "navigation",
+    keys: ['Alt', '5'],
+    description: 'Ir al Diagrama de Arquitectura y Sinapsis (o Ctrl+5)',
+    category: 'navigation',
   },
   {
-    keys: ["Alt", "6"],
-    description: "Ir a la Matriz Cognitiva y Telemetría (o Ctrl+6)",
-    category: "navigation",
+    keys: ['Alt', '6'],
+    description: 'Ir a la Matriz Cognitiva y Telemetría (o Ctrl+6)',
+    category: 'navigation',
   },
   {
-    keys: ["Alt", "7"],
-    description: "Ir a la Presentación & Auditoría Arquitectónica de Nodo Cero",
-    category: "navigation",
+    keys: ['Alt', '7'],
+    description: 'Ir a la Presentación & Auditoría Arquitectónica de Nodo Cero',
+    category: 'navigation',
     recommended: true,
   },
   {
-    keys: ["Alt", "8"],
-    description: "Ir al Hub RDM & Consola de Gobernanza /api/v1/isabella",
-    category: "navigation",
+    keys: ['Alt', '8'],
+    description: 'Ir al Hub RDM & Consola de Gobernanza /api/v1/isabella',
+    category: 'navigation',
     recommended: true,
   },
 
   // System & Dialogs
   {
-    keys: ["Ctrl", "/"],
-    description: "Abrir este panel de Atajos de Teclado (o pulsar ?)",
-    category: "system",
+    keys: ['Ctrl', '/'],
+    description: 'Abrir este panel de Atajos de Teclado (o pulsar ?)',
+    category: 'system',
     recommended: true,
   },
   {
-    keys: ["Ctrl", "Shift", "D"],
-    description: "Ejecutar diagnóstico instantáneo de subsistemas (/status)",
-    category: "system",
+    keys: ['Ctrl', 'Shift', 'D'],
+    description: 'Ejecutar diagnóstico instantáneo de subsistemas (/status)',
+    category: 'system',
   },
   {
-    keys: ["Esc"],
-    description: "Cerrar modales activos, cancelar dictado o desenfocar",
-    category: "system",
+    keys: ['Esc'],
+    description: 'Cerrar modales activos, cancelar dictado o desenfocar',
+    category: 'system',
   },
 ];
 
@@ -153,9 +153,9 @@ interface Props {
 }
 
 export const KeyboardShortcutsModal: React.FC<Props> = ({ isOpen, onClose }) => {
-  const [filter, setFilter] = useState<string>("");
-  const [activeCategory, setActiveCategory] = useState<string>("all");
-  const isMac = typeof navigator !== "undefined" && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
+  const [filter, setFilter] = useState<string>('');
+  const [activeCategory, setActiveCategory] = useState<string>('all');
+  const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
 
   useEffect(() => {
     if (isOpen) {
@@ -166,17 +166,17 @@ export const KeyboardShortcutsModal: React.FC<Props> = ({ isOpen, onClose }) => 
   if (!isOpen) return null;
 
   const categories = [
-    { id: "all", label: "Todos los Atajos", icon: Command },
-    { id: "terminal", label: "Terminal y Prompt", icon: Terminal },
-    { id: "audio", label: "Voz y Micrófono", icon: Mic },
-    { id: "navigation", label: "Navegación Rápida", icon: Layers },
-    { id: "system", label: "Sistema CROWN", icon: Zap },
+    { id: 'all', label: 'Todos los Atajos', icon: Command },
+    { id: 'terminal', label: 'Terminal y Prompt', icon: Terminal },
+    { id: 'audio', label: 'Voz y Micrófono', icon: Mic },
+    { id: 'navigation', label: 'Navegación Rápida', icon: Layers },
+    { id: 'system', label: 'Sistema CROWN', icon: Zap },
   ];
 
   const filteredShortcuts = SHORTCUT_LIST.filter((item) => {
-    const matchesCategory = activeCategory === "all" || item.category === activeCategory;
+    const matchesCategory = activeCategory === 'all' || item.category === activeCategory;
     const matchesSearch =
-      filter === "" ||
+      filter === '' ||
       item.description.toLowerCase().includes(filter.toLowerCase()) ||
       item.keys.some((k) => k.toLowerCase().includes(filter.toLowerCase()));
     return matchesCategory && matchesSearch;
@@ -185,9 +185,9 @@ export const KeyboardShortcutsModal: React.FC<Props> = ({ isOpen, onClose }) => 
   const renderKeyBadge = (key: string) => {
     let displayKey = key;
     if (isMac) {
-      if (key === "Ctrl") displayKey = "⌘";
-      if (key === "Alt") displayKey = "⌥";
-      if (key === "Shift") displayKey = "⇧";
+      if (key === 'Ctrl') displayKey = '⌘';
+      if (key === 'Alt') displayKey = '⌥';
+      if (key === 'Shift') displayKey = '⇧';
     }
     return (
       <kbd
@@ -264,8 +264,8 @@ export const KeyboardShortcutsModal: React.FC<Props> = ({ isOpen, onClose }) => 
                   }}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl whitespace-nowrap transition-all cursor-pointer ${
                     active
-                      ? "bg-blue-600 text-white font-bold shadow-md shadow-blue-500/25"
-                      : "bg-[#081220] text-slate-400 hover:text-slate-200 hover:bg-[#0B1A2E] border border-slate-800"
+                      ? 'bg-blue-600 text-white font-bold shadow-md shadow-blue-500/25'
+                      : 'bg-[#081220] text-slate-400 hover:text-slate-200 hover:bg-[#0B1A2E] border border-slate-800'
                   }`}
                 >
                   <Icon className="w-3.5 h-3.5" />
@@ -318,7 +318,17 @@ export const KeyboardShortcutsModal: React.FC<Props> = ({ isOpen, onClose }) => 
         <div className="flex items-center justify-between px-6 py-3 border-t border-slate-800 bg-[#0B1526]/90 text-xs font-mono text-slate-400">
           <div className="flex items-center gap-2">
             <span className="text-amber-400 font-bold">Consejo:</span>
-            <span>Usa <kbd className="px-1.5 py-0.5 rounded bg-[#060D1A] text-sky-300 border border-slate-700 text-[11px]">Ctrl+K</kbd> para limpiar y <kbd className="px-1.5 py-0.5 rounded bg-[#060D1A] text-sky-300 border border-slate-700 text-[11px]">Ctrl+Enter</kbd> para enviar rápidamente.</span>
+            <span>
+              Usa{' '}
+              <kbd className="px-1.5 py-0.5 rounded bg-[#060D1A] text-sky-300 border border-slate-700 text-[11px]">
+                Ctrl+K
+              </kbd>{' '}
+              para limpiar y{' '}
+              <kbd className="px-1.5 py-0.5 rounded bg-[#060D1A] text-sky-300 border border-slate-700 text-[11px]">
+                Ctrl+Enter
+              </kbd>{' '}
+              para enviar rápidamente.
+            </span>
           </div>
           <button
             type="button"

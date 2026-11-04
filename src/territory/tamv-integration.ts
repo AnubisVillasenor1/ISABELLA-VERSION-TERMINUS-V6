@@ -8,22 +8,23 @@
  */
 
 export const CAPABILITY_MATURITY = [
-  "planned",
-  "experimental",
-  "simulated",
-  "implemented",
-  "tested",
-  "verified",
+  'planned',
+  'experimental',
+  'simulated',
+  'implemented',
+  'tested',
+  'verified',
 ] as const;
 
 export type CapabilityMaturity = (typeof CAPABILITY_MATURITY)[number];
 
 export const TAMV_MODULES = [
-  "MSR",
-  "MDD",
-  "DreamSpaces",
-  "Blindajes",
-  "TerritorialArchitecture",
+  'MSR',
+  'MDD',
+  'DreamSpaces',
+  'Blindajes',
+  'TerritorialArchitecture',
+  'KaosAudioSystem',
 ] as const;
 
 export type TamvModule = (typeof TAMV_MODULES)[number];
@@ -36,38 +37,46 @@ export interface TamvModuleDescriptor {
   disclaimer: string;
 }
 
-export const TAMV_INTEGRATION_MAP: Readonly<Record<TamvModule, TamvModuleDescriptor>> = Object.freeze({
-  MSR: {
-    module: "MSR",
-    role: "registro y provenance",
-    maturity: "implemented",
-    disclaimer: "Provenance no implica veracidad de la afirmación registrada.",
-  },
-  MDD: {
-    module: "MDD",
-    role: "modelo económico",
-    maturity: "planned",
-    disclaimer: "Sujeto a requisitos legales y operativos; no es una base financiera o bancaria.",
-  },
-  DreamSpaces: {
-    module: "DreamSpaces",
-    role: "experiencia web/XR por fases",
-    maturity: "experimental",
-    disclaimer: "Separación entre concepto e implementación; por fases.",
-  },
-  Blindajes: {
-    module: "Blindajes",
-    role: "controles de seguridad",
-    maturity: "implemented",
-    disclaimer: "Controles de seguridad, no garantía de invulnerabilidad.",
-  },
-  TerritorialArchitecture: {
-    module: "TerritorialArchitecture",
-    role: "contexto e identidad territorial",
-    maturity: "implemented",
-    disclaimer: "Contexto e identidad, no restricción técnica.",
-  },
-});
+export const TAMV_INTEGRATION_MAP: Readonly<Record<TamvModule, TamvModuleDescriptor>> =
+  Object.freeze({
+    MSR: {
+      module: 'MSR',
+      role: 'registro y provenance',
+      maturity: 'implemented',
+      disclaimer: 'Provenance no implica veracidad de la afirmación registrada.',
+    },
+    MDD: {
+      module: 'MDD',
+      role: 'modelo económico',
+      maturity: 'planned',
+      disclaimer: 'Sujeto a requisitos legales y operativos; no es una base financiera o bancaria.',
+    },
+    DreamSpaces: {
+      module: 'DreamSpaces',
+      role: 'experiencia web/XR por fases',
+      maturity: 'experimental',
+      disclaimer: 'Separación entre concepto e implementación; por fases.',
+    },
+    Blindajes: {
+      module: 'Blindajes',
+      role: 'controles de seguridad',
+      maturity: 'implemented',
+      disclaimer: 'Controles de seguridad, no garantía de invulnerabilidad.',
+    },
+    TerritorialArchitecture: {
+      module: 'TerritorialArchitecture',
+      role: 'contexto e identidad territorial',
+      maturity: 'implemented',
+      disclaimer: 'Contexto e identidad, no restricción técnica.',
+    },
+    KaosAudioSystem: {
+      module: 'KaosAudioSystem',
+      role: 'análisis espectral, presets y plan de redefinición de audio',
+      maturity: 'tested',
+      disclaimer:
+        'Analiza señal real y planifica; no sintetiza voz ni renderiza audio, y las cadenas de downstream siguen siendo conceptuales.',
+    },
+  });
 
 export interface IntegrationHonestyReport {
   module: TamvModule;
@@ -84,7 +93,7 @@ export interface IntegrationHonestyReport {
  */
 export function assessIntegrationHonesty(
   module: TamvModule,
-  claimedMaturity: CapabilityMaturity,
+  claimedMaturity: CapabilityMaturity
 ): IntegrationHonestyReport {
   const descriptor = TAMV_INTEGRATION_MAP[module];
   const rank = (m: CapabilityMaturity) => CAPABILITY_MATURITY.indexOf(m);

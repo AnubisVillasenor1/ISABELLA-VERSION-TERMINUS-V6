@@ -1,4 +1,4 @@
-import { createAuditEvent, IsabellaSkill, SkillResult, unique } from "./contracts";
+import { createAuditEvent, IsabellaSkill, SkillResult, unique } from './contracts';
 
 // ============================================================================
 // 10. MNEMOSYNE (Living Institutional Memory)
@@ -26,38 +26,38 @@ export interface MnemosyneOutput {
 }
 
 export const MNEMOSYNE: IsabellaSkill<MnemosyneInput, MnemosyneOutput> = {
-  id: "MNEMOSYNE",
-  name: "Living Institutional Memory",
-  version: "v.GENESIS",
-  federation: "CIVILIZATIONAL_ARCHIVE",
-  risk: "MEDIUM",
-  description: "Indexa, resume, etiqueta y versiona artefactos para la memoria del ecosistema.",
+  id: 'MNEMOSYNE',
+  name: 'Living Institutional Memory',
+  version: 'v.GENESIS',
+  federation: 'CIVILIZATIONAL_ARCHIVE',
+  risk: 'MEDIUM',
+  description: 'Indexa, resume, etiqueta y versiona artefactos para la memoria del ecosistema.',
   canRun: (input) =>
     Boolean(input.artifact?.id && input.artifact?.title && input.artifact?.content),
   async run(input, context): Promise<SkillResult<MnemosyneOutput>> {
     const words = input.artifact.content.trim().split(/\s+/);
-    const summary = words.slice(0, 80).join(" ").trim();
+    const summary = words.slice(0, 80).join(' ').trim();
 
     const tags = unique([
       ...(input.tags ?? []),
       context.federation.toLowerCase(),
-      "isabella-memory",
-      "tamv",
-      "rdm-digital",
+      'isabella-memory',
+      'tamv',
+      'rdm-digital',
     ]);
 
     const record = {
       id: input.artifact.id,
       title: input.artifact.title,
-      summary: summary + (words.length > 80 ? "…" : ""),
+      summary: summary + (words.length > 80 ? '…' : ''),
       tags,
-      version: input.artifact.version ?? "1.0.0",
+      version: input.artifact.version ?? '1.0.0',
       indexedAt: new Date().toISOString(),
     };
 
     return {
-      skillId: "MNEMOSYNE",
-      status: "SUCCESS",
+      skillId: 'MNEMOSYNE',
+      status: 'SUCCESS',
       summary: `MNEMOSYNE indexó el artefacto “${record.title}”.`,
       data: { memoryRecord: record },
       evidence: [
@@ -70,16 +70,16 @@ export const MNEMOSYNE: IsabellaSkill<MnemosyneInput, MnemosyneOutput> = {
       warnings: [],
       auditEvents: [
         createAuditEvent(
-          "SKILL_INVOKED",
-          "MNEMOSYNE",
+          'SKILL_INVOKED',
+          'MNEMOSYNE',
           { artifactId: input.artifact.id },
-          context.actorId,
+          context.actorId
         ),
         createAuditEvent(
-          "SKILL_COMPLETED",
-          "MNEMOSYNE",
+          'SKILL_COMPLETED',
+          'MNEMOSYNE',
           { tags, version: record.version },
-          context.actorId,
+          context.actorId
         ),
       ],
     };
@@ -109,17 +109,17 @@ export interface ChronosOutput {
 }
 
 export const CHRONOS: IsabellaSkill<ChronosInput, ChronosOutput> = {
-  id: "CHRONOS",
-  name: "Temporal Continuity Engine",
-  version: "v.GENESIS",
-  federation: "CIVILIZATIONAL_ARCHIVE",
-  risk: "MEDIUM",
+  id: 'CHRONOS',
+  name: 'Temporal Continuity Engine',
+  version: 'v.GENESIS',
+  federation: 'CIVILIZATIONAL_ARCHIVE',
+  risk: 'MEDIUM',
   description:
-    "Ordena eventos, preserva trazabilidad temporal y señala inconsistencias cronológicas.",
+    'Ordena eventos, preserva trazabilidad temporal y señala inconsistencias cronológicas.',
   canRun: (input) => Boolean(input.events?.length),
   async run(input, context): Promise<SkillResult<ChronosOutput>> {
     const timeline = [...input.events].sort(
-      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
     );
 
     const temporalWarnings = timeline
@@ -127,24 +127,24 @@ export const CHRONOS: IsabellaSkill<ChronosInput, ChronosOutput> = {
       .map((event) => `Timestamp inválido en ${event.id}.`);
 
     return {
-      skillId: "CHRONOS",
-      status: temporalWarnings.length ? "PARTIAL" : "SUCCESS",
+      skillId: 'CHRONOS',
+      status: temporalWarnings.length ? 'PARTIAL' : 'SUCCESS',
       summary: `CHRONOS ordenó ${timeline.length} eventos temporales.`,
       data: { timeline, temporalWarnings },
       evidence: [],
       warnings: temporalWarnings,
       auditEvents: [
         createAuditEvent(
-          "SKILL_INVOKED",
-          "CHRONOS",
+          'SKILL_INVOKED',
+          'CHRONOS',
           { eventCount: input.events.length },
-          context.actorId,
+          context.actorId
         ),
         createAuditEvent(
-          "SKILL_COMPLETED",
-          "CHRONOS",
+          'SKILL_COMPLETED',
+          'CHRONOS',
           { temporalWarnings: temporalWarnings.length },
-          context.actorId,
+          context.actorId
         ),
       ],
     };
@@ -160,7 +160,7 @@ export interface PrometeoInput {
     title: string;
     content: string;
   }>;
-  target: "BLUEPRINT" | "API" | "BACKLOG" | "ARCHITECTURE";
+  target: 'BLUEPRINT' | 'API' | 'BACKLOG' | 'ARCHITECTURE';
 }
 
 export interface PrometeoOutput {
@@ -175,29 +175,29 @@ export interface PrometeoOutput {
 }
 
 export const PROMETEO: IsabellaSkill<PrometeoInput, PrometeoOutput> = {
-  id: "PROMETEO",
-  name: "Civilizational Compiler",
-  version: "v.GENESIS",
-  federation: "CIVILIZATIONAL_ARCHIVE",
-  risk: "HIGH",
+  id: 'PROMETEO',
+  name: 'Civilizational Compiler',
+  version: 'v.GENESIS',
+  federation: 'CIVILIZATIONAL_ARCHIVE',
+  risk: 'HIGH',
   description:
-    "Convierte documentos y repositorios en blueprints, contratos y unidades implementables.",
+    'Convierte documentos y repositorios en blueprints, contratos y unidades implementables.',
   canRun: (input) => Boolean(input.documents?.length && input.target),
   async run(input, context): Promise<SkillResult<PrometeoOutput>> {
     const corpus = input.documents
       .map((doc) => `${doc.title} ${doc.content}`)
-      .join(" ")
+      .join(' ')
       .toLowerCase();
 
     const inferredDomains = unique(
       [
-        corpus.includes("api") && "API",
-        corpus.includes("seguridad") && "SECURITY",
-        corpus.includes("turismo") && "TOURISM",
-        corpus.includes("memoria") && "MEMORY",
-        corpus.includes("territorio") && "TERRITORY",
-        corpus.includes("educacion") && "EDUCATION",
-      ].filter((v): v is string => typeof v === "string"),
+        corpus.includes('api') && 'API',
+        corpus.includes('seguridad') && 'SECURITY',
+        corpus.includes('turismo') && 'TOURISM',
+        corpus.includes('memoria') && 'MEMORY',
+        corpus.includes('territorio') && 'TERRITORY',
+        corpus.includes('educacion') && 'EDUCATION',
+      ].filter((v): v is string => typeof v === 'string')
     );
 
     const proposedArtifacts = inferredDomains.map((domain) => ({
@@ -209,14 +209,14 @@ export const PROMETEO: IsabellaSkill<PrometeoInput, PrometeoOutput> = {
     const gaps =
       inferredDomains.length === 0
         ? [
-            "No se detectaron dominios suficientes.",
-            "Se requiere documentación estructurada adicional.",
+            'No se detectaron dominios suficientes.',
+            'Se requiere documentación estructurada adicional.',
           ]
         : [];
 
     return {
-      skillId: "PROMETEO",
-      status: gaps.length ? "PARTIAL" : "SUCCESS",
+      skillId: 'PROMETEO',
+      status: gaps.length ? 'PARTIAL' : 'SUCCESS',
       summary: `PROMETEO compiló ${input.documents.length} documentos hacia ${input.target}.`,
       data: {
         target: input.target,
@@ -232,12 +232,12 @@ export const PROMETEO: IsabellaSkill<PrometeoInput, PrometeoOutput> = {
       warnings: gaps,
       auditEvents: [
         createAuditEvent(
-          "SKILL_INVOKED",
-          "PROMETEO",
+          'SKILL_INVOKED',
+          'PROMETEO',
           { target: input.target, documentCount: input.documents.length },
-          context.actorId,
+          context.actorId
         ),
-        createAuditEvent("SKILL_COMPLETED", "PROMETEO", { inferredDomains }, context.actorId),
+        createAuditEvent('SKILL_COMPLETED', 'PROMETEO', { inferredDomains }, context.actorId),
       ],
     };
   },

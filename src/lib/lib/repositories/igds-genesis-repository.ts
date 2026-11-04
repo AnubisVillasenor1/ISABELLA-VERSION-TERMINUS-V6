@@ -8,32 +8,32 @@
  * Concurrencia: cada append toma un advisory lock transaccional para asignar
  * `sequence` y `previous_entry_hash` de forma estricta.
  */
-import { Pool } from "pg";
-import { randomUUID } from "node:crypto";
-import { config } from "../config";
+import { Pool } from 'pg';
+import { randomUUID } from 'node:crypto';
+import { config } from '../config';
 import {
   GENESIS_PREVIOUS_HASH,
   computeEntryHash,
   type AppendRevocationInput,
   type AppendSealInput,
   type GenesisRegistry,
-} from "../igds";
+} from '../igds';
 import type {
   GenesisCheckpoint,
   GenesisEntry,
   GenesisEntryType,
   GenesisRevocationPayload,
-} from "../igds";
-import type { SignatureEnvelope } from "../igds";
+} from '../igds';
+import type { SignatureEnvelope } from '../igds';
 
 const IGDS_APPEND_LOCK = 872364991;
 
 let pool: Pool | null = null;
-let poolUrl = "";
+let poolUrl = '';
 
 function getPool(): Pool {
   const url = config().DATABASE_URL;
-  if (!url) throw new Error("DATABASE_URL is required for the IGDS Genesis registry.");
+  if (!url) throw new Error('DATABASE_URL is required for the IGDS Genesis registry.');
   if (!pool || poolUrl !== url) {
     if (pool) void pool.end().catch(() => undefined);
     pool = new Pool({
@@ -51,7 +51,7 @@ export function disposeIgdsPool(): Promise<void> {
   if (!pool) return Promise.resolve();
   const closing = pool;
   pool = null;
-  poolUrl = "";
+  poolUrl = '';
   return closing.end().catch(() => undefined);
 }
 
@@ -76,7 +76,7 @@ interface GenesisCheckpointRow {
   last_sequence: string | number;
   generated_at: Date | string;
   signature: SignatureEnvelope;
-  timestamp_token: GenesisCheckpoint["timestamp_token"];
+  timestamp_token: GenesisCheckpoint['timestamp_token'];
 }
 
 function toEntry(row: GenesisEntryRow): GenesisEntry {
@@ -119,10 +119,10 @@ async function appendEntry(input: {
 }): Promise<GenesisEntry> {
   const client = await getPool().connect();
   try {
-    await client.query("BEGIN");
-    await client.query("SELECT pg_advisory_xact_lock($1)", [IGDS_APPEND_LOCK]);
+    await client.query('BEGIN');
+    await client.query('SELECT pg_advisory_xact_lock($1)', [IGDS_APPEND_LOCK]);
     const head = await client.query(
-      `SELECT sequence, entry_hash FROM igds_entries ORDER BY sequence DESC LIMIT 1`,
+      `SELECT sequence, entry_hash FROM igds_entries ORDER BY sequence DESC LIMIT 1`
     );
     const headRow = head.rows[0] as { sequence: string | number; entry_hash: string } | undefined;
     const previousHash = headRow ? headRow.entry_hash : GENESIS_PREVIOUS_HASH;
@@ -163,7 +163,7 @@ async function appendEntry(input: {
         entry.revocation ? JSON.stringify(entry.revocation) : null,
         JSON.stringify(payload),
         entry.created_at,
-      ],
+      ]
     );
 
     if (input.revocation) {
@@ -183,14 +183,14 @@ async function appendEntry(input: {
           revocation.effective_at,
           entry.entry_hash,
           JSON.stringify(revocation),
-        ],
+        ]
       );
     }
 
-    await client.query("COMMIT");
+    await client.query('COMMIT');
     return entry;
   } catch (error) {
-    await client.query("ROLLBACK").catch(() => undefined);
+    await client.query('ROLLBACK').catch(() => undefined);
     throw error;
   } finally {
     client.release();
@@ -203,7 +203,7 @@ export function createPostgresGenesisRegistry(): GenesisRegistry {
     appendSeal(input: AppendSealInput) {
       return appendEntry({
         entryId: input.entryId,
-        type: "seal",
+        type: 'seal',
         documentId: input.documentId,
         documentDigest: input.documentDigest,
         manifestDigest: input.manifestDigest,
@@ -214,10 +214,10 @@ export function createPostgresGenesisRegistry(): GenesisRegistry {
     appendRevocation(input: AppendRevocationInput) {
       return appendEntry({
         entryId: input.entryId,
-        type: "revocation",
+        type: 'revocation',
         documentId: input.revocation.target_id,
-        documentDigest: "",
-        manifestDigest: "",
+        documentDigest: '',
+        manifestDigest: '',
         signature: input.signature,
         revocation: input.revocation,
         createdAt: input.createdAt,
@@ -230,7 +230,7 @@ export function createPostgresGenesisRegistry(): GenesisRegistry {
     async get(sequence: number) {
       const { rows } = await getPool().query(
         `SELECT * FROM igds_entries WHERE sequence = $1 LIMIT 1`,
-        [sequence],
+        [sequence]
       );
       const row = (rows as GenesisEntryRow[])[0];
       return row ? toEntry(row) : null;
@@ -238,20 +238,20 @@ export function createPostgresGenesisRegistry(): GenesisRegistry {
     async list(limit = 200) {
       const { rows } = await getPool().query(
         `SELECT * FROM igds_entries ORDER BY sequence ASC LIMIT $1`,
-        [Math.max(1, Math.floor(limit))],
+        [Math.max(1, Math.floor(limit))]
       );
       return (rows as GenesisEntryRow[]).map(toEntry);
     },
     async head() {
       const { rows } = await getPool().query(
-        `SELECT * FROM igds_entries ORDER BY sequence DESC LIMIT 1`,
+        `SELECT * FROM igds_entries ORDER BY sequence DESC LIMIT 1`
       );
       const row = (rows as GenesisEntryRow[])[0];
       return row ? toEntry(row) : null;
     },
     async leafHashes() {
       const { rows } = await getPool().query(
-        `SELECT entry_hash FROM igds_entries ORDER BY sequence ASC`,
+        `SELECT entry_hash FROM igds_entries ORDER BY sequence ASC`
       );
       return (rows as Array<{ entry_hash: string }>).map((row) => row.entry_hash);
     },
@@ -272,14 +272,14 @@ export async function saveGenesisCheckpoint(checkpoint: GenesisCheckpoint): Prom
       checkpoint.generated_at,
       JSON.stringify(checkpoint.signature),
       checkpoint.timestamp_token ? JSON.stringify(checkpoint.timestamp_token) : null,
-    ],
+    ]
   );
 }
 
 export async function listGenesisCheckpoints(limit = 50): Promise<GenesisCheckpoint[]> {
   const { rows } = await getPool().query(
     `SELECT * FROM igds_checkpoints ORDER BY tree_size DESC LIMIT $1`,
-    [Math.max(1, Math.floor(limit))],
+    [Math.max(1, Math.floor(limit))]
   );
   return (rows as GenesisCheckpointRow[]).map(toCheckpoint);
 }
@@ -287,13 +287,13 @@ export async function listGenesisCheckpoints(limit = 50): Promise<GenesisCheckpo
 /** Revocación vigente más reciente para un objetivo (para evaluar confianza). */
 export async function latestRevocationForTarget(
   targetType: string,
-  targetId: string,
+  targetId: string
 ): Promise<GenesisRevocationPayload | null> {
   const { rows } = await getPool().query(
     `SELECT payload FROM igds_revocations
       WHERE target_type = $1 AND target_id = $2
       ORDER BY effective_at DESC LIMIT 1`,
-    [targetType, targetId],
+    [targetType, targetId]
   );
   const row = (rows as Array<{ payload: GenesisRevocationPayload }>)[0];
   return row?.payload ?? null;

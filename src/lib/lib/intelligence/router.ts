@@ -1,17 +1,17 @@
-import { randomUUID } from "node:crypto";
-import { config } from "@/lib/config";
-import { isProductionLike, resolveRuntimeMode } from "@/lib/runtime-mode";
+import { randomUUID } from 'node:crypto';
+import { config } from '@/lib/config';
+import { isProductionLike, resolveRuntimeMode } from '@/lib/runtime-mode';
 import type {
   GovernanceDecision,
   IntelligenceProvider,
   IntelligenceRequest,
   IntelligenceResponse,
-} from "./contracts";
-import { approveModel, listModels, registerProvider } from "./model-registry";
-import { createMoERoute, executeMoE } from "./moe-engine";
-import { recordIntelligenceMetric } from "./observability";
-import { authorizeModelForRuntime } from "./production-model-gate";
-import { inspectInferenceInput } from "./inference-firewall";
+} from './contracts';
+import { approveModel, listModels, registerProvider } from './model-registry';
+import { createMoERoute, executeMoE } from './moe-engine';
+import { recordIntelligenceMetric } from './observability';
+import { authorizeModelForRuntime } from './production-model-gate';
+import { inspectInferenceInput } from './inference-firewall';
 
 const providers = new Map<string, IntelligenceProvider>();
 const failures = new Map<string, { count: number; openUntil: number }>();
@@ -50,60 +50,60 @@ export function addProvider(provider: IntelligenceProvider, productionApproved =
 function evaluateGovernance(request: IntelligenceRequest): GovernanceDecision {
   if (!request.tenantId || !request.actorId)
     return {
-      decision: "DENY",
-      reasons: ["tenant-and-actor-required"],
+      decision: 'DENY',
+      reasons: ['tenant-and-actor-required'],
       riskScore: 100,
       policyIds: [],
     };
   if (request.messages.length === 0 || request.messages.length > 40)
     return {
-      decision: "DENY",
-      reasons: ["invalid-message-count"],
+      decision: 'DENY',
+      reasons: ['invalid-message-count'],
       riskScore: 80,
       policyIds: [],
     };
   const temperature = request.temperature ?? 0.7;
   if (temperature < 0 || temperature > 2)
     return {
-      decision: "DENY",
-      reasons: ["temperature-out-of-range"],
+      decision: 'DENY',
+      reasons: ['temperature-out-of-range'],
       riskScore: 50,
       policyIds: [],
     };
   return {
-    decision: "ALLOW",
+    decision: 'ALLOW',
     reasons: [],
     riskScore: 0,
-    policyIds: ["inference-firewall-v1"],
+    policyIds: ['inference-firewall-v1'],
   };
 }
 
 export function governIntelligence(request: IntelligenceRequest): GovernanceDecision {
   const base = evaluateGovernance(request);
-  if (base.decision !== "ALLOW") return base;
+  if (base.decision !== 'ALLOW') return base;
   const firewall = inspectInferenceInput(request.messages);
   if (!firewall.allowed)
     return {
-      decision: "DENY",
+      decision: 'DENY',
       reasons: firewall.reasons,
       riskScore: 95,
-      policyIds: ["inference-firewall-v1"],
+      policyIds: ['inference-firewall-v1'],
     };
   return base;
 }
 
 export async function invokeIntelligence(
-  input: Omit<IntelligenceRequest, "requestId"> & { requestId?: string },
+  input: Omit<IntelligenceRequest, 'requestId'> & { requestId?: string }
 ): Promise<IntelligenceResponse> {
   const firewall = inspectInferenceInput(input.messages);
-  if (!firewall.allowed) throw new Error(`intelligence_DENY:${firewall.reasons.join(",")}`);
+  if (!firewall.allowed) throw new Error(`intelligence_DENY:${firewall.reasons.join(',')}`);
   const request: IntelligenceRequest = {
     ...input,
     messages: firewall.sanitized,
     requestId: input.requestId ?? randomUUID(),
   };
   const governance = evaluateGovernance(request);
-  if (governance.decision !== "ALLOW")
+  if (governance.decision !== 'ALLOW')
     throw new Error(`intelligence_${governance.decision.toLowerCase()}`);
 
   const production = isProductionLike(resolveRuntimeMode(config().ISABELLA_RUNTIME_MODE));
@@ -117,12 +117,12 @@ export async function invokeIntelligence(
             enabled: model.enabled,
             productionApproved: model.productionApproved,
           },
-        ] as const,
-    ),
+        ] as const
+    )
   );
   const route = createMoERoute(request, providers, descriptors, 3);
   const eligible = route.selected.filter((expert) => !production || expert.productionApproved);
-  if (!eligible.length) throw new Error("inference_unavailable:no_production_approved_expert");
+  if (!eligible.length) throw new Error('inference_unavailable:no_production_approved_expert');
 
   const authorizedExperts = [];
   for (const expert of eligible) {
@@ -139,7 +139,7 @@ export async function invokeIntelligence(
     }
     authorizedExperts.push(expert);
   }
-  if (!authorizedExperts.length) throw new Error("inference_unavailable:no_authorized_expert");
+  if (!authorizedExperts.length) throw new Error('inference_unavailable:no_authorized_expert');
 
   const started = performance.now();
   try {

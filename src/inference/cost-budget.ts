@@ -6,9 +6,15 @@
  * enteros (sin errores de coma flotante). Memoria de proceso; con varias instancias hace falta almacén compartido.
  */
 export class BudgetDeniedError extends Error {
-  constructor(readonly tenant: string, readonly requested: number, readonly remaining: number) {
-    super(`COST_BUDGET: denied for tenant (requested ${requested}µUSD, remaining ${remaining}µUSD)`);
-    this.name = "BudgetDeniedError";
+  constructor(
+    readonly tenant: string,
+    readonly requested: number,
+    readonly remaining: number
+  ) {
+    super(
+      `COST_BUDGET: denied for tenant (requested ${requested}µUSD, remaining ${remaining}µUSD)`
+    );
+    this.name = 'BudgetDeniedError';
   }
 }
 
@@ -26,8 +32,15 @@ interface TenantState {
   overrun: number;
 }
 
-export function estimateCostMicroUsd(tokensIn: number, tokensOut: number, usdPerMTokIn: number, usdPerMTokOut: number): number {
-  for (const v of [tokensIn, tokensOut, usdPerMTokIn, usdPerMTokOut]) if (!Number.isFinite(v) || v < 0) throw new RangeError("COST_BUDGET: inputs must be finite and >= 0");
+export function estimateCostMicroUsd(
+  tokensIn: number,
+  tokensOut: number,
+  usdPerMTokIn: number,
+  usdPerMTokOut: number
+): number {
+  for (const v of [tokensIn, tokensOut, usdPerMTokIn, usdPerMTokOut])
+    if (!Number.isFinite(v) || v < 0)
+      throw new RangeError('COST_BUDGET: inputs must be finite and >= 0');
   // (tokens / 1e6) * USD/Mtok * 1e6 µUSD = tokens * USD/Mtok  (µUSD)
   return Math.ceil(tokensIn * usdPerMTokIn + tokensOut * usdPerMTokOut);
 }
@@ -40,12 +53,17 @@ export class CostBudget {
   private readonly open = new Map<string, Reservation>();
   private seq = 0;
 
-  constructor(private readonly defaultDailyLimit: number, private readonly maxOpenReservations = 10_000) {
-    if (!Number.isInteger(defaultDailyLimit) || defaultDailyLimit < 0) throw new RangeError("COST_BUDGET: limit must be a non-negative integer (µUSD)");
+  constructor(
+    private readonly defaultDailyLimit: number,
+    private readonly maxOpenReservations = 10_000
+  ) {
+    if (!Number.isInteger(defaultDailyLimit) || defaultDailyLimit < 0)
+      throw new RangeError('COST_BUDGET: limit must be a non-negative integer (µUSD)');
   }
 
   setLimit(tenant: string, dailyLimit: number): void {
-    if (!Number.isInteger(dailyLimit) || dailyLimit < 0) throw new RangeError("COST_BUDGET: limit must be a non-negative integer");
+    if (!Number.isInteger(dailyLimit) || dailyLimit < 0)
+      throw new RangeError('COST_BUDGET: limit must be a non-negative integer');
     this.limits.set(tenant, dailyLimit);
   }
 
@@ -66,10 +84,13 @@ export class CostBudget {
   }
 
   reserve(tenant: string, amount: number, now = Date.now()): Reservation {
-    if (typeof tenant !== "string" || tenant.length === 0 || tenant.length > 128) throw new RangeError("COST_BUDGET: invalid tenant");
-    if (!Number.isInteger(amount) || amount < 0) throw new RangeError("COST_BUDGET: amount must be a non-negative integer");
+    if (typeof tenant !== 'string' || tenant.length === 0 || tenant.length > 128)
+      throw new RangeError('COST_BUDGET: invalid tenant');
+    if (!Number.isInteger(amount) || amount < 0)
+      throw new RangeError('COST_BUDGET: amount must be a non-negative integer');
     const left = this.remaining(tenant, now);
-    if (amount > left || this.open.size >= this.maxOpenReservations) throw new BudgetDeniedError(tenant, amount, left);
+    if (amount > left || this.open.size >= this.maxOpenReservations)
+      throw new BudgetDeniedError(tenant, amount, left);
     const s = this.state(tenant, now);
     s.reserved += amount;
     const r: Reservation = { id: `res-${(this.seq += 1)}`, tenant, amount, period: s.period };
@@ -79,7 +100,7 @@ export class CostBudget {
 
   private close(id: string): { r: Reservation; s: TenantState | undefined } {
     const r = this.open.get(id);
-    if (r === undefined) throw new RangeError("COST_BUDGET: unknown or already closed reservation");
+    if (r === undefined) throw new RangeError('COST_BUDGET: unknown or already closed reservation');
     this.open.delete(id);
     const s = this.tenants.get(r.tenant);
     return { r, s: s !== undefined && s.period === r.period ? s : undefined };
@@ -87,7 +108,8 @@ export class CostBudget {
 
   /** Registra el costo real. Si excede lo reservado, el exceso se contabiliza como overrun (visible, nunca oculto). */
   settle(id: string, actual: number): { charged: number; overrun: number } {
-    if (!Number.isInteger(actual) || actual < 0) throw new RangeError("COST_BUDGET: actual must be a non-negative integer");
+    if (!Number.isInteger(actual) || actual < 0)
+      throw new RangeError('COST_BUDGET: actual must be a non-negative integer');
     const { r, s } = this.close(id);
     const overrun = Math.max(0, actual - r.amount);
     if (s !== undefined) {
@@ -104,8 +126,17 @@ export class CostBudget {
     if (s !== undefined) s.reserved -= r.amount;
   }
 
-  usage(tenant: string, now = Date.now()): { period: string; spent: number; reserved: number; overrun: number; remaining: number } {
+  usage(
+    tenant: string,
+    now = Date.now()
+  ): { period: string; spent: number; reserved: number; overrun: number; remaining: number } {
     const s = this.state(tenant, now);
-    return { period: s.period, spent: s.spent, reserved: s.reserved, overrun: s.overrun, remaining: this.remaining(tenant, now) };
+    return {
+      period: s.period,
+      spent: s.spent,
+      reserved: s.reserved,
+      overrun: s.overrun,
+      remaining: this.remaining(tenant, now),
+    };
   }
 }

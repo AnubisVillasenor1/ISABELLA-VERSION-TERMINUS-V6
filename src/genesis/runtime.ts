@@ -1,38 +1,79 @@
-import { evaluateCrown, type CrownEvaluationInput, type CrownVerdict } from "../crown";
-import { inspectAegis, type AegisVerdict } from "../security/aegis";
-import { planExecution, type AdaptivePlan, type AdaptiveRequest } from "../intelligence/adaptive-router";
-import { planTurboRoute as buildTurboPlan, type TurboPlan, type TurboRequest } from "../intelligence/turbo-planner";
-import { classifyFlow as classifyTrafficFlow, type TrafficLightInput, type TrafficLightVerdict } from "../governance/traffic-light";
-import { InMemoryTelemetry, sloSnapshot, type TelemetrySink } from "../observability/telemetry";
-import { IKESEngine, type IKESEnginePersistencePort } from "../memory/ikes";
-import { ToolRegistry, type ToolAuthorization, type ToolReceipt } from "../tools/registry";
-import { SkillRegistry } from "../skills/registry";
-import { GovernedInferenceRouter } from "../inference/router";
-import type { GenerationRequest, GenerationResult } from "../inference/types";
-import { DeterministicVerifier } from "../veritas/verifier";
-import { assessGrounding, type GroundingEvidence, type GroundingOptions, type GroundingReport } from "../veritas/grounding";
-import { evaluateCompanionSafety, type CompanionSafetyVerdict } from "../companion/safety";
-import { InMemoryHumanEscalationQueue, createEscalation, type HumanEscalationQueue } from "../companion/escalation";
-import { explainPolicyDecision, type DecisionExplanation } from "../cognition/explainability";
-import { createEmotionalTrace, type EmotionalTrace } from "../cognition/emotional-trace";
-import { planExperts, type ExpertPlan, GENESIS_EXPERTS } from "../cognition/experts";
-import { queryTerritory, type TerritoryQuery, type TerritoryAnswer } from "../territory/context";
-import { evaluateXrSafety, type XrSafetyDecision, type XrSafetyEvent } from "../xr/safety";
-import { InMemoryConsentRegistry, type ConsentRegistry } from "../cognition/consent";
-import { planExperts as planCognitiveExperts } from "../cognition/experts";
-import { synthesize, type CognitiveSynthesis, type CognitiveTask, type ExpertResult } from "../cognition/orchestrator";
-import { createSource, validateClaim, type ProvenanceClaim, type ProvenanceSource } from "../memory/provenance";
-import type { AtlasPersistencePort, CreateUserInput, RecordEconomyEntryInput, RecordProtocolExecutionInput } from "../atlas";
-import { IsabellaEngine, type IsabellaEngineConfig, type IsabellaProfile } from "../isabella";
-import { PennyLaneBridge, type PennyLaneBridgeConfig, type PennyLaneExecutionRequest, type PennyLaneExecutionResult } from "../quantum";
-import { sanitizeDocument, type RawDocument, type SanitizedDocument } from "../sanitization";
+import { evaluateCrown, type CrownEvaluationInput, type CrownVerdict } from '../crown';
+import { inspectAegis, type AegisVerdict } from '../security/aegis';
+import {
+  planExecution,
+  type AdaptivePlan,
+  type AdaptiveRequest,
+} from '../intelligence/adaptive-router';
+import {
+  planTurboRoute as buildTurboPlan,
+  type TurboPlan,
+  type TurboRequest,
+} from '../intelligence/turbo-planner';
+import {
+  classifyFlow as classifyTrafficFlow,
+  type TrafficLightInput,
+  type TrafficLightVerdict,
+} from '../governance/traffic-light';
+import { InMemoryTelemetry, sloSnapshot, type TelemetrySink } from '../observability/telemetry';
+import { IKESEngine, type IKESEnginePersistencePort } from '../memory/ikes';
+import { ToolRegistry, type ToolAuthorization, type ToolReceipt } from '../tools/registry';
+import { SkillRegistry } from '../skills/registry';
+import { GovernedInferenceRouter } from '../inference/router';
+import type { GenerationRequest, GenerationResult } from '../inference/types';
+import { DeterministicVerifier } from '../veritas/verifier';
+import {
+  assessGrounding,
+  type GroundingEvidence,
+  type GroundingOptions,
+  type GroundingReport,
+} from '../veritas/grounding';
+import { evaluateCompanionSafety, type CompanionSafetyVerdict } from '../companion/safety';
+import {
+  InMemoryHumanEscalationQueue,
+  createEscalation,
+  type HumanEscalationQueue,
+} from '../companion/escalation';
+import { explainPolicyDecision, type DecisionExplanation } from '../cognition/explainability';
+import { createEmotionalTrace, type EmotionalTrace } from '../cognition/emotional-trace';
+import { planExperts, type ExpertPlan, GENESIS_EXPERTS } from '../cognition/experts';
+import { queryTerritory, type TerritoryQuery, type TerritoryAnswer } from '../territory/context';
+import { evaluateXrSafety, type XrSafetyDecision, type XrSafetyEvent } from '../xr/safety';
+import { InMemoryConsentRegistry, type ConsentRegistry } from '../cognition/consent';
+import { planExperts as planCognitiveExperts } from '../cognition/experts';
+import {
+  synthesize,
+  type CognitiveSynthesis,
+  type CognitiveTask,
+  type ExpertResult,
+} from '../cognition/orchestrator';
+import {
+  createSource,
+  validateClaim,
+  type ProvenanceClaim,
+  type ProvenanceSource,
+} from '../memory/provenance';
+import type {
+  AtlasPersistencePort,
+  CreateUserInput,
+  RecordEconomyEntryInput,
+  RecordProtocolExecutionInput,
+} from '../atlas';
+import { IsabellaEngine, type IsabellaEngineConfig, type IsabellaProfile } from '../isabella';
+import {
+  PennyLaneBridge,
+  type PennyLaneBridgeConfig,
+  type PennyLaneExecutionRequest,
+  type PennyLaneExecutionResult,
+} from '../quantum';
+import { sanitizeDocument, type RawDocument, type SanitizedDocument } from '../sanitization';
 import {
   createKnowledgeEntry,
   runIkesPipeline,
   toEpistemicStatus,
   type KnowledgeEntrySeed,
   type IkesPipelineResult,
-} from "../memory/knowledge-entry";
+} from '../memory/knowledge-entry';
 import {
   LspValidationAdapter,
   EntityMutationManager,
@@ -57,16 +98,31 @@ import {
   type ReconciliationState,
   type ReconciliationReport,
   type SyncScope,
-} from "../governance";
-import type { KnowledgeClaim } from "../memory/ikes";
-import { ProtocolRegistry, PROTOCOL_CATALOG } from "../protocols";
-import { GenesisModuleRegistry } from "../modules";
-import { CANONICAL_TOOLS, PROTOCOL_TOOLS } from "../tools";
-import { CANONICAL_SKILLS, FOUNDATIONAL_SKILLS } from "../skills";
-import { assessEpistemicState, passesEriGate, type SophiaSignals, type SophiaAssessment } from "../cognition/sophia";
-import { detectContradictions as runContradictionDetection, type CanonicalClaim, type ContradictionOptions, type ContradictionReport } from "../cognition/contradiction";
-import { federationById, listFederations, type TamvFederation } from "../federation";
-import { MagpieBus, type MagpieDeliveryReport, type MagpieHandler, type MagpiePublishInput } from "../messaging";
+} from '../governance';
+import type { KnowledgeClaim } from '../memory/ikes';
+import { ProtocolRegistry, PROTOCOL_CATALOG } from '../protocols';
+import { GenesisModuleRegistry } from '../modules';
+import { CANONICAL_TOOLS, DETERMINISTIC_TOOLS, PROTOCOL_TOOLS } from '../tools';
+import { CANONICAL_SKILLS, EVOLVED_SKILL_DESCRIPTORS, FOUNDATIONAL_SKILLS } from '../skills';
+import {
+  assessEpistemicState,
+  passesEriGate,
+  type SophiaSignals,
+  type SophiaAssessment,
+} from '../cognition/sophia';
+import {
+  detectContradictions as runContradictionDetection,
+  type CanonicalClaim,
+  type ContradictionOptions,
+  type ContradictionReport,
+} from '../cognition/contradiction';
+import { federationById, listFederations, type TamvFederation } from '../federation';
+import {
+  MagpieBus,
+  type MagpieDeliveryReport,
+  type MagpieHandler,
+  type MagpiePublishInput,
+} from '../messaging';
 import {
   mapOrderPermissions as buildPermissionMap,
   verifyAuthorizationEnvelope as runVerifyAuthorization,
@@ -74,9 +130,17 @@ import {
   type PermissionCatalog,
   type AuthorizationEnvelope,
   type AuthorizationVerification,
-} from "../governance/permission-map";
-import { hardenSanitization, buildQuarantineRecord, type HardeningResult } from "../sanitization";
-import { triangulateDigest, sealEnvelope, openEnvelope, evaluateVigia, type TriangulatedDigest, type SealedEnvelope, type VigiaVerdict } from "../security";
+} from '../governance/permission-map';
+import { hardenSanitization, buildQuarantineRecord, type HardeningResult } from '../sanitization';
+import {
+  triangulateDigest,
+  sealEnvelope,
+  openEnvelope,
+  evaluateVigia,
+  type TriangulatedDigest,
+  type SealedEnvelope,
+  type VigiaVerdict,
+} from '../security';
 import {
   sealDocument as sealDocumentManifest,
   verifyDocumentSeal as verifyDocumentSealManifest,
@@ -87,9 +151,24 @@ import {
   type VerifySealInput,
   type SealVerificationReport,
   type DocumentSealEnablement,
-} from "../security";
-import { buildOpsSnapshot, assessProductionReadiness, type DependencyHealth, type MaintenanceWindow, type OpsSnapshot, type ProductionReadinessReport } from "../deployment";
-import { buildTapAct, validateTapAct, evaluateIsaPipeline, type TapActInput, type TapAct, type TapActValidation, type HighImpactTrigger } from "../ingress";
+} from '../security';
+import {
+  buildOpsSnapshot,
+  assessProductionReadiness,
+  type DependencyHealth,
+  type MaintenanceWindow,
+  type OpsSnapshot,
+  type ProductionReadinessReport,
+} from '../deployment';
+import {
+  buildTapAct,
+  validateTapAct,
+  evaluateIsaPipeline,
+  type TapActInput,
+  type TapAct,
+  type TapActValidation,
+  type HighImpactTrigger,
+} from '../ingress';
 import {
   CapabilityGateway,
   CapabilityRegistry,
@@ -103,8 +182,8 @@ import {
   reasonArchitecture,
   selfEvaluate,
   verifyClaim,
-} from "../capabilities";
-import { createGiftBundle, type GiftBundle } from "../gifts";
+} from '../capabilities';
+import { createGiftBundle, type GiftBundle } from '../gifts';
 import {
   CIVILIZATION_GIFT_COUNT,
   CIVILIZATION_LAYER_COUNT,
@@ -112,8 +191,8 @@ import {
   runCivilizationCycle as runCivilizationCycleCore,
   type CivilizationCycleInput,
   type CivilizationCycleResult,
-} from "../civilization";
-import { createEngine } from "../evolution/engine";
+} from '../civilization';
+import { createEngine } from '../evolution/engine';
 import {
   createHfHubClient,
   hfHubSummary as buildHfHubSummary,
@@ -123,14 +202,14 @@ import {
   type HfCatalogResult,
   type HfIngestInput,
   type HfKnowledgeDocument,
-} from "../hf-hub";
+} from '../hf-hub';
 import {
   createIhec,
   ihecSummary as buildIhecSummary,
   runWithIhec,
   type IhecGiftPayload,
   type IhecRunResult,
-} from "../ihec";
+} from '../ihec';
 import {
   CUSTOMIZATION_CATALOG,
   CustomizationRegistry,
@@ -144,7 +223,7 @@ import {
   type MarketplacePack,
   type MarketplacePlan,
   type MarketplaceSnapshot,
-} from "../customization";
+} from '../customization';
 
 export interface GenesisRuntimeInput extends CrownEvaluationInput, AdaptiveRequest {
   memoryQuery?: string;
@@ -154,7 +233,7 @@ export interface GenesisRuntimeDecision {
   crown: CrownVerdict;
   aegis: AegisVerdict;
   plan: AdaptivePlan;
-  memory: ReturnType<IKESEngine["retrieve"]>;
+  memory: ReturnType<IKESEngine['retrieve']>;
   admitted: boolean;
 }
 
@@ -207,7 +286,10 @@ export class IsabellaGenesisRuntime {
   /** Legado de los regalos: diez capacidades que Isabella debe desarrollar. */
   readonly gifts: GiftBundle = createGiftBundle();
   /** Cache del fabric de evolución (Ω-11) para la auditoría de controles del ciclo CCR-1. */
-  private evolutionFabric?: { readonly controls: readonly import("../core/types").EvolutionControl[]; readonly mode: string };
+  private evolutionFabric?: {
+    readonly controls: readonly import('../core/types').EvolutionControl[];
+    readonly mode: string;
+  };
   /** Llave Ed25519 del sello documental IGDS; perezosa (env PEM o efímera). */
   private documentSealSignerInstance?: Ed25519Signer;
 
@@ -216,7 +298,7 @@ export class IsabellaGenesisRuntime {
     persistence?: AtlasPersistencePort,
     isabellaConfig?: IsabellaEngineConfig,
     quantumConfig?: PennyLaneBridgeConfig,
-    memoryPersistence?: IKESEnginePersistencePort,
+    memoryPersistence?: IKESEnginePersistencePort
   ) {
     this.telemetry = telemetry;
     this.persistence = persistence;
@@ -238,11 +320,15 @@ export class IsabellaGenesisRuntime {
 
   /** Registra los catálogos canónicos de tools, skills y protocolos. */
   private registerCanonicalCatalogs(): void {
-    for (const tool of [...CANONICAL_TOOLS, ...PROTOCOL_TOOLS]) {
+    for (const tool of [...CANONICAL_TOOLS, ...PROTOCOL_TOOLS, ...DETERMINISTIC_TOOLS]) {
       if (this.tools.list().some((t) => t.id === tool.id)) continue;
       this.tools.register(tool);
     }
-    for (const skill of [...CANONICAL_SKILLS, ...FOUNDATIONAL_SKILLS]) {
+    for (const skill of [
+      ...CANONICAL_SKILLS,
+      ...FOUNDATIONAL_SKILLS,
+      ...EVOLVED_SKILL_DESCRIPTORS,
+    ]) {
       if (this.skills.list().some((s) => s.id === skill.id)) continue;
       this.skills.register(skill);
     }
@@ -254,45 +340,50 @@ export class IsabellaGenesisRuntime {
 
   private registerCanonicalModules(): void {
     this.modules.register({
-      id: "isabella.cognition",
-      version: "1.0.0",
-      domain: "cognition",
-      capabilities: ["mediation", "entropy", "epistemic-analysis"],
+      id: 'isabella.cognition',
+      version: '1.0.0',
+      domain: 'cognition',
+      capabilities: ['mediation', 'entropy', 'epistemic-analysis'],
     });
     this.modules.register({
-      id: "isabella.litle",
-      version: "1.0.0",
-      domain: "trust",
-      capabilities: ["attestation", "evidence-chain", "certificate"],
+      id: 'isabella.litle',
+      version: '1.0.0',
+      domain: 'trust',
+      capabilities: ['attestation', 'evidence-chain', 'certificate'],
     });
     this.modules.register({
-      id: "isabella.atlas",
-      version: "1.0.0",
-      domain: "infrastructure",
-      capabilities: ["persistence", "xr", "webrtc-signaling"],
+      id: 'isabella.atlas',
+      version: '1.0.0',
+      domain: 'infrastructure',
+      capabilities: ['persistence', 'xr', 'webrtc-signaling'],
     });
     this.modules.register({
-      id: "isabella.quantum.pennylane",
-      version: "1.0.0",
-      domain: "quantum",
-      capabilities: ["circuit-execution", "quantum-simulation", "hybrid-workflows", "qiskit-interop"],
-    });
-    this.modules.register({
-      id: "isabella.governance",
-      version: "1.0.0",
-      domain: "trust",
+      id: 'isabella.quantum.pennylane',
+      version: '1.0.0',
+      domain: 'quantum',
       capabilities: [
-        "sanitization",
-        "knowledge-entry",
-        "evidence-manifest",
-        "git-governance",
-        "lsp-validation",
-        "sync-manager",
-        "deployment-gates",
-        "verifier",
-        "quality-gates",
-        "file-schema",
-        "lifecycle",
+        'circuit-execution',
+        'quantum-simulation',
+        'hybrid-workflows',
+        'qiskit-interop',
+      ],
+    });
+    this.modules.register({
+      id: 'isabella.governance',
+      version: '1.0.0',
+      domain: 'trust',
+      capabilities: [
+        'sanitization',
+        'knowledge-entry',
+        'evidence-manifest',
+        'git-governance',
+        'lsp-validation',
+        'sync-manager',
+        'deployment-gates',
+        'verifier',
+        'quality-gates',
+        'file-schema',
+        'lifecycle',
       ],
     });
   }
@@ -303,62 +394,109 @@ export class IsabellaGenesisRuntime {
    * Invariante: registrar una capacidad no concede autoridad ni ejecuta efectos.
    */
   private registerGiftCapabilities(): void {
-    const low = (id: string, domain: import("../capabilities").CapabilityDomain, description: string) => ({
-      id, version: "1.0.0", domain, description, riskTier: "LOW" as const, requiresAuthority: true,
+    const low = (
+      id: string,
+      domain: import('../capabilities').CapabilityDomain,
+      description: string
+    ) => ({
+      id,
+      version: '1.0.0',
+      domain,
+      description,
+      riskTier: 'LOW' as const,
+      requiresAuthority: true,
     });
     for (const gift of this.gifts.manifest) {
       this.capabilities.register({
-        descriptor: low(gift.capabilityId, gift.domain, `[Legado #${gift.order}] ${gift.title}: ${gift.summary}`),
-        health: () => "ready",
+        descriptor: low(
+          gift.capabilityId,
+          gift.domain,
+          `[Legado #${gift.order}] ${gift.title}: ${gift.summary}`
+        ),
+        health: () => 'ready',
         execute: async (input) => this.gifts.invoke(gift.capabilityId, input),
       });
     }
   }
 
   private registerCivilizationCapabilities(): void {
-    const low = (id: string, domain: import("../capabilities").CapabilityDomain, description: string) => ({
-      id, version: "1.0.0", domain, description, riskTier: "LOW" as const, requiresAuthority: true,
+    const low = (
+      id: string,
+      domain: import('../capabilities').CapabilityDomain,
+      description: string
+    ) => ({
+      id,
+      version: '1.0.0',
+      domain,
+      description,
+      riskTier: 'LOW' as const,
+      requiresAuthority: true,
     });
     this.capabilities.register({
       descriptor: low(
-        "hsf.civilization.runtime",
-        "architecture",
-        `ISABELLA Ω · CCR-1: ciclo gobernado de 9 pasos sobre ${CIVILIZATION_LAYER_COUNT} capas Ω y ${CIVILIZATION_GIFT_COUNT} regalos; clasifica, explica y evidencia, no autoriza ni ejecuta.`,
+        'hsf.civilization.runtime',
+        'architecture',
+        `ISABELLA Ω · CCR-1: ciclo gobernado de 9 pasos sobre ${CIVILIZATION_LAYER_COUNT} capas Ω y ${CIVILIZATION_GIFT_COUNT} regalos; clasifica, explica y evidencia, no autoriza ni ejecuta.`
       ),
-      health: () => "ready",
+      health: () => 'ready',
       execute: async (input) => {
         const value = input as { input?: CivilizationCycleInput } | CivilizationCycleInput;
-        const cycleInput = (value as { input?: CivilizationCycleInput }).input ?? (value as CivilizationCycleInput);
+        const cycleInput =
+          (value as { input?: CivilizationCycleInput }).input ?? (value as CivilizationCycleInput);
         return this.runCivilizationCycle(cycleInput);
       },
     });
   }
 
   private registerHfHubCapabilities(): void {
-    const low = (id: string, domain: import("../capabilities").CapabilityDomain, description: string) => ({
-      id, version: "1.0.0", domain, description, riskTier: "LOW" as const, requiresAuthority: true,
+    const low = (
+      id: string,
+      domain: import('../capabilities').CapabilityDomain,
+      description: string
+    ) => ({
+      id,
+      version: '1.0.0',
+      domain,
+      description,
+      riskTier: 'LOW' as const,
+      requiresAuthority: true,
     });
     this.capabilities.register({
       descriptor: low(
-        "hsf.integration.hf-hub",
-        "integration",
-        "HUGGING FACE HUB: cataloga modelos/datasets y propone model cards como conocimiento; usa información/datos del Hub (gratis), nunca el router de inferencia (de pago). Leer no admite conocimiento.",
+        'hsf.integration.hf-hub',
+        'integration',
+        'HUGGING FACE HUB: cataloga modelos/datasets y propone model cards como conocimiento; usa información/datos del Hub (gratis), nunca el router de inferencia (de pago). Leer no admite conocimiento.'
       ),
-      health: () => (this.hfHub.configured ? "ready" : "degraded"),
+      health: () => (this.hfHub.configured ? 'ready' : 'degraded'),
       execute: async (input) => {
         const value = (input ?? {}) as {
-          operation?: string; task?: string; search?: string; limit?: number; datasetId?: string; revision?: string;
+          operation?: string;
+          task?: string;
+          search?: string;
+          limit?: number;
+          datasetId?: string;
+          revision?: string;
         };
-        if (value.operation === "ingest" && typeof value.datasetId === "string" && value.datasetId.trim()) {
+        if (
+          value.operation === 'ingest' &&
+          typeof value.datasetId === 'string' &&
+          value.datasetId.trim()
+        ) {
           return this.ingestHfDataset({
             datasetId: value.datasetId.trim(),
-            ...(typeof value.revision === "string" && value.revision.trim() ? { revision: value.revision.trim() } : {}),
+            ...(typeof value.revision === 'string' && value.revision.trim()
+              ? { revision: value.revision.trim() }
+              : {}),
           });
         }
         return this.queryHfHub({
-          ...(typeof value.task === "string" && value.task.trim() ? { task: value.task.trim() } : {}),
-          ...(typeof value.search === "string" && value.search.trim() ? { search: value.search.trim() } : {}),
-          ...(typeof value.limit === "number" ? { limit: value.limit } : {}),
+          ...(typeof value.task === 'string' && value.task.trim()
+            ? { task: value.task.trim() }
+            : {}),
+          ...(typeof value.search === 'string' && value.search.trim()
+            ? { search: value.search.trim() }
+            : {}),
+          ...(typeof value.limit === 'number' ? { limit: value.limit } : {}),
         });
       },
     });
@@ -370,18 +508,30 @@ export class IsabellaGenesisRuntime {
    * de IHEC y aplica los 10 regalos de Perplexity. NO autoriza ni ejecuta.
    */
   private registerIhecCapabilities(): void {
-    const low = (id: string, domain: import("../capabilities").CapabilityDomain, description: string) => ({
-      id, version: "1.0.0", domain, description, riskTier: "LOW" as const, requiresAuthority: true,
+    const low = (
+      id: string,
+      domain: import('../capabilities').CapabilityDomain,
+      description: string
+    ) => ({
+      id,
+      version: '1.0.0',
+      domain,
+      description,
+      riskTier: 'LOW' as const,
+      requiresAuthority: true,
     });
     this.capabilities.register({
       descriptor: low(
-        "hsf.ihec.continuity",
-        "architecture",
-        "ISABELLA Ω v3.1 · IHEC: 12 subsistemas de continuidad + 10 regalos de Perplexity; detecta, aísla, se recupera, aprende y muta. No autoriza ni ejecuta.",
+        'hsf.ihec.continuity',
+        'architecture',
+        'ISABELLA Ω v3.1 · IHEC: 12 subsistemas de continuidad + 10 regalos de Perplexity; detecta, aísla, se recupera, aprende y muta. No autoriza ni ejecuta.'
       ),
-      health: () => "ready",
+      health: () => 'ready',
       execute: async (input) => {
-        const value = (input ?? {}) as { input?: CivilizationCycleInput; payload?: IhecGiftPayload };
+        const value = (input ?? {}) as {
+          input?: CivilizationCycleInput;
+          payload?: IhecGiftPayload;
+        };
         const cycleInput = value.input ?? (value as unknown as CivilizationCycleInput);
         return this.runCivilizationCycleWithIhec(cycleInput, value.payload ?? {});
       },
@@ -402,26 +552,35 @@ export class IsabellaGenesisRuntime {
    * Invariante: no autoriza, no instala y no ejecuta.
    */
   private registerCustomizationCapabilities(): void {
-    const low = (id: string, domain: import("../capabilities").CapabilityDomain, description: string) => ({
-      id, version: "1.0.0", domain, description, riskTier: "LOW" as const, requiresAuthority: true,
+    const low = (
+      id: string,
+      domain: import('../capabilities').CapabilityDomain,
+      description: string
+    ) => ({
+      id,
+      version: '1.0.0',
+      domain,
+      description,
+      riskTier: 'LOW' as const,
+      requiresAuthority: true,
     });
     this.capabilities.register({
       descriptor: low(
-        "hsf.integration.marketplace",
-        "integration",
-        "Customización nativa + Marketplace: cataloga reglas, skills, hooks, plugins y servidores MCP como descriptores de solo lectura; resuelve packs y produce un plan. No autoriza, no instala, no ejecuta.",
+        'hsf.integration.marketplace',
+        'integration',
+        'Customización nativa + Marketplace: cataloga reglas, skills, hooks, plugins y servidores MCP como descriptores de solo lectura; resuelve packs y produce un plan. No autoriza, no instala, no ejecuta.'
       ),
-      health: () => "ready",
+      health: () => 'ready',
       execute: async (input) => {
         const value = (input ?? {}) as { operation?: string; id?: string };
-        if (value.operation === "snapshot") return this.marketplaceSnapshot();
-        if (value.operation === "detail" && typeof value.id === "string") {
+        if (value.operation === 'snapshot') return this.marketplaceSnapshot();
+        if (value.operation === 'detail' && typeof value.id === 'string') {
           return this.customizationDetail(value.id) ?? null;
         }
-        if (value.operation === "pack" && typeof value.id === "string") {
+        if (value.operation === 'pack' && typeof value.id === 'string') {
           return this.marketplacePack(value.id) ?? null;
         }
-        if (value.operation === "plan" && typeof value.id === "string") {
+        if (value.operation === 'plan' && typeof value.id === 'string') {
           return this.marketplacePlan(value.id) ?? null;
         }
         return this.customizationCatalog();
@@ -459,7 +618,7 @@ export class IsabellaGenesisRuntime {
   /** Resuelve un pack de plugin contra el catálogo nativo, o `undefined`. */
   marketplacePack(id: string): MarketplacePack | undefined {
     const entry = this.customizations.get(id);
-    if (!entry || entry.kind !== "plugin") return undefined;
+    if (!entry || entry.kind !== 'plugin') return undefined;
     return resolveMarketplacePack(entry, this.customizations);
   }
 
@@ -470,69 +629,131 @@ export class IsabellaGenesisRuntime {
   }
 
   private registerHyperSkillFabric(): void {
-    const low = (id: string, domain: import("../capabilities").CapabilityDomain, description: string) => ({
-      id, version: "1.0.0", domain, description, riskTier: "LOW" as const, requiresAuthority: true,
+    const low = (
+      id: string,
+      domain: import('../capabilities').CapabilityDomain,
+      description: string
+    ) => ({
+      id,
+      version: '1.0.0',
+      domain,
+      description,
+      riskTier: 'LOW' as const,
+      requiresAuthority: true,
     });
 
     this.capabilities.register({
-      descriptor: low("hsf.memory.fabric", "memory", "Persistent-memory contract over semantic, relational, temporal and provenance providers."),
-      health: () => "ready",
+      descriptor: low(
+        'hsf.memory.fabric',
+        'memory',
+        'Persistent-memory contract over semantic, relational, temporal and provenance providers.'
+      ),
+      health: () => 'ready',
       execute: async (input, _context) => {
-        const value = input as { text?: string; namespace?: string; relations?: string[]; metadata?: Record<string,string> };
-        if (!value.text?.trim()) throw new Error("HSF_MEMORY_TEXT_REQUIRED");
-        return this.memoryFabric.write({ text: value.text, namespace: value.namespace ?? "genesis", relations: value.relations ?? [], metadata: value.metadata, });
+        const value = input as {
+          text?: string;
+          namespace?: string;
+          relations?: string[];
+          metadata?: Record<string, string>;
+        };
+        if (!value.text?.trim()) throw new Error('HSF_MEMORY_TEXT_REQUIRED');
+        return this.memoryFabric.write({
+          text: value.text,
+          namespace: value.namespace ?? 'genesis',
+          relations: value.relations ?? [],
+          metadata: value.metadata,
+        });
       },
     });
     this.capabilities.register({
-      descriptor: low("hsf.execution.fabric", "execution", "Governed task scheduling contract for asynchronous and long-lived work."),
-      health: () => "ready",
+      descriptor: low(
+        'hsf.execution.fabric',
+        'execution',
+        'Governed task scheduling contract for asynchronous and long-lived work.'
+      ),
+      health: () => 'ready',
       execute: async (input) => {
         const value = input as { type?: string; input?: unknown; scheduledAt?: string };
-        if (!value.type?.trim()) throw new Error("HSF_TASK_TYPE_REQUIRED");
+        if (!value.type?.trim()) throw new Error('HSF_TASK_TYPE_REQUIRED');
         return this.executionFabric.enqueue(value.type, value.input, value.scheduledAt);
       },
     });
     this.capabilities.register({
-      descriptor: low("hsf.knowledge.fabric", "knowledge", "Versioned knowledge ingestion with deterministic content identity."),
-      health: () => "ready",
-      execute: async (input) => this.knowledgeFabric.ingest(input as { title: string; content: string; source: string }),
+      descriptor: low(
+        'hsf.knowledge.fabric',
+        'knowledge',
+        'Versioned knowledge ingestion with deterministic content identity.'
+      ),
+      health: () => 'ready',
+      execute: async (input) =>
+        this.knowledgeFabric.ingest(input as { title: string; content: string; source: string }),
     });
     this.capabilities.register({
-      descriptor: low("hsf.collective.consensus", "collective", "Independent expert result reconciliation with explicit dissent."),
-      health: () => "ready",
-      execute: async (input) => consensus((input as { results: Parameters<typeof consensus>[0] }).results),
+      descriptor: low(
+        'hsf.collective.consensus',
+        'collective',
+        'Independent expert result reconciliation with explicit dissent.'
+      ),
+      health: () => 'ready',
+      execute: async (input) =>
+        consensus((input as { results: Parameters<typeof consensus>[0] }).results),
     });
     this.capabilities.register({
-      descriptor: low("hsf.truth.verification", "verification", "Evidence/contradiction scoring; never upgrades absent evidence into truth."),
-      health: () => "ready",
+      descriptor: low(
+        'hsf.truth.verification',
+        'verification',
+        'Evidence/contradiction scoring; never upgrades absent evidence into truth.'
+      ),
+      health: () => 'ready',
       execute: async (input) => verifyClaim(input as Parameters<typeof verifyClaim>[0]),
     });
     this.capabilities.register({
-      descriptor: low("hsf.architecture.reasoning", "architecture", "Structural analysis of components, dependencies and constraints."),
-      health: () => "ready",
-      execute: async (input) => reasonArchitecture(input as Parameters<typeof reasonArchitecture>[0]),
+      descriptor: low(
+        'hsf.architecture.reasoning',
+        'architecture',
+        'Structural analysis of components, dependencies and constraints.'
+      ),
+      health: () => 'ready',
+      execute: async (input) =>
+        reasonArchitecture(input as Parameters<typeof reasonArchitecture>[0]),
     });
     this.capabilities.register({
-      descriptor: low("hsf.digital-twin", "digital-twin", "Deterministic project/system twin projection."),
-      health: () => "ready",
+      descriptor: low(
+        'hsf.digital-twin',
+        'digital-twin',
+        'Deterministic project/system twin projection.'
+      ),
+      health: () => 'ready',
       execute: async (input) => buildDigitalTwin(input as Parameters<typeof buildDigitalTwin>[0]),
     });
     this.capabilities.register({
-      descriptor: low("hsf.strategic-intelligence", "strategy", "Scenario planning with explicit probabilities, costs and assumptions."),
-      health: () => "ready",
+      descriptor: low(
+        'hsf.strategic-intelligence',
+        'strategy',
+        'Scenario planning with explicit probabilities, costs and assumptions.'
+      ),
+      health: () => 'ready',
       execute: async (input) => planStrategy(input as Parameters<typeof planStrategy>[0]),
     });
     this.capabilities.register({
-      descriptor: low("hsf.self-evaluation", "verification", "Post-output criterion review without altering the source model."),
-      health: () => "ready",
+      descriptor: low(
+        'hsf.self-evaluation',
+        'verification',
+        'Post-output criterion review without altering the source model.'
+      ),
+      health: () => 'ready',
       execute: async (input) => {
         const value = input as { output: unknown; criteria: string[] };
         return selfEvaluate(value.output, value.criteria);
       },
     });
     this.capabilities.register({
-      descriptor: low("hsf.massive-context.parallel", "collective", "Parallel decomposition/fusion primitive for bounded analysis workers."),
-      health: () => "ready",
+      descriptor: low(
+        'hsf.massive-context.parallel',
+        'collective',
+        'Parallel decomposition/fusion primitive for bounded analysis workers.'
+      ),
+      health: () => 'ready',
       execute: async (input) => {
         const value = input as { items: unknown[] };
         return parallelAnalyze(value.items, async (item, index) => ({ index, item }));
@@ -541,53 +762,104 @@ export class IsabellaGenesisRuntime {
   }
 
   private registerGovernanceCapabilities(): void {
-    const low = (id: string, domain: import("../capabilities").CapabilityDomain, description: string) => ({
-      id, version: "1.0.0", domain, description, riskTier: "LOW" as const, requiresAuthority: true,
+    const low = (
+      id: string,
+      domain: import('../capabilities').CapabilityDomain,
+      description: string
+    ) => ({
+      id,
+      version: '1.0.0',
+      domain,
+      description,
+      riskTier: 'LOW' as const,
+      requiresAuthority: true,
     });
 
     this.capabilities.register({
-      descriptor: low("hsf.sanitization.pipeline", "knowledge", "Sanitización segura de documentos antes de deduplicación y admisión."),
-      health: () => "ready",
+      descriptor: low(
+        'hsf.sanitization.pipeline',
+        'knowledge',
+        'Sanitización segura de documentos antes de deduplicación y admisión.'
+      ),
+      health: () => 'ready',
       execute: async (input) => this.sanitize(input as RawDocument),
     });
     this.capabilities.register({
-      descriptor: low("hsf.knowledge.admission", "knowledge", "Admite conocimiento gobernado (IKES) con sanitización, evidencia y policy gate."),
-      health: () => "ready",
-      execute: async (input) => this.admitKnowledge(input as Parameters<typeof this.admitKnowledge>[0]),
+      descriptor: low(
+        'hsf.knowledge.admission',
+        'knowledge',
+        'Admite conocimiento gobernado (IKES) con sanitización, evidencia y policy gate.'
+      ),
+      health: () => 'ready',
+      execute: async (input) =>
+        this.admitKnowledge(input as Parameters<typeof this.admitKnowledge>[0]),
     });
     this.capabilities.register({
-      descriptor: low("hsf.git.governance", "verification", "Evalúa operaciones Git destructivas/externas contra el policy gate."),
-      health: () => "ready",
+      descriptor: low(
+        'hsf.git.governance',
+        'verification',
+        'Evalúa operaciones Git destructivas/externas contra el policy gate.'
+      ),
+      health: () => 'ready',
       execute: async (input) => this.evaluateGit(input as GitOperationRequest),
     });
     this.capabilities.register({
-      descriptor: low("hsf.quality.gates", "verification", "Evalúa los 15 gates canónicos antes de promoción."),
-      health: () => "ready",
+      descriptor: low(
+        'hsf.quality.gates',
+        'verification',
+        'Evalúa los 15 gates canónicos antes de promoción.'
+      ),
+      health: () => 'ready',
       execute: async (input) => this.evaluateQuality(input as QualityGateInput),
     });
     this.capabilities.register({
-      descriptor: low("hsf.deployment.gates", "integration", "Evalúa los gates de despliegue (build→rollback) y valores DNS reales."),
-      health: () => "ready",
+      descriptor: low(
+        'hsf.deployment.gates',
+        'integration',
+        'Evalúa los gates de despliegue (build→rollback) y valores DNS reales.'
+      ),
+      health: () => 'ready',
       execute: async (input) => {
-        const value = input as { target: DeploymentTarget; gates: Parameters<typeof assessDeployment>[1]; opts?: Parameters<typeof assessDeployment>[2] };
+        const value = input as {
+          target: DeploymentTarget;
+          gates: Parameters<typeof assessDeployment>[1];
+          opts?: Parameters<typeof assessDeployment>[2];
+        };
         return this.assessDeployment(value.target, value.gates, value.opts);
       },
     });
     this.capabilities.register({
-      descriptor: low("hsf.agent.verifier", "verification", "Verifica aplicaciones Python basadas en Agent SDK (alcance acotado)."),
-      health: () => "ready",
+      descriptor: low(
+        'hsf.agent.verifier',
+        'verification',
+        'Verifica aplicaciones Python basadas en Agent SDK (alcance acotado).'
+      ),
+      health: () => 'ready',
       execute: async (input) => this.verifyAgentApp(input as VerifierInput),
     });
     this.capabilities.register({
-      descriptor: low("hsf.lifecycle.plan", "execution", "Produce un plan de ciclo de vida de issues (inspect → propose)."),
-      health: () => "ready",
+      descriptor: low(
+        'hsf.lifecycle.plan',
+        'execution',
+        'Produce un plan de ciclo de vida de issues (inspect → propose).'
+      ),
+      health: () => 'ready',
       execute: async (input) => this.planLifecycle(input as LifecycleRunInput),
     });
     this.capabilities.register({
-      descriptor: low("hsf.lsp.validation", "verification", "Valida técnicamente código con frescura de diagnósticos LSP."),
-      health: () => "ready",
+      descriptor: low(
+        'hsf.lsp.validation',
+        'verification',
+        'Valida técnicamente código con frescura de diagnósticos LSP.'
+      ),
+      health: () => 'ready',
       execute: async (input) => {
-        const value = input as { file: string; content: string; diagnostics?: Parameters<LspValidationAdapter["pushDiagnostics"]>[2]; timeoutMs?: number };
+        const value = input as {
+          file: string;
+          content: string;
+          diagnostics?: Parameters<LspValidationAdapter['pushDiagnostics']>[2];
+          timeoutMs?: number;
+        };
         this.lsp.openFile(value.file, value.content);
         const version = this.lsp.saveFile(value.file, value.content);
         if (value.diagnostics) this.lsp.pushDiagnostics(value.file, version, value.diagnostics);
@@ -595,55 +867,92 @@ export class IsabellaGenesisRuntime {
       },
     });
     this.capabilities.register({
-      descriptor: low("hsf.sanitization.hardening", "knowledge", "Endurecimiento de sanitización: entropía, homóglifos y PII profunda (Luhn/IBAN)."),
-      health: () => "ready",
-      execute: async (input) => this.harden((input as { content?: string }).content ?? ""),
+      descriptor: low(
+        'hsf.sanitization.hardening',
+        'knowledge',
+        'Endurecimiento de sanitización: entropía, homóglifos y PII profunda (Luhn/IBAN).'
+      ),
+      health: () => 'ready',
+      execute: async (input) => this.harden((input as { content?: string }).content ?? ''),
     });
     this.capabilities.register({
-      descriptor: low("hsf.crypto.triangulated", "verification", "Sello criptográfico triangulado (SHA3-512 + SHA-256 + BLAKE2b-512) y AEAD AES-256-GCM."),
-      health: () => "ready",
+      descriptor: low(
+        'hsf.crypto.triangulated',
+        'verification',
+        'Sello criptográfico triangulado (SHA3-512 + SHA-256 + BLAKE2b-512) y AEAD AES-256-GCM.'
+      ),
+      health: () => 'ready',
       execute: async (input) => {
         const value = input as { content?: string; hmacKey?: string };
-        return this.triangulate(value.content ?? "", value.hmacKey);
+        return this.triangulate(value.content ?? '', value.hmacKey);
       },
     });
     this.capabilities.register({
-      descriptor: low("hsf.ops.readiness", "integration", "Readiness de producción fail-closed sobre dependencias requeridas."),
-      health: () => "ready",
-      execute: async (input) => this.readiness((input as { dependencies?: DependencyHealth[] }).dependencies ?? []),
+      descriptor: low(
+        'hsf.ops.readiness',
+        'integration',
+        'Readiness de producción fail-closed sobre dependencias requeridas.'
+      ),
+      health: () => 'ready',
+      execute: async (input) =>
+        this.readiness((input as { dependencies?: DependencyHealth[] }).dependencies ?? []),
     });
     this.capabilities.register({
-      descriptor: low("hsf.isa.pipeline", "verification", "Evalúa el pipeline ISA-API v40 de 12 etapas (fail-closed)."),
-      health: () => "ready",
-      execute: async (input) => this.evaluateIsa(input as Parameters<typeof evaluateIsaPipeline>[0]),
+      descriptor: low(
+        'hsf.isa.pipeline',
+        'verification',
+        'Evalúa el pipeline ISA-API v40 de 12 etapas (fail-closed).'
+      ),
+      health: () => 'ready',
+      execute: async (input) =>
+        this.evaluateIsa(input as Parameters<typeof evaluateIsaPipeline>[0]),
     });
     this.capabilities.register({
-      descriptor: low("hsf.vigia.integrity", "verification", "Triple bloqueo VIGIA: integridad ontológica, semántica y conductual (fail-closed)."),
-      health: () => "ready",
-      execute: async (input) => this.assessVigia((input as { content?: string }).content ?? ""),
+      descriptor: low(
+        'hsf.vigia.integrity',
+        'verification',
+        'Triple bloqueo VIGIA: integridad ontológica, semántica y conductual (fail-closed).'
+      ),
+      health: () => 'ready',
+      execute: async (input) => this.assessVigia((input as { content?: string }).content ?? ''),
     });
     this.capabilities.register({
-      descriptor: low("hsf.truth.contradiction", "verification", "Contradiction Engine Ω: contradicciones estructurales entre claims canónicos."),
-      health: () => "ready",
+      descriptor: low(
+        'hsf.truth.contradiction',
+        'verification',
+        'Contradiction Engine Ω: contradicciones estructurales entre claims canónicos.'
+      ),
+      health: () => 'ready',
       execute: async (input) => {
         const value = input as { claims?: CanonicalClaim[]; functionalRelations?: string[] };
-        return this.detectContradictions(value.claims ?? [], { functionalRelations: value.functionalRelations });
+        return this.detectContradictions(value.claims ?? [], {
+          functionalRelations: value.functionalRelations,
+        });
       },
     });
     this.capabilities.register({
-      descriptor: low("hsf.federation.registry", "collective", "Registro canónico de las 7 federaciones TAMV (id ↔ código YUN)."),
-      health: () => "ready",
+      descriptor: low(
+        'hsf.federation.registry',
+        'collective',
+        'Registro canónico de las 7 federaciones TAMV (id ↔ código YUN).'
+      ),
+      health: () => 'ready',
       execute: async (input) => {
         const value = input as { id?: number };
         return value.id === undefined ? listFederations() : this.federation(value.id);
       },
     });
     this.capabilities.register({
-      descriptor: low("hsf.messaging.bus", "integration", "MAGPIE-X: bus de eventos gobernado en proceso; transporta intención, no autoriza ejecución."),
-      health: () => "ready",
+      descriptor: low(
+        'hsf.messaging.bus',
+        'integration',
+        'MAGPIE-X: bus de eventos gobernado en proceso; transporta intención, no autoriza ejecución.'
+      ),
+      health: () => 'ready',
       execute: async (input) => {
         const value = input as Partial<MagpiePublishInput>;
-        if (!value.topic?.trim() || !value.type?.trim()) throw new Error("MAGPIE_PUBLISH_INPUT_REQUIRED");
+        if (!value.topic?.trim() || !value.type?.trim())
+          throw new Error('MAGPIE_PUBLISH_INPUT_REQUIRED');
         return this.publishEvent({
           topic: value.topic,
           type: value.type,
@@ -654,81 +963,124 @@ export class IsabellaGenesisRuntime {
       },
     });
     this.capabilities.register({
-      descriptor: low("hsf.truth.grounding", "verification", "Evidence Grounding Guard Ω: anclaje léxico fail-closed de una respuesta a su evidencia (no verdad)."),
-      health: () => "ready",
+      descriptor: low(
+        'hsf.truth.grounding',
+        'verification',
+        'Evidence Grounding Guard Ω: anclaje léxico fail-closed de una respuesta a su evidencia (no verdad).'
+      ),
+      health: () => 'ready',
       execute: async (input) => {
-        const value = input as { answer?: string; evidence?: GroundingEvidence[]; options?: GroundingOptions };
-        return this.assessGrounding(value.answer ?? "", value.evidence ?? [], value.options);
+        const value = input as {
+          answer?: string;
+          evidence?: GroundingEvidence[];
+          options?: GroundingOptions;
+        };
+        return this.assessGrounding(value.answer ?? '', value.evidence ?? [], value.options);
       },
     });
     this.capabilities.register({
-      descriptor: low("hsf.governance.permission-map", "architecture", "PERMISSION MAP Ω: expande una orden en sus permisos requeridos y los cataloga por nivel (NEUTRO→CRÍTICO); mapear no autoriza."),
-      health: () => "ready",
+      descriptor: low(
+        'hsf.governance.permission-map',
+        'architecture',
+        'PERMISSION MAP Ω: expande una orden en sus permisos requeridos y los cataloga por nivel (NEUTRO→CRÍTICO); mapear no autoriza.'
+      ),
+      health: () => 'ready',
       execute: async (input) => {
         const value = input as { order?: OrderIntent };
-        if (!value.order) throw new Error("ORDER_REQUIRED");
+        if (!value.order) throw new Error('ORDER_REQUIRED');
         return this.mapOrderPermissions(value.order);
       },
     });
     this.capabilities.register({
-      descriptor: low("hsf.governance.consent-envelope", "verification", "Verifica el sobre de autorización humana (fail-closed) y atribuye la responsabilidad al principal."),
-      health: () => "ready",
+      descriptor: low(
+        'hsf.governance.consent-envelope',
+        'verification',
+        'Verifica el sobre de autorización humana (fail-closed) y atribuye la responsabilidad al principal.'
+      ),
+      health: () => 'ready',
       execute: async (input) => {
         const value = input as { envelope?: AuthorizationEnvelope; catalog?: PermissionCatalog };
-        if (!value.envelope || !value.catalog) throw new Error("AUTHORIZATION_INPUT_REQUIRED");
+        if (!value.envelope || !value.catalog) throw new Error('AUTHORIZATION_INPUT_REQUIRED');
         return this.verifyOrderAuthorization(value.envelope, value.catalog);
       },
     });
     this.capabilities.register({
-      descriptor: low("hsf.intelligence.turbo-planner", "strategy", "TURBO ROUTE PLANNER Ω: decide la ruta (FAST/GROUNDED/AGENT/HUMAN_REVIEW) y qué filtros gobernados son obligatorios u omitibles; planificar no autoriza."),
-      health: () => "ready",
+      descriptor: low(
+        'hsf.intelligence.turbo-planner',
+        'strategy',
+        'TURBO ROUTE PLANNER Ω: decide la ruta (FAST/GROUNDED/AGENT/HUMAN_REVIEW) y qué filtros gobernados son obligatorios u omitibles; planificar no autoriza.'
+      ),
+      health: () => 'ready',
       execute: async (input) => {
         const value = input as { request?: TurboRequest };
-        if (!value.request) throw new Error("TURBO_REQUEST_REQUIRED");
+        if (!value.request) throw new Error('TURBO_REQUEST_REQUIRED');
         return this.planTurboRoute(value.request);
       },
     });
     this.capabilities.register({
-      descriptor: low("hsf.governance.traffic-light", "strategy", "SEMÁFORO DE FLUJO GOBERNADO Ω: clasifica la solicitud (verde/amarillo/naranja/rojo) y decide cuántos filtros gobernados corren; clasificar no autoriza ni ejecuta."),
-      health: () => "ready",
+      descriptor: low(
+        'hsf.governance.traffic-light',
+        'strategy',
+        'SEMÁFORO DE FLUJO GOBERNADO Ω: clasifica la solicitud (verde/amarillo/naranja/rojo) y decide cuántos filtros gobernados corren; clasificar no autoriza ni ejecuta.'
+      ),
+      health: () => 'ready',
       execute: async (input) => {
         const value = input as { input?: TrafficLightInput };
-        if (!value.input) throw new Error("TRAFFIC_INPUT_REQUIRED");
+        if (!value.input) throw new Error('TRAFFIC_INPUT_REQUIRED');
         return this.classifyFlow(value.input);
       },
     });
     this.capabilities.register({
-      descriptor: low("hsf.security.document-seal", "verification", "IGDS-v1: sella un documento (integridad SHA-256 + firma Ed25519) y devuelve su manifiesto; sellar no autoriza ni publica."),
-      health: () => "ready",
+      descriptor: low(
+        'hsf.security.document-seal',
+        'verification',
+        'IGDS-v1: sella un documento (integridad SHA-256 + firma Ed25519) y devuelve su manifiesto; sellar no autoriza ni publica.'
+      ),
+      health: () => 'ready',
       execute: async (input) => {
         const value = input as {
-          document?: SealDocumentInput["document"];
+          document?: SealDocumentInput['document'];
           contentBase64?: string;
           createdAt?: string;
           prevSealId?: string | null;
           generateWatermark?: boolean;
         };
-        if (!value.document || typeof value.contentBase64 !== "string") throw new Error("DOCUMENT_SEAL_INPUT_REQUIRED");
+        if (!value.document || typeof value.contentBase64 !== 'string')
+          throw new Error('DOCUMENT_SEAL_INPUT_REQUIRED');
         return this.sealDocument({
           document: value.document,
-          bytes: Buffer.from(value.contentBase64, "base64"),
+          bytes: Buffer.from(value.contentBase64, 'base64'),
           ...(value.createdAt ? { createdAt: value.createdAt } : {}),
           ...(value.prevSealId !== undefined ? { prevSealId: value.prevSealId } : {}),
-          ...(value.generateWatermark !== undefined ? { generateWatermark: value.generateWatermark } : {}),
+          ...(value.generateWatermark !== undefined
+            ? { generateWatermark: value.generateWatermark }
+            : {}),
         });
       },
     });
     this.capabilities.register({
-      descriptor: low("hsf.security.document-seal.verify", "verification", "IGDS-v1: verifica integridad + firma Ed25519 de un manifiesto de sello documental (fail-closed)."),
-      health: () => "ready",
+      descriptor: low(
+        'hsf.security.document-seal.verify',
+        'verification',
+        'IGDS-v1: verifica integridad + firma Ed25519 de un manifiesto de sello documental (fail-closed).'
+      ),
+      health: () => 'ready',
       execute: async (input) => {
-        const value = input as { manifest?: DocumentSealManifest; contentBase64?: string; publicKeyPem?: string };
-        if (!value.manifest || typeof value.contentBase64 !== "string" || typeof value.publicKeyPem !== "string") {
-          throw new Error("DOCUMENT_SEAL_VERIFY_INPUT_REQUIRED");
+        const value = input as {
+          manifest?: DocumentSealManifest;
+          contentBase64?: string;
+          publicKeyPem?: string;
+        };
+        if (
+          !value.manifest ||
+          typeof value.contentBase64 !== 'string' ||
+          typeof value.publicKeyPem !== 'string'
+        ) {
+          throw new Error('DOCUMENT_SEAL_VERIFY_INPUT_REQUIRED');
         }
         return this.verifyDocumentSeal({
           manifest: value.manifest,
-          bytes: Buffer.from(value.contentBase64, "base64"),
+          bytes: Buffer.from(value.contentBase64, 'base64'),
           publicKeyPem: value.publicKeyPem,
         });
       },
@@ -737,9 +1089,10 @@ export class IsabellaGenesisRuntime {
 
   private registerCanonicalProtocols(): void {
     this.protocols.register({
-      id: "isabella.quantum.pennylane.execute",
-      version: "1.0.0",
-      description: "Ejecuta un circuito cuántico mediante el puente gobernado Isabella → PennyLane.",
+      id: 'isabella.quantum.pennylane.execute',
+      version: '1.0.0',
+      description:
+        'Ejecuta un circuito cuántico mediante el puente gobernado Isabella → PennyLane.',
       execute: async (context) => this.executePennyLane(context.input as PennyLaneExecutionRequest),
     });
   }
@@ -748,11 +1101,11 @@ export class IsabellaGenesisRuntime {
     const started = Date.now();
     const result = await this.quantum.execute(request);
     this.telemetry.metric({
-      name: "request_latency_ms",
+      name: 'request_latency_ms',
       value: Date.now() - started,
       at: new Date().toISOString(),
       attributes: {
-        stage: "quantum-pennylane",
+        stage: 'quantum-pennylane',
         backend: result.backend,
         status: result.status,
       },
@@ -764,41 +1117,49 @@ export class IsabellaGenesisRuntime {
     return this.quantum.health();
   }
 
-
   async initPersistence(): Promise<void> {
     const initializers: Promise<unknown>[] = [this.memory.initPersistence()];
-    if (this.persistence && "init" in this.persistence && typeof this.persistence.init === "function") {
+    if (
+      this.persistence &&
+      'init' in this.persistence &&
+      typeof this.persistence.init === 'function'
+    ) {
       initializers.push(this.persistence.init());
     }
     const results = await Promise.allSettled(initializers);
-    const failures = results.filter((result): result is PromiseRejectedResult => result.status === "rejected");
+    const failures = results.filter(
+      (result): result is PromiseRejectedResult => result.status === 'rejected'
+    );
     if (failures.length > 0) {
-      throw new AggregateError(failures.map((failure) => failure.reason), "GENESIS_PERSISTENCE_INITIALIZATION_FAILED");
+      throw new AggregateError(
+        failures.map((failure) => failure.reason),
+        'GENESIS_PERSISTENCE_INITIALIZATION_FAILED'
+      );
     }
   }
 
   async persistUser(input: CreateUserInput) {
-    if (!this.persistence) throw new Error("Genesis persistence is not configured");
+    if (!this.persistence) throw new Error('Genesis persistence is not configured');
     return this.persistence.createUser(input);
   }
 
   async persistProtocolExecution(input: RecordProtocolExecutionInput) {
-    if (!this.persistence) throw new Error("Genesis persistence is not configured");
+    if (!this.persistence) throw new Error('Genesis persistence is not configured');
     return this.persistence.recordProtocolExecution(input);
   }
 
   async persistEconomyEntry(input: RecordEconomyEntryInput) {
-    if (!this.persistence) throw new Error("Genesis persistence is not configured");
+    if (!this.persistence) throw new Error('Genesis persistence is not configured');
     return this.persistence.recordEconomyEntry(input);
   }
 
   async publishAtlasXrEvent(eventType: string, payload: unknown) {
-    if (!this.persistence) throw new Error("Genesis persistence is not configured");
+    if (!this.persistence) throw new Error('Genesis persistence is not configured');
     return this.persistence.publishXrEvent(eventType, payload);
   }
 
-  async createAtlasSignal(input: Parameters<AtlasPersistencePort["createSignal"]>[0]) {
-    if (!this.persistence) throw new Error("Genesis persistence is not configured");
+  async createAtlasSignal(input: Parameters<AtlasPersistencePort['createSignal']>[0]) {
+    if (!this.persistence) throw new Error('Genesis persistence is not configured');
     return this.persistence.createSignal(input);
   }
 
@@ -807,18 +1168,18 @@ export class IsabellaGenesisRuntime {
     try {
       const result = this.isabella.chat(input);
       this.telemetry.metric({
-        name: "request_latency_ms",
+        name: 'request_latency_ms',
         value: Date.now() - started,
         at: new Date().toISOString(),
-        attributes: { stage: "isabella-mediation", profile: input.profile ?? "general" },
+        attributes: { stage: 'isabella-mediation', profile: input.profile ?? 'general' },
       });
       return result;
     } catch (error) {
       this.telemetry.metric({
-        name: "request_latency_ms",
+        name: 'request_latency_ms',
         value: Date.now() - started,
         at: new Date().toISOString(),
-        attributes: { stage: "isabella-mediation", status: "error" },
+        attributes: { stage: 'isabella-mediation', status: 'error' },
       });
       throw error;
     }
@@ -826,37 +1187,48 @@ export class IsabellaGenesisRuntime {
 
   isabellaLatencySnapshot() {
     if (!(this.telemetry instanceof InMemoryTelemetry)) {
-      return { samples: 0, p50Ms: 0, p95Ms: 0, p99Ms: 0, errorRate: 0, source: "custom-sink" as const };
+      return {
+        samples: 0,
+        p50Ms: 0,
+        p95Ms: 0,
+        p99Ms: 0,
+        errorRate: 0,
+        source: 'custom-sink' as const,
+      };
     }
     const samples = this.telemetry.metrics
-      .filter((point) => point.name === "request_latency_ms" && point.attributes.stage === "isabella-mediation")
+      .filter(
+        (point) =>
+          point.name === 'request_latency_ms' && point.attributes.stage === 'isabella-mediation'
+      )
       .map((point) => point.value);
     const errors = this.telemetry.metrics.filter(
-      (point) => point.name === "request_latency_ms"
-        && point.attributes.stage === "isabella-mediation"
-        && point.attributes.status === "error",
+      (point) =>
+        point.name === 'request_latency_ms' &&
+        point.attributes.stage === 'isabella-mediation' &&
+        point.attributes.status === 'error'
     ).length;
-    return { ...sloSnapshot(samples, errors), source: "in-memory" as const };
+    return { ...sloSnapshot(samples, errors), source: 'in-memory' as const };
   }
 
   evaluateIsabellaEntropy(probabilities: number[]) {
     const started = Date.now();
     const result = this.isabella.evaluarEntropia(probabilities);
     this.telemetry.metric({
-      name: "request_latency_ms",
+      name: 'request_latency_ms',
       value: Date.now() - started,
       at: new Date().toISOString(),
-      attributes: { stage: "isabella-entropy" },
+      attributes: { stage: 'isabella-entropy' },
     });
     return result;
   }
 
   /** Optional memory degradation must not disable local conversation; explicit memory APIs still return 503. */
-  private retrieveMemorySafely(query: string): ReturnType<IKESEngine["retrieve"]> {
+  private retrieveMemorySafely(query: string): ReturnType<IKESEngine['retrieve']> {
     try {
       return this.memory.retrieve(query);
     } catch (error) {
-      if (error instanceof Error && error.message === "IKES_PERSISTENCE_NOT_INITIALIZED") return [];
+      if (error instanceof Error && error.message === 'IKES_PERSISTENCE_NOT_INITIALIZED') return [];
       throw error;
     }
   }
@@ -866,40 +1238,61 @@ export class IsabellaGenesisRuntime {
     const aegis = inspectAegis(input.input);
     const crown = evaluateCrown(input);
     const plan = planExecution(input);
-    const memory = input.memoryQuery && aegis.decision !== "BLOCK"
-      ? this.retrieveMemorySafely(input.memoryQuery)
-      : [];
-    const admitted = aegis.decision !== "BLOCK" && crown.verification.allPassed && crown.responseMode !== "refuse";
+    const memory =
+      input.memoryQuery && aegis.decision !== 'BLOCK'
+        ? this.retrieveMemorySafely(input.memoryQuery)
+        : [];
+    const admitted =
+      aegis.decision !== 'BLOCK' && crown.verification.allPassed && crown.responseMode !== 'refuse';
 
     this.telemetry.metric({
-      name: "request_total",
+      name: 'request_total',
       value: 1,
       at: new Date().toISOString(),
       attributes: { admitted, risk: input.riskTier, complexity: plan.complexity },
     });
     this.telemetry.metric({
-      name: "request_latency_ms",
+      name: 'request_latency_ms',
       value: Date.now() - started,
       at: new Date().toISOString(),
-      attributes: { stage: "governed-evaluation" },
+      attributes: { stage: 'governed-evaluation' },
     });
 
     this.events.publish({
-      topic: "runtime.evaluated",
-      type: admitted ? "admitted" : "refused",
-      payload: { admitted, risk: input.riskTier, complexity: plan.complexity, aegis: aegis.decision },
+      topic: 'runtime.evaluated',
+      type: admitted ? 'admitted' : 'refused',
+      payload: {
+        admitted,
+        risk: input.riskTier,
+        complexity: plan.complexity,
+        aegis: aegis.decision,
+      },
     });
 
     return { crown, aegis, plan, memory, admitted };
   }
 
-  synthesizeCognition(task: CognitiveTask, expertIds: readonly (typeof GENESIS_EXPERTS[number])[], results: readonly ExpertResult[]): CognitiveSynthesis {
+  synthesizeCognition(
+    task: CognitiveTask,
+    expertIds: readonly (typeof GENESIS_EXPERTS)[number][],
+    results: readonly ExpertResult[]
+  ): CognitiveSynthesis {
     return synthesize(task, planCognitiveExperts(expertIds), results);
   }
 
-  registerConsent(grant: Parameters<ConsentRegistry["grant"]>[0]): void { this.consent.grant(grant); }
-  revokeConsent(consentId: string): void { this.consent.revoke(consentId); }
-  hasConsent(principalId: string, purpose: Parameters<ConsentRegistry["has"]>[1], scope?: string): boolean { return this.consent.has(principalId,purpose,scope); }
+  registerConsent(grant: Parameters<ConsentRegistry['grant']>[0]): void {
+    this.consent.grant(grant);
+  }
+  revokeConsent(consentId: string): void {
+    this.consent.revoke(consentId);
+  }
+  hasConsent(
+    principalId: string,
+    purpose: Parameters<ConsentRegistry['has']>[1],
+    scope?: string
+  ): boolean {
+    return this.consent.has(principalId, purpose, scope);
+  }
 
   assessCompanionSafety(input: string): CompanionSafetyVerdict {
     return evaluateCompanionSafety(input);
@@ -910,19 +1303,31 @@ export class IsabellaGenesisRuntime {
     return evaluateVigia(input);
   }
 
-  explainPolicy(decision: "ALLOW"|"DENY"|"REVIEW", factors: readonly string[], evidenceRefs: readonly string[], policyVersion: string): DecisionExplanation {
+  explainPolicy(
+    decision: 'ALLOW' | 'DENY' | 'REVIEW',
+    factors: readonly string[],
+    evidenceRefs: readonly string[],
+    policyVersion: string
+  ): DecisionExplanation {
     return explainPolicyDecision(decision, factors, evidenceRefs, policyVersion);
   }
 
-  createContextTrace(traceId: string, signals: Parameters<typeof createEmotionalTrace>[1], purpose: Parameters<typeof createEmotionalTrace>[2]): EmotionalTrace {
+  createContextTrace(
+    traceId: string,
+    signals: Parameters<typeof createEmotionalTrace>[1],
+    purpose: Parameters<typeof createEmotionalTrace>[2]
+  ): EmotionalTrace {
     return createEmotionalTrace(traceId, signals, purpose);
   }
 
-  planExpertModules(ids: readonly (typeof GENESIS_EXPERTS[number])[]): ExpertPlan {
+  planExpertModules(ids: readonly (typeof GENESIS_EXPERTS)[number][]): ExpertPlan {
     return planExperts(ids);
   }
 
-  routeTerritory(query: TerritoryQuery, resolver: (query: TerritoryQuery) => TerritoryAnswer): TerritoryAnswer {
+  routeTerritory(
+    query: TerritoryQuery,
+    resolver: (query: TerritoryQuery) => TerritoryAnswer
+  ): TerritoryAnswer {
     return queryTerritory(query, resolver);
   }
 
@@ -930,8 +1335,12 @@ export class IsabellaGenesisRuntime {
     return evaluateXrSafety(event);
   }
 
-  createProvenanceSource(input: Parameters<typeof createSource>[0]): ProvenanceSource { return createSource(input); }
-  validateProvenanceClaim(claim: ProvenanceClaim, sources: readonly ProvenanceSource[]): boolean { return validateClaim(claim,sources); }
+  createProvenanceSource(input: Parameters<typeof createSource>[0]): ProvenanceSource {
+    return createSource(input);
+  }
+  validateProvenanceClaim(claim: ProvenanceClaim, sources: readonly ProvenanceSource[]): boolean {
+    return validateClaim(claim, sources);
+  }
 
   escalate(request: Parameters<typeof createEscalation>[0]): void {
     this.escalation.enqueue(createEscalation(request));
@@ -941,14 +1350,14 @@ export class IsabellaGenesisRuntime {
     const started = Date.now();
     const result = await this.inference.generate(request);
     this.telemetry.metric({
-      name: "request_latency_ms",
+      name: 'request_latency_ms',
       value: Date.now() - started,
       at: new Date().toISOString(),
-      attributes: { stage: "inference", modelId: result.modelId },
+      attributes: { stage: 'inference', modelId: result.modelId },
     });
     if (result.outputTokens > 0) {
       this.telemetry.metric({
-        name: "tokens_per_second",
+        name: 'tokens_per_second',
         value: result.outputTokens / Math.max(0.001, result.latencyMs / 1000),
         at: new Date().toISOString(),
         attributes: { modelId: result.modelId },
@@ -960,48 +1369,56 @@ export class IsabellaGenesisRuntime {
   async executeTool(
     id: string,
     input: unknown,
-    principal: GenesisRuntimeInput["principal"],
+    principal: GenesisRuntimeInput['principal'],
     scope: string,
-    authorization: ToolAuthorization = {},
+    authorization: ToolAuthorization = {}
   ): Promise<GenesisToolDecision> {
     const started = Date.now();
-    const aegis = inspectAegis(JSON.stringify(input) ?? "");
-    if (aegis.decision === "BLOCK") {
+    const aegis = inspectAegis(JSON.stringify(input) ?? '');
+    if (aegis.decision === 'BLOCK') {
       this.telemetry.metric({
-        name: "security_block",
+        name: 'security_block',
         value: 1,
         at: new Date().toISOString(),
-        attributes: { stage: "tool-input", toolId: id },
+        attributes: { stage: 'tool-input', toolId: id },
       });
-      this.events.publish({ topic: "tool.blocked", type: "security", payload: { toolId: id, decision: aegis.decision } });
+      this.events.publish({
+        topic: 'tool.blocked',
+        type: 'security',
+        payload: { toolId: id, decision: aegis.decision },
+      });
       return { admitted: false, aegis };
     }
 
     try {
       const result = await this.tools.execute(id, input, principal, scope, authorization);
       this.telemetry.metric({
-        name: "tool_execution",
+        name: 'tool_execution',
         value: 1,
         at: new Date().toISOString(),
         attributes: { toolId: id, status: result.receipt.status },
       });
       this.telemetry.metric({
-        name: "request_latency_ms",
+        name: 'request_latency_ms',
         value: Date.now() - started,
         at: new Date().toISOString(),
-        attributes: { stage: "tool-execution" },
+        attributes: { stage: 'tool-execution' },
       });
-      this.events.publish({ topic: "tool.executed", type: result.receipt.status, payload: { toolId: id } });
+      this.events.publish({
+        topic: 'tool.executed',
+        type: result.receipt.status,
+        payload: { toolId: id },
+      });
       return { admitted: true, aegis, output: result.output, receipt: result.receipt };
     } catch (error) {
       const receipt = (error as { receipt?: ToolReceipt }).receipt;
       this.telemetry.metric({
-        name: "tool_execution",
+        name: 'tool_execution',
         value: 1,
         at: new Date().toISOString(),
-        attributes: { toolId: id, status: receipt?.status ?? "error" },
+        attributes: { toolId: id, status: receipt?.status ?? 'error' },
       });
-      this.events.publish({ topic: "tool.failed", type: "error", payload: { toolId: id } });
+      this.events.publish({ topic: 'tool.failed', type: 'error', payload: { toolId: id } });
       return { admitted: false, aegis, receipt };
     }
   }
@@ -1014,10 +1431,10 @@ export class IsabellaGenesisRuntime {
   sanitize(raw: RawDocument): SanitizedDocument {
     const result = sanitizeDocument(raw);
     this.telemetry.metric({
-      name: "request_total",
+      name: 'request_total',
       value: 1,
       at: new Date().toISOString(),
-      attributes: { stage: "sanitization", status: result.status },
+      attributes: { stage: 'sanitization', status: result.status },
     });
     return result;
   }
@@ -1042,13 +1459,13 @@ export class IsabellaGenesisRuntime {
       claimIds,
       sourceIds: [...new Set((input.claims ?? []).flatMap((c) => [...c.sourceIds]))],
       evidenceIds: [...new Set((input.claims ?? []).flatMap((c) => [...c.evidenceIds]))],
-      temporalStatus: "current",
-      epistemicStatus: toEpistemicStatus(input.claims?.[0]?.epistemicState ?? "E0_UNVERIFIED"),
+      temporalStatus: 'current',
+      epistemicStatus: toEpistemicStatus(input.claims?.[0]?.epistemicState ?? 'E0_UNVERIFIED'),
     };
     const entry = createKnowledgeEntry(seed);
     const pipeline = runIkesPipeline({
       entry,
-      sanitizationAdmitted: sanitized.status === "ADMITTED",
+      sanitizationAdmitted: sanitized.status === 'ADMITTED',
       policyGateGranted: input.policyGateGranted,
       // The current runtime has no durable knowledge index adapter; never imply indexing from sanitization alone.
       indexed: false,
@@ -1075,7 +1492,11 @@ export class IsabellaGenesisRuntime {
     return evaluateGitOperation(request);
   }
 
-  assessDeployment(target: DeploymentTarget, gates: Parameters<typeof assessDeployment>[1], opts?: Parameters<typeof assessDeployment>[2]): DeploymentAssessment {
+  assessDeployment(
+    target: DeploymentTarget,
+    gates: Parameters<typeof assessDeployment>[1],
+    opts?: Parameters<typeof assessDeployment>[2]
+  ): DeploymentAssessment {
     return assessDeployment(target, gates, opts);
   }
 
@@ -1102,17 +1523,29 @@ export class IsabellaGenesisRuntime {
   }
 
   /** Contradiction Engine Ω: detecta contradicciones estructurales entre claims canónicos. */
-  detectContradictions(claims: readonly CanonicalClaim[], options?: ContradictionOptions): ContradictionReport {
+  detectContradictions(
+    claims: readonly CanonicalClaim[],
+    options?: ContradictionOptions
+  ): ContradictionReport {
     return runContradictionDetection(claims, options);
   }
 
   /** Evidence Grounding Guard Ω: mide el anclaje léxico de una respuesta a su evidencia (fail-closed). */
-  assessGrounding(answer: string, evidence: readonly GroundingEvidence[], options?: GroundingOptions): GroundingReport {
+  assessGrounding(
+    answer: string,
+    evidence: readonly GroundingEvidence[],
+    options?: GroundingOptions
+  ): GroundingReport {
     const report = assessGrounding(answer, evidence, options);
     this.events.publish({
-      topic: "truth.grounding.assessed",
+      topic: 'truth.grounding.assessed',
       type: report.verdict,
-      payload: { verdict: report.verdict, groundedness: report.groundedness, unsupported: report.unsupportedClaimCount, digest: report.digest },
+      payload: {
+        verdict: report.verdict,
+        groundedness: report.groundedness,
+        unsupported: report.unsupportedClaimCount,
+        digest: report.digest,
+      },
     });
     return report;
   }
@@ -1129,7 +1562,7 @@ export class IsabellaGenesisRuntime {
   mapOrderPermissions(order: OrderIntent): PermissionCatalog {
     const catalog = buildPermissionMap(order);
     this.events.publish({
-      topic: "governance.permissions.mapped",
+      topic: 'governance.permissions.mapped',
       type: catalog.highestLevel,
       payload: {
         orderId: catalog.orderId,
@@ -1147,10 +1580,13 @@ export class IsabellaGenesisRuntime {
    * Verifica el sobre de autorización humana. Fail-closed: solo `AUTHORIZED` procede;
    * cualquier hueco, denegación o manipulación bloquea la ejecución.
    */
-  verifyOrderAuthorization(envelope: AuthorizationEnvelope, catalog: PermissionCatalog): AuthorizationVerification {
+  verifyOrderAuthorization(
+    envelope: AuthorizationEnvelope,
+    catalog: PermissionCatalog
+  ): AuthorizationVerification {
     const verification = runVerifyAuthorization(envelope, catalog);
     this.events.publish({
-      topic: "governance.permissions.authorized",
+      topic: 'governance.permissions.authorized',
       type: verification.status,
       payload: {
         orderId: envelope.orderId,
@@ -1173,7 +1609,7 @@ export class IsabellaGenesisRuntime {
   planTurboRoute(request: TurboRequest): TurboPlan {
     const plan = buildTurboPlan(request);
     this.events.publish({
-      topic: "intelligence.turbo.planned",
+      topic: 'intelligence.turbo.planned',
       type: plan.route,
       payload: {
         route: plan.route,
@@ -1199,7 +1635,7 @@ export class IsabellaGenesisRuntime {
   classifyFlow(input: TrafficLightInput): TrafficLightVerdict {
     const verdict = classifyTrafficFlow(input);
     this.events.publish({
-      topic: "governance.traffic.classified",
+      topic: 'governance.traffic.classified',
       type: verdict.band,
       payload: {
         band: verdict.band,
@@ -1218,10 +1654,16 @@ export class IsabellaGenesisRuntime {
   /* ISABELLA Ω · Cognitive Civilization Runtime (CCR-1)                 */
   /* ------------------------------------------------------------------ */
 
-  private getEvolutionFabric(): { readonly controls: readonly import("../core/types").EvolutionControl[]; readonly mode: string } {
+  private getEvolutionFabric(): {
+    readonly controls: readonly import('../core/types').EvolutionControl[];
+    readonly mode: string;
+  } {
     if (!this.evolutionFabric) {
       const engine = createEngine();
-      this.evolutionFabric = Object.freeze({ controls: [...engine.controls.values()], mode: engine.mode });
+      this.evolutionFabric = Object.freeze({
+        controls: [...engine.controls.values()],
+        mode: engine.mode,
+      });
     }
     return this.evolutionFabric;
   }
@@ -1248,7 +1690,7 @@ export class IsabellaGenesisRuntime {
           this.events.publish(event);
         },
       },
-      input,
+      input
     );
   }
 
@@ -1288,7 +1730,7 @@ export class IsabellaGenesisRuntime {
    */
   runCivilizationCycleWithIhec(
     input: CivilizationCycleInput,
-    giftPayload: IhecGiftPayload = {},
+    giftPayload: IhecGiftPayload = {}
   ): IhecRunResult<CivilizationCycleResult> {
     const payload: IhecGiftPayload = { summary: input.input, ...giftPayload };
     return runWithIhec(this.ihec, payload, () => this.runCivilizationCycle(input));
@@ -1298,7 +1740,6 @@ export class IsabellaGenesisRuntime {
   ihecSummary(): ReturnType<typeof buildIhecSummary> {
     return buildIhecSummary();
   }
-
 
   /**
    * Llave Ed25519 usada para sellar documentos. Se carga de
@@ -1311,8 +1752,8 @@ export class IsabellaGenesisRuntime {
     if (!this.documentSealSignerInstance) {
       const pem = process.env.GENESIS_DOCUMENT_SEAL_KEY_PEM?.trim();
       this.documentSealSignerInstance = pem
-        ? Ed25519Signer.fromPem(pem, "genesis-document-seal")
-        : Ed25519Signer.generate("genesis-document-seal-ephemeral");
+        ? Ed25519Signer.fromPem(pem, 'genesis-document-seal')
+        : Ed25519Signer.generate('genesis-document-seal-ephemeral');
     }
     return this.documentSealSignerInstance;
   }
@@ -1325,7 +1766,7 @@ export class IsabellaGenesisRuntime {
   async sealDocument(input: SealDocumentInput): Promise<DocumentSealManifest> {
     const manifest = await sealDocumentManifest(input, this.documentSealSigner());
     this.events.publish({
-      topic: "security.document.sealed",
+      topic: 'security.document.sealed',
       type: manifest.schema,
       payload: {
         sealId: manifest.sealId,
@@ -1343,8 +1784,8 @@ export class IsabellaGenesisRuntime {
   async verifyDocumentSeal(input: VerifySealInput): Promise<SealVerificationReport> {
     const report = await verifyDocumentSealManifest(input);
     this.events.publish({
-      topic: "security.document.seal.verified",
-      type: report.valid ? "VALID" : "INVALID",
+      topic: 'security.document.seal.verified',
+      type: report.valid ? 'VALID' : 'INVALID',
       payload: {
         sealId: report.sealId,
         valid: report.valid,
@@ -1380,7 +1821,10 @@ export class IsabellaGenesisRuntime {
   }
 
   /** Cuarentena de un contenido sensible (registra hash y motivo, no el secreto). */
-  quarantine(content: string, findings: Parameters<typeof buildQuarantineRecord>[1]): ReturnType<typeof buildQuarantineRecord> {
+  quarantine(
+    content: string,
+    findings: Parameters<typeof buildQuarantineRecord>[1]
+  ): ReturnType<typeof buildQuarantineRecord> {
     return buildQuarantineRecord(content, findings);
   }
 
@@ -1390,12 +1834,12 @@ export class IsabellaGenesisRuntime {
   }
 
   /** Sella un contenido con AES-256-GCM + sello triangulado. */
-  seal(plaintext: string, key: Buffer, aad = ""): SealedEnvelope {
+  seal(plaintext: string, key: Buffer, aad = ''): SealedEnvelope {
     return sealEnvelope(plaintext, key, aad);
   }
 
   /** Abre un sobre sellado; fail-closed ante tag o sello inválidos. */
-  open(envelope: SealedEnvelope, key: Buffer, aad = ""): string {
+  open(envelope: SealedEnvelope, key: Buffer, aad = ''): string {
     return openEnvelope(envelope, key, aad);
   }
 
@@ -1404,8 +1848,11 @@ export class IsabellaGenesisRuntime {
     return assessProductionReadiness(dependencies);
   }
 
-  /** Snapshot operativo coherente (readiness + mantenimiento + correlación). */
-  opsSnapshot(dependencies: readonly DependencyHealth[], windows: readonly MaintenanceWindow[] = []): OpsSnapshot {
+  /** Snapshot operativo coherente (readiness + mantenimiento + correlaci��n). */
+  opsSnapshot(
+    dependencies: readonly DependencyHealth[],
+    windows: readonly MaintenanceWindow[] = []
+  ): OpsSnapshot {
     return buildOpsSnapshot(dependencies, windows);
   }
 
@@ -1420,7 +1867,9 @@ export class IsabellaGenesisRuntime {
   }
 
   /** Evalúa el pipeline ISA-API de 12 etapas (fail-closed). */
-  evaluateIsa(flags: Parameters<typeof evaluateIsaPipeline>[0]): ReturnType<typeof evaluateIsaPipeline> {
+  evaluateIsa(
+    flags: Parameters<typeof evaluateIsaPipeline>[0]
+  ): ReturnType<typeof evaluateIsaPipeline> {
     return evaluateIsaPipeline(flags);
   }
 }

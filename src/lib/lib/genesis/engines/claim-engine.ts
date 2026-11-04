@@ -1,17 +1,17 @@
-import { Claim, ClaimStatus, DEFAULT_CLAIMS, validateClaim } from "../schemas/claim.schema";
-import { Evidence } from "../schemas/evidence.schema";
-import { Finding } from "../schemas/finding.schema";
-import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-import { ScanResult } from "../scanners/source-scanner";
-import { SecurityScanResult, VulnerabilityFinding } from "../scanners/security-scanner";
-import { DatabaseScanResult, DetectedEngine } from "../scanners/database-scanner";
-import { FinancialScanResult } from "../scanners/financial-scanner";
-import { GovernanceScanResult } from "../scanners/governance-scanner";
-import { TestDiscoveryResult, TestExecutionResult, TestFile } from "../runners/test-runner";
-import { CodeArtifact } from "../graph/evidence-graph";
-import { getCiRunId, isCiEnvironment } from "../../config";
+import { Claim, ClaimStatus, DEFAULT_CLAIMS, validateClaim } from '../schemas/claim.schema';
+import { Evidence } from '../schemas/evidence.schema';
+import { Finding } from '../schemas/finding.schema';
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { ScanResult } from '../scanners/source-scanner';
+import { SecurityScanResult, VulnerabilityFinding } from '../scanners/security-scanner';
+import { DatabaseScanResult, DetectedEngine } from '../scanners/database-scanner';
+import { FinancialScanResult } from '../scanners/financial-scanner';
+import { GovernanceScanResult } from '../scanners/governance-scanner';
+import { TestDiscoveryResult, TestExecutionResult, TestFile } from '../runners/test-runner';
+import { CodeArtifact } from '../graph/evidence-graph';
+import { getCiRunId, isCiEnvironment } from '../../config';
 
 export interface ClaimEngineConfig {
   claimsPath?: string;
@@ -88,13 +88,13 @@ export class ClaimEngine {
   }
 
   private getDependencyLockHash(): string {
-    const lockfilePath = join(process.cwd(), "pnpm-lock.yaml");
+    const lockfilePath = join(process.cwd(), 'pnpm-lock.yaml');
     try {
-      const content = readFileSync(lockfilePath, "utf8");
-      return createHash("sha3-512").update(content).digest("hex");
+      const content = readFileSync(lockfilePath, 'utf8');
+      return createHash('sha3-512').update(content).digest('hex');
     } catch (error) {
       throw new Error(
-        `Cannot collect Genesis evidence without pnpm-lock.yaml: ${error instanceof Error ? error.message : String(error)}`,
+        `Cannot collect Genesis evidence without pnpm-lock.yaml: ${error instanceof Error ? error.message : String(error)}`
       );
     }
   }
@@ -102,20 +102,20 @@ export class ClaimEngine {
   private collectEvidenceFromScans(): void {
     const now = new Date().toISOString();
     const environment = {
-      runner: isCiEnvironment() ? "GitHub Actions" : "local",
-      runnerId: isCiEnvironment() ? getCiRunId() : "local",
+      runner: isCiEnvironment() ? 'GitHub Actions' : 'local',
+      runnerId: isCiEnvironment() ? getCiRunId() : 'local',
       os: process.platform,
       nodeVersion: process.version,
       pnpmVersion: (() => {
         try {
           const packageManager = JSON.parse(
-            readFileSync(join(process.cwd(), "package.json"), "utf8"),
+            readFileSync(join(process.cwd(), 'package.json'), 'utf8')
           ).packageManager;
-          return typeof packageManager === "string"
-            ? packageManager.replace(/^pnpm@/, "")
-            : "unknown";
+          return typeof packageManager === 'string'
+            ? packageManager.replace(/^pnpm@/, '')
+            : 'unknown';
         } catch {
-          return "unknown";
+          return 'unknown';
         }
       })(),
       dependencyLockHash: this.getDependencyLockHash(),
@@ -127,9 +127,9 @@ export class ClaimEngine {
         const evidence: Evidence = {
           id: `ev-source-${artifact.id}`,
           claimId: this.mapArtifactToClaim(artifact),
-          type: "SOURCE_CODE",
-          source: "repository",
-          provenance: "STATIC",
+          type: 'SOURCE_CODE',
+          source: 'repository',
+          provenance: 'STATIC',
           location: { file: artifact.file, line: 1, column: 1 },
           content: {
             hash: artifact.hash,
@@ -138,7 +138,7 @@ export class ClaimEngine {
           },
           metadata: {
             collectedAt: now,
-            collectedBy: "source-scanner",
+            collectedBy: 'source-scanner',
             environment,
             ttlDays: 90,
             reproducible: true,
@@ -154,22 +154,22 @@ export class ClaimEngine {
     const securityResult = this.scanResults.security as SecurityScanResult | undefined;
     if (securityResult?.vulnerabilities?.length) {
       for (const vuln of securityResult.vulnerabilities) {
-        if (vuln.severity === "CRITICAL" || vuln.severity === "HIGH") {
+        if (vuln.severity === 'CRITICAL' || vuln.severity === 'HIGH') {
           const evidence: Evidence = {
             id: `ev-sec-${vuln.id}`,
             claimId: this.mapVulnToClaim(vuln),
-            type: "SECURITY_TEST",
-            source: "test-execution",
-            provenance: "STATIC",
+            type: 'SECURITY_TEST',
+            source: 'test-execution',
+            provenance: 'STATIC',
             location: { file: vuln.file, line: vuln.line, column: vuln.column },
             content: {
-              hash: createHash("sha3-512").update(JSON.stringify(vuln)).digest("hex"),
+              hash: createHash('sha3-512').update(JSON.stringify(vuln)).digest('hex'),
               size: 100,
               preview: `${vuln.type}: ${vuln.description} (${vuln.severity})`,
             },
             metadata: {
               collectedAt: now,
-              collectedBy: "security-scanner",
+              collectedBy: 'security-scanner',
               environment,
               testResult: {
                 passed: false,
@@ -195,18 +195,18 @@ export class ClaimEngine {
           const evidence: Evidence = {
             id: `ev-db-${engine.type}`,
             claimId: this.mapEngineToClaim(engine),
-            type: "SOURCE_CODE",
-            source: "repository",
-            provenance: "STATIC",
+            type: 'SOURCE_CODE',
+            source: 'repository',
+            provenance: 'STATIC',
             location: { file: engine.files?.[0] },
             content: {
-              hash: createHash("sha3-512").update(JSON.stringify(engine)).digest("hex"),
+              hash: createHash('sha3-512').update(JSON.stringify(engine)).digest('hex'),
               size: 100,
-              preview: `Engine: ${engine.type}, Tables: ${engine.tables?.join(", ")}, Authority for: ${engine.isAuthorityFor?.join(", ")}`,
+              preview: `Engine: ${engine.type}, Tables: ${engine.tables?.join(', ')}, Authority for: ${engine.isAuthorityFor?.join(', ')}`,
             },
             metadata: {
               collectedAt: now,
-              collectedBy: "database-scanner",
+              collectedBy: 'database-scanner',
               environment,
               ttlDays: 90,
               reproducible: true,
@@ -225,24 +225,24 @@ export class ClaimEngine {
       for (const op of finResult.operations) {
         const evidence: Evidence = {
           id: `ev-fin-${op.name}`,
-          claimId: "CLAIM-005",
-          type: op.atomic && op.idempotent ? "INTEGRATION_TEST" : "SECURITY_TEST",
-          source: "repository",
-          provenance: "STATIC",
+          claimId: 'CLAIM-005',
+          type: op.atomic && op.idempotent ? 'INTEGRATION_TEST' : 'SECURITY_TEST',
+          source: 'repository',
+          provenance: 'STATIC',
           location: { file: op.location },
           content: {
-            hash: createHash("sha3-512").update(op.implementation).digest("hex"),
+            hash: createHash('sha3-512').update(op.implementation).digest('hex'),
             size: op.implementation.length,
             preview: `${op.type}: atomic=${op.atomic}, idempotent=${op.idempotent}, doubleEntry=${op.doubleEntry}, ledgerIntegrated=${op.ledgerIntegrated}`,
           },
           metadata: {
             collectedAt: now,
-            collectedBy: "financial-scanner",
+            collectedBy: 'financial-scanner',
             environment,
             testResult: {
               passed: op.atomic && op.idempotent && op.balanceCheck,
               durationMs: 0,
-              output: `Operation ${op.name}: ${op.atomic ? "atomic" : "NOT atomic"}, ${op.idempotent ? "idempotent" : "NOT idempotent"}`,
+              output: `Operation ${op.name}: ${op.atomic ? 'atomic' : 'NOT atomic'}, ${op.idempotent ? 'idempotent' : 'NOT idempotent'}`,
             },
             ttlDays: 90,
             reproducible: true,
@@ -262,17 +262,17 @@ export class ClaimEngine {
           const evidence: Evidence = {
             id: `ev-gov-${claimAnalysis.claim.id}-code`,
             claimId: claimAnalysis.claim.id,
-            type: "SOURCE_CODE",
-            source: "repository",
-            provenance: "STATIC",
+            type: 'SOURCE_CODE',
+            source: 'repository',
+            provenance: 'STATIC',
             content: {
-              hash: createHash("sha3-512").update(`code:${claimAnalysis.claim.id}`).digest("hex"),
+              hash: createHash('sha3-512').update(`code:${claimAnalysis.claim.id}`).digest('hex'),
               size: 100,
               preview: `Code implemented for claim ${claimAnalysis.claim.id}`,
             },
             metadata: {
               collectedAt: now,
-              collectedBy: "governance-scanner",
+              collectedBy: 'governance-scanner',
               environment,
               ttlDays: 90,
               reproducible: true,
@@ -287,19 +287,19 @@ export class ClaimEngine {
           const evidence: Evidence = {
             id: `ev-gov-${claimAnalysis.claim.id}-evidence`,
             claimId: claimAnalysis.claim.id,
-            type: "ARCHITECTURE_DOCUMENT",
-            source: "repository",
-            provenance: "STATIC",
+            type: 'ARCHITECTURE_DOCUMENT',
+            source: 'repository',
+            provenance: 'STATIC',
             content: {
-              hash: createHash("sha3-512")
+              hash: createHash('sha3-512')
                 .update(`evidence:${claimAnalysis.claim.id}`)
-                .digest("hex"),
+                .digest('hex'),
               size: 100,
               preview: `Evidence found for claim ${claimAnalysis.claim.id}`,
             },
             metadata: {
               collectedAt: now,
-              collectedBy: "governance-scanner",
+              collectedBy: 'governance-scanner',
               environment,
               ttlDays: 90,
               reproducible: true,
@@ -314,17 +314,17 @@ export class ClaimEngine {
           const evidence: Evidence = {
             id: `ev-gov-${claimAnalysis.claim.id}-tests`,
             claimId: claimAnalysis.claim.id,
-            type: "UNIT_TEST",
-            source: "test-execution",
-            provenance: "STATIC",
+            type: 'UNIT_TEST',
+            source: 'test-execution',
+            provenance: 'STATIC',
             content: {
-              hash: createHash("sha3-512").update(`tests:${claimAnalysis.claim.id}`).digest("hex"),
+              hash: createHash('sha3-512').update(`tests:${claimAnalysis.claim.id}`).digest('hex'),
               size: 100,
               preview: `Tests passing for claim ${claimAnalysis.claim.id}`,
             },
             metadata: {
               collectedAt: now,
-              collectedBy: "governance-scanner",
+              collectedBy: 'governance-scanner',
               environment,
               ttlDays: 90,
               reproducible: true,
@@ -343,11 +343,11 @@ export class ClaimEngine {
     if (!this.testResults) return;
     const now = new Date().toISOString();
     const environment = {
-      runner: isCiEnvironment() ? "GitHub Actions" : "local",
-      runnerId: isCiEnvironment() ? getCiRunId() : "local",
+      runner: isCiEnvironment() ? 'GitHub Actions' : 'local',
+      runnerId: isCiEnvironment() ? getCiRunId() : 'local',
       os: process.platform,
       nodeVersion: process.version,
-      pnpmVersion: "10.34.5",
+      pnpmVersion: '10.34.5',
       dependencyLockHash: this.getDependencyLockHash(),
     };
 
@@ -360,33 +360,33 @@ export class ClaimEngine {
 
     for (const testFile of this.testResults.testFiles) {
       for (const testCase of testFile.tests) {
-        let evidenceType: Evidence["type"] = "UNIT_TEST";
-        if (testFile.category === "integration") evidenceType = "INTEGRATION_TEST";
-        else if (testFile.category === "security") evidenceType = "SECURITY_TEST";
-        else if (testFile.category === "concurrency") evidenceType = "CONCURRENCY_TEST";
-        else if (testFile.category === "e2e") evidenceType = "INTEGRATION_TEST";
-        else if (testFile.category === "performance") evidenceType = "UNIT_TEST";
+        let evidenceType: Evidence['type'] = 'UNIT_TEST';
+        if (testFile.category === 'integration') evidenceType = 'INTEGRATION_TEST';
+        else if (testFile.category === 'security') evidenceType = 'SECURITY_TEST';
+        else if (testFile.category === 'concurrency') evidenceType = 'CONCURRENCY_TEST';
+        else if (testFile.category === 'e2e') evidenceType = 'INTEGRATION_TEST';
+        else if (testFile.category === 'performance') evidenceType = 'UNIT_TEST';
         const executed = executionByTest.get(`${testFile.file}|${testCase.name}`);
         if (!executed) continue;
         const claimId = this.mapTestFileToClaim(testFile);
         const evidence: Evidence = {
-          id: `ev-test-${testFile.file.replace(/[^a-zA-Z0-9]/g, "-")}-${testCase.name.replace(/[^a-zA-Z0-9]/g, "-")}`.slice(
+          id: `ev-test-${testFile.file.replace(/[^a-zA-Z0-9]/g, '-')}-${testCase.name.replace(/[^a-zA-Z0-9]/g, '-')}`.slice(
             0,
-            64,
+            64
           ),
           claimId,
           type: evidenceType,
-          source: "test-execution",
-          provenance: "RUNTIME",
+          source: 'test-execution',
+          provenance: 'RUNTIME',
           location: { file: testFile.file, line: testCase.line },
           content: {
-            hash: createHash("sha3-512").update(`${testFile.file}:${testCase.name}`).digest("hex"),
+            hash: createHash('sha3-512').update(`${testFile.file}:${testCase.name}`).digest('hex'),
             size: 100,
-            preview: `${testFile.category} test: ${testCase.name}${executed ? (executed.passed ? " (passed)" : " (failed)") : " (discovered, not executed)"}`,
+            preview: `${testFile.category} test: ${testCase.name}${executed ? (executed.passed ? ' (passed)' : ' (failed)') : ' (discovered, not executed)'}`,
           },
           metadata: {
             collectedAt: now,
-            collectedBy: executed ? "test-executor" : "test-discovery",
+            collectedBy: executed ? 'test-executor' : 'test-discovery',
             environment,
             testResult: executed
               ? {
@@ -408,100 +408,100 @@ export class ClaimEngine {
 
   private mapArtifactToClaim(artifact: CodeArtifact): string {
     const file = artifact.file.toLowerCase();
-    if (file.includes("sovereign") || file.includes("engine")) return "CLAIM-007";
-    if (file.includes("bookpi") || file.includes("ledger") || file.includes("audit"))
-      return "CLAIM-003";
-    if (file.includes("auth") || file.includes("rbac") || file.includes("abac")) return "CLAIM-002";
-    if (file.includes("csp") || file.includes("security")) return "CLAIM-010";
-    if (file.includes("financial") || file.includes("billing") || file.includes("payment"))
-      return "CLAIM-005";
-    if (file.includes("database") || file.includes("repository") || file.includes("persistence"))
-      return "CLAIM-006";
-    if (file.includes("kill") || file.includes("emergency")) return "CLAIM-008";
-    if (file.includes("mfa") || file.includes("step-up")) return "CLAIM-009";
-    if (file.includes("provenance") || file.includes("git") || file.includes("charter"))
-      return "CLAIM-001";
-    if (file.includes("privacy") || file.includes("gdpr") || file.includes("dpa"))
-      return "CLAIM-004";
-    return "CLAIM-001";
+    if (file.includes('sovereign') || file.includes('engine')) return 'CLAIM-007';
+    if (file.includes('bookpi') || file.includes('ledger') || file.includes('audit'))
+      return 'CLAIM-003';
+    if (file.includes('auth') || file.includes('rbac') || file.includes('abac')) return 'CLAIM-002';
+    if (file.includes('csp') || file.includes('security')) return 'CLAIM-010';
+    if (file.includes('financial') || file.includes('billing') || file.includes('payment'))
+      return 'CLAIM-005';
+    if (file.includes('database') || file.includes('repository') || file.includes('persistence'))
+      return 'CLAIM-006';
+    if (file.includes('kill') || file.includes('emergency')) return 'CLAIM-008';
+    if (file.includes('mfa') || file.includes('step-up')) return 'CLAIM-009';
+    if (file.includes('provenance') || file.includes('git') || file.includes('charter'))
+      return 'CLAIM-001';
+    if (file.includes('privacy') || file.includes('gdpr') || file.includes('dpa'))
+      return 'CLAIM-004';
+    return 'CLAIM-001';
   }
 
   private mapVulnToClaim(vuln: VulnerabilityFinding): string {
     const file = vuln.file.toLowerCase();
-    if (file.includes("csp") || file.includes("content-security")) return "CLAIM-010";
-    if (file.includes("sql") || file.includes("injection")) return "CLAIM-005";
-    if (file.includes("auth") || file.includes("jwt")) return "CLAIM-002";
-    if (file.includes("eval") || file.includes("injection")) return "CLAIM-007";
-    return "CLAIM-003";
+    if (file.includes('csp') || file.includes('content-security')) return 'CLAIM-010';
+    if (file.includes('sql') || file.includes('injection')) return 'CLAIM-005';
+    if (file.includes('auth') || file.includes('jwt')) return 'CLAIM-002';
+    if (file.includes('eval') || file.includes('injection')) return 'CLAIM-007';
+    return 'CLAIM-003';
   }
 
   private mapEngineToClaim(engine: DetectedEngine): string {
-    if (engine.type === "postgresql" || engine.type === "neon") return "CLAIM-006";
-    if (engine.type === "supabase") return "CLAIM-006";
-    if (engine.type === "json_files") return "CLAIM-007";
-    if (engine.type === "in_memory") return "CLAIM-007";
-    return "CLAIM-006";
+    if (engine.type === 'postgresql' || engine.type === 'neon') return 'CLAIM-006';
+    if (engine.type === 'supabase') return 'CLAIM-006';
+    if (engine.type === 'json_files') return 'CLAIM-007';
+    if (engine.type === 'in_memory') return 'CLAIM-007';
+    return 'CLAIM-006';
   }
 
   private mapTestFileToClaim(testFile: TestFile): string {
     const file = testFile.file.toLowerCase();
-    if (file.includes("audit") || file.includes("ledger") || file.includes("bookpi"))
-      return "CLAIM-003";
-    if (file.includes("financial") || file.includes("billing") || file.includes("payment"))
-      return "CLAIM-005";
-    if (file.includes("auth") || file.includes("rbac") || file.includes("hitl")) return "CLAIM-002";
-    if (file.includes("sovereign") || file.includes("state")) return "CLAIM-007";
-    if (file.includes("database") || file.includes("repository")) return "CLAIM-006";
-    if (file.includes("kill") || file.includes("emergency")) return "CLAIM-008";
-    if (file.includes("mfa")) return "CLAIM-009";
-    if (file.includes("csp") || file.includes("security")) return "CLAIM-010";
-    return "CLAIM-001";
+    if (file.includes('audit') || file.includes('ledger') || file.includes('bookpi'))
+      return 'CLAIM-003';
+    if (file.includes('financial') || file.includes('billing') || file.includes('payment'))
+      return 'CLAIM-005';
+    if (file.includes('auth') || file.includes('rbac') || file.includes('hitl')) return 'CLAIM-002';
+    if (file.includes('sovereign') || file.includes('state')) return 'CLAIM-007';
+    if (file.includes('database') || file.includes('repository')) return 'CLAIM-006';
+    if (file.includes('kill') || file.includes('emergency')) return 'CLAIM-008';
+    if (file.includes('mfa')) return 'CLAIM-009';
+    if (file.includes('csp') || file.includes('security')) return 'CLAIM-010';
+    return 'CLAIM-001';
   }
 
   evaluateClaimStatus(claimId: string): ClaimStatus {
     const claim = this.claims.get(claimId);
-    if (!claim) return "UNKNOWN";
+    if (!claim) return 'UNKNOWN';
     const evidences = this.getEvidences(claimId);
     const findings = this.getFindings(claimId);
-    const criticalFindings = findings.filter((f) => f.severity === "CRITICAL").length;
-    if (criticalFindings > 0) return "FAILED";
+    const criticalFindings = findings.filter((f) => f.severity === 'CRITICAL').length;
+    if (criticalFindings > 0) return 'FAILED';
     const requiredTypes = claim.evidenceRequired;
     const coveredTypes = new Set(evidences.map((e) => e.type));
     const missingTypes = requiredTypes.filter((t) => !coveredTypes.has(t));
     if (missingTypes.length > 0) {
       const minRequired = this.getMinEvidenceForStatus(claim.requiredStatus);
-      if (evidences.length < minRequired) return "PARTIAL";
-      if (missingTypes.length === requiredTypes.length) return "PLANNED";
-      return "PARTIAL";
+      if (evidences.length < minRequired) return 'PARTIAL';
+      if (missingTypes.length === requiredTypes.length) return 'PLANNED';
+      return 'PARTIAL';
     }
-    if (claim.requiredStatus === "PRODUCTION-VERIFIED") {
-      const hasDeploymentRecord = evidences.some((e) => e.type === "DEPLOYMENT_RECORD");
-      const hasHealthCheck = evidences.some((e) => e.type === "HEALTH_CHECK");
-      const hasMonitoring = evidences.some((e) => e.type === "MONITORING_DATA");
-      const hasIncidentReport = evidences.some((e) => e.type === "INCIDENT_REPORT");
+    if (claim.requiredStatus === 'PRODUCTION-VERIFIED') {
+      const hasDeploymentRecord = evidences.some((e) => e.type === 'DEPLOYMENT_RECORD');
+      const hasHealthCheck = evidences.some((e) => e.type === 'HEALTH_CHECK');
+      const hasMonitoring = evidences.some((e) => e.type === 'MONITORING_DATA');
+      const hasIncidentReport = evidences.some((e) => e.type === 'INCIDENT_REPORT');
       if (!hasDeploymentRecord || !hasHealthCheck || !hasMonitoring || !hasIncidentReport)
-        return "VERIFIED";
-      return "PRODUCTION-VERIFIED";
+        return 'VERIFIED';
+      return 'PRODUCTION-VERIFIED';
     }
-    if (claim.requiredStatus === "VERIFIED") {
-      const hasExternalAudit = evidences.some((e) => e.type === "EXTERNAL_AUDIT");
-      const hasConcurrencyTest = evidences.some((e) => e.type === "CONCURRENCY_TEST");
-      if (!hasExternalAudit || !hasConcurrencyTest) return "TESTED";
-      return "VERIFIED";
+    if (claim.requiredStatus === 'VERIFIED') {
+      const hasExternalAudit = evidences.some((e) => e.type === 'EXTERNAL_AUDIT');
+      const hasConcurrencyTest = evidences.some((e) => e.type === 'CONCURRENCY_TEST');
+      if (!hasExternalAudit || !hasConcurrencyTest) return 'TESTED';
+      return 'VERIFIED';
     }
-    if (claim.requiredStatus === "TESTED") {
-      const hasIntegrationTest = evidences.some((e) => e.type === "INTEGRATION_TEST");
-      const hasSecurityTest = evidences.some((e) => e.type === "SECURITY_TEST");
-      if (!hasIntegrationTest || !hasSecurityTest) return "IMPLEMENTED";
-      return "TESTED";
+    if (claim.requiredStatus === 'TESTED') {
+      const hasIntegrationTest = evidences.some((e) => e.type === 'INTEGRATION_TEST');
+      const hasSecurityTest = evidences.some((e) => e.type === 'SECURITY_TEST');
+      if (!hasIntegrationTest || !hasSecurityTest) return 'IMPLEMENTED';
+      return 'TESTED';
     }
-    if (claim.requiredStatus === "IMPLEMENTED") {
-      const hasSourceCode = evidences.some((e) => e.type === "SOURCE_CODE");
-      const hasUnitTest = evidences.some((e) => e.type === "UNIT_TEST");
-      if (!hasSourceCode || !hasUnitTest) return "DESIGNED";
-      return "IMPLEMENTED";
+    if (claim.requiredStatus === 'IMPLEMENTED') {
+      const hasSourceCode = evidences.some((e) => e.type === 'SOURCE_CODE');
+      const hasUnitTest = evidences.some((e) => e.type === 'UNIT_TEST');
+      if (!hasSourceCode || !hasUnitTest) return 'DESIGNED';
+      return 'IMPLEMENTED';
     }
-    return "DESIGNED";
+    return 'DESIGNED';
   }
 
   private getMinEvidenceForStatus(status: ClaimStatus): number {
@@ -512,10 +512,10 @@ export class ClaimEngine {
       IMPLEMENTED: 2,
       TESTED: 4,
       VERIFIED: 6,
-      "PRODUCTION-VERIFIED": 10,
+      'PRODUCTION-VERIFIED': 10,
       FAILED: 0,
       UNKNOWN: 0,
-      "NOT-APPLICABLE": 0,
+      'NOT-APPLICABLE': 0,
     };
     return requirements[status] ?? 0;
   }
@@ -527,9 +527,9 @@ export class ClaimEngine {
         id: c.id,
         title: c.title,
         requiredStatus: c.requiredStatus,
-      })),
+      }))
     );
-    return createHash("sha3-512").update(content).digest("hex");
+    return createHash('sha3-512').update(content).digest('hex');
   }
 }
 

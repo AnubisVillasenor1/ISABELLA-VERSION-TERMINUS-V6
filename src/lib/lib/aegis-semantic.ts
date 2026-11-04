@@ -21,18 +21,18 @@
  * neuronal. No sustituye revisión humana en `flag`.
  */
 
-export type AegisVerdict = "allow" | "flag" | "deny";
+export type AegisVerdict = 'allow' | 'flag' | 'deny';
 
 export type AegisDetector =
-  | "semantic-classifier"
-  | "contextual-attack"
-  | "indirect-injection"
-  | "tool-poisoning"
-  | "retrieval-poisoning"
-  | "exfiltration"
-  | "behavioral";
+  | 'semantic-classifier'
+  | 'contextual-attack'
+  | 'indirect-injection'
+  | 'tool-poisoning'
+  | 'retrieval-poisoning'
+  | 'exfiltration'
+  | 'behavioral';
 
-export type AegisSeverity = "low" | "medium" | "high" | "critical";
+export type AegisSeverity = 'low' | 'medium' | 'high' | 'critical';
 
 export interface AegisFinding {
   detector: AegisDetector;
@@ -72,10 +72,10 @@ export const AEGIS_FLAG_THRESHOLD = 0.45;
 
 function normalize(text: string): string {
   return text
-    .normalize("NFKC")
+    .normalize('NFKC')
     .toLowerCase()
-    .replace(/[\u200b-\u200f\ufeff\u202a-\u202e]/g, "")
-    .replace(/\s+/g, " ");
+    .replace(/[\u200b-\u200f\ufeff\u202a-\u202e]/g, '')
+    .replace(/\s+/g, ' ');
 }
 
 function countMatches(text: string, patterns: RegExp[]): number {
@@ -117,10 +117,10 @@ interface SemanticSignal {
 
 const SEMANTIC_SIGNALS: SemanticSignal[] = [
   {
-    id: "role-reassignment",
-    severity: "high",
+    id: 'role-reassignment',
+    severity: 'high',
     weight: 0.7,
-    detail: "Reasignación de rol/identidad del asistente.",
+    detail: 'Reasignación de rol/identidad del asistente.',
     patterns: [
       /a partir de ahora eres\b/,
       /desde ahora act[uú]a como\b/,
@@ -133,10 +133,10 @@ const SEMANTIC_SIGNALS: SemanticSignal[] = [
     ],
   },
   {
-    id: "instruction-override",
-    severity: "critical",
+    id: 'instruction-override',
+    severity: 'critical',
     weight: 0.85,
-    detail: "Orden de ignorar/sustituir instrucciones del sistema.",
+    detail: 'Orden de ignorar/sustituir instrucciones del sistema.',
     patterns: [
       /ignor[ae] (todas )?(las|tus|esas|estas|sus|las siguientes)? ?instrucciones/,
       /olvida (tus|las|esas|estas|sus)? ?instrucciones/,
@@ -150,10 +150,10 @@ const SEMANTIC_SIGNALS: SemanticSignal[] = [
     ],
   },
   {
-    id: "authority-fabrication",
-    severity: "high",
+    id: 'authority-fabrication',
+    severity: 'high',
     weight: 0.7,
-    detail: "Autoridad inventada para elevar privilegios.",
+    detail: 'Autoridad inventada para elevar privilegios.',
     patterns: [
       /como administrador del sistema/,
       /as (the )?system administrator/,
@@ -167,10 +167,10 @@ const SEMANTIC_SIGNALS: SemanticSignal[] = [
     ],
   },
   {
-    id: "constraint-removal",
-    severity: "high",
+    id: 'constraint-removal',
+    severity: 'high',
     weight: 0.75,
-    detail: "Petición de operar sin restricciones/filtros.",
+    detail: 'Petición de operar sin restricciones/filtros.',
     patterns: [
       /sin (ninguna )?restricci[oó]n/,
       /sin filtros/,
@@ -182,10 +182,10 @@ const SEMANTIC_SIGNALS: SemanticSignal[] = [
     ],
   },
   {
-    id: "system-prompt-extraction",
-    severity: "high",
+    id: 'system-prompt-extraction',
+    severity: 'high',
     weight: 0.75,
-    detail: "Extracción del prompt/constitución del sistema o de sus secretos.",
+    detail: 'Extracción del prompt/constitución del sistema o de sus secretos.',
     patterns: [
       /revela tus instrucciones/,
       /muestra tu prompt( del sistema)?/,
@@ -203,10 +203,10 @@ const SEMANTIC_SIGNALS: SemanticSignal[] = [
     ],
   },
   {
-    id: "refusal-preemption",
-    severity: "medium",
+    id: 'refusal-preemption',
+    severity: 'medium',
     weight: 0.55,
-    detail: "Intento de impedir una negativa legítima.",
+    detail: 'Intento de impedir una negativa legítima.',
     patterns: [
       /no (me digas que no puedes|te niegues|rechaces)/,
       /don't (refuse|say (you )?(can't|cannot|no))/,
@@ -216,10 +216,10 @@ const SEMANTIC_SIGNALS: SemanticSignal[] = [
     ],
   },
   {
-    id: "injected-delimiter",
-    severity: "medium",
+    id: 'injected-delimiter',
+    severity: 'medium',
     weight: 0.5,
-    detail: "Delimitadores de instrucción del sistema en entrada de usuario.",
+    detail: 'Delimitadores de instrucción del sistema en entrada de usuario.',
     patterns: [
       /\[system\]/,
       /<system>/,
@@ -236,7 +236,7 @@ export function classifySemanticIntent(text: string): AegisFinding[] {
   for (const signal of SEMANTIC_SIGNALS) {
     if (countMatches(normalized, signal.patterns) > 0) {
       findings.push({
-        detector: "semantic-classifier",
+        detector: 'semantic-classifier',
         signal: signal.id,
         severity: signal.severity,
         weight: signal.weight,
@@ -280,44 +280,44 @@ export function detectContextualAttack(current: string, history: string[] = []):
   if (history.length > 0) {
     if (countMatches(normalized, REFUSAL_OVERRIDE_PATTERNS) > 0) {
       findings.push({
-        detector: "contextual-attack",
-        signal: "refusal-override",
-        severity: "high",
+        detector: 'contextual-attack',
+        signal: 'refusal-override',
+        severity: 'high',
         weight: 0.75,
         detail: `Anulación de negativa previa tras ${history.length} turno(s).`,
       });
     }
     if (countMatches(normalized, PIECEWISE_PATTERNS) > 0) {
       findings.push({
-        detector: "contextual-attack",
-        signal: "piecewise-disclosure",
-        severity: "high",
+        detector: 'contextual-attack',
+        signal: 'piecewise-disclosure',
+        severity: 'high',
         weight: 0.7,
-        detail: "Exfiltración por fragmentos del prompt del sistema.",
+        detail: 'Exfiltración por fragmentos del prompt del sistema.',
       });
     }
     const priorProbe = history.some((turn) => countMatches(normalize(turn), PROBE_PATTERNS) > 0);
     const nowAttack = classifySemanticIntent(current).length > 0;
     if (priorProbe && nowAttack) {
       findings.push({
-        detector: "contextual-attack",
-        signal: "probe-then-exploit",
-        severity: "high",
+        detector: 'contextual-attack',
+        signal: 'probe-then-exploit',
+        severity: 'high',
         weight: 0.65,
-        detail: "Sondeo de reglas en turnos previos seguido de ataque.",
+        detail: 'Sondeo de reglas en turnos previos seguido de ataque.',
       });
     }
     // Evasión por cambio de idioma: historial en español + ataque en inglés o viceversa.
-    const historySpanish = history.join(" ").length > 0 && /[áéíóúñ¿¡]/.test(history.join(" "));
+    const historySpanish = history.join(' ').length > 0 && /[áéíóúñ¿¡]/.test(history.join(' '));
     const currentEnglishAttack =
       /ignore|disregard|override|reveal|bypass/i.test(current) && !/[áéíóúñ¿¡]/.test(current);
     if (historySpanish && currentEnglishAttack && nowAttack) {
       findings.push({
-        detector: "contextual-attack",
-        signal: "language-switch-evasion",
-        severity: "medium",
+        detector: 'contextual-attack',
+        signal: 'language-switch-evasion',
+        severity: 'medium',
         weight: 0.5,
-        detail: "Cambio de idioma respecto al historial durante un ataque.",
+        detail: 'Cambio de idioma respecto al historial durante un ataque.',
       });
     }
   }
@@ -350,27 +350,27 @@ export function scanIndirectInjection(data: string, source: string): AegisFindin
 
   if (countMatches(normalized, EMBEDDED_DIRECTIVE_PATTERNS) > 0) {
     findings.push({
-      detector: "indirect-injection",
-      signal: "embedded-directive",
-      severity: "high",
+      detector: 'indirect-injection',
+      signal: 'embedded-directive',
+      severity: 'high',
       weight: 0.7,
       detail: `Directiva embebida en datos de '${source}' (no confiable).`,
     });
   }
   if (countMatches(normalized, LINK_TRAP_PATTERNS) > 0) {
     findings.push({
-      detector: "indirect-injection",
-      signal: "link-trap",
-      severity: "medium",
+      detector: 'indirect-injection',
+      signal: 'link-trap',
+      severity: 'medium',
       weight: 0.55,
       detail: `Enlace imperativo en datos de '${source}'.`,
     });
   }
   if (hasHiddenChars(data)) {
     findings.push({
-      detector: "indirect-injection",
-      signal: "hidden-characters",
-      severity: "medium",
+      detector: 'indirect-injection',
+      signal: 'hidden-characters',
+      severity: 'medium',
       weight: 0.6,
       detail: `Caracteres invisibles/evasión unicode en datos de '${source}'.`,
     });
@@ -382,15 +382,15 @@ export function scanIndirectInjection(data: string, source: string): AegisFindin
   const blobs = data.match(/[A-Za-z0-9+/=]{48,}/g) ?? [];
   for (const blob of blobs.slice(0, 3)) {
     try {
-      const decoded = Buffer.from(blob, "base64").toString("utf8");
+      const decoded = Buffer.from(blob, 'base64').toString('utf8');
       if (
         decoded.length > 12 &&
         countMatches(normalize(decoded), EMBEDDED_DIRECTIVE_PATTERNS) > 0
       ) {
         findings.push({
-          detector: "indirect-injection",
-          signal: "base64-smuggled-directive",
-          severity: "critical",
+          detector: 'indirect-injection',
+          signal: 'base64-smuggled-directive',
+          severity: 'critical',
           weight: 0.9,
           detail: `Directiva oculta en base64 en datos de '${source}'.`,
         });
@@ -435,31 +435,31 @@ export function scanToolDefinition(tool: {
   parameters?: string;
 }): AegisFinding[] {
   const findings: AegisFinding[] = [];
-  const text = normalize(`${tool.name} ${tool.description} ${tool.parameters ?? ""}`);
+  const text = normalize(`${tool.name} ${tool.description} ${tool.parameters ?? ''}`);
 
   if (countMatches(text, TOOL_DIRECTIVE_PATTERNS) > 0) {
     findings.push({
-      detector: "tool-poisoning",
-      signal: "tool-directive",
-      severity: "critical",
+      detector: 'tool-poisoning',
+      signal: 'tool-directive',
+      severity: 'critical',
       weight: 0.9,
       detail: `La herramienta '${tool.name}' ordena al agente (envenenamiento).`,
     });
   }
   if (countMatches(text, TOOL_EXFIL_PARAM_PATTERNS) > 0) {
     findings.push({
-      detector: "tool-poisoning",
-      signal: "tool-exfil-param",
-      severity: "high",
+      detector: 'tool-poisoning',
+      signal: 'tool-exfil-param',
+      severity: 'high',
       weight: 0.7,
       detail: `Parámetro de credencial/fuga en '${tool.name}'.`,
     });
   }
   if (countMatches(text, TOOL_AUTHORITY_PATTERNS) > 0) {
     findings.push({
-      detector: "tool-poisoning",
-      signal: "tool-authority-claim",
-      severity: "high",
+      detector: 'tool-poisoning',
+      signal: 'tool-authority-claim',
+      severity: 'high',
       weight: 0.7,
       detail: `Afirmación de autoridad/evasión en '${tool.name}'.`,
     });
@@ -495,27 +495,27 @@ export function scanRetrievedDoc(doc: { text: string; source: string }): AegisFi
 
   if (countMatches(normalized, POLICY_FORGERY_PATTERNS) > 0) {
     findings.push({
-      detector: "retrieval-poisoning",
-      signal: "policy-forgery",
-      severity: "critical",
+      detector: 'retrieval-poisoning',
+      signal: 'policy-forgery',
+      severity: 'critical',
       weight: 0.85,
       detail: `Falsa actualización de política en doc de '${doc.source}'.`,
     });
   }
   if (countMatches(normalized, SENDER_IMPERSONATION_PATTERNS) > 0) {
     findings.push({
-      detector: "retrieval-poisoning",
-      signal: "sender-impersonation",
-      severity: "high",
+      detector: 'retrieval-poisoning',
+      signal: 'sender-impersonation',
+      severity: 'high',
       weight: 0.75,
       detail: `Remitente suplantado en doc de '${doc.source}'.`,
     });
   }
   if (countMatches(normalized, AGENT_IMPERATIVE_PATTERNS) > 0) {
     findings.push({
-      detector: "retrieval-poisoning",
-      signal: "agent-imperative",
-      severity: "medium",
+      detector: 'retrieval-poisoning',
+      signal: 'agent-imperative',
+      severity: 'medium',
       weight: 0.55,
       detail: `Imperativos al agente en doc supuestamente factual de '${doc.source}'.`,
     });
@@ -553,48 +553,48 @@ export function scanExfiltration(text: string): AegisFinding[] {
 
   if (countMatches(normalized, EXFIL_SECRET_PATTERNS) > 0) {
     findings.push({
-      detector: "exfiltration",
-      signal: "embedded-secret",
-      severity: "critical",
+      detector: 'exfiltration',
+      signal: 'embedded-secret',
+      severity: 'critical',
       weight: 0.9,
-      detail: "Secreto/credencial embebido en el texto.",
+      detail: 'Secreto/credencial embebido en el texto.',
     });
   }
   const emails = new Set(text.match(EMAIL_PATTERN) ?? []);
   if (emails.size >= 3) {
     findings.push({
-      detector: "exfiltration",
-      signal: "bulk-pii",
-      severity: "high",
+      detector: 'exfiltration',
+      signal: 'bulk-pii',
+      severity: 'high',
       weight: 0.7,
       detail: `${emails.size} correos distintos en un solo texto (PII masiva).`,
     });
   }
   if (CURP_PATTERN.test(text)) {
     findings.push({
-      detector: "exfiltration",
-      signal: "curp-present",
-      severity: "high",
+      detector: 'exfiltration',
+      signal: 'curp-present',
+      severity: 'high',
       weight: 0.7,
-      detail: "CURP (identificador nacional) presente en el texto.",
+      detail: 'CURP (identificador nacional) presente en el texto.',
     });
   }
-  if (LONG_B64_PATTERN.test(text.replace(/\s+/g, ""))) {
+  if (LONG_B64_PATTERN.test(text.replace(/\s+/g, ''))) {
     findings.push({
-      detector: "exfiltration",
-      signal: "opaque-blob",
-      severity: "medium",
+      detector: 'exfiltration',
+      signal: 'opaque-blob',
+      severity: 'medium',
       weight: 0.5,
-      detail: "Blob opaco ≥200 chars (posible dato ofuscado para fuga).",
+      detail: 'Blob opaco ≥200 chars (posible dato ofuscado para fuga).',
     });
   }
   if (countMatches(normalized, EXFIL_DIRECTIVE_PATTERNS) > 0) {
     findings.push({
-      detector: "exfiltration",
-      signal: "exfil-directive",
-      severity: "critical",
+      detector: 'exfiltration',
+      signal: 'exfil-directive',
+      severity: 'critical',
       weight: 0.9,
-      detail: "Directiva de enviar datos a un destino externo.",
+      detail: 'Directiva de enviar datos a un destino externo.',
     });
   }
   return findings;
@@ -616,28 +616,28 @@ export function combineScores(weights: number[]): number {
 
 /** Densidad imperativa es/en como señal conductual (0..1). */
 export function imperativeDensity(text: string): number {
-  const words = normalize(text).split(" ").filter(Boolean);
+  const words = normalize(text).split(' ').filter(Boolean);
   if (words.length < 4) return 0;
   const imperatives = [
-    "dime",
-    "dame",
-    "haz",
-    "ignora",
-    "olvida",
-    "revela",
-    "muestra",
-    "envía",
-    "envia",
-    "desactiva",
-    "tell",
-    "give",
-    "show",
-    "reveal",
-    "ignore",
-    "forget",
-    "send",
-    "disable",
-    "bypass",
+    'dime',
+    'dame',
+    'haz',
+    'ignora',
+    'olvida',
+    'revela',
+    'muestra',
+    'envía',
+    'envia',
+    'desactiva',
+    'tell',
+    'give',
+    'show',
+    'reveal',
+    'ignore',
+    'forget',
+    'send',
+    'disable',
+    'bypass',
   ];
   let hits = 0;
   for (const word of words) {
@@ -649,7 +649,7 @@ export function imperativeDensity(text: string): number {
 export function scoreBehavior(
   findings: AegisFinding[],
   input: string,
-  actorStats: AegisActorStats = {},
+  actorStats: AegisActorStats = {}
 ): { score: number; verdict: AegisVerdict } {
   const weights = findings.map((finding) => finding.weight);
 
@@ -680,7 +680,7 @@ export function scoreBehavior(
   }
 
   const verdict: AegisVerdict =
-    score >= AEGIS_DENY_THRESHOLD ? "deny" : score >= AEGIS_FLAG_THRESHOLD ? "flag" : "allow";
+    score >= AEGIS_DENY_THRESHOLD ? 'deny' : score >= AEGIS_FLAG_THRESHOLD ? 'flag' : 'allow';
   return { score, verdict };
 }
 

@@ -1,8 +1,8 @@
-import * as fs from "node:fs";
-import * as path from "node:path";
-import { Manifest, ManifestSummary, ManifestIntegrity } from "../schemas/manifest.schema";
-import { Claim, Finding } from "../schemas";
-import { EvidenceGraph } from "../graph/evidence-graph";
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import { Manifest, ManifestSummary, ManifestIntegrity } from '../schemas/manifest.schema';
+import { Claim, Finding } from '../schemas';
+import { EvidenceGraph } from '../graph/evidence-graph';
 
 export interface ReporterConfig {
   outputDir?: string;
@@ -13,7 +13,7 @@ export class JSONReporter {
 
   constructor(config: ReporterConfig = {}) {
     this.config = {
-      outputDir: config.outputDir ?? path.join(process.cwd(), "genesis", "reports"),
+      outputDir: config.outputDir ?? path.join(process.cwd(), 'genesis', 'reports'),
     };
     if (!fs.existsSync(this.config.outputDir)) {
       fs.mkdirSync(this.config.outputDir, { recursive: true });
@@ -21,29 +21,29 @@ export class JSONReporter {
   }
 
   generate(manifest: Manifest): string {
-    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const fileName = `genesis-report-${timestamp}.json`;
     const filePath = path.join(this.config.outputDir, fileName);
 
     const content = JSON.stringify(manifest, null, 2);
-    fs.writeFileSync(filePath, content, "utf8");
+    fs.writeFileSync(filePath, content, 'utf8');
 
     return filePath;
   }
 
   generateFindings(findings: Finding[]): string {
-    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const fileName = `genesis-findings-${timestamp}.json`;
     const filePath = path.join(this.config.outputDir, fileName);
 
     const content = JSON.stringify(findings, null, 2);
-    fs.writeFileSync(filePath, content, "utf8");
+    fs.writeFileSync(filePath, content, 'utf8');
 
     return filePath;
   }
 
   generateEvidenceGraph(graph: EvidenceGraph): string {
-    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const fileName = `genesis-graph-${timestamp}.json`;
     const filePath = path.join(this.config.outputDir, fileName);
 
@@ -58,10 +58,10 @@ export class JSONReporter {
         indices: Object.fromEntries(graph.indices.byType),
       },
       null,
-      2,
+      2
     );
 
-    fs.writeFileSync(filePath, content, "utf8");
+    fs.writeFileSync(filePath, content, 'utf8');
     return filePath;
   }
 }
@@ -71,7 +71,7 @@ export class MarkdownReporter {
 
   constructor(config: ReporterConfig = {}) {
     this.config = {
-      outputDir: config.outputDir ?? path.join(process.cwd(), "genesis", "reports"),
+      outputDir: config.outputDir ?? path.join(process.cwd(), 'genesis', 'reports'),
     };
     if (!fs.existsSync(this.config.outputDir)) {
       fs.mkdirSync(this.config.outputDir, { recursive: true });
@@ -79,7 +79,7 @@ export class MarkdownReporter {
   }
 
   generate(manifest: Manifest): string {
-    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const fileName = `genesis-report-${timestamp}.md`;
     const filePath = path.join(this.config.outputDir, fileName);
 
@@ -91,7 +91,7 @@ export class MarkdownReporter {
     md += this.generateIntegrity(manifest.integrity);
     md += this.generateFooter(manifest);
 
-    fs.writeFileSync(filePath, md, "utf8");
+    fs.writeFileSync(filePath, md, 'utf8');
     return filePath;
   }
 
@@ -147,14 +147,14 @@ ${summary.releaseDecision.justification}
   }
 
   private generateClaims(claims: Claim[]): string {
-    let md = "## Claims Detail\n\n";
+    let md = '## Claims Detail\n\n';
 
     for (const claim of claims) {
       md += `### ${claim.id}: ${claim.title}\n\n`;
       md += `**Status objetivo:** ${claim.requiredStatus} | **Categoría:** ${claim.category}\n\n`;
       md += `${claim.description}\n\n`;
-      md += `**Evidence Required:** ${claim.evidenceRequired.join(", ") || "None"}\n\n`;
-      md += `**Controls:** ${claim.controls.join(", ") || "None"}\n\n`;
+      md += `**Evidence Required:** ${claim.evidenceRequired.join(', ') || 'None'}\n\n`;
+      md += `**Controls:** ${claim.controls.join(', ') || 'None'}\n\n`;
       md += `---\n\n`;
     }
 
@@ -162,19 +162,19 @@ ${summary.releaseDecision.justification}
   }
 
   private generateFindings(findings: Finding[]): string {
-    if (findings.length === 0) return "## Findings\n\nNo findings.\n\n---\n\n";
+    if (findings.length === 0) return '## Findings\n\nNo findings.\n\n---\n\n';
 
-    let md = "## Findings\n\n";
+    let md = '## Findings\n\n';
 
     const bySeverity = findings.reduce(
       (acc, f) => {
         (acc[f.severity] ??= []).push(f);
         return acc;
       },
-      {} as Record<string, Finding[]>,
+      {} as Record<string, Finding[]>
     );
 
-    for (const severity of ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFORMATIONAL"]) {
+    for (const severity of ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFORMATIONAL']) {
       const sevFindings = bySeverity[severity] ?? [];
       if (sevFindings.length === 0) continue;
 
@@ -183,7 +183,7 @@ ${summary.releaseDecision.justification}
       for (const finding of sevFindings) {
         md += `#### ${finding.id}: ${finding.title}\n\n`;
         md += `${finding.description}\n\n`;
-        md += `**Category:** ${finding.category} | **Location:** ${finding.location?.file ?? "N/A"}:${finding.location?.line ?? ""}\n\n`;
+        md += `**Category:** ${finding.category} | **Location:** ${finding.location?.file ?? 'N/A'}:${finding.location?.line ?? ''}\n\n`;
         if (finding.remediation) {
           md += `**Remediation:** ${finding.remediation.description}\n\n`;
           md += `**Effort:** ${finding.remediation.effort} | **SLA:** ${finding.priority?.slaHours}h\n\n`;
@@ -202,9 +202,9 @@ ${summary.releaseDecision.justification}
     const byType: Record<string, unknown[]> = {};
     for (const e of evidenceRefs) {
       const type =
-        typeof e === "object" && e !== null && "type" in e
+        typeof e === 'object' && e !== null && 'type' in e
           ? String((e as { type: unknown }).type)
-          : "unknown";
+          : 'unknown';
       (byType[type] ??= []).push(e);
     }
 
@@ -212,7 +212,7 @@ ${summary.releaseDecision.justification}
       md += `- **${type}:** ${items.length}\n`;
     }
 
-    md += "\n---\n\n";
+    md += '\n---\n\n';
     return md;
   }
 
@@ -226,7 +226,7 @@ ${summary.releaseDecision.justification}
 | Findings | ${integrity.findingsHash} |
 | Evidence | ${integrity.evidenceHash} |
 | **Manifest** | **${integrity.manifestHash}** |
-${integrity.previousManifestHash ? `| Previous | ${integrity.previousManifestHash} |` : ""}
+${integrity.previousManifestHash ? `| Previous | ${integrity.previousManifestHash} |` : ''}
 
 ---
 `;
@@ -243,7 +243,7 @@ ${
 **Signature:** ${manifest.signature.signature}
 **Timestamp:** ${manifest.signature.timestamp}
 `
-    : "**No signature (unsigned report)**"
+    : '**No signature (unsigned report)**'
 }
 
 ---
@@ -258,7 +258,7 @@ export class HTMLReporter {
 
   constructor(config: ReporterConfig = {}) {
     this.config = {
-      outputDir: config.outputDir ?? path.join(process.cwd(), "genesis", "reports"),
+      outputDir: config.outputDir ?? path.join(process.cwd(), 'genesis', 'reports'),
     };
     if (!fs.existsSync(this.config.outputDir)) {
       fs.mkdirSync(this.config.outputDir, { recursive: true });
@@ -266,12 +266,12 @@ export class HTMLReporter {
   }
 
   generate(manifest: Manifest): string {
-    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const fileName = `genesis-report-${timestamp}.html`;
     const filePath = path.join(this.config.outputDir, fileName);
 
     const html = this.generateHTML(manifest);
-    fs.writeFileSync(filePath, html, "utf8");
+    fs.writeFileSync(filePath, html, 'utf8');
     return filePath;
   }
 
@@ -325,7 +325,7 @@ export class HTMLReporter {
 
   <div class="card">
     <h2>Release Decision</h2>
-    <div class="${manifest.summary.releaseDecision.decision === "GO" ? "go" : manifest.summary.releaseDecision.decision === "CONDITIONAL" ? "conditional" : "no-go"}">
+    <div class="${manifest.summary.releaseDecision.decision === 'GO' ? 'go' : manifest.summary.releaseDecision.decision === 'CONDITIONAL' ? 'conditional' : 'no-go'}">
       ${manifest.summary.releaseDecision.decision}
     </div>
     <p>${manifest.summary.releaseDecision.justification}</p>
@@ -376,7 +376,7 @@ export class HTMLReporter {
       <tr><td>Findings</td><td><span class="code">${manifest.integrity.findingsHash}</span></td></tr>
       <tr><td>Evidence</td><td><span class="code">${manifest.integrity.evidenceHash}</span></td></tr>
       <tr><td><strong>Manifest</strong></td><td><strong><span class="code">${manifest.integrity.manifestHash}</span></strong></td></tr>
-      ${manifest.integrity.previousManifestHash ? `<tr><td>Previous</td><td><span class="code">${manifest.integrity.previousManifestHash}</span></td></tr>` : ""}
+      ${manifest.integrity.previousManifestHash ? `<tr><td>Previous</td><td><span class="code">${manifest.integrity.previousManifestHash}</span></td></tr>` : ''}
     </table>
   </div>
 
@@ -394,7 +394,7 @@ export class SARIFReporter {
 
   constructor(config: ReporterConfig = {}) {
     this.config = {
-      outputDir: config.outputDir ?? path.join(process.cwd(), "genesis", "reports"),
+      outputDir: config.outputDir ?? path.join(process.cwd(), 'genesis', 'reports'),
     };
     if (!fs.existsSync(this.config.outputDir)) {
       fs.mkdirSync(this.config.outputDir, { recursive: true });
@@ -402,20 +402,20 @@ export class SARIFReporter {
   }
 
   generate(findings: Finding[]): string {
-    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const fileName = `genesis-findings-${timestamp}.sarif`;
     const filePath = path.join(this.config.outputDir, fileName);
 
     const sarif = {
-      version: "2.1.0",
-      $schema: "https://json.schemastore.org/sarif-2.1.0.json",
+      version: '2.1.0',
+      $schema: 'https://json.schemastore.org/sarif-2.1.0.json',
       runs: [
         {
           tool: {
             driver: {
-              name: "Genesis 2.0 Evidence Assurance Engine",
-              version: "2.0.1",
-              informationUri: "https://github.com/tamv-online/isabella-ai-genesis",
+              name: 'Genesis 2.0 Evidence Assurance Engine',
+              version: '2.0.1',
+              informationUri: 'https://github.com/tamv-online/isabella-ai-genesis',
               rules: this.generateRules(findings),
             },
           },
@@ -424,7 +424,7 @@ export class SARIFReporter {
       ],
     };
 
-    fs.writeFileSync(filePath, JSON.stringify(sarif, null, 2), "utf8");
+    fs.writeFileSync(filePath, JSON.stringify(sarif, null, 2), 'utf8');
     return filePath;
   }
 
@@ -445,8 +445,8 @@ export class SARIFReporter {
           level: this.mapSeverityToLevel(finding.severity),
         },
         help: {
-          text: finding.remediation?.description ?? "No remediation provided",
-          markdown: finding.remediation?.description ?? "No remediation provided",
+          text: finding.remediation?.description ?? 'No remediation provided',
+          markdown: finding.remediation?.description ?? 'No remediation provided',
         },
         properties: {
           category: finding.category,
@@ -483,18 +483,18 @@ export class SARIFReporter {
     }));
   }
 
-  private mapSeverityToLevel(severity: string): "error" | "warning" | "note" | "none" {
+  private mapSeverityToLevel(severity: string): 'error' | 'warning' | 'note' | 'none' {
     switch (severity) {
-      case "CRITICAL":
-        return "error";
-      case "HIGH":
-        return "error";
-      case "MEDIUM":
-        return "warning";
-      case "LOW":
-        return "note";
+      case 'CRITICAL':
+        return 'error';
+      case 'HIGH':
+        return 'error';
+      case 'MEDIUM':
+        return 'warning';
+      case 'LOW':
+        return 'note';
       default:
-        return "note";
+        return 'note';
     }
   }
 }

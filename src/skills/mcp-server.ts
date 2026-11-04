@@ -7,9 +7,9 @@
  * that CROWN, triangulation and BookPI still apply. MCP transports intent; it
  * does not grant authority.
  */
-import { randomUUID } from "node:crypto";
-import { SkillRegistry } from "./registry";
-import { HyperCoreEngine, type SkillExecutionRequest } from "./hypercore-engine";
+import { randomUUID } from 'node:crypto';
+import { SkillRegistry } from './registry';
+import { HyperCoreEngine, type SkillExecutionRequest } from './hypercore-engine';
 
 export interface JsonRpcRequest {
   readonly jsonrpc?: string;
@@ -25,7 +25,7 @@ export interface JsonRpcError {
 }
 
 export interface JsonRpcResponse {
-  readonly jsonrpc: "2.0";
+  readonly jsonrpc: '2.0';
   readonly id: string | number | null;
   readonly result?: unknown;
   readonly error?: JsonRpcError;
@@ -60,7 +60,7 @@ export interface SkillMcpServerOptions {
   readonly protocolVersion?: string;
 }
 
-const MCP_PROTOCOL_VERSION = "2024-11-05";
+const MCP_PROTOCOL_VERSION = '2024-11-05';
 
 export class SkillMcpServer {
   private readonly registry: SkillRegistry;
@@ -76,8 +76,8 @@ export class SkillMcpServer {
     this.engine = options.engine;
     this.identity = options.identity;
     this.resolveScopes = options.resolveScopes;
-    this.serverName = options.serverName ?? "isabella-hypercore-omega";
-    this.serverVersion = options.serverVersion ?? "2.0.0";
+    this.serverName = options.serverName ?? 'isabella-hypercore-omega';
+    this.serverVersion = options.serverVersion ?? '2.0.0';
     this.protocolVersion = options.protocolVersion ?? MCP_PROTOCOL_VERSION;
   }
 
@@ -85,7 +85,7 @@ export class SkillMcpServer {
     return this.registry.list().map((skill) => ({
       name: skill.id,
       description: `Isabella sovereign skill ${skill.id} (v${skill.version}, risk ${skill.riskTier}).`,
-      inputSchema: skill.contract?.inputSchema ?? { type: "object" },
+      inputSchema: skill.contract?.inputSchema ?? { type: 'object' },
       annotations: {
         riskTier: skill.riskTier,
         requiresEvidence: skill.requiresEvidence,
@@ -97,16 +97,20 @@ export class SkillMcpServer {
   async handle(request: JsonRpcRequest): Promise<JsonRpcResponse> {
     const id = request.id ?? null;
     switch (request.method) {
-      case "initialize":
-        return { jsonrpc: "2.0", id, result: this.initializeResult() };
-      case "notifications/initialized":
-        return { jsonrpc: "2.0", id, result: {} };
-      case "tools/list":
-        return { jsonrpc: "2.0", id, result: { tools: this.listTools() } };
-      case "tools/call":
-        return { jsonrpc: "2.0", id, result: await this.callTool(request.params) };
+      case 'initialize':
+        return { jsonrpc: '2.0', id, result: this.initializeResult() };
+      case 'notifications/initialized':
+        return { jsonrpc: '2.0', id, result: {} };
+      case 'tools/list':
+        return { jsonrpc: '2.0', id, result: { tools: this.listTools() } };
+      case 'tools/call':
+        return { jsonrpc: '2.0', id, result: await this.callTool(request.params) };
       default:
-        return { jsonrpc: "2.0", id, error: { code: -32601, message: `Method not found: ${request.method}` } };
+        return {
+          jsonrpc: '2.0',
+          id,
+          error: { code: -32601, message: `Method not found: ${request.method}` },
+        };
     }
   }
 
@@ -119,12 +123,12 @@ export class SkillMcpServer {
   }
 
   private async callTool(params: unknown): Promise<unknown> {
-    if (typeof params !== "object" || params === null) {
-      return { content: [{ type: "text", text: "invalid params" }], isError: true };
+    if (typeof params !== 'object' || params === null) {
+      return { content: [{ type: 'text', text: 'invalid params' }], isError: true };
     }
     const { name, arguments: args } = params as McpCallParams;
-    if (typeof name !== "string" || !this.registry.has(name)) {
-      return { content: [{ type: "text", text: `unknown tool: ${String(name)}` }], isError: true };
+    if (typeof name !== 'string' || !this.registry.has(name)) {
+      return { content: [{ type: 'text', text: `unknown tool: ${String(name)}` }], isError: true };
     }
 
     const request: SkillExecutionRequest = {
@@ -135,9 +139,13 @@ export class SkillMcpServer {
       policyVersion: this.identity.policyVersion,
       traceId: randomUUID(),
       input: args ?? {},
-      signals: typeof args === "object" && args !== null && "signals" in args && Array.isArray((args as { signals: unknown }).signals)
-        ? ((args as { signals: string[] }).signals)
-        : ["mcp:tool_call"],
+      signals:
+        typeof args === 'object' &&
+        args !== null &&
+        'signals' in args &&
+        Array.isArray((args as { signals: unknown }).signals)
+          ? (args as { signals: string[] }).signals
+          : ['mcp:tool_call'],
       grantedScopes: this.resolveScopes(name),
       approvalProvided: false,
       evidenceHashes: [`mcp:${this.serverName}`],
@@ -147,7 +155,7 @@ export class SkillMcpServer {
     return {
       content: [
         {
-          type: "text",
+          type: 'text',
           text: JSON.stringify({
             status: result.status,
             phase: result.phase,
@@ -159,7 +167,7 @@ export class SkillMcpServer {
           }),
         },
       ],
-      isError: result.status !== "COMPLETED",
+      isError: result.status !== 'COMPLETED',
     };
   }
 }

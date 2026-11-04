@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from "react";
-import { Network, Zap, Cpu, CheckCircle2, AlertTriangle } from "lucide-react";
-import { useServerFn } from "../../lib/tanstack-polyfill";
-import { getQuantumReflection } from "../../lib/atlas.functions";
+import React, { useEffect, useState } from 'react';
+import { Network, Zap, Cpu, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { useServerFn } from '../../lib/tanstack-polyfill';
+import { getQuantumReflection } from '../../lib/atlas.functions';
 
 export const QuantumReflectionCard: React.FC = () => {
   const [data, setData] = useState<any>(null);
@@ -19,7 +19,10 @@ export const QuantumReflectionCard: React.FC = () => {
     };
     load();
     const t = setInterval(load, 5000);
-    return () => { mounted = false; clearInterval(t); };
+    return () => {
+      mounted = false;
+      clearInterval(t);
+    };
   }, []);
 
   if (!data) return <div className="p-4 bg-slate-900 animate-pulse rounded-xl h-48"></div>;
@@ -44,7 +47,9 @@ export const QuantumReflectionCard: React.FC = () => {
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
           </span>
-          <span className="text-[10px] text-indigo-300 font-mono tracking-widest">{data.federationStatus}</span>
+          <span className="text-[10px] text-indigo-300 font-mono tracking-widest">
+            {data.federationStatus}
+          </span>
         </div>
       </div>
 
@@ -83,17 +88,22 @@ export const QuantumReflectionCard: React.FC = () => {
             </h5>
             <div className="flex flex-wrap gap-2">
               {data.ingestedModules.map((m: string) => (
-                <span key={m} className="px-2 py-1 text-[9px] font-mono bg-indigo-900/40 text-indigo-200 rounded border border-indigo-500/30">
+                <span
+                  key={m}
+                  className="px-2 py-1 text-[9px] font-mono bg-indigo-900/40 text-indigo-200 rounded border border-indigo-500/30"
+                >
                   {m}
                 </span>
               ))}
             </div>
           </div>
           <div className="bg-slate-900/50 p-4 rounded-lg border border-slate-800/50">
-             <h5 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Síntesis Reflexiva</h5>
-             <p className="text-xs text-slate-300 leading-relaxed font-sans italic">
-               "{data.selfReflection.insights}"
-             </p>
+            <h5 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">
+              Síntesis Reflexiva
+            </h5>
+            <p className="text-xs text-slate-300 leading-relaxed font-sans italic">
+              "{data.selfReflection.insights}"
+            </p>
           </div>
         </div>
       </div>

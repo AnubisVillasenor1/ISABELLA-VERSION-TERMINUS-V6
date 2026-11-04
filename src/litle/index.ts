@@ -1,1 +1,7 @@
-export * from "./types"; export * from "./id"; export * from "./canonical"; export * from "./evidence"; export * from "./epistemic"; export * from "./certificate"; export * from "./trust-fabric";
+export * from './types';
+export * from './id';
+export * from './canonical';
+export * from './evidence';
+export * from './epistemic';
+export * from './certificate';
+export * from './trust-fabric';

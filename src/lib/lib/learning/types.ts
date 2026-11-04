@@ -1,7 +1,7 @@
 /** Learning Plane contracts: identity, provenance and reproducibility are mandatory. */
-export type DatasetStatus = "PROPOSED" | "VALIDATED" | "APPROVED" | "REJECTED" | "REVOKED";
+export type DatasetStatus = 'PROPOSED' | 'VALIDATED' | 'APPROVED' | 'REJECTED' | 'REVOKED';
 export type TrainingStatus =
-  "QUEUED" | "RUNNING" | "SUCCEEDED" | "COMPLETED" | "FAILED" | "CANCELLED" | "REJECTED";
+  'QUEUED' | 'RUNNING' | 'SUCCEEDED' | 'COMPLETED' | 'FAILED' | 'CANCELLED' | 'REJECTED';
 export interface DatasetIdentity {
   datasetId: string;
   version: string;

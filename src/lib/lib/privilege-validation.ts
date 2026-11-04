@@ -1,4 +1,4 @@
-import { resolveRoleChain, type Role } from "./rbac";
+import { resolveRoleChain, type Role } from './rbac';
 
 // ============================================================================
 // PRIVILEGE VALIDATION (src/lib/privilege-validation.ts)
@@ -25,10 +25,10 @@ export function isScopeSubset(requestedScopes: string[], issuerScopes: string[])
 /** TTL máximo (en segundos) permitido para API keys por rol del emisor. */
 export function maxApiKeyTTLForRole(issuerRole: string): number {
   switch (issuerRole) {
-    case "SovereignOwner":
+    case 'SovereignOwner':
       return 365 * 24 * 3600; // 1 año
-    case "Operator":
-    case "governance_admin":
+    case 'Operator':
+    case 'governance_admin':
       return 30 * 24 * 3600; // 30 días
     default:
       return 24 * 3600; // 24h, mínimo privilegio
@@ -66,21 +66,21 @@ export function validateApiKeyIssue(input: {
   if (!isRoleSubset(requestedRole, issuerRole)) {
     return {
       allowed: false,
-      reason: "Cannot issue credential with higher role",
+      reason: 'Cannot issue credential with higher role',
     };
   }
 
   if (!isScopeSubset(requestedScopes, issuerScopes)) {
     return {
       allowed: false,
-      reason: "Cannot issue credential with broader scopes",
+      reason: 'Cannot issue credential with broader scopes',
     };
   }
 
   if (requestedTenantId && requestedTenantId !== issuerTenantId) {
     return {
       allowed: false,
-      reason: "Cannot issue credential for another tenant",
+      reason: 'Cannot issue credential for another tenant',
     };
   }
 

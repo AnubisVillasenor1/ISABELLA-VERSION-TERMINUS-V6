@@ -12,7 +12,7 @@
  * aplicable deniega, el resultado es deny (fail-closed).
  */
 
-import type { Role } from "./rbac";
+import type { Role } from './rbac';
 
 /** Contexto de atributos disponible para la evaluación. */
 export interface AttributeContext {
@@ -38,7 +38,7 @@ export interface AttributeContext {
   timezone: string;
 }
 
-export type AbacDecision = "allow" | "deny" | "notApplied";
+export type AbacDecision = 'allow' | 'deny' | 'notApplied';
 
 export interface AbacEvaluation {
   decision: AbacDecision;
@@ -58,10 +58,10 @@ export interface AbacPolicy {
  * alcance global explícito.
  */
 function territorialPolicy(context: AttributeContext): AbacDecision {
-  if (!context.resourceTenant) return "notApplied";
-  if (context.subjectTenant === context.resourceTenant) return "notApplied";
-  if (context.role === "SovereignOwner" || context.role === "Auditor") return "notApplied";
-  return "deny";
+  if (!context.resourceTenant) return 'notApplied';
+  if (context.subjectTenant === context.resourceTenant) return 'notApplied';
+  if (context.role === 'SovereignOwner' || context.role === 'Auditor') return 'notApplied';
+  return 'deny';
 }
 
 /**
@@ -69,14 +69,14 @@ function territorialPolicy(context: AttributeContext): AbacDecision {
  * un propietario distinto nunca es accesible sin autorización global.
  */
 function personalDataPolicy(context: AttributeContext): AbacDecision {
-  if (!context.resource.startsWith("data:personal")) return "notApplied";
+  if (!context.resource.startsWith('data:personal')) return 'notApplied';
   if (context.resourceOwner && context.resourceOwner !== context.subject) {
-    if (context.role === "SovereignOwner" || context.role === "governance_admin") {
-      return "notApplied";
+    if (context.role === 'SovereignOwner' || context.role === 'governance_admin') {
+      return 'notApplied';
     }
-    return "deny";
+    return 'deny';
   }
-  return "notApplied";
+  return 'notApplied';
 }
 
 /**
@@ -84,16 +84,16 @@ function personalDataPolicy(context: AttributeContext): AbacDecision {
  * con riesgo elevado es denegada por defecto (fail-closed).
  */
 function highRiskPolicy(context: AttributeContext): AbacDecision {
-  if (!context.authenticated) return "deny";
-  if (context.risk >= 0.9) return "deny";
-  return "notApplied";
+  if (!context.authenticated) return 'deny';
+  if (context.risk >= 0.9) return 'deny';
+  return 'notApplied';
 }
 
 /** Políticas de fábrica, evaluadas en orden. La primera en decidir manda. */
 export const DEFAULT_ABAC_POLICIES: readonly AbacPolicy[] = [
-  { name: "risk:deny-high", evaluate: highRiskPolicy },
-  { name: "residency:personal-data", evaluate: personalDataPolicy },
-  { name: "isolation:territorial", evaluate: territorialPolicy },
+  { name: 'risk:deny-high', evaluate: highRiskPolicy },
+  { name: 'residency:personal-data', evaluate: personalDataPolicy },
+  { name: 'isolation:territorial', evaluate: territorialPolicy },
 ];
 
 /**
@@ -105,22 +105,22 @@ export const DEFAULT_ABAC_POLICIES: readonly AbacPolicy[] = [
  */
 export function evaluateAbac(
   context: AttributeContext,
-  policies: readonly AbacPolicy[] = DEFAULT_ABAC_POLICIES,
+  policies: readonly AbacPolicy[] = DEFAULT_ABAC_POLICIES
 ): AbacEvaluation {
   for (const policy of policies) {
     const decision = policy.evaluate(context);
-    if (decision === "deny") {
+    if (decision === 'deny') {
       return {
-        decision: "deny",
+        decision: 'deny',
         policy: policy.name,
         reason: `ABAC denegó por política '${policy.name}'.`,
       };
     }
   }
   return {
-    decision: "notApplied",
+    decision: 'notApplied',
     policy: null,
-    reason: "Ninguna política ABAC aplicable.",
+    reason: 'Ninguna política ABAC aplicable.',
   };
 }
 

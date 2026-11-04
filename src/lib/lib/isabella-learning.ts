@@ -1,5 +1,5 @@
-import { createHash, randomUUID } from "node:crypto";
-import { z } from "zod";
+import { createHash, randomUUID } from 'node:crypto';
+import { z } from 'zod';
 
 /**
  * Isabella Learning Core
@@ -11,13 +11,13 @@ import { z } from "zod";
  */
 
 export const LearningModeSchema = z.enum([
-  "supervised",
-  "contrastive",
-  "preference",
-  "episodic",
-  "procedural",
-  "reflective",
-  "multimodal",
+  'supervised',
+  'contrastive',
+  'preference',
+  'episodic',
+  'procedural',
+  'reflective',
+  'multimodal',
 ]);
 export type LearningMode = z.infer<typeof LearningModeSchema>;
 
@@ -27,7 +27,7 @@ export const LearningExampleSchema = z.object({
   target: z.string().max(100_000).optional(),
   negative: z.string().max(100_000).optional(),
   context: z.record(z.string(), z.unknown()).optional(),
-  outcome: z.enum(["success", "partial", "failure", "unknown"]).default("unknown"),
+  outcome: z.enum(['success', 'partial', 'failure', 'unknown']).default('unknown'),
   quality: z.number().min(0).max(1).default(0.5),
   consent: z.boolean().default(false),
   source: z.string().min(1).max(256),
@@ -43,7 +43,7 @@ export interface LearningMemory {
   concepts: string[];
   procedures: string[];
   preferences: string[];
-  outcome: LearningExample["outcome"];
+  outcome: LearningExample['outcome'];
   quality: number;
   createdAt: string;
   lastReinforcedAt: string;
@@ -135,14 +135,14 @@ export class InMemoryLearningStore implements LearningStore {
 
   updateCompetence(
     skillId: string,
-    outcome: LearningExample["outcome"],
-    quality: number,
+    outcome: LearningExample['outcome'],
+    quality: number
   ): Competence {
     const existing = this.competence.find((item) => item.skillId === skillId);
     const now = new Date().toISOString();
-    const success = outcome === "success" ? 1 : 0;
-    const failure = outcome === "failure" ? 1 : 0;
-    const signal = outcome === "success" ? quality : outcome === "failure" ? -quality : 0;
+    const success = outcome === 'success' ? 1 : 0;
+    const failure = outcome === 'failure' ? 1 : 0;
+    const signal = outcome === 'success' ? quality : outcome === 'failure' ? -quality : 0;
     if (!existing) {
       const created = {
         skillId,
@@ -188,15 +188,15 @@ export class IsabellaLearningEngine {
     if (!parsed.success)
       return {
         accepted: false,
-        reason: parsed.error.issues.map((issue) => issue.message).join("; "),
+        reason: parsed.error.issues.map((issue) => issue.message).join('; '),
         competence: [],
         concepts: [],
       };
     const example = sanitizeExample(parsed.data);
-    if (!example.consent && example.mode !== "supervised") {
+    if (!example.consent && example.mode !== 'supervised') {
       return {
         accepted: false,
-        reason: "Explicit consent is required for durable non-supervised learning.",
+        reason: 'Explicit consent is required for durable non-supervised learning.',
         competence: [],
         concepts: [],
       };
@@ -207,7 +207,7 @@ export class IsabellaLearningEngine {
     ) {
       return {
         accepted: false,
-        reason: "Learning sample rejected by prompt-injection guard.",
+        reason: 'Learning sample rejected by prompt-injection guard.',
         competence: [],
         concepts: [],
       };
@@ -215,9 +215,9 @@ export class IsabellaLearningEngine {
 
     const concepts = extractConcepts(example.input, example.target, example.context);
     const procedures =
-      example.mode === "procedural" ? extractProcedures(example.input, example.target) : [];
+      example.mode === 'procedural' ? extractProcedures(example.input, example.target) : [];
     const preferences =
-      example.mode === "preference" ? extractPreferences(example.input, example.target) : [];
+      example.mode === 'preference' ? extractPreferences(example.input, example.target) : [];
     const signature = stableSignature(example, concepts);
     const existing = this.store.getBySignature(signature);
     const now = new Date().toISOString();
@@ -249,7 +249,7 @@ export class IsabellaLearningEngine {
     this.store.upsert(memory);
     this.store.updateConcepts(concepts, example.quality);
     const competence = example.skillIds.map((skillId) =>
-      this.store.updateCompetence(skillId, example.outcome, example.quality),
+      this.store.updateCompetence(skillId, example.outcome, example.quality)
     );
     return { accepted: true, memory, competence, concepts };
   }
@@ -263,7 +263,7 @@ export class IsabellaLearningEngine {
       .filter((item) => item.score > 0)
       .sort(
         (a, b) =>
-          b.score - a.score || b.memory.lastReinforcedAt.localeCompare(a.memory.lastReinforcedAt),
+          b.score - a.score || b.memory.lastReinforcedAt.localeCompare(a.memory.lastReinforcedAt)
       )
       .slice(0, Math.max(1, Math.min(limit, 50)))
       .map((item) => item.memory);
@@ -279,7 +279,7 @@ export class IsabellaLearningEngine {
     const score = clamp(
       memories.reduce((sum, memory) => sum + memory.quality, 0) / Math.max(memories.length, 1),
       0,
-      1,
+      1
     );
     return {
       score,
@@ -293,13 +293,13 @@ export class IsabellaLearningEngine {
   }
 
   restore(snapshot: LearningSnapshot): void {
-    if (snapshot.version !== 1) throw new Error("Unsupported learning snapshot version");
+    if (snapshot.version !== 1) throw new Error('Unsupported learning snapshot version');
     this.store.replace(snapshot);
   }
 }
 
 export function createIsabellaLearningEngine(
-  store?: InMemoryLearningStore,
+  store?: InMemoryLearningStore
 ): IsabellaLearningEngine {
   return new IsabellaLearningEngine(store);
 }
@@ -326,7 +326,7 @@ function sanitizeExample(example: LearningExample): LearningExample {
 }
 
 function sanitizeText(value: string): string {
-  let sanitized = "";
+  let sanitized = '';
   for (const character of value) {
     const code = character.codePointAt(0) ?? 0;
     if (code >= 0x20 || code === 0x09 || code === 0x0a || code === 0x0d) sanitized += character;
@@ -335,47 +335,47 @@ function sanitizeText(value: string): string {
 }
 
 function containsPromptInjection(value: string): boolean {
-  const normalized = value.toLowerCase().replace(/\s+/g, " ").trim();
+  const normalized = value.toLowerCase().replace(/\s+/g, ' ').trim();
   return [
-    "ignore all instructions",
-    "ignore previous instructions",
-    "ignore prior instructions",
-    "system prompt",
-    "developer message",
-    "reveal the secret",
-    "reveal secret",
-    "jailbreak",
+    'ignore all instructions',
+    'ignore previous instructions',
+    'ignore prior instructions',
+    'system prompt',
+    'developer message',
+    'reveal the secret',
+    'reveal secret',
+    'jailbreak',
   ].some((term) => normalized.includes(term));
 }
 
 function extractConcepts(...values: Array<string | Record<string, unknown> | undefined>): string[] {
   const text = values
     .filter((value) => value !== undefined)
-    .map((value) => (typeof value === "string" ? value : JSON.stringify(value)))
-    .join(" ")
+    .map((value) => (typeof value === 'string' ? value : JSON.stringify(value)))
+    .join(' ')
     .toLowerCase();
   const words =
     text
-      .normalize("NFKD")
-      .replace(/[\u0300-\u036f]/g, "")
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '')
       .match(/[a-záéíóúñü]{4,}/gi) ?? [];
   const stop = new Set([
-    "para",
-    "como",
-    "desde",
-    "este",
-    "esta",
-    "that",
-    "with",
-    "from",
-    "have",
-    "will",
-    "then",
-    "when",
-    "what",
-    "into",
-    "sobre",
-    "entre",
+    'para',
+    'como',
+    'desde',
+    'este',
+    'esta',
+    'that',
+    'with',
+    'from',
+    'have',
+    'will',
+    'then',
+    'when',
+    'what',
+    'into',
+    'sobre',
+    'entre',
   ]);
   return [
     ...new Set(words.filter((word) => !stop.has(word)).map((word) => word.slice(0, 48))),
@@ -383,17 +383,17 @@ function extractConcepts(...values: Array<string | Record<string, unknown> | und
 }
 
 function extractProcedures(input?: string, target?: string): string[] {
-  const text = [input, target].filter(Boolean).join(" ");
+  const text = [input, target].filter(Boolean).join(' ');
   return (text.match(/(?:\d+[.)]|primero|despues|después|luego|finalmente)[^.!?]{3,160}/gi) ?? [])
     .slice(0, 12)
     .map(sanitizeText);
 }
 
 function extractPreferences(input?: string, target?: string): string[] {
-  const text = [input, target].filter(Boolean).join(" ");
+  const text = [input, target].filter(Boolean).join(' ');
   return (
     text.match(
-      /(?:prefiero|preferimos|evita|evitar|me gusta|no me gusta|should|prefer|avoid)[^.!?]{2,140}/gi,
+      /(?:prefiero|preferimos|evita|evitar|me gusta|no me gusta|should|prefer|avoid)[^.!?]{2,140}/gi
     ) ?? []
   )
     .slice(0, 12)
@@ -401,17 +401,17 @@ function extractPreferences(input?: string, target?: string): string[] {
 }
 
 function stableSignature(example: LearningExample, concepts: string[]): string {
-  return createHash("sha3-512")
+  return createHash('sha3-512')
     .update(
       JSON.stringify({
         mode: example.mode,
         input: example.input,
-        target: example.target ?? "",
-        negative: example.negative ?? "",
+        target: example.target ?? '',
+        negative: example.negative ?? '',
         concepts,
-      }),
+      })
     )
-    .digest("hex");
+    .digest('hex');
 }
 
 function relevance(memory: LearningMemory, concepts: string[]): number {

@@ -33,7 +33,7 @@ import {
   type IhecOmegaResponse,
   type IhecSentinelVerdict,
   type IhecTopologyPlan,
-} from "./engines";
+} from './engines';
 import {
   aetherVerdict,
   axiomExplain,
@@ -58,14 +58,14 @@ import {
   type PrismaResult,
   type SentinelXResult,
   type TerraResult,
-} from "./gifts";
+} from './gifts';
 import {
   IHEC_DIVERGENCES,
   IHEC_LAYER_COUNT,
   IHEC_SPEC_ID,
   IHEC_SUBSYSTEM_COUNT,
   IHEC_VERSION,
-} from "./contract";
+} from './contract';
 
 /** Excepción soberana: fallo clasificado en una federación. */
 export class SovereignKernelError extends Error {
@@ -73,7 +73,7 @@ export class SovereignKernelError extends Error {
   readonly code: string;
   constructor(federation: string, code: string) {
     super(`Fallo soberano en ${federation}: ${code}`);
-    this.name = "SovereignKernelError";
+    this.name = 'SovereignKernelError';
     this.federation = federation;
     this.code = code;
   }
@@ -133,31 +133,44 @@ export interface AppliedGifts {
 /** Aplica los 10 regalos de Perplexity de forma determinista. Ninguno autoriza. */
 export function applyPerplexityGifts(payload: IhecGiftPayload): AppliedGifts {
   return Object.freeze({
-    prisma: prismaEvaluate({ semanticNoise: payload.semanticNoise ?? 0, contextDrift: payload.contextDrift ?? 0 }),
+    prisma: prismaEvaluate({
+      semanticNoise: payload.semanticNoise ?? 0,
+      contextDrift: payload.contextDrift ?? 0,
+    }),
     echo: echoReconstruct(payload.memoryFragments ?? []),
-    axiom: axiomExplain({ summary: payload.summary ?? "Sin resumen provisto", evidence: payload.memoryFragments?.map((f) => f.source ?? "fragment") ?? [] }),
+    axiom: axiomExplain({
+      summary: payload.summary ?? 'Sin resumen provisto',
+      evidence: payload.memoryFragments?.map((f) => f.source ?? 'fragment') ?? [],
+    }),
     nova: novaSelectIndex({ latencyTargetMs: 5, accuracyTarget: 0.9 }),
     oracle: oracleConsensus(payload.summary ? [{ answer: payload.summary, confidence: 0.9 }] : []),
-    lumina: luminaHypothesize({ partialData: payload.partialData ?? {}, conflicts: payload.principles ?? [] }),
-    sentinelX: sentinelXAnalyze({ payload, contextDrift: payload.contextDrift ?? 0, semanticNoise: payload.semanticNoise ?? 0 }),
+    lumina: luminaHypothesize({
+      partialData: payload.partialData ?? {},
+      conflicts: payload.principles ?? [],
+    }),
+    sentinelX: sentinelXAnalyze({
+      payload,
+      contextDrift: payload.contextDrift ?? 0,
+      semanticNoise: payload.semanticNoise ?? 0,
+    }),
     terra: terraAdapt({ territory: payload.territory, profile: payload.profile }),
     chronos: chronosNexus(payload.past ?? {}, payload.present ?? {}),
-    aether: aetherVerdict({ summary: payload.summary ?? "" }, payload.principles ?? []),
+    aether: aetherVerdict({ summary: payload.summary ?? '' }, payload.principles ?? []),
   });
 }
 
 export interface IhecOk<T> {
-  readonly status: "ok";
+  readonly status: 'ok';
   readonly result: T;
   readonly gifts: AppliedGifts;
   readonly sentinel: IhecSentinelVerdict;
-  readonly authorityPath: "FULL";
+  readonly authorityPath: 'FULL';
   readonly authorizationPerformed: false;
   readonly executionPerformed: false;
 }
 
 export interface IhecDegraded {
-  readonly status: "degraded";
+  readonly status: 'degraded';
   readonly reason: string;
   readonly response: IhecDegradedResponse;
   readonly topology: IhecTopologyPlan;
@@ -165,7 +178,7 @@ export interface IhecDegraded {
 }
 
 export interface IhecOmega {
-  readonly status: "omega";
+  readonly status: 'omega';
   readonly response: IhecOmegaResponse;
   readonly crisis: readonly IhecCrisisRecord[];
   readonly guards: readonly IhecMutationGuard[];
@@ -179,7 +192,11 @@ export type IhecRunResult<T> = IhecOk<T> | IhecDegraded | IhecOmega;
  * con recuperación; cualquier otro fallo activa Omega Mode. En ambos casos se
  * archiva la crisis y se genera una guarda (PENDING_REVIEW).
  */
-export function runWithIhec<T>(ihec: Ihec, payload: IhecGiftPayload, core: () => T): IhecRunResult<T> {
+export function runWithIhec<T>(
+  ihec: Ihec,
+  payload: IhecGiftPayload,
+  core: () => T
+): IhecRunResult<T> {
   const sentinel = ihec.sentinel.detect({
     signature: payload.summary,
     contextDrift: payload.contextDrift ?? 0,
@@ -190,23 +207,31 @@ export function runWithIhec<T>(ihec: Ihec, payload: IhecGiftPayload, core: () =>
     const result = core();
     const gifts = applyPerplexityGifts(payload);
     return Object.freeze({
-      status: "ok" as const,
+      status: 'ok' as const,
       result,
       gifts,
       sentinel,
-      authorityPath: "FULL" as const,
+      authorityPath: 'FULL' as const,
       authorizationPerformed: false as const,
       executionPerformed: false as const,
     });
   } catch (error) {
     if (error instanceof SovereignKernelError) {
       const topology = ihec.activateFailover(error.federation);
-      const snapshot = ihec.snapshot.capture({ state: { phase: "failover", payloadSummary: payload.summary ?? "" } });
+      const snapshot = ihec.snapshot.capture({
+        state: { phase: 'failover', payloadSummary: payload.summary ?? '' },
+      });
       const recovery = ihec.recovery.restore(snapshot);
-      ihec.crisisMemory.record(error, snapshot.hash, "FAILOVER");
-      ihec.immuneMutation.generateGuard(error, "normal");
+      ihec.crisisMemory.record(error, snapshot.hash, 'FAILOVER');
+      ihec.immuneMutation.generateGuard(error, 'normal');
       const response = ihec.governance.degradedResponse(payload, recovery, error.code);
-      return Object.freeze({ status: "degraded" as const, reason: error.code, response, topology, governance: ihec.governance.trail() });
+      return Object.freeze({
+        status: 'degraded' as const,
+        reason: error.code,
+        response,
+        topology,
+        governance: ihec.governance.trail(),
+      });
     }
 
     const normalized = error instanceof Error ? error : new Error(String(error));
@@ -214,10 +239,15 @@ export function runWithIhec<T>(ihec: Ihec, payload: IhecGiftPayload, core: () =>
     ihec.omegaMode.saveGlobalState();
     ihec.omegaMode.quarantineCorrupted();
     ihec.omegaMode.activateSecondaryRuntime();
-    ihec.crisisMemory.record(normalized, null, "OMEGA");
-    ihec.immuneMutation.generateGuard(normalized, "critical");
+    ihec.crisisMemory.record(normalized, null, 'OMEGA');
+    ihec.immuneMutation.generateGuard(normalized, 'critical');
     const response = ihec.omegaMode.rebuildAndRespond(payload);
-    return Object.freeze({ status: "omega" as const, response, crisis: ihec.crisisMemory.all(), guards: ihec.immuneMutation.all() });
+    return Object.freeze({
+      status: 'omega' as const,
+      response,
+      crisis: ihec.crisisMemory.all(),
+      guards: ihec.immuneMutation.all(),
+    });
   }
 }
 

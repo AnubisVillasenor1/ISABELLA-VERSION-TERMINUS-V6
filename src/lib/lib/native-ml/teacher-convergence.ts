@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash } from 'node:crypto';
 
 export interface TeacherObservation {
   teacherId: string;
@@ -23,11 +23,11 @@ function clamp01(value: number): number {
 }
 
 function normalize(text: string): string {
-  return text.normalize("NFKC").trim().replace(/\s+/g, " ").toLocaleLowerCase("es-MX");
+  return text.normalize('NFKC').trim().replace(/\s+/g, ' ').toLocaleLowerCase('es-MX');
 }
 
 function hash(value: unknown): string {
-  return createHash("sha256").update(JSON.stringify(value)).digest("hex");
+  return createHash('sha256').update(JSON.stringify(value)).digest('hex');
 }
 
 function tokenize(text: string): Set<string> {
@@ -47,11 +47,11 @@ function jaccard(left: Set<string>, right: Set<string>): number {
  * original teacher and are never treated as authority by themselves.
  */
 export function convergeTeacherObservations(
-  observations: readonly TeacherObservation[],
+  observations: readonly TeacherObservation[]
 ): TeacherConsensus {
   if (observations.length < 2)
-    throw new Error("teacher_convergence_requires_multiple_observations");
-  if (observations.length > 16) throw new Error("teacher_convergence_observation_limit");
+    throw new Error('teacher_convergence_requires_multiple_observations');
+  if (observations.length > 16) throw new Error('teacher_convergence_observation_limit');
 
   const clean = observations.map((observation) => ({
     ...observation,
@@ -60,14 +60,14 @@ export function convergeTeacherObservations(
     confidence: clamp01(observation.confidence),
   }));
   if (clean.some((item) => !item.teacherId || !item.response))
-    throw new Error("teacher_convergence_invalid_observation");
+    throw new Error('teacher_convergence_invalid_observation');
 
   // Tokenize each response once and reuse the symmetric pairs, keeping the
   // per-candidate summation order identical to the original scan.
   const tokenSets = clean.map((item) => tokenize(item.response));
   const size = clean.length;
   const similarityMatrix: number[][] = Array.from({ length: size }, () =>
-    new Array<number>(size).fill(0),
+    new Array<number>(size).fill(0)
   );
   for (let i = 0; i < size; i++) {
     for (let j = i + 1; j < size; j++) {
@@ -92,7 +92,7 @@ export function convergeTeacherObservations(
   const conflict = agreementScore < 0.35;
   const confidence = clamp01(
     (clean.reduce((sum, item) => sum + item.confidence, 0) / clean.length) * 0.5 +
-      agreementScore * 0.5,
+      agreementScore * 0.5
   );
   const provenanceHash = hash(
     clean.map((item) => ({
@@ -101,7 +101,7 @@ export function convergeTeacherObservations(
       responseHash: hash(item.response),
       knowledgeTimestamp: item.knowledgeTimestamp ?? null,
       provenance: item.provenance ?? [],
-    })),
+    }))
   );
 
   return {

@@ -1,8 +1,8 @@
 /**
  * TINA cache key — segregated by tenant, principal, scopes, versions (src/lib/tina/cache.ts)
  */
-import { sha256Hex } from "./ethical";
-import type { TinaExecutionPath } from "./types";
+import { sha256Hex } from './ethical';
+import type { TinaExecutionPath } from './types';
 
 export interface TinaCacheInput {
   tenantId: string;
@@ -20,7 +20,7 @@ function canonicalize(input: TinaCacheInput): string {
   return JSON.stringify({
     ...input,
     scopes: [...input.scopes].sort(),
-    prompt: input.prompt.normalize("NFKC").trim(),
+    prompt: input.prompt.normalize('NFKC').trim(),
   });
 }
 

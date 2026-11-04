@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash } from 'node:crypto';
 
 // ============================================================================
 // DOMINIO DE TENANT (src/lib/domains/tenant.ts)
@@ -7,7 +7,7 @@ import { createHash } from "node:crypto";
 // Aislado de adaptadores: domain no depende de proveedores externos (AGENTS.md §11).
 // ============================================================================
 
-export type TenantTier = "Free" | "Enterprise" | "Sovereign";
+export type TenantTier = 'Free' | 'Enterprise' | 'Sovereign';
 
 export interface TenantDomain {
   id: string;
@@ -41,10 +41,10 @@ export function slugify(name: string): string {
   return (
     name
       .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "") || "tenant"
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'tenant'
   );
 }
 
@@ -84,11 +84,11 @@ export function mapTenantDomainToRow(domain: TenantDomain): TenantRow {
 /** Aplica la política de límite de cuota por tier (solo como valor por defecto). */
 export function defaultQuotaTierLimit(tier: TenantTier): number {
   switch (tier) {
-    case "Free":
+    case 'Free':
       return 100;
-    case "Enterprise":
+    case 'Enterprise':
       return 10_000;
-    case "Sovereign":
+    case 'Sovereign':
       return 1_000_000;
     default:
       return 1_000;
@@ -97,13 +97,13 @@ export function defaultQuotaTierLimit(tier: TenantTier): number {
 
 /** Normaliza el tier a un valor canónico seguro. */
 export function normalizeTenantTier(tier: string): TenantTier {
-  if (tier === "Enterprise" || tier === "Sovereign") return tier;
-  return "Free";
+  if (tier === 'Enterprise' || tier === 'Sovereign') return tier;
+  return 'Free';
 }
 
 /** Resumen criptográfico del dominio para auditoría/hash chaining. */
 export function tenantDomainHash(domain: TenantDomain): string {
-  return createHash("sha256")
+  return createHash('sha256')
     .update(
       [
         domain.id,
@@ -113,7 +113,7 @@ export function tenantDomainHash(domain: TenantDomain): string {
         domain.quotaBalance,
         domain.quotaTierLimit,
         domain.createdAt.toISOString(),
-      ].join("|"),
+      ].join('|')
     )
-    .digest("hex");
+    .digest('hex');
 }

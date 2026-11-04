@@ -5,23 +5,32 @@
  */
 
 export type RevenueStream =
-  | "SUBSCRIPTION"
-  | "ISA_API"
-  | "SKILL_MARKETPLACE"
-  | "AGENT_MARKETPLACE"
-  | "AGENT_HOSTING"
-  | "AI_CLOUD"
-  | "AGENT_REVENUE_SHARING"
-  | "HYPERAUTOMATION"
-  | "WHITE_LABEL"
-  | "CERTIFICATION"
-  | "DATA_VAULT"
-  | "ECOSYSTEM_TREASURY";
+  | 'SUBSCRIPTION'
+  | 'ISA_API'
+  | 'SKILL_MARKETPLACE'
+  | 'AGENT_MARKETPLACE'
+  | 'AGENT_HOSTING'
+  | 'AI_CLOUD'
+  | 'AGENT_REVENUE_SHARING'
+  | 'HYPERAUTOMATION'
+  | 'WHITE_LABEL'
+  | 'CERTIFICATION'
+  | 'DATA_VAULT'
+  | 'ECOSYSTEM_TREASURY';
 
 export type RevenueStreamConfig = {
   readonly stream: RevenueStream;
   readonly name: string;
-  readonly model: "recurring" | "transactional" | "marketplace" | "consumption" | "b2b" | "enterprise" | "education" | "data" | "strategic";
+  readonly model:
+    | 'recurring'
+    | 'transactional'
+    | 'marketplace'
+    | 'consumption'
+    | 'b2b'
+    | 'enterprise'
+    | 'education'
+    | 'data'
+    | 'strategic';
   readonly baseSplit: {
     readonly user: number;
     readonly platform: number;
@@ -32,118 +41,118 @@ export type RevenueStreamConfig = {
 
 export const REVENUE_STREAMS: readonly RevenueStreamConfig[] = [
   {
-    stream: "SUBSCRIPTION",
-    name: "Suscripciones Isabella",
-    model: "recurring",
-    baseSplit: { user: 0.00, platform: 1.00 },
+    stream: 'SUBSCRIPTION',
+    name: 'Suscripciones Isabella',
+    model: 'recurring',
+    baseSplit: { user: 0.0, platform: 1.0 },
     dynamicSplit: false,
-    description: "Planes mensuales/anuales - 100% plataforma",
+    description: 'Planes mensuales/anuales - 100% plataforma',
   },
   {
-    stream: "ISA_API",
-    name: "ISA API Pay-per-token",
-    model: "transactional",
-    baseSplit: { user: 0.70, platform: 0.30 },
+    stream: 'ISA_API',
+    name: 'ISA API Pay-per-token',
+    model: 'transactional',
+    baseSplit: { user: 0.7, platform: 0.3 },
     dynamicSplit: true,
-    description: "API de terceros - Reparto dinámico por IETS",
+    description: 'API de terceros - Reparto dinámico por IETS',
   },
   {
-    stream: "SKILL_MARKETPLACE",
-    name: "Marketplace de Skills",
-    model: "marketplace",
-    baseSplit: { user: 0.70, platform: 0.30 },
+    stream: 'SKILL_MARKETPLACE',
+    name: 'Marketplace de Skills',
+    model: 'marketplace',
+    baseSplit: { user: 0.7, platform: 0.3 },
     dynamicSplit: true,
-    description: "Skills, prompts, workflows, plugins - Dinámico 50/50 a 90/10",
+    description: 'Skills, prompts, workflows, plugins - Dinámico 50/50 a 90/10',
   },
   {
-    stream: "AGENT_MARKETPLACE",
-    name: "Marketplace de Agentes",
-    model: "marketplace",
-    baseSplit: { user: 0.70, platform: 0.30 },
+    stream: 'AGENT_MARKETPLACE',
+    name: 'Marketplace de Agentes',
+    model: 'marketplace',
+    baseSplit: { user: 0.7, platform: 0.3 },
     dynamicSplit: true,
-    description: "Agentes publicados - Dinámico 50/50 a 90/10",
+    description: 'Agentes publicados - Dinámico 50/50 a 90/10',
   },
   {
-    stream: "AGENT_HOSTING",
-    name: "Hosting de Agentes",
-    model: "recurring",
-    baseSplit: { user: 0.00, platform: 1.00 },
+    stream: 'AGENT_HOSTING',
+    name: 'Hosting de Agentes',
+    model: 'recurring',
+    baseSplit: { user: 0.0, platform: 1.0 },
     dynamicSplit: false,
-    description: "Starter / Pro / Enterprise - 100% plataforma",
+    description: 'Starter / Pro / Enterprise - 100% plataforma',
   },
   {
-    stream: "AI_CLOUD",
-    name: "Sovereign AI Cloud",
-    model: "consumption",
-    baseSplit: { user: 0.00, platform: 1.00 },
+    stream: 'AI_CLOUD',
+    name: 'Sovereign AI Cloud',
+    model: 'consumption',
+    baseSplit: { user: 0.0, platform: 1.0 },
     dynamicSplit: false,
-    description: "GPU, CPU, inferencia, storage - Margen sobre costo",
+    description: 'GPU, CPU, inferencia, storage - Margen sobre costo',
   },
   {
-    stream: "AGENT_REVENUE_SHARING",
-    name: "Revenue Sharing de Agentes",
-    model: "recurring",
-    baseSplit: { user: 0.70, platform: 0.30 },
+    stream: 'AGENT_REVENUE_SHARING',
+    name: 'Revenue Sharing de Agentes',
+    model: 'recurring',
+    baseSplit: { user: 0.7, platform: 0.3 },
     dynamicSplit: true,
-    description: "Ingresos generados por agentes - Dinámico por IETS",
+    description: 'Ingresos generados por agentes - Dinámico por IETS',
   },
   {
-    stream: "HYPERAUTOMATION",
-    name: "Hyperautomation",
-    model: "b2b",
+    stream: 'HYPERAUTOMATION',
+    name: 'Hyperautomation',
+    model: 'b2b',
     baseSplit: { user: 0.75, platform: 0.25 },
     dynamicSplit: true,
-    description: "CRM, ERP, facturación, ventas - 15-25% plataforma",
+    description: 'CRM, ERP, facturación, ventas - 15-25% plataforma',
   },
   {
-    stream: "WHITE_LABEL",
-    name: "White Label",
-    model: "enterprise",
-    baseSplit: { user: 0.00, platform: 1.00 },
+    stream: 'WHITE_LABEL',
+    name: 'White Label',
+    model: 'enterprise',
+    baseSplit: { user: 0.0, platform: 1.0 },
     dynamicSplit: false,
-    description: "Licencia anual - 100% plataforma",
+    description: 'Licencia anual - 100% plataforma',
   },
   {
-    stream: "CERTIFICATION",
-    name: "Certificaciones",
-    model: "education",
-    baseSplit: { user: 0.00, platform: 1.00 },
+    stream: 'CERTIFICATION',
+    name: 'Certificaciones',
+    model: 'education',
+    baseSplit: { user: 0.0, platform: 1.0 },
     dynamicSplit: false,
-    description: "Exámenes y credenciales - 100% plataforma",
+    description: 'Exámenes y credenciales - 100% plataforma',
   },
   {
-    stream: "DATA_VAULT",
-    name: "Data Vault",
-    model: "data",
-    baseSplit: { user: 0.50, platform: 0.50 },
+    stream: 'DATA_VAULT',
+    name: 'Data Vault',
+    model: 'data',
+    baseSplit: { user: 0.5, platform: 0.5 },
     dynamicSplit: true,
-    description: "Datasets anonimizados - Según consentimiento y compliance",
+    description: 'Datasets anonimizados - Según consentimiento y compliance',
   },
   {
-    stream: "ECOSYSTEM_TREASURY",
-    name: "Ecosystem Treasury",
-    model: "strategic",
-    baseSplit: { user: 0.00, platform: 1.00 },
+    stream: 'ECOSYSTEM_TREASURY',
+    name: 'Ecosystem Treasury',
+    model: 'strategic',
+    baseSplit: { user: 0.0, platform: 1.0 },
     dynamicSplit: false,
-    description: "Inversión, licencias, partnerships - 100% plataforma",
+    description: 'Inversión, licencias, partnerships - 100% plataforma',
   },
 ] as const;
 
 export function getStreamConfig(stream: RevenueStream): RevenueStreamConfig {
-  const config = REVENUE_STREAMS.find(s => s.stream === stream);
+  const config = REVENUE_STREAMS.find((s) => s.stream === stream);
   if (!config) throw new Error(`REVENUE_STREAM_NOT_FOUND: ${stream}`);
   return config;
 }
 
 export function getDynamicSplitStreams(): RevenueStream[] {
-  return REVENUE_STREAMS.filter(s => s.dynamicSplit).map(s => s.stream);
+  return REVENUE_STREAMS.filter((s) => s.dynamicSplit).map((s) => s.stream);
 }
 
 export function getStaticSplitStreams(): RevenueStream[] {
-  return REVENUE_STREAMS.filter(s => !s.dynamicSplit).map(s => s.stream);
+  return REVENUE_STREAMS.filter((s) => !s.dynamicSplit).map((s) => s.stream);
 }
 
-export type IETSTier = "STARTER" | "PROFESSIONAL" | "ADVANCED" | "ELITE" | "SOVEREIGN";
+export type IETSTier = 'STARTER' | 'PROFESSIONAL' | 'ADVANCED' | 'ELITE' | 'SOVEREIGN';
 
 export type IETSInputs = {
   readonly referrals: number;
@@ -202,18 +211,18 @@ export type SettlementResult = {
 };
 
 export type LedgerAccount =
-  | "GATEWAY_CLEARING"
-  | "GROSS_REVENUE"
-  | "DIRECT_COST"
-  | "TAX_PAYABLE"
-  | "GATEWAY_FEES"
-  | "EMERGENCY_VAULT"
-  | "INNOVATION_VAULT"
-  | "TREASURY_VAULT"
-  | "CREATOR_WALLET"
-  | "PLATFORM_REVENUE";
+  | 'GATEWAY_CLEARING'
+  | 'GROSS_REVENUE'
+  | 'DIRECT_COST'
+  | 'TAX_PAYABLE'
+  | 'GATEWAY_FEES'
+  | 'EMERGENCY_VAULT'
+  | 'INNOVATION_VAULT'
+  | 'TREASURY_VAULT'
+  | 'CREATOR_WALLET'
+  | 'PLATFORM_REVENUE';
 
-export type LedgerDirection = "DEBIT" | "CREDIT";
+export type LedgerDirection = 'DEBIT' | 'CREDIT';
 
 export type LedgerPosting = {
   readonly account: LedgerAccount;
@@ -282,7 +291,7 @@ export type OutboxEvent = {
   readonly eventType: string;
   readonly eventId: string;
   readonly payload: unknown;
-  readonly status: "PENDING" | "PUBLISHED" | "FAILED";
+  readonly status: 'PENDING' | 'PUBLISHED' | 'FAILED';
   readonly attempts: number;
   readonly createdAt: string;
   readonly publishedAt?: string;

@@ -5,15 +5,15 @@
 //
 // Invariante: catalogar y clasificar NO autoriza, NO instala y NO ejecuta. Estos
 // tipos son descriptores declarativos (datos), nunca rutas de ejecución.
-import type { RiskTier } from "../authority/method-id";
+import type { RiskTier } from '../authority/method-id';
 
-export type CustomizationKind = "rule" | "skill" | "plugin" | "hook" | "mcp-server";
+export type CustomizationKind = 'rule' | 'skill' | 'plugin' | 'hook' | 'mcp-server';
 
-export type CustomizationState = "draft" | "engine-generated" | "human-approved" | "human-authored";
+export type CustomizationState = 'draft' | 'engine-generated' | 'human-approved' | 'human-authored';
 
-export type CustomizationScope = "workspace" | "global" | "builtin";
+export type CustomizationScope = 'workspace' | 'global' | 'builtin';
 
-export type HookEvent = "PreToolUse" | "PostToolUse" | "PreInvocation" | "PostInvocation" | "Stop";
+export type HookEvent = 'PreToolUse' | 'PostToolUse' | 'PreInvocation' | 'PostInvocation' | 'Stop';
 
 export interface CustomizationBase {
   readonly kind: CustomizationKind;
@@ -27,17 +27,17 @@ export interface CustomizationBase {
 }
 
 export interface RuleCustomization extends CustomizationBase {
-  readonly kind: "rule";
+  readonly kind: 'rule';
   /** Ubicación canónica del archivo de reglas (p. ej. "AGENTS.md"). */
   readonly path: string;
   readonly alwaysOn: boolean;
-  readonly trigger: "always_on" | "model_decision";
+  readonly trigger: 'always_on' | 'model_decision';
 }
 
 export interface SkillCustomization extends CustomizationBase {
-  readonly kind: "skill";
+  readonly kind: 'skill';
   /** Divulgación progresiva: las skills se cargan bajo demanda, nunca siempre-activas. */
-  readonly activation: "on-demand";
+  readonly activation: 'on-demand';
   /** `name` declarado en el frontmatter YAML de SKILL.md. */
   readonly frontmatterName: string;
   readonly riskTier: RiskTier;
@@ -46,13 +46,13 @@ export interface SkillCustomization extends CustomizationBase {
 }
 
 export interface HookHandler {
-  readonly type: "command";
+  readonly type: 'command';
   readonly matcher: string;
   readonly timeoutSeconds: number;
 }
 
 export interface HookCustomization extends CustomizationBase {
-  readonly kind: "hook";
+  readonly kind: 'hook';
   readonly event: HookEvent;
   readonly enabled: boolean;
   readonly handlers: readonly HookHandler[];
@@ -66,8 +66,8 @@ export interface McpToolSchema {
 }
 
 export interface McpServerCustomization extends CustomizationBase {
-  readonly kind: "mcp-server";
-  readonly transport: "stdio" | "sse";
+  readonly kind: 'mcp-server';
+  readonly transport: 'stdio' | 'sse';
   readonly command?: string;
   readonly serverUrl?: string;
   readonly tools: readonly McpToolSchema[];
@@ -81,7 +81,7 @@ export interface PluginBundle {
 }
 
 export interface PluginCustomization extends CustomizationBase {
-  readonly kind: "plugin";
+  readonly kind: 'plugin';
   readonly enabledByDefault: boolean;
   readonly disabled: boolean;
   readonly bundles: PluginBundle;
@@ -95,9 +95,9 @@ export type CustomizationEntry =
   | PluginCustomization;
 
 export const CUSTOMIZATION_KINDS: readonly CustomizationKind[] = Object.freeze([
-  "rule",
-  "skill",
-  "plugin",
-  "hook",
-  "mcp-server",
+  'rule',
+  'skill',
+  'plugin',
+  'hook',
+  'mcp-server',
 ]);

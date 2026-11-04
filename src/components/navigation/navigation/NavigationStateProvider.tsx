@@ -6,19 +6,8 @@
  * foco anterior, modo comparativo.
  */
 
-import {
-  createContext,
-  useContext,
-  useReducer,
-  useCallback,
-  useMemo,
-  type ReactNode,
-} from "react";
-import type {
-  NavigationState,
-  NavigationAction,
-  NavbarId,
-} from "./types";
+import { createContext, useContext, useReducer, useCallback, useMemo, type ReactNode } from 'react';
+import type { NavigationState, NavigationAction, NavbarId } from './types';
 
 // ============================================================================
 // REDUCER
@@ -33,12 +22,9 @@ const initialState: NavigationState = {
   comparisonNavbars: null,
 };
 
-function navigationReducer(
-  state: NavigationState,
-  action: NavigationAction,
-): NavigationState {
+function navigationReducer(state: NavigationState, action: NavigationAction): NavigationState {
   switch (action.type) {
-    case "OPEN_NAVBAR": {
+    case 'OPEN_NAVBAR': {
       // En modo comparativo, permitir dos navbars
       if (state.comparisonMode && state.comparisonNavbars) {
         const [first, second] = state.comparisonNavbars;
@@ -58,21 +44,21 @@ function navigationReducer(
       };
     }
 
-    case "CLOSE_NAVBAR":
+    case 'CLOSE_NAVBAR':
       return {
         ...state,
         activeNavbar: null,
         previousFocusId: state.previousFocusId,
       };
 
-    case "TOGGLE_NAVBAR": {
+    case 'TOGGLE_NAVBAR': {
       if (state.activeNavbar === action.navbar) {
         return { ...state, activeNavbar: null };
       }
       return { ...state, activeNavbar: action.navbar };
     }
 
-    case "TOGGLE_FOLDER": {
+    case 'TOGGLE_FOLDER': {
       const current = state.expandedFolders[action.nodeId] ?? false;
       return {
         ...state,
@@ -83,7 +69,7 @@ function navigationReducer(
       };
     }
 
-    case "EXPAND_FOLDER":
+    case 'EXPAND_FOLDER':
       return {
         ...state,
         expandedFolders: {
@@ -92,7 +78,7 @@ function navigationReducer(
         },
       };
 
-    case "COLLAPSE_FOLDER":
+    case 'COLLAPSE_FOLDER':
       return {
         ...state,
         expandedFolders: {
@@ -101,19 +87,19 @@ function navigationReducer(
         },
       };
 
-    case "SET_ACTIVE_NODE":
+    case 'SET_ACTIVE_NODE':
       return {
         ...state,
         activeNode: action.nodeId,
       };
 
-    case "SET_PREVIOUS_FOCUS":
+    case 'SET_PREVIOUS_FOCUS':
       return {
         ...state,
         previousFocusId: action.focusId,
       };
 
-    case "ENABLE_COMPARISON":
+    case 'ENABLE_COMPARISON':
       return {
         ...state,
         comparisonMode: true,
@@ -121,7 +107,7 @@ function navigationReducer(
         activeNavbar: action.navbars[0],
       };
 
-    case "DISABLE_COMPARISON":
+    case 'DISABLE_COMPARISON':
       return {
         ...state,
         comparisonMode: false,
@@ -129,7 +115,7 @@ function navigationReducer(
         activeNavbar: null,
       };
 
-    case "RESET":
+    case 'RESET':
       return initialState;
 
     default:
@@ -158,42 +144,34 @@ const NavigationContext = createContext<NavigationContextValue | null>(null);
 // PROVIDER
 // ============================================================================
 
-export function NavigationStateProvider({
-  children,
-}: {
-  children: ReactNode;
-}) {
+export function NavigationStateProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(navigationReducer, initialState);
 
   const openNavbar = useCallback(
-    (navbar: NavbarId) => dispatch({ type: "OPEN_NAVBAR", navbar }),
-    [],
+    (navbar: NavbarId) => dispatch({ type: 'OPEN_NAVBAR', navbar }),
+    []
   );
 
-  const closeNavbar = useCallback(
-    () => dispatch({ type: "CLOSE_NAVBAR" }),
-    [],
-  );
+  const closeNavbar = useCallback(() => dispatch({ type: 'CLOSE_NAVBAR' }), []);
 
   const toggleNavbar = useCallback(
-    (navbar: NavbarId) => dispatch({ type: "TOGGLE_NAVBAR", navbar }),
-    [],
+    (navbar: NavbarId) => dispatch({ type: 'TOGGLE_NAVBAR', navbar }),
+    []
   );
 
   const toggleFolder = useCallback(
-    (nodeId: string) => dispatch({ type: "TOGGLE_FOLDER", nodeId }),
-    [],
+    (nodeId: string) => dispatch({ type: 'TOGGLE_FOLDER', nodeId }),
+    []
   );
 
   const isFolderExpanded = useCallback(
     (nodeId: string) => state.expandedFolders[nodeId] ?? false,
-    [state.expandedFolders],
+    [state.expandedFolders]
   );
 
   const setPreviousFocus = useCallback(
-    (focusId: string | null) =>
-      dispatch({ type: "SET_PREVIOUS_FOCUS", focusId }),
-    [],
+    (focusId: string | null) => dispatch({ type: 'SET_PREVIOUS_FOCUS', focusId }),
+    []
   );
 
   const value = useMemo<NavigationContextValue>(
@@ -207,22 +185,10 @@ export function NavigationStateProvider({
       isFolderExpanded,
       setPreviousFocus,
     }),
-    [
-      state,
-      openNavbar,
-      closeNavbar,
-      toggleNavbar,
-      toggleFolder,
-      isFolderExpanded,
-      setPreviousFocus,
-    ],
+    [state, openNavbar, closeNavbar, toggleNavbar, toggleFolder, isFolderExpanded, setPreviousFocus]
   );
 
-  return (
-    <NavigationContext.Provider value={value}>
-      {children}
-    </NavigationContext.Provider>
-  );
+  return <NavigationContext.Provider value={value}>{children}</NavigationContext.Provider>;
 }
 
 // ============================================================================
@@ -232,7 +198,7 @@ export function NavigationStateProvider({
 export function useNavigation(): NavigationContextValue {
   const context = useContext(NavigationContext);
   if (!context) {
-    throw new Error("useNavigation must be used within NavigationStateProvider");
+    throw new Error('useNavigation must be used within NavigationStateProvider');
   }
   return context;
 }

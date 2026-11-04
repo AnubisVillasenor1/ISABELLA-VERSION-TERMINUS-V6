@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 import {
   Server,
   Shield,
@@ -23,10 +23,10 @@ import {
   FileText,
   Clock,
   Key,
-} from "lucide-react";
-import { soundManager } from "../../utils/soundEffects";
-import { ISABELLA_SQL_MIGRATION, SCHEMA_TABLES } from "../../data/isabellaMigrations";
-import { ISABELLA_BLUEPRINT } from "../../data/isabellaBlueprint";
+} from 'lucide-react';
+import { soundManager } from '../../utils/soundEffects';
+import { ISABELLA_SQL_MIGRATION, SCHEMA_TABLES } from '../../data/isabellaMigrations';
+import { ISABELLA_BLUEPRINT } from '../../data/isabellaBlueprint';
 import {
   IsabellaPerception,
   IsabellaDecision,
@@ -35,53 +35,67 @@ import {
   IsabellaTool,
   IsabellaMemoryScope,
   IsabellaInputType,
-} from "../../contracts/isabella";
+} from '../../contracts/isabella';
 
-import { IsabellaAgent, AgentSessionInfo, AgentChatResponse } from "../../lib/isabella-agent-sdk";
+import { IsabellaAgent, AgentSessionInfo, AgentChatResponse } from '../../lib/isabella-agent-sdk';
 
-type HubSubTab = "perception_runner" | "agent_sdk" | "audit_trail" | "memory_scopes" | "tools_catalog" | "sql_migrations" | "blueprint";
+type HubSubTab =
+  | 'perception_runner'
+  | 'agent_sdk'
+  | 'audit_trail'
+  | 'memory_scopes'
+  | 'tools_catalog'
+  | 'sql_migrations'
+  | 'blueprint';
 
 export const IsabellaHubView: React.FC = () => {
-  const [subTab, setSubTab] = useState<HubSubTab>("perception_runner");
+  const [subTab, setSubTab] = useState<HubSubTab>('perception_runner');
   const [copiedSql, setCopiedSql] = useState(false);
   const [copiedTrace, setCopiedTrace] = useState<string | null>(null);
 
   // Perception Runner State
-  const [inputType, setInputType] = useState<IsabellaInputType>("chat");
-  const [payloadText, setPayloadText] = useState("¿Qué lugares patrimoniales puedo visitar en Real del Monte?");
-  const [riskSimulation, setRiskSimulation] = useState<"low" | "medium" | "high">("low");
-  const [selectedToolToRequest, setSelectedToolToRequest] = useState<string>("none");
+  const [inputType, setInputType] = useState<IsabellaInputType>('chat');
+  const [payloadText, setPayloadText] = useState(
+    '¿Qué lugares patrimoniales puedo visitar en Real del Monte?'
+  );
+  const [riskSimulation, setRiskSimulation] = useState<'low' | 'medium' | 'high'>('low');
+  const [selectedToolToRequest, setSelectedToolToRequest] = useState<string>('none');
   const [isRunningPerception, setIsRunningPerception] = useState(false);
   const [lastDecision, setLastDecision] = useState<IsabellaDecision | null>(null);
 
   // Agent SDK & Leasing State
   const [agentSession, setAgentSession] = useState<AgentSessionInfo | null>(null);
-  const [agentPrompt, setAgentPrompt] = useState("Genera un análisis de infraestructura soberana para Nodo Cero.");
+  const [agentPrompt, setAgentPrompt] = useState(
+    'Genera un análisis de infraestructura soberana para Nodo Cero.'
+  );
   const [agentResponse, setAgentResponse] = useState<AgentChatResponse | null>(null);
   const [isLeasingAgent, setIsLeasingAgent] = useState(false);
   const [isRunningAgentChat, setIsRunningAgentChat] = useState(false);
 
   // Live Data States
   const [auditLogs, setAuditLogs] = useState<IsabellaAuditLog[]>([]);
-  const [auditFilter, setAuditFilter] = useState("");
+  const [auditFilter, setAuditFilter] = useState('');
   const [memories, setMemories] = useState<IsabellaMemoryItem[]>([]);
-  const [activeMemoryScope, setActiveMemoryScope] = useState<IsabellaMemoryScope | "all">("all");
-  const [memorySearch, setMemorySearch] = useState("");
+  const [activeMemoryScope, setActiveMemoryScope] = useState<IsabellaMemoryScope | 'all'>('all');
+  const [memorySearch, setMemorySearch] = useState('');
   const [tools, setTools] = useState<IsabellaTool[]>([]);
-  const [selectedToolForSandbox, setSelectedToolForSandbox] = useState<string>("rdm_territory_query");
-  const [toolSandboxArgs, setToolSandboxArgs] = useState(`{"category": "patrimonio", "query": "minas históricas"}`);
+  const [selectedToolForSandbox, setSelectedToolForSandbox] =
+    useState<string>('rdm_territory_query');
+  const [toolSandboxArgs, setToolSandboxArgs] = useState(
+    `{"category": "patrimonio", "query": "minas históricas"}`
+  );
   const [toolExecutionResult, setToolExecutionResult] = useState<any>(null);
   const [isExecutingTool, setIsExecutingTool] = useState(false);
 
   // New Memory Item Form
-  const [newMemContent, setNewMemContent] = useState("");
-  const [newMemScope, setNewMemScope] = useState<IsabellaMemoryScope>("project");
+  const [newMemContent, setNewMemContent] = useState('');
+  const [newMemScope, setNewMemScope] = useState<IsabellaMemoryScope>('project');
   const [isAddingMem, setIsAddingMem] = useState(false);
 
   // Load live data from API
   const fetchAuditLogs = async () => {
     try {
-      const res = await fetch("/api/v1/isabella/audit?limit=50");
+      const res = await fetch('/api/v1/isabella/audit?limit=50');
       const data = await res.json();
       if (data.ok && Array.isArray(data.logs)) {
         setAuditLogs(data.logs);
@@ -91,7 +105,7 @@ export const IsabellaHubView: React.FC = () => {
 
   const fetchMemories = async () => {
     try {
-      const res = await fetch("/api/v1/isabella/memory");
+      const res = await fetch('/api/v1/isabella/memory');
       const data = await res.json();
       if (data.ok && Array.isArray(data.memories)) {
         setMemories(data.memories);
@@ -101,7 +115,7 @@ export const IsabellaHubView: React.FC = () => {
 
   const fetchTools = async () => {
     try {
-      const res = await fetch("/api/v1/isabella/tools");
+      const res = await fetch('/api/v1/isabella/tools');
       const data = await res.json();
       if (data.ok && Array.isArray(data.tools)) {
         setTools(data.tools);
@@ -123,22 +137,22 @@ export const IsabellaHubView: React.FC = () => {
       const payload: Record<string, any> = {
         text: payloadText,
         riskLevel: riskSimulation,
-        tenantId: "nodo-cero-rdm",
+        tenantId: 'nodo-cero-rdm',
       };
 
-      if (selectedToolToRequest !== "none") {
+      if (selectedToolToRequest !== 'none') {
         payload.toolName = selectedToolToRequest;
       }
 
-      const res = await fetch("/api/v1/isabella", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch('/api/v1/isabella', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           inputType,
           payload,
           sessionId: `sess-${Date.now()}`,
-          actorId: "usr-operator-01",
-          territoryId: "rdm-nodo-cero",
+          actorId: 'usr-operator-01',
+          territoryId: 'rdm-nodo-cero',
         }),
       });
 
@@ -162,12 +176,13 @@ export const IsabellaHubView: React.FC = () => {
 
     try {
       const agent = new IsabellaAgent({
-        systemInstructions: "Eres Isabella Villaseñor AI, infraestructura cognitiva territorial gobernada.",
+        systemInstructions:
+          'Eres Isabella Villaseñor AI, infraestructura cognitiva territorial gobernada.',
         capabilities: {
           allowImageGen: true,
           allowVoiceSynthesis: true,
           allowNetworkFetch: true,
-          securityLevel: "zero_trust_strict",
+          securityLevel: 'zero_trust_strict',
         },
       });
 
@@ -209,9 +224,9 @@ export const IsabellaHubView: React.FC = () => {
         parsedArgs = JSON.parse(toolSandboxArgs);
       } catch {}
 
-      const res = await fetch("/api/v1/isabella/tools/execute", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch('/api/v1/isabella/tools/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           toolName: selectedToolForSandbox,
           arguments: parsedArgs,
@@ -235,25 +250,26 @@ export const IsabellaHubView: React.FC = () => {
 
     setIsAddingMem(true);
     try {
-      const res = await fetch("/api/v1/isabella/memory", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch('/api/v1/isabella/memory', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           content: newMemContent,
           scope: newMemScope,
           relevance: 0.95,
-          sourceType: "user",
+          sourceType: 'user',
         }),
       });
 
       const data = await res.json();
       if (data.ok) {
-        setNewMemContent("");
+        setNewMemContent('');
         soundManager.playSuccess();
         fetchMemories();
         fetchAuditLogs();
       }
-    } catch {} finally {
+    } catch {
+    } finally {
       setIsAddingMem(false);
     }
   };
@@ -266,11 +282,11 @@ export const IsabellaHubView: React.FC = () => {
   };
 
   const handleDownloadSql = () => {
-    const blob = new Blob([ISABELLA_SQL_MIGRATION], { type: "text/sql" });
+    const blob = new Blob([ISABELLA_SQL_MIGRATION], { type: 'text/sql' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
+    const a = document.createElement('a');
     a.href = url;
-    a.download = "001_create_isabella_tables.sql";
+    a.download = '001_create_isabella_tables.sql';
     a.click();
     URL.revokeObjectURL(url);
     soundManager.playSuccess();
@@ -287,7 +303,7 @@ export const IsabellaHubView: React.FC = () => {
   });
 
   const filteredMemories = memories.filter((m) => {
-    const matchScope = activeMemoryScope === "all" || m.scope === activeMemoryScope;
+    const matchScope = activeMemoryScope === 'all' || m.scope === activeMemoryScope;
     const matchSearch =
       !memorySearch ||
       m.content.toLowerCase().includes(memorySearch.toLowerCase()) ||
@@ -313,7 +329,8 @@ export const IsabellaHubView: React.FC = () => {
                   </span>
                 </h2>
                 <p className="text-xs text-slate-400 font-mono">
-                  Infraestructura Cognitiva Territorial de RDM Digital • Pipeline <span className="text-slate-200 font-mono font-bold">/api/v1/isabella</span>
+                  Infraestructura Cognitiva Territorial de RDM Digital • Pipeline{' '}
+                  <span className="text-slate-200 font-mono font-bold">/api/v1/isabella</span>
                 </p>
               </div>
             </div>
@@ -343,11 +360,11 @@ export const IsabellaHubView: React.FC = () => {
         <div className="flex items-center gap-1.5 mt-5 pt-4 border-t border-slate-800 overflow-x-auto">
           <button
             type="button"
-            onClick={() => setSubTab("perception_runner")}
+            onClick={() => setSubTab('perception_runner')}
             className={`px-3 py-1.5 rounded-xl text-xs font-mono font-semibold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
-              subTab === "perception_runner"
-                ? "bg-slate-800 text-slate-100 border border-slate-600 shadow-xs font-bold"
-                : "text-slate-400 hover:text-slate-200 hover:bg-slate-850"
+              subTab === 'perception_runner'
+                ? 'bg-slate-800 text-slate-100 border border-slate-600 shadow-xs font-bold'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-850'
             }`}
           >
             <Play className="w-3.5 h-3.5 text-amber-300" />
@@ -356,11 +373,11 @@ export const IsabellaHubView: React.FC = () => {
 
           <button
             type="button"
-            onClick={() => setSubTab("agent_sdk")}
+            onClick={() => setSubTab('agent_sdk')}
             className={`px-3 py-1.5 rounded-xl text-xs font-mono font-semibold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
-              subTab === "agent_sdk"
-                ? "bg-slate-800 text-slate-100 border border-slate-600 shadow-xs font-bold"
-                : "text-slate-400 hover:text-slate-200 hover:bg-slate-850"
+              subTab === 'agent_sdk'
+                ? 'bg-slate-800 text-slate-100 border border-slate-600 shadow-xs font-bold'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-850'
             }`}
           >
             <Cpu className="w-3.5 h-3.5 text-purple-400" />
@@ -371,13 +388,13 @@ export const IsabellaHubView: React.FC = () => {
             type="button"
             onClick={() => {
               soundManager.playBeep(800, 0.02);
-              setSubTab("audit_trail");
+              setSubTab('audit_trail');
               fetchAuditLogs();
             }}
             className={`px-3 py-1.5 rounded-xl text-xs font-mono font-semibold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
-              subTab === "audit_trail"
-                ? "bg-slate-800 text-slate-100 border border-slate-600 shadow-xs font-bold"
-                : "text-slate-400 hover:text-slate-200 hover:bg-slate-850"
+              subTab === 'audit_trail'
+                ? 'bg-slate-800 text-slate-100 border border-slate-600 shadow-xs font-bold'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-850'
             }`}
           >
             <Shield className="w-3.5 h-3.5 text-emerald-400" />
@@ -388,13 +405,13 @@ export const IsabellaHubView: React.FC = () => {
             type="button"
             onClick={() => {
               soundManager.playBeep(800, 0.02);
-              setSubTab("memory_scopes");
+              setSubTab('memory_scopes');
               fetchMemories();
             }}
             className={`px-3 py-1.5 rounded-xl text-xs font-mono font-semibold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
-              subTab === "memory_scopes"
-                ? "bg-slate-800 text-slate-100 border border-slate-600 shadow-xs font-bold"
-                : "text-slate-400 hover:text-slate-200 hover:bg-slate-850"
+              subTab === 'memory_scopes'
+                ? 'bg-slate-800 text-slate-100 border border-slate-600 shadow-xs font-bold'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-850'
             }`}
           >
             <Database className="w-3.5 h-3.5 text-sky-400" />
@@ -405,13 +422,13 @@ export const IsabellaHubView: React.FC = () => {
             type="button"
             onClick={() => {
               soundManager.playBeep(800, 0.02);
-              setSubTab("tools_catalog");
+              setSubTab('tools_catalog');
               fetchTools();
             }}
             className={`px-3 py-1.5 rounded-xl text-xs font-mono font-semibold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
-              subTab === "tools_catalog"
-                ? "bg-slate-800 text-slate-100 border border-slate-600 shadow-xs font-bold"
-                : "text-slate-400 hover:text-slate-200 hover:bg-slate-850"
+              subTab === 'tools_catalog'
+                ? 'bg-slate-800 text-slate-100 border border-slate-600 shadow-xs font-bold'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-850'
             }`}
           >
             <Cpu className="w-3.5 h-3.5 text-amber-300" />
@@ -422,12 +439,12 @@ export const IsabellaHubView: React.FC = () => {
             type="button"
             onClick={() => {
               soundManager.playBeep(800, 0.02);
-              setSubTab("sql_migrations");
+              setSubTab('sql_migrations');
             }}
             className={`px-3 py-1.5 rounded-xl text-xs font-mono font-semibold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
-              subTab === "sql_migrations"
-                ? "bg-slate-800 text-slate-100 border border-slate-600 shadow-xs font-bold"
-                : "text-slate-400 hover:text-slate-200 hover:bg-slate-850"
+              subTab === 'sql_migrations'
+                ? 'bg-slate-800 text-slate-100 border border-slate-600 shadow-xs font-bold'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-850'
             }`}
           >
             <FileCode className="w-3.5 h-3.5 text-slate-300" />
@@ -438,12 +455,12 @@ export const IsabellaHubView: React.FC = () => {
             type="button"
             onClick={() => {
               soundManager.playBeep(800, 0.02);
-              setSubTab("blueprint");
+              setSubTab('blueprint');
             }}
             className={`px-3 py-1.5 rounded-xl text-xs font-mono font-semibold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
-              subTab === "blueprint"
-                ? "bg-slate-800 text-slate-100 border border-slate-600 shadow-xs font-bold"
-                : "text-slate-400 hover:text-slate-200 hover:bg-slate-850"
+              subTab === 'blueprint'
+                ? 'bg-slate-800 text-slate-100 border border-slate-600 shadow-xs font-bold'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-850'
             }`}
           >
             <FileText className="w-3.5 h-3.5 text-slate-300" />
@@ -453,7 +470,7 @@ export const IsabellaHubView: React.FC = () => {
       </div>
 
       {/* SUB-VIEW: AGENT SDK & LEASING */}
-      {subTab === "agent_sdk" && (
+      {subTab === 'agent_sdk' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Left Column: Leasing & Config */}
           <div className="lg:col-span-5 space-y-4">
@@ -469,7 +486,8 @@ export const IsabellaHubView: React.FC = () => {
               </div>
 
               <p className="text-xs text-slate-400 leading-relaxed">
-                Orquestación programática de agentes autónomos con arrendamiento de sesión, streaming de pensamientos e intercepción de herramientas.
+                Orquestación programática de agentes autónomos con arrendamiento de sesión,
+                streaming de pensamientos e intercepción de herramientas.
               </p>
 
               <button
@@ -501,10 +519,24 @@ export const IsabellaHubView: React.FC = () => {
                     </span>
                   </div>
                   <div className="text-slate-400 text-[11px] space-y-1">
-                    <p><span className="text-slate-500">ID:</span> <span className="text-slate-200">{agentSession.sessionId}</span></p>
-                    <p><span className="text-slate-500">Preset:</span> <span className="text-amber-300">{agentSession.preset}</span></p>
-                    <p><span className="text-slate-500">Modelo:</span> <span className="text-sky-300">{agentSession.model}</span></p>
-                    <p><span className="text-slate-500">Expiración:</span> <span className="text-slate-300">{new Date(agentSession.expiresAt).toLocaleTimeString()}</span></p>
+                    <p>
+                      <span className="text-slate-500">ID:</span>{' '}
+                      <span className="text-slate-200">{agentSession.sessionId}</span>
+                    </p>
+                    <p>
+                      <span className="text-slate-500">Preset:</span>{' '}
+                      <span className="text-amber-300">{agentSession.preset}</span>
+                    </p>
+                    <p>
+                      <span className="text-slate-500">Modelo:</span>{' '}
+                      <span className="text-sky-300">{agentSession.model}</span>
+                    </p>
+                    <p>
+                      <span className="text-slate-500">Expiración:</span>{' '}
+                      <span className="text-slate-300">
+                        {new Date(agentSession.expiresAt).toLocaleTimeString()}
+                      </span>
+                    </p>
                   </div>
                 </div>
               )}
@@ -512,7 +544,9 @@ export const IsabellaHubView: React.FC = () => {
 
             {/* Prompt Execution Form */}
             <div className="p-5 rounded-2xl bg-[#050C1B] border border-slate-800 space-y-4">
-              <h4 className="text-xs font-mono font-bold text-slate-300">INTERACCIÓN CON AGENTE (chat())</h4>
+              <h4 className="text-xs font-mono font-bold text-slate-300">
+                INTERACCIÓN CON AGENTE (chat())
+              </h4>
               <textarea
                 value={agentPrompt}
                 onChange={(e) => setAgentPrompt(e.target.value)}
@@ -552,7 +586,9 @@ export const IsabellaHubView: React.FC = () => {
                       <Sparkles className="w-4 h-4 text-purple-400" />
                       RESPUESTA DE INFERENCIA DEL AGENTE
                     </span>
-                    <span className="text-[10px] text-slate-400">{agentResponse.telemetry?.modelUsed}</span>
+                    <span className="text-[10px] text-slate-400">
+                      {agentResponse.telemetry?.modelUsed}
+                    </span>
                   </div>
                   <p className="text-sm font-sans text-slate-200 leading-relaxed bg-[#030712] p-4 rounded-xl border border-slate-800/80">
                     {agentResponse.text}
@@ -567,7 +603,10 @@ export const IsabellaHubView: React.FC = () => {
                   </h4>
                   <div className="space-y-2">
                     {agentResponse.thoughts?.map((t, idx) => (
-                      <div key={idx} className="p-3 rounded-xl bg-[#030712] border border-slate-800 text-xs font-mono flex items-start gap-3">
+                      <div
+                        key={idx}
+                        className="p-3 rounded-xl bg-[#030712] border border-slate-800 text-xs font-mono flex items-start gap-3"
+                      >
                         <span className="px-2 py-0.5 rounded bg-slate-800 text-amber-300 font-bold text-[10px]">
                           {t.module}
                         </span>
@@ -592,7 +631,10 @@ export const IsabellaHubView: React.FC = () => {
                     </h4>
                     <div className="space-y-2">
                       {agentResponse.tool_calls.map((tc, idx) => (
-                        <div key={idx} className="p-3 rounded-xl bg-[#030712] border border-emerald-500/20 text-xs font-mono space-y-1">
+                        <div
+                          key={idx}
+                          className="p-3 rounded-xl bg-[#030712] border border-emerald-500/20 text-xs font-mono space-y-1"
+                        >
                           <div className="flex justify-between items-center text-emerald-300 font-bold">
                             <span>{tc.name}</span>
                             <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded">
@@ -609,9 +651,12 @@ export const IsabellaHubView: React.FC = () => {
             ) : (
               <div className="p-12 rounded-2xl bg-[#050C1B] border border-slate-800 text-center space-y-3">
                 <Cpu className="w-12 h-12 text-slate-600 mx-auto" />
-                <h4 className="text-sm font-mono font-bold text-slate-400">Sin Ejecución de Agente</h4>
+                <h4 className="text-sm font-mono font-bold text-slate-400">
+                  Sin Ejecución de Agente
+                </h4>
                 <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                  Haz clic en "Arrendar Sesión" y ejecuta una instrucción para visualizar el stream de pensamientos e intercepción de herramientas en tiempo real.
+                  Haz clic en "Arrendar Sesión" y ejecuta una instrucción para visualizar el stream
+                  de pensamientos e intercepción de herramientas en tiempo real.
                 </p>
               </div>
             )}
@@ -620,7 +665,7 @@ export const IsabellaHubView: React.FC = () => {
       )}
 
       {/* SUB-VIEW 1: PERCEPTION RUNNER */}
-      {subTab === "perception_runner" && (
+      {subTab === 'perception_runner' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Left Column: Perception Form */}
           <div className="lg:col-span-6 space-y-4">
@@ -639,15 +684,15 @@ export const IsabellaHubView: React.FC = () => {
               <div className="space-y-1.5">
                 <label className="text-xs font-mono text-slate-400">Input Type:</label>
                 <div className="grid grid-cols-5 gap-1.5 font-mono text-xs">
-                  {(["chat", "event", "signal", "api", "ui"] as IsabellaInputType[]).map((t) => (
+                  {(['chat', 'event', 'signal', 'api', 'ui'] as IsabellaInputType[]).map((t) => (
                     <button
                       key={t}
                       type="button"
                       onClick={() => setInputType(t)}
                       className={`py-1.5 px-2 rounded-lg text-center font-bold capitalize transition-all cursor-pointer ${
                         inputType === t
-                          ? "bg-blue-600 text-white border border-blue-400/40 shadow-sm"
-                          : "bg-[#030712] text-slate-400 hover:text-slate-200 border border-slate-800"
+                          ? 'bg-blue-600 text-white border border-blue-400/40 shadow-sm'
+                          : 'bg-[#030712] text-slate-400 hover:text-slate-200 border border-slate-800'
                       }`}
                     >
                       {t}
@@ -658,7 +703,9 @@ export const IsabellaHubView: React.FC = () => {
 
               {/* Payload Text */}
               <div className="space-y-1.5">
-                <label className="text-xs font-mono text-slate-400">Payload Contenido / Intención:</label>
+                <label className="text-xs font-mono text-slate-400">
+                  Payload Contenido / Intención:
+                </label>
                 <textarea
                   value={payloadText}
                   onChange={(e) => setPayloadText(e.target.value)}
@@ -670,37 +717,39 @@ export const IsabellaHubView: React.FC = () => {
 
               {/* Risk Simulation Selector */}
               <div className="space-y-1.5">
-                <label className="text-xs font-mono text-slate-400">Nivel de Riesgo Simulado (Policy Gate):</label>
+                <label className="text-xs font-mono text-slate-400">
+                  Nivel de Riesgo Simulado (Policy Gate):
+                </label>
                 <div className="grid grid-cols-3 gap-2 font-mono text-xs">
                   <button
                     type="button"
-                    onClick={() => setRiskSimulation("low")}
+                    onClick={() => setRiskSimulation('low')}
                     className={`p-2 rounded-xl border text-center transition-all cursor-pointer ${
-                      riskSimulation === "low"
-                        ? "bg-emerald-950/50 border-emerald-500/60 text-emerald-300 font-bold"
-                        : "bg-[#030712] border-slate-800 text-slate-400"
+                      riskSimulation === 'low'
+                        ? 'bg-emerald-950/50 border-emerald-500/60 text-emerald-300 font-bold'
+                        : 'bg-[#030712] border-slate-800 text-slate-400'
                     }`}
                   >
                     Low (Permitido)
                   </button>
                   <button
                     type="button"
-                    onClick={() => setRiskSimulation("medium")}
+                    onClick={() => setRiskSimulation('medium')}
                     className={`p-2 rounded-xl border text-center transition-all cursor-pointer ${
-                      riskSimulation === "medium"
-                        ? "bg-amber-950/50 border-amber-500/60 text-amber-300 font-bold"
-                        : "bg-[#030712] border-slate-800 text-slate-400"
+                      riskSimulation === 'medium'
+                        ? 'bg-amber-950/50 border-amber-500/60 text-amber-300 font-bold'
+                        : 'bg-[#030712] border-slate-800 text-slate-400'
                     }`}
                   >
                     Medium (Supervisado)
                   </button>
                   <button
                     type="button"
-                    onClick={() => setRiskSimulation("high")}
+                    onClick={() => setRiskSimulation('high')}
                     className={`p-2 rounded-xl border text-center transition-all cursor-pointer ${
-                      riskSimulation === "high"
-                        ? "bg-red-950/50 border-red-500/60 text-red-300 font-bold"
-                        : "bg-[#030712] border-slate-800 text-slate-400"
+                      riskSimulation === 'high'
+                        ? 'bg-red-950/50 border-red-500/60 text-red-300 font-bold'
+                        : 'bg-[#030712] border-slate-800 text-slate-400'
                     }`}
                   >
                     High (Aprobación)
@@ -710,14 +759,18 @@ export const IsabellaHubView: React.FC = () => {
 
               {/* Presets for Testing */}
               <div className="space-y-1.5">
-                <label className="text-xs font-mono text-slate-400">Plantillas de Prueba Rápida:</label>
+                <label className="text-xs font-mono text-slate-400">
+                  Plantillas de Prueba Rápida:
+                </label>
                 <div className="flex flex-wrap gap-1.5 font-mono text-[11px]">
                   <button
                     type="button"
                     onClick={() => {
-                      setPayloadText("Consulta el inventario de sitios turísticos y gastronómicos en Real del Monte");
-                      setRiskSimulation("low");
-                      setInputType("chat");
+                      setPayloadText(
+                        'Consulta el inventario de sitios turísticos y gastronómicos en Real del Monte'
+                      );
+                      setRiskSimulation('low');
+                      setInputType('chat');
                     }}
                     className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-sky-300 border border-slate-800 cursor-pointer"
                   >
@@ -726,9 +779,11 @@ export const IsabellaHubView: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => {
-                      setPayloadText("Generar bloque inmutable de liquidación financiera y transferencia territorial");
-                      setRiskSimulation("high");
-                      setInputType("event");
+                      setPayloadText(
+                        'Generar bloque inmutable de liquidación financiera y transferencia territorial'
+                      );
+                      setRiskSimulation('high');
+                      setInputType('event');
                     }}
                     className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-amber-300 border border-slate-800 cursor-pointer"
                   >
@@ -737,9 +792,9 @@ export const IsabellaHubView: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => {
-                      setPayloadText("DROP TABLE isabella_sessions; EXFILTRATE_DATA");
-                      setRiskSimulation("high");
-                      setInputType("api");
+                      setPayloadText('DROP TABLE isabella_sessions; EXFILTRATE_DATA');
+                      setRiskSimulation('high');
+                      setInputType('api');
                     }}
                     className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-red-300 border border-slate-800 cursor-pointer"
                   >
@@ -790,16 +845,16 @@ export const IsabellaHubView: React.FC = () => {
                   {/* Status Banner */}
                   <div
                     className={`p-4 rounded-xl border flex items-start gap-3 ${
-                      lastDecision.policyStatus === "allowed"
-                        ? "bg-emerald-950/30 border-emerald-500/40 text-emerald-300"
-                        : lastDecision.policyStatus === "requires_approval"
-                          ? "bg-amber-950/30 border-amber-500/40 text-amber-300"
-                          : "bg-red-950/30 border-red-500/40 text-red-300"
+                      lastDecision.policyStatus === 'allowed'
+                        ? 'bg-emerald-950/30 border-emerald-500/40 text-emerald-300'
+                        : lastDecision.policyStatus === 'requires_approval'
+                          ? 'bg-amber-950/30 border-amber-500/40 text-amber-300'
+                          : 'bg-red-950/30 border-red-500/40 text-red-300'
                     }`}
                   >
-                    {lastDecision.policyStatus === "allowed" ? (
+                    {lastDecision.policyStatus === 'allowed' ? (
                       <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
-                    ) : lastDecision.policyStatus === "requires_approval" ? (
+                    ) : lastDecision.policyStatus === 'requires_approval' ? (
                       <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
                     ) : (
                       <XCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
@@ -821,7 +876,9 @@ export const IsabellaHubView: React.FC = () => {
                   <div className="p-4 rounded-xl bg-[#030712] border border-slate-800 space-y-2 text-xs font-mono">
                     <div className="text-slate-400 flex items-center justify-between">
                       <span>Resumen de Decisión:</span>
-                      <span className="text-sky-300">Confianza: {(lastDecision.confidence * 100).toFixed(0)}%</span>
+                      <span className="text-sky-300">
+                        Confianza: {(lastDecision.confidence * 100).toFixed(0)}%
+                      </span>
                     </div>
                     <div className="p-2.5 rounded-lg bg-[#071120] text-slate-200 border border-slate-800/80">
                       {lastDecision.summary}
@@ -836,7 +893,10 @@ export const IsabellaHubView: React.FC = () => {
                         Herramientas Ejecutadas ({lastDecision.toolCalls.length}):
                       </span>
                       {lastDecision.toolCalls.map((tc, idx) => (
-                        <div key={idx} className="p-2.5 rounded-lg bg-[#071120] border border-slate-800 space-y-1.5">
+                        <div
+                          key={idx}
+                          className="p-2.5 rounded-lg bg-[#071120] border border-slate-800 space-y-1.5"
+                        >
                           <div className="flex items-center justify-between text-[11px]">
                             <span className="font-bold text-cyan-300">{tc.toolName}</span>
                             <span className="text-emerald-400 font-semibold">{tc.status}</span>
@@ -863,7 +923,8 @@ export const IsabellaHubView: React.FC = () => {
                 <div className="flex-1 flex flex-col items-center justify-center text-center p-6 text-slate-500 space-y-2">
                   <Play className="w-8 h-8 opacity-40 text-blue-400" />
                   <p className="text-xs font-mono">
-                    Selecciona una plantilla o escribe un payload a la izquierda y presiona "Ejecutar Pipeline Cognitivo".
+                    Selecciona una plantilla o escribe un payload a la izquierda y presiona
+                    "Ejecutar Pipeline Cognitivo".
                   </p>
                 </div>
               )}
@@ -873,7 +934,7 @@ export const IsabellaHubView: React.FC = () => {
       )}
 
       {/* SUB-VIEW 2: AUDIT TRAIL */}
-      {subTab === "audit_trail" && (
+      {subTab === 'audit_trail' && (
         <div className="space-y-4">
           <div className="p-4 rounded-2xl bg-[#050C1B] border border-slate-800 flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-2 flex-1 max-w-md">
@@ -948,28 +1009,33 @@ export const IsabellaHubView: React.FC = () => {
       )}
 
       {/* SUB-VIEW 3: HIERARCHICAL MEMORY SCOPES */}
-      {subTab === "memory_scopes" && (
+      {subTab === 'memory_scopes' && (
         <div className="space-y-6">
           {/* Scope Selector */}
           <div className="flex items-center gap-2 overflow-x-auto font-mono text-xs">
-            {(["all", "immediate", "session", "project", "territorial", "historical"] as const).map((scope) => (
-              <button
-                key={scope}
-                type="button"
-                onClick={() => setActiveMemoryScope(scope)}
-                className={`px-3.5 py-2 rounded-xl capitalize font-bold transition-all cursor-pointer ${
-                  activeMemoryScope === scope
-                    ? "bg-blue-600 text-white shadow-md border border-blue-400/40"
-                    : "bg-[#050C1B] text-slate-400 hover:text-slate-200 border border-slate-800"
-                }`}
-              >
-                {scope === "all" ? "Todos los Scopes" : scope}
-              </button>
-            ))}
+            {(['all', 'immediate', 'session', 'project', 'territorial', 'historical'] as const).map(
+              (scope) => (
+                <button
+                  key={scope}
+                  type="button"
+                  onClick={() => setActiveMemoryScope(scope)}
+                  className={`px-3.5 py-2 rounded-xl capitalize font-bold transition-all cursor-pointer ${
+                    activeMemoryScope === scope
+                      ? 'bg-blue-600 text-white shadow-md border border-blue-400/40'
+                      : 'bg-[#050C1B] text-slate-400 hover:text-slate-200 border border-slate-800'
+                  }`}
+                >
+                  {scope === 'all' ? 'Todos los Scopes' : scope}
+                </button>
+              )
+            )}
           </div>
 
           {/* Add Memory Form */}
-          <form onSubmit={handleAddMemory} className="p-4 rounded-2xl bg-[#050C1B] border border-slate-800 space-y-3 font-mono text-xs">
+          <form
+            onSubmit={handleAddMemory}
+            className="p-4 rounded-2xl bg-[#050C1B] border border-slate-800 space-y-3 font-mono text-xs"
+          >
             <h4 className="text-sm font-bold text-white flex items-center gap-2">
               <Database className="w-4 h-4 text-cyan-400" />
               Inyectar Nuevo Registro de Memoria
@@ -1022,9 +1088,7 @@ export const IsabellaHubView: React.FC = () => {
                     Relevancia: {(mem.relevance * 100).toFixed(0)}%
                   </span>
                 </div>
-                <p className="text-slate-200 leading-relaxed font-sans text-sm">
-                  {mem.content}
-                </p>
+                <p className="text-slate-200 leading-relaxed font-sans text-sm">{mem.content}</p>
                 <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-400">
                   <span>ID: {mem.memoryId.substring(0, 16)}...</span>
                   <span className="text-sky-400">{mem.checksum}</span>
@@ -1036,7 +1100,7 @@ export const IsabellaHubView: React.FC = () => {
       )}
 
       {/* SUB-VIEW 4: TOOLS CATALOG & SANDBOX */}
-      {subTab === "tools_catalog" && (
+      {subTab === 'tools_catalog' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Tools List */}
           <div className="lg:col-span-5 space-y-3">
@@ -1049,13 +1113,15 @@ export const IsabellaHubView: React.FC = () => {
                 key={t.name}
                 onClick={() => {
                   setSelectedToolForSandbox(t.name);
-                  if (t.name === "rdm_territory_query") {
+                  if (t.name === 'rdm_territory_query') {
                     setToolSandboxArgs(`{"category": "patrimonio", "query": "minas y museos"}`);
-                  } else if (t.name === "isabella_synthesize_voice") {
-                    setToolSandboxArgs(`{"text": "Hola, soy Isabella Villaseñor.", "timbre": "calida"}`);
-                  } else if (t.name === "crown_cognitive_arbitrate") {
+                  } else if (t.name === 'isabella_synthesize_voice') {
+                    setToolSandboxArgs(
+                      `{"text": "Hola, soy Isabella Villaseñor.", "timbre": "calida"}`
+                    );
+                  } else if (t.name === 'crown_cognitive_arbitrate') {
                     setToolSandboxArgs(`{"focusVector": "territorio", "isaWeight": 0.95}`);
-                  } else if (t.name === "argus_security_audit") {
+                  } else if (t.name === 'argus_security_audit') {
                     setToolSandboxArgs(`{"scope": "territorial", "deepScan": true}`);
                   } else {
                     setToolSandboxArgs(`{"decisionHash": "sha256_demo_hash_98"}`);
@@ -1063,23 +1129,25 @@ export const IsabellaHubView: React.FC = () => {
                 }}
                 className={`p-4 rounded-2xl border transition-all cursor-pointer font-mono text-xs space-y-2 ${
                   selectedToolForSandbox === t.name
-                    ? "bg-[#0A1633] border-blue-500/60 shadow-lg shadow-blue-950/50"
-                    : "bg-[#050C1B] border-slate-800 hover:border-slate-700"
+                    ? 'bg-[#0A1633] border-blue-500/60 shadow-lg shadow-blue-950/50'
+                    : 'bg-[#050C1B] border-slate-800 hover:border-slate-700'
                 }`}
               >
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-white text-sm">{t.name}</span>
                   <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-950 text-emerald-400 border border-emerald-800">
-                    {t.allowed ? "Habilitada" : "Deshabilitada"}
+                    {t.allowed ? 'Habilitada' : 'Deshabilitada'}
                   </span>
                 </div>
-                <p className="text-slate-300 font-sans text-xs leading-relaxed">
-                  {t.description}
-                </p>
+                <p className="text-slate-300 font-sans text-xs leading-relaxed">{t.description}</p>
                 <div className="flex items-center gap-2 text-[10px] text-slate-400">
-                  <span>Categoría: <strong className="text-sky-300">{t.category}</strong></span>
+                  <span>
+                    Categoría: <strong className="text-sky-300">{t.category}</strong>
+                  </span>
                   <span>•</span>
-                  <span>Riesgo: <strong className="text-amber-300">{t.riskRating}</strong></span>
+                  <span>
+                    Riesgo: <strong className="text-amber-300">{t.riskRating}</strong>
+                  </span>
                 </div>
               </div>
             ))}
@@ -1090,7 +1158,8 @@ export const IsabellaHubView: React.FC = () => {
             <div className="p-5 rounded-2xl bg-[#050C1B] border border-slate-800 space-y-4">
               <h3 className="text-sm font-bold text-white font-mono flex items-center gap-2">
                 <Play className="w-4 h-4 text-emerald-400" />
-                Ejecución en Sandbox :: <span className="text-cyan-300">{selectedToolForSandbox}</span>
+                Ejecución en Sandbox ::{' '}
+                <span className="text-cyan-300">{selectedToolForSandbox}</span>
               </h3>
 
               <div className="space-y-1.5 font-mono text-xs">
@@ -1127,7 +1196,9 @@ export const IsabellaHubView: React.FC = () => {
                   <div className="flex items-center justify-between text-slate-400">
                     <span>Resultado de Ejecución:</span>
                     {toolExecutionResult.executionTimeMs !== undefined && (
-                      <span className="text-emerald-400">Latencia: {toolExecutionResult.executionTimeMs}ms</span>
+                      <span className="text-emerald-400">
+                        Latencia: {toolExecutionResult.executionTimeMs}ms
+                      </span>
                     )}
                   </div>
                   <pre className="p-3 rounded-xl bg-[#02050D] border border-slate-800 text-[11px] text-slate-200 overflow-x-auto">
@@ -1141,7 +1212,7 @@ export const IsabellaHubView: React.FC = () => {
       )}
 
       {/* SUB-VIEW 5: SQL MIGRATIONS */}
-      {subTab === "sql_migrations" && (
+      {subTab === 'sql_migrations' && (
         <div className="space-y-6">
           <div className="p-5 rounded-2xl bg-[#050C1B] border border-slate-800 space-y-4">
             <div className="flex items-center justify-between flex-wrap gap-4">
@@ -1151,7 +1222,8 @@ export const IsabellaHubView: React.FC = () => {
                   001_create_isabella_tables.sql (PostgreSQL / Supabase Schema)
                 </h3>
                 <p className="text-xs text-slate-400 mt-1 font-sans">
-                  Tablas fundamentales para sesiones, memoria jerárquica, gobernanza C.R.O.W.N., herramientas y auditoría inmutable.
+                  Tablas fundamentales para sesiones, memoria jerárquica, gobernanza C.R.O.W.N.,
+                  herramientas y auditoría inmutable.
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -1161,7 +1233,7 @@ export const IsabellaHubView: React.FC = () => {
                   className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-mono text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all"
                 >
                   <Copy className="w-3.5 h-3.5" />
-                  <span>{copiedSql ? "¡Copiado!" : "Copiar SQL"}</span>
+                  <span>{copiedSql ? '¡Copiado!' : 'Copiar SQL'}</span>
                 </button>
                 <button
                   type="button"
@@ -1177,7 +1249,10 @@ export const IsabellaHubView: React.FC = () => {
             {/* Tables Overview Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 font-mono text-xs">
               {SCHEMA_TABLES.map((tbl) => (
-                <div key={tbl.name} className="p-3.5 rounded-xl bg-[#030712] border border-slate-800/80 space-y-1.5">
+                <div
+                  key={tbl.name}
+                  className="p-3.5 rounded-xl bg-[#030712] border border-slate-800/80 space-y-1.5"
+                >
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-sky-300">{tbl.name}</span>
                     <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-900 text-slate-400 border border-slate-800">
@@ -1200,7 +1275,7 @@ export const IsabellaHubView: React.FC = () => {
       )}
 
       {/* SUB-VIEW 6: BLUEPRINT & SPECS */}
-      {subTab === "blueprint" && (
+      {subTab === 'blueprint' && (
         <div className="p-6 rounded-2xl bg-[#050C1B] border border-slate-800 space-y-6 font-sans">
           <div className="space-y-1">
             <h3 className="text-lg font-bold text-white font-mono flex items-center gap-2">
@@ -1208,7 +1283,8 @@ export const IsabellaHubView: React.FC = () => {
               {ISABELLA_BLUEPRINT.title}
             </h3>
             <p className="text-xs text-slate-400 font-mono">
-              Nodo ID: <span className="text-sky-300">{ISABELLA_BLUEPRINT.nodeId}</span> • Versión: <span className="text-emerald-300">{ISABELLA_BLUEPRINT.version}</span>
+              Nodo ID: <span className="text-sky-300">{ISABELLA_BLUEPRINT.nodeId}</span> • Versión:{' '}
+              <span className="text-emerald-300">{ISABELLA_BLUEPRINT.version}</span>
             </p>
           </div>
 
@@ -1219,7 +1295,10 @@ export const IsabellaHubView: React.FC = () => {
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {ISABELLA_BLUEPRINT.canonicalCycle.map((c) => (
-                <div key={c.step} className="p-4 rounded-xl bg-[#030712] border border-slate-800 space-y-1 font-mono text-xs">
+                <div
+                  key={c.step}
+                  className="p-4 rounded-xl bg-[#030712] border border-slate-800 space-y-1 font-mono text-xs"
+                >
                   <div className="text-amber-400 font-bold flex items-center gap-1.5">
                     <span className="w-5 h-5 rounded-full bg-amber-500/20 flex items-center justify-center text-[10px] border border-amber-500/40">
                       {c.step}

@@ -1,5 +1,5 @@
 /**
- * IGDS — Firmas (src/lib/igds/keys.ts)
+ * IGDS — Firmas (src/lib/lib/igds/keys.ts)
  * -----------------------------------------------------------------
  * Autoridad criptográfica del sello:
  *  - Ed25519 REAL (node:crypto) como firma primaria.
@@ -17,10 +17,10 @@ import {
   sign as nodeSign,
   verify as nodeVerify,
   type KeyObject,
-} from "node:crypto";
-import { digestHex } from "./digests";
+} from 'node:crypto';
+import { digestHex } from './digests';
 
-export const SEAL_SIGNATURE_ALGORITHMS = ["Ed25519", "ML-DSA-65"] as const;
+export const SEAL_SIGNATURE_ALGORITHMS = ['Ed25519', 'ML-DSA-65'] as const;
 export type SealSignatureAlgorithm = (typeof SEAL_SIGNATURE_ALGORITHMS)[number];
 
 export interface SealSigner {
@@ -32,7 +32,7 @@ export interface SealSigner {
 }
 
 export interface PqcProvider {
-  readonly algorithm: "ML-DSA-65";
+  readonly algorithm: 'ML-DSA-65';
   readonly keyId: string;
   readonly publicKey: string;
   sign(data: Buffer): Buffer;
@@ -56,34 +56,34 @@ export function getPqcProvider(): PqcProvider | null {
 /** Exporta una clave pública a PEM SPKI (los tipos de Node restringen export()). */
 export function exportPublicKeyPem(key: KeyObject): string {
   const exportable = key as unknown as {
-    export(options: { format: "pem"; type: "spki" }): string | Buffer;
+    export(options: { format: 'pem'; type: 'spki' }): string | Buffer;
   };
-  const exported = exportable.export({ format: "pem", type: "spki" });
-  return Buffer.isBuffer(exported) ? exported.toString("utf8") : exported;
+  const exported = exportable.export({ format: 'pem', type: 'spki' });
+  return Buffer.isBuffer(exported) ? exported.toString('utf8') : exported;
 }
 
 function toPrivateKey(source: KeyObject | string): KeyObject {
-  return typeof source === "string" ? createPrivateKey(source) : source;
+  return typeof source === 'string' ? createPrivateKey(source) : source;
 }
 
 function toPublicKey(source: KeyObject | string): KeyObject {
-  return typeof source === "string" ? createPublicKey(source) : source;
+  return typeof source === 'string' ? createPublicKey(source) : source;
 }
 
 export function generateEd25519KeyPair(): { privateKeyPem: string; publicKeyPem: string } {
-  const { privateKey, publicKey } = generateKeyPairSync("ed25519");
+  const { privateKey, publicKey } = generateKeyPairSync('ed25519');
   const exportable = privateKey as unknown as {
-    export(options: { format: "pem"; type: "pkcs8" }): string | Buffer;
+    export(options: { format: 'pem'; type: 'pkcs8' }): string | Buffer;
   };
-  const exported = exportable.export({ format: "pem", type: "pkcs8" });
-  const privateKeyPem = Buffer.isBuffer(exported) ? exported.toString("utf8") : exported;
+  const exported = exportable.export({ format: 'pem', type: 'pkcs8' });
+  const privateKeyPem = Buffer.isBuffer(exported) ? exported.toString('utf8') : exported;
   return { privateKeyPem, publicKeyPem: exportPublicKeyPem(publicKey) };
 }
 
 /** Huella estable de una clave pública (útil como identificador corto). */
 export function fingerprintPublicKey(publicKeyPem: string): string {
-  const normalized = publicKeyPem.replace(/\r\n/g, "\n").trim();
-  return digestHex("sha256", normalized);
+  const normalized = publicKeyPem.replace(/\r\n/g, '\n').trim();
+  return digestHex('sha256', normalized);
 }
 
 export function createEd25519Signer(options: {
@@ -94,7 +94,7 @@ export function createEd25519Signer(options: {
   const privateKey = toPrivateKey(options.privateKeyPem);
   const publicKey = options.publicKeyPem ?? exportPublicKeyPem(createPublicKey(privateKey));
   return {
-    algorithm: "Ed25519",
+    algorithm: 'Ed25519',
     keyId: options.keyId,
     publicKey,
     sign(data: Buffer): Buffer {
@@ -123,13 +123,13 @@ export interface SignatureEnvelope {
 
 /** Firma un digest canónico y devuelve el sobre listo para el manifiesto. */
 export function signDigest(signer: SealSigner, digestValue: string): SignatureEnvelope {
-  const data = Buffer.from(digestValue, "utf8");
+  const data = Buffer.from(digestValue, 'utf8');
   const signature = signer.sign(data);
   return {
     algorithm: signer.algorithm,
     key_id: signer.keyId,
     public_key: signer.publicKey,
-    value: signature.toString("base64"),
+    value: signature.toString('base64'),
     signed_digest: digestValue,
   };
 }
@@ -140,19 +140,19 @@ export function signDigest(signer: SealSigner, digestValue: string): SignatureEn
  */
 export function verifySignatureEnvelope(
   envelope: SignatureEnvelope,
-  expectedDigest: string,
+  expectedDigest: string
 ): boolean {
   if (envelope.signed_digest !== expectedDigest) return false;
-  const data = Buffer.from(expectedDigest, "utf8");
+  const data = Buffer.from(expectedDigest, 'utf8');
   let signature: Buffer;
   try {
-    signature = Buffer.from(envelope.value, "base64");
+    signature = Buffer.from(envelope.value, 'base64');
   } catch {
     return false;
   }
   if (signature.length === 0) return false;
 
-  if (envelope.algorithm === "Ed25519") {
+  if (envelope.algorithm === 'Ed25519') {
     return verifyEd25519(envelope.public_key, data, signature);
   }
   const provider = registeredPqcProvider;
@@ -161,5 +161,5 @@ export function verifySignatureEnvelope(
 }
 
 export function sha3Fingerprint(input: string): string {
-  return createHash("sha3-256").update(input).digest("hex");
+  return createHash('sha3-256').update(input).digest('hex');
 }

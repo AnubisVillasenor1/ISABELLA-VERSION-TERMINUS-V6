@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { useCrown } from "../../context/CrownContext";
+import React, { useState } from 'react';
+import { useCrown } from '../../context/CrownContext';
 import {
   Volume2,
   VolumeX,
@@ -16,13 +16,13 @@ import {
   Check,
   UserCheck,
   ShieldCheck,
-} from "lucide-react";
-import { soundManager } from "../../utils/soundEffects";
-import { VoiceSettings } from "../../types";
-import { getAvailableFemaleVoices, isStrictlyFemaleVoice } from "../../utils/voiceUtils";
+} from 'lucide-react';
+import { soundManager } from '../../utils/soundEffects';
+import { VoiceSettings } from '../../types';
+import { getAvailableFemaleVoices, isStrictlyFemaleVoice } from '../../utils/voiceUtils';
 
 const TIMBRE_PRESETS: Array<{
-  id: VoiceSettings["timbrePreset"];
+  id: VoiceSettings['timbrePreset'];
   name: string;
   desc: string;
   pitch: number;
@@ -32,64 +32,68 @@ const TIMBRE_PRESETS: Array<{
   testPhrase: string;
 }> = [
   {
-    id: "natural_fluida",
-    name: "Voz Femenina Natural y Fluida (Recomendada)",
-    desc: "Cadencia humana auténtica, entonación orgánica femenina, respiración suave y prosodia fluida en español.",
-    pitch: 1.10,
+    id: 'natural_fluida',
+    name: 'Voz Femenina Natural y Fluida (Recomendada)',
+    desc: 'Cadencia humana auténtica, entonación orgánica femenina, respiración suave y prosodia fluida en español.',
+    pitch: 1.1,
     rate: 0.96,
     icon: Sparkles,
-    color: "text-sky-300 border-slate-700/80 bg-[#081220]",
-    testPhrase: "Hola. Mi voz se adapta con naturalidad, calidez y fluidez a cada pensamiento que compartimos.",
+    color: 'text-sky-300 border-slate-700/80 bg-[#081220]',
+    testPhrase:
+      'Hola. Mi voz se adapta con naturalidad, calidez y fluidez a cada pensamiento que compartimos.',
   },
   {
-    id: "calida",
-    name: "Voz Femenina Cálida y Empática",
-    desc: "Tono dulce, envolvente y acogedor, ideal para reflexiones profundas y escucha activa.",
+    id: 'calida',
+    name: 'Voz Femenina Cálida y Empática',
+    desc: 'Tono dulce, envolvente y acogedor, ideal para reflexiones profundas y escucha activa.',
     pitch: 1.12,
     rate: 0.94,
     icon: Heart,
-    color: "text-rose-300 border-slate-700/80 bg-[#081220]",
-    testPhrase: "Hola, me alegra mucho estar aquí contigo. ¿Cómo te encuentras en este momento?",
+    color: 'text-rose-300 border-slate-700/80 bg-[#081220]',
+    testPhrase: 'Hola, me alegra mucho estar aquí contigo. ¿Cómo te encuentras en este momento?',
   },
   {
-    id: "cristalina",
-    name: "Voz Femenina Cristalina y Luminosa",
-    desc: "Articulación nítida, brillante y vivaz con presencia serena y elegante.",
+    id: 'cristalina',
+    name: 'Voz Femenina Cristalina y Luminosa',
+    desc: 'Articulación nítida, brillante y vivaz con presencia serena y elegante.',
     pitch: 1.15,
     rate: 0.98,
     icon: Sparkles,
-    color: "text-sky-300 border-slate-700/80 bg-[#081220]",
-    testPhrase: "La claridad del pensamiento nos permite observar el universo con asombro y serenidad.",
+    color: 'text-sky-300 border-slate-700/80 bg-[#081220]',
+    testPhrase:
+      'La claridad del pensamiento nos permite observar el universo con asombro y serenidad.',
   },
   {
-    id: "poetica",
-    name: "Voz Femenina Poética e Íntima",
-    desc: "Cadencia pausada, cadenciosa y lírica para momentos de contemplación estética.",
+    id: 'poetica',
+    name: 'Voz Femenina Poética e Íntima',
+    desc: 'Cadencia pausada, cadenciosa y lírica para momentos de contemplación estética.',
     pitch: 1.08,
-    rate: 0.90,
+    rate: 0.9,
     icon: Feather,
-    color: "text-rose-300 border-slate-700/80 bg-[#081220]",
-    testPhrase: "Somos constelaciones de ideas respirando en la inmensidad del silencio.",
+    color: 'text-rose-300 border-slate-700/80 bg-[#081220]',
+    testPhrase: 'Somos constelaciones de ideas respirando en la inmensidad del silencio.',
   },
   {
-    id: "filosofica",
-    name: "Voz Femenina Filosófica y Dialéctica",
-    desc: "Tono estructurado, sobrio, equilibrado y de primer orden epistémico.",
+    id: 'filosofica',
+    name: 'Voz Femenina Filosófica y Dialéctica',
+    desc: 'Tono estructurado, sobrio, equilibrado y de primer orden epistémico.',
     pitch: 1.06,
     rate: 0.96,
     icon: Brain,
-    color: "text-blue-300 border-slate-700/80 bg-[#081220]",
-    testPhrase: "Examinemos los principios que fundamentan esta idea desde una perspectiva lúcida y analítica.",
+    color: 'text-blue-300 border-slate-700/80 bg-[#081220]',
+    testPhrase:
+      'Examinemos los principios que fundamentan esta idea desde una perspectiva lúcida y analítica.',
   },
   {
-    id: "holografica",
-    name: "Voz Femenina Holográfica CROWN",
-    desc: "Modulación armónica con micro-resonancias sutiles de la red neuronal.",
+    id: 'holografica',
+    name: 'Voz Femenina Holográfica CROWN',
+    desc: 'Modulación armónica con micro-resonancias sutiles de la red neuronal.',
     pitch: 1.14,
     rate: 1.02,
     icon: Radio,
-    color: "text-amber-300 border-slate-700/80 bg-[#081220]",
-    testPhrase: "Nodo CROWN en fase activa. Todos los canales cognitivos se encuentran en resonancia armónica.",
+    color: 'text-amber-300 border-slate-700/80 bg-[#081220]',
+    testPhrase:
+      'Nodo CROWN en fase activa. Todos los canales cognitivos se encuentran en resonancia armónica.',
   },
 ];
 
@@ -107,7 +111,7 @@ export const VoiceStudioView: React.FC = () => {
 
   const { voiceSettings, isSpeaking, isListening, speechSynthesisEnabled } = state;
   const [customText, setCustomText] = useState<string>(
-    "Hola, soy Isabella Villaseñor AI. Mi voz ahora fluye con naturalidad, calidez y armonía para acompañar tus ideas y creaciones."
+    'Hola, soy Isabella Villaseñor AI. Mi voz ahora fluye con naturalidad, calidez y armonía para acompañar tus ideas y creaciones.'
   );
 
   const handleTimbreSelect = (preset: (typeof TIMBRE_PRESETS)[0]) => {
@@ -138,10 +142,10 @@ export const VoiceStudioView: React.FC = () => {
   // Filter available voices strictly to female voices (Spanish female first)
   const femaleVoices = getAvailableFemaleVoices(availableVoices);
   const spanishFemaleVoices = femaleVoices.filter(
-    (v) => v.lang.startsWith("es") || v.lang.includes("ES") || v.lang.includes("MX")
+    (v) => v.lang.startsWith('es') || v.lang.includes('ES') || v.lang.includes('MX')
   );
   const otherFemaleVoices = femaleVoices.filter(
-    (v) => !v.lang.startsWith("es") && !v.lang.includes("ES") && !v.lang.includes("MX")
+    (v) => !v.lang.startsWith('es') && !v.lang.includes('ES') && !v.lang.includes('MX')
   );
 
   return (
@@ -162,7 +166,8 @@ export const VoiceStudioView: React.FC = () => {
                   Estudio Acústico & Síntesis de Voz :: Isabella Voice Engine
                 </h2>
                 <p className="text-xs font-mono text-slate-400">
-                  Voz femenina natural, prosodia fluida, modulación de timbre y reconocimiento de voz
+                  Voz femenina natural, prosodia fluida, modulación de timbre y reconocimiento de
+                  voz
                 </p>
               </div>
             </div>
@@ -173,12 +178,16 @@ export const VoiceStudioView: React.FC = () => {
                 onClick={toggleSpeechSynthesis}
                 className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-mono font-bold transition-all border cursor-pointer ${
                   speechSynthesisEnabled
-                    ? "bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-md shadow-amber-950/40"
-                    : "bg-[#081220] text-slate-400 border-slate-800"
+                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-md shadow-amber-950/40'
+                    : 'bg-[#081220] text-slate-400 border-slate-800'
                 }`}
               >
-                {speechSynthesisEnabled ? <Volume2 className="w-4 h-4 text-amber-400" /> : <VolumeX className="w-4 h-4" />}
-                <span>{speechSynthesisEnabled ? "Síntesis ACTIVADA" : "Síntesis SILENCIADA"}</span>
+                {speechSynthesisEnabled ? (
+                  <Volume2 className="w-4 h-4 text-amber-400" />
+                ) : (
+                  <VolumeX className="w-4 h-4" />
+                )}
+                <span>{speechSynthesisEnabled ? 'Síntesis ACTIVADA' : 'Síntesis SILENCIADA'}</span>
               </button>
             </div>
           </div>
@@ -191,17 +200,17 @@ export const VoiceStudioView: React.FC = () => {
                   key={i}
                   className={`w-1.5 rounded-full transition-all duration-150 ${
                     isSpeaking
-                      ? "bg-gradient-to-t from-blue-600 via-sky-400 to-amber-300"
+                      ? 'bg-gradient-to-t from-blue-600 via-sky-400 to-amber-300'
                       : isListening
-                      ? "bg-rose-500/80"
-                      : "bg-slate-800"
+                        ? 'bg-rose-500/80'
+                        : 'bg-slate-800'
                   }`}
                   style={{
                     height: isSpeaking
                       ? `${Math.max(12, Math.sin((i + Date.now() / 150) * 0.5) * 48 + 20)}px`
                       : isListening
-                      ? `${Math.max(8, Math.random() * 32 + 10)}px`
-                      : "6px",
+                        ? `${Math.max(8, Math.random() * 32 + 10)}px`
+                        : '6px',
                   }}
                 />
               ))}
@@ -210,15 +219,19 @@ export const VoiceStudioView: React.FC = () => {
             <div className="text-[11px] font-mono text-slate-400 mt-2 flex items-center gap-2">
               <span
                 className={`w-2 h-2 rounded-full ${
-                  isSpeaking ? "bg-amber-400 animate-ping" : isListening ? "bg-rose-400 animate-ping" : "bg-emerald-400"
+                  isSpeaking
+                    ? 'bg-amber-400 animate-ping'
+                    : isListening
+                      ? 'bg-rose-400 animate-ping'
+                      : 'bg-emerald-400'
                 }`}
               />
               <span>
                 {isSpeaking
-                  ? "SINTETIZANDO VOZ NATURAL Y FLUIDA DE ISABELLA"
+                  ? 'SINTETIZANDO VOZ NATURAL Y FLUIDA DE ISABELLA'
                   : isListening
-                  ? "MICRÓFONO ACTIVO :: ESCUCHANDO TU VOZ..."
-                  : "CANAL ACÚSTICO EN REPOSO"}
+                    ? 'MICRÓFONO ACTIVO :: ESCUCHANDO TU VOZ...'
+                    : 'CANAL ACÚSTICO EN REPOSO'}
               </span>
             </div>
           </div>
@@ -251,8 +264,8 @@ export const VoiceStudioView: React.FC = () => {
                 onClick={() => handleTimbreSelect(preset)}
                 className={`text-left rounded-2xl p-5 border transition-all duration-200 backdrop-blur-md relative overflow-hidden group cursor-pointer ${
                   isSelected
-                    ? "border-blue-500 bg-[#081220] shadow-xl ring-1 ring-blue-500/40"
-                    : "border-slate-800 bg-[#070F1E]/80 hover:border-slate-700 hover:bg-[#0B182C]"
+                    ? 'border-blue-500 bg-[#081220] shadow-xl ring-1 ring-blue-500/40'
+                    : 'border-slate-800 bg-[#070F1E]/80 hover:border-slate-700 hover:bg-[#0B182C]'
                 }`}
               >
                 {isSelected && (
@@ -307,11 +320,13 @@ export const VoiceStudioView: React.FC = () => {
               </span>
             </div>
             <select
-              value={voiceSettings.preferredVoiceName || ""}
+              value={voiceSettings.preferredVoiceName || ''}
               onChange={(e) => updateVoiceSettings({ preferredVoiceName: e.target.value })}
               className="w-full rounded-xl bg-[#030712] border border-slate-800 px-3 py-2.5 text-xs font-mono text-slate-200 focus:outline-none focus:border-blue-500/60 cursor-pointer"
             >
-              <option value="">-- Selección Automática Femenina Óptima (Natural / Neural) --</option>
+              <option value="">
+                -- Selección Automática Femenina Óptima (Natural / Neural) --
+              </option>
               {spanishFemaleVoices.length > 0 && (
                 <optgroup label="Voces Femeninas en Español (Recomendadas)">
                   {spanishFemaleVoices.map((v) => (
@@ -332,7 +347,8 @@ export const VoiceStudioView: React.FC = () => {
               )}
             </select>
             <p className="text-[10px] font-mono text-slate-400">
-              Isabella selecciona exclusivamente voces femeninas de alta fidelidad, con micro-modulaciones cálidas y entonación humana natural.
+              Isabella selecciona exclusivamente voces femeninas de alta fidelidad, con
+              micro-modulaciones cálidas y entonación humana natural.
             </p>
           </div>
 
@@ -408,11 +424,11 @@ export const VoiceStudioView: React.FC = () => {
               onClick={() => updateVoiceSettings({ autoSpeak: !voiceSettings.autoSpeak })}
               className={`px-3 py-1 rounded-lg border transition-all cursor-pointer ${
                 voiceSettings.autoSpeak
-                  ? "bg-blue-950/80 border-blue-500 text-sky-300 font-bold"
-                  : "bg-[#030712] border-slate-800 text-slate-400"
+                  ? 'bg-blue-950/80 border-blue-500 text-sky-300 font-bold'
+                  : 'bg-[#030712] border-slate-800 text-slate-400'
               }`}
             >
-              {voiceSettings.autoSpeak ? "ON" : "OFF"}
+              {voiceSettings.autoSpeak ? 'ON' : 'OFF'}
             </button>
           </div>
         </div>
@@ -467,12 +483,18 @@ export const VoiceStudioView: React.FC = () => {
               }}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border font-mono text-xs transition-all active:scale-95 cursor-pointer ${
                 isListening
-                  ? "bg-rose-600 hover:bg-rose-500 text-white border-rose-400 animate-pulse"
-                  : "bg-[#030712] hover:bg-[#081220] text-slate-300 border-slate-800"
+                  ? 'bg-rose-600 hover:bg-rose-500 text-white border-rose-400 animate-pulse'
+                  : 'bg-[#030712] hover:bg-[#081220] text-slate-300 border-slate-800'
               }`}
             >
-              {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4 text-amber-400" />}
-              <span>{isListening ? "Escuchando... (Click para parar)" : "Hablar por Micrófono"}</span>
+              {isListening ? (
+                <MicOff className="w-4 h-4" />
+              ) : (
+                <Mic className="w-4 h-4 text-amber-400" />
+              )}
+              <span>
+                {isListening ? 'Escuchando... (Click para parar)' : 'Hablar por Micrófono'}
+              </span>
             </button>
           </div>
         </div>
@@ -480,4 +502,3 @@ export const VoiceStudioView: React.FC = () => {
     </div>
   );
 };
-

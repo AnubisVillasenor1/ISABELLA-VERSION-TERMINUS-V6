@@ -1,13 +1,13 @@
-import { useState } from "react";
-import { Cpu, Play, ListCollapse, Clock, Percent } from "lucide-react";
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
-import { toast } from "sonner";
+import { useState } from 'react';
+import { Cpu, Play, ListCollapse, Clock, Percent } from 'lucide-react';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
+import { toast } from 'sonner';
 
 interface QuantumJob {
   id: string;
   objective: string;
   backend: string;
-  status: "Queued" | "Transpiling" | "Executing" | "Completed" | "Failed";
+  status: 'Queued' | 'Transpiling' | 'Executing' | 'Completed' | 'Failed';
   qubits: number;
   fidelity: number;
   durationMs: number;
@@ -25,34 +25,34 @@ export function QuantumJobMonitor() {
     setIsSimulating(true);
     const newId = `qup-job-${crypto.randomUUID().slice(0, 8)}`;
     const choice = {
-      obj: "qml_classification" as const,
-      label: "Clasificación QML Híbrido",
+      obj: 'qml_classification' as const,
+      label: 'Clasificación QML Híbrido',
     };
-    const backend = "aer_simulator_local" as const;
+    const backend = 'aer_simulator_local' as const;
     const qubits = 2;
 
     const newJob: QuantumJob = {
       id: newId,
       objective: choice.label,
       backend,
-      status: "Queued",
+      status: 'Queued',
       qubits,
       fidelity: 0,
       durationMs: 0,
-      timestamp: "Recién adicionado",
+      timestamp: 'Recién adicionado',
     };
     setJobs((prev) => [newJob, ...prev]);
     toast.info(`Trabajo ${newId} enviado a la cola del transpilador QUP.`);
 
     try {
-      const { getSessionToken, ensureSessionToken } = await import("@/lib/auth-client");
+      const { getSessionToken, ensureSessionToken } = await import('@/lib/auth-client');
       let token = getSessionToken();
       if (!token) {
         try {
           token = await ensureSessionToken();
         } catch {
-          const devRes = await fetch("/api/db?action=dev-session", {
-            method: "POST",
+          const devRes = await fetch('/api/db?action=dev-session', {
+            method: 'POST',
           });
           if (devRes.ok) {
             token = (await devRes.json()).token;
@@ -60,11 +60,11 @@ export function QuantumJobMonitor() {
         }
       }
 
-      if (!token) throw new Error("No token disponible");
+      if (!token) throw new Error('No token disponible');
 
       const payload = {
         dataset: {
-          name: "canonical-qml-benchmark",
+          name: 'canonical-qml-benchmark',
           features: [{ x: 1, y: 0 }],
         },
         backend: backend,
@@ -73,21 +73,21 @@ export function QuantumJobMonitor() {
           circuitDepth: 15,
           objective: choice.obj,
           errorMitigation: [],
-          errorCorrection: "none",
-          classicalBaseline: "xgboost",
+          errorCorrection: 'none',
+          classicalBaseline: 'xgboost',
         },
       };
 
       setJobs((prev) =>
         prev.map((j) =>
-          j.id === newId ? { ...j, status: "Transpiling", timestamp: "Transpilando..." } : j,
-        ),
+          j.id === newId ? { ...j, status: 'Transpiling', timestamp: 'Transpilando...' } : j
+        )
       );
 
-      const res = await fetch("/api/db?action=qup-run", {
-        method: "POST",
+      const res = await fetch('/api/db?action=qup-run', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(payload),
@@ -95,7 +95,7 @@ export function QuantumJobMonitor() {
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || "Error en API cuántica");
+        throw new Error(errorData.error || 'Error en API cuántica');
       }
 
       const { result } = await res.json();
@@ -105,22 +105,22 @@ export function QuantumJobMonitor() {
           j.id === newId
             ? {
                 ...j,
-                status: "Completed",
+                status: 'Completed',
                 fidelity: parseFloat((result.runtime.quantumFidelity * 100).toFixed(1)),
                 durationMs: result.compilation.latencyMs,
-                timestamp: "Hace unos instantes",
+                timestamp: 'Hace unos instantes',
               }
-            : j,
-        ),
+            : j
+        )
       );
       toast.success(
-        `Trabajo cuántico ${newId} completado con fidelidad: ${(result.runtime.quantumFidelity * 100).toFixed(1)}%`,
+        `Trabajo cuántico ${newId} completado con fidelidad: ${(result.runtime.quantumFidelity * 100).toFixed(1)}%`
       );
     } catch (e) {
       setJobs((prev) =>
-        prev.map((j) => (j.id === newId ? { ...j, status: "Failed", timestamp: "Falló" } : j)),
+        prev.map((j) => (j.id === newId ? { ...j, status: 'Failed', timestamp: 'Falló' } : j))
       );
-      toast.error(`Error ejecutando job: ${e instanceof Error ? e.message : "Desconocido"}`);
+      toast.error(`Error ejecutando job: ${e instanceof Error ? e.message : 'Desconocido'}`);
     } finally {
       setIsSimulating(false);
     }
@@ -128,7 +128,7 @@ export function QuantumJobMonitor() {
 
   // Compile data for Recharts chart
   const completedJobsData = jobs
-    .filter((j) => j.status === "Completed")
+    .filter((j) => j.status === 'Completed')
     .map((j) => ({
       name: j.id,
       fidelity: j.fidelity,
@@ -138,8 +138,8 @@ export function QuantumJobMonitor() {
 
   // Latencia promedio real de los trabajos completados en esta sesión.
   const averageLatencyLabel = (() => {
-    const done = jobs.filter((j) => j.status === "Completed" && j.durationMs > 0);
-    if (done.length === 0) return "Sin corridas aún";
+    const done = jobs.filter((j) => j.status === 'Completed' && j.durationMs > 0);
+    if (done.length === 0) return 'Sin corridas aún';
     const avg = done.reduce((acc, j) => acc + j.durationMs, 0) / done.length;
     return `${(avg / 1000).toFixed(2)} seg / Corrida (${done.length})`;
   })();
@@ -196,7 +196,7 @@ export function QuantumJobMonitor() {
                     {job.id}
                   </div>
                   <div className="col-span-4 text-muted-foreground truncate" title={job.objective}>
-                    {job.objective}{" "}
+                    {job.objective}{' '}
                     <span className="text-[9px] text-crown font-semibold block">
                       ({job.qubits} qubits)
                     </span>
@@ -204,31 +204,31 @@ export function QuantumJobMonitor() {
                   <div className="col-span-3 flex items-center gap-1.5">
                     <span
                       className={`size-1.5 rounded-full ${
-                        job.status === "Completed"
-                          ? "bg-emerald-400"
-                          : job.status === "Executing"
-                            ? "bg-purple-400 animate-pulse"
-                            : job.status === "Transpiling"
-                              ? "bg-amber-400 animate-spin"
-                              : "bg-blue-400 animate-pulse"
+                        job.status === 'Completed'
+                          ? 'bg-emerald-400'
+                          : job.status === 'Executing'
+                            ? 'bg-purple-400 animate-pulse'
+                            : job.status === 'Transpiling'
+                              ? 'bg-amber-400 animate-spin'
+                              : 'bg-blue-400 animate-pulse'
                       }`}
                     />
                     <span
                       className={`capitalize font-bold text-[9px] ${
-                        job.status === "Completed"
-                          ? "text-emerald-400"
-                          : job.status === "Executing"
-                            ? "text-purple-400"
-                            : job.status === "Transpiling"
-                              ? "text-amber-400"
-                              : "text-blue-400"
+                        job.status === 'Completed'
+                          ? 'text-emerald-400'
+                          : job.status === 'Executing'
+                            ? 'text-purple-400'
+                            : job.status === 'Transpiling'
+                              ? 'text-amber-400'
+                              : 'text-blue-400'
                       }`}
                     >
                       {job.status}
                     </span>
                   </div>
                   <div className="col-span-2 text-right font-extrabold text-white">
-                    {job.fidelity > 0 ? `${job.fidelity}%` : "—"}
+                    {job.fidelity > 0 ? `${job.fidelity}%` : '—'}
                   </div>
                 </div>
               ))}
@@ -250,12 +250,12 @@ export function QuantumJobMonitor() {
                     margin={{ top: 5, right: 5, left: -32, bottom: 0 }}
                   >
                     <CartesianGrid strokeDasharray="3 3" stroke="#232635" />
-                    <XAxis dataKey="name" tick={{ fill: "#9ca3af", fontSize: 8.5 }} />
-                    <YAxis tick={{ fill: "#9ca3af", fontSize: 8.5 }} domain={[90, 100]} />
+                    <XAxis dataKey="name" tick={{ fill: '#9ca3af', fontSize: 8.5 }} />
+                    <YAxis tick={{ fill: '#9ca3af', fontSize: 8.5 }} domain={[90, 100]} />
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: "#13151f",
-                        borderColor: "#2d2f3d",
+                        backgroundColor: '#13151f',
+                        borderColor: '#2d2f3d',
                       }}
                     />
                     <Bar

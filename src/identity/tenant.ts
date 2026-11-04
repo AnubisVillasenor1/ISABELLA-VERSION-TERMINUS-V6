@@ -3,7 +3,7 @@
 export interface Tenant {
   id: string;
   name: string;
-  status: "active" | "suspended" | "provisioning";
+  status: 'active' | 'suspended' | 'provisioning';
 }
 
 export interface TenantCatalog {
@@ -15,7 +15,7 @@ export function createTenantCatalog(tenants: readonly Tenant[]): TenantCatalog {
 }
 
 export function tenantIsActive(catalog: TenantCatalog, tenantId: string): boolean {
-  return catalog.tenants.get(tenantId)?.status === "active";
+  return catalog.tenants.get(tenantId)?.status === 'active';
 }
 
 /**
@@ -26,7 +26,7 @@ export function isolatedAccess(
   catalog: TenantCatalog,
   principalTenantId: string | undefined,
   targetTenantId: string,
-  opts: { crossTenantGranted?: boolean } = {},
+  opts: { crossTenantGranted?: boolean } = {}
 ): boolean {
   if (!principalTenantId) {
     return false; // sin arrendatario conocido no hay acceso aislado

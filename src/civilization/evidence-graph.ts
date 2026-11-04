@@ -7,9 +7,10 @@
  *
  * CAPABILITY ≠ AUTHORITY ≠ EXECUTION ≠ EVIDENCE ≠ LEARNING ≠ PRODUCTION.
  */
-import { createHash } from "node:crypto";
+import { createHash } from 'node:crypto';
 
-export type EvidenceLineage = "knowledge" | "decision" | "economic" | "agent" | "governance" | "security";
+export type EvidenceLineage =
+  'knowledge' | 'decision' | 'economic' | 'agent' | 'governance' | 'security';
 
 export interface EvidenceNode {
   readonly id: string;
@@ -34,39 +35,77 @@ export interface EvidenceVerification {
   readonly head: string | null;
 }
 
-function nodeHash(n: Omit<EvidenceNode, "hash">): string {
-  return createHash("sha256").update(JSON.stringify({
-    id: n.id, timestamp: n.timestamp, actor: n.actor, action: n.action, policy: n.policy,
-    reason: n.reason, evidenceHash: n.evidenceHash, impact: n.impact, consequence: n.consequence,
-    lineage: n.lineage, previousHash: n.previousHash, sequence: n.sequence,
-  })).digest("hex");
+function nodeHash(n: Omit<EvidenceNode, 'hash'>): string {
+  return createHash('sha256')
+    .update(
+      JSON.stringify({
+        id: n.id,
+        timestamp: n.timestamp,
+        actor: n.actor,
+        action: n.action,
+        policy: n.policy,
+        reason: n.reason,
+        evidenceHash: n.evidenceHash,
+        impact: n.impact,
+        consequence: n.consequence,
+        lineage: n.lineage,
+        previousHash: n.previousHash,
+        sequence: n.sequence,
+      })
+    )
+    .digest('hex');
 }
 
-export const CEG_GENESIS = "0".repeat(64);
+export const CEG_GENESIS = '0'.repeat(64);
 
 export class CivilizationalEvidenceGraph {
   private readonly nodes: EvidenceNode[] = [];
   private seq = 0;
 
-  get size(): number { return this.nodes.length; }
-  get head(): string | null { return this.nodes.length > 0 ? (this.nodes[this.nodes.length - 1] as EvidenceNode).hash : null; }
+  get size(): number {
+    return this.nodes.length;
+  }
+  get head(): string | null {
+    return this.nodes.length > 0 ? (this.nodes[this.nodes.length - 1] as EvidenceNode).hash : null;
+  }
 
   append(input: {
-    id: string; timestamp?: string; actor: string; action: string; policy: string; reason: string;
-    evidenceHash?: string; impact?: string; consequence?: string; lineage?: readonly EvidenceLineage[];
+    id: string;
+    timestamp?: string;
+    actor: string;
+    action: string;
+    policy: string;
+    reason: string;
+    evidenceHash?: string;
+    impact?: string;
+    consequence?: string;
+    lineage?: readonly EvidenceLineage[];
   }): EvidenceNode {
-    if (typeof input.id !== "string" || input.id.length === 0) throw new RangeError("CEG: id required");
-    if (typeof input.actor !== "string" || input.actor.length === 0) throw new RangeError("CEG: actor required");
-    if (typeof input.action !== "string" || input.action.length === 0) throw new RangeError("CEG: action required");
-    if (this.nodes.some((n) => n.id === input.id)) throw new RangeError("CEG: duplicate id");
+    if (typeof input.id !== 'string' || input.id.length === 0)
+      throw new RangeError('CEG: id required');
+    if (typeof input.actor !== 'string' || input.actor.length === 0)
+      throw new RangeError('CEG: actor required');
+    if (typeof input.action !== 'string' || input.action.length === 0)
+      throw new RangeError('CEG: action required');
+    if (this.nodes.some((n) => n.id === input.id)) throw new RangeError('CEG: duplicate id');
     const ts = input.timestamp ?? new Date().toISOString();
-    const prev = this.nodes.length > 0 ? (this.nodes[this.nodes.length - 1] as EvidenceNode).hash : CEG_GENESIS;
+    const prev =
+      this.nodes.length > 0
+        ? (this.nodes[this.nodes.length - 1] as EvidenceNode).hash
+        : CEG_GENESIS;
     const base = {
-      id: input.id, timestamp: ts, actor: input.actor, action: input.action, policy: input.policy ?? "UNSPECIFIED",
-      reason: input.reason ?? "", evidenceHash: input.evidenceHash ?? createHash("sha256").update(input.id).digest("hex"),
-      impact: input.impact ?? "unspecified", consequence: input.consequence ?? "recorded",
-      lineage: [...(input.lineage ?? ["governance"])],
-      previousHash: prev, sequence: (this.seq += 1),
+      id: input.id,
+      timestamp: ts,
+      actor: input.actor,
+      action: input.action,
+      policy: input.policy ?? 'UNSPECIFIED',
+      reason: input.reason ?? '',
+      evidenceHash: input.evidenceHash ?? createHash('sha256').update(input.id).digest('hex'),
+      impact: input.impact ?? 'unspecified',
+      consequence: input.consequence ?? 'recorded',
+      lineage: [...(input.lineage ?? ['governance'])],
+      previousHash: prev,
+      sequence: (this.seq += 1),
     };
     const node: EvidenceNode = { ...base, hash: nodeHash(base) };
     this.nodes.push(node);
@@ -75,15 +114,24 @@ export class CivilizationalEvidenceGraph {
 
   list(limit?: number): readonly EvidenceNode[] {
     if (limit === undefined) return [...this.nodes];
-    if (!Number.isInteger(limit) || limit < 1) throw new RangeError("CEG: limit must be positive integer");
+    if (!Number.isInteger(limit) || limit < 1)
+      throw new RangeError('CEG: limit must be positive integer');
     return this.nodes.slice(-limit);
   }
 
-  get(id: string): EvidenceNode | undefined { return this.nodes.find((n) => n.id === id); }
+  get(id: string): EvidenceNode | undefined {
+    return this.nodes.find((n) => n.id === id);
+  }
 
-  byActor(actor: string): readonly EvidenceNode[] { return this.nodes.filter((n) => n.actor === actor); }
-  byAction(action: string): readonly EvidenceNode[] { return this.nodes.filter((n) => n.action === action); }
-  byLineage(lineage: EvidenceLineage): readonly EvidenceNode[] { return this.nodes.filter((n) => n.lineage.includes(lineage)); }
+  byActor(actor: string): readonly EvidenceNode[] {
+    return this.nodes.filter((n) => n.actor === actor);
+  }
+  byAction(action: string): readonly EvidenceNode[] {
+    return this.nodes.filter((n) => n.action === action);
+  }
+  byLineage(lineage: EvidenceLineage): readonly EvidenceNode[] {
+    return this.nodes.filter((n) => n.lineage.includes(lineage));
+  }
 
   verify(): EvidenceVerification {
     const reasons: string[] = [];
@@ -114,7 +162,17 @@ export class CivilizationalEvidenceGraph {
     return trail;
   }
 
-  exportSnapshot(): { readonly version: string; readonly count: number; readonly head: string | null; readonly nodes: readonly EvidenceNode[] } {
-    return { version: "CEG-1.0", count: this.nodes.length, head: this.head, nodes: [...this.nodes] };
+  exportSnapshot(): {
+    readonly version: string;
+    readonly count: number;
+    readonly head: string | null;
+    readonly nodes: readonly EvidenceNode[];
+  } {
+    return {
+      version: 'CEG-1.0',
+      count: this.nodes.length,
+      head: this.head,
+      nodes: [...this.nodes],
+    };
   }
 }

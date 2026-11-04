@@ -18,6 +18,14 @@ function collectSource(dir: string): string {
   return files.map((file) => readFileSync(file, "utf8")).join("\n");
 }
 
+// Reading the whole src tree costs seconds on Windows; the tree does not change
+// between tests in the same run, so collect it once.
+let cachedSource: string | null = null;
+function source(): string {
+  cachedSource ??= collectSource(srcDir);
+  return cachedSource;
+}
+
 export function extractRoutes(source: string): string[] {
   const re = /app\.(get|post|put|delete|patch)\(\s*(["'`])([^"'`]*)\2/g;
   const routes: string[] = [];
@@ -32,12 +40,12 @@ const expected = JSON.parse(
 
 describe("route inventory contract (TD-01)", () => {
   it("matches the frozen HTTP surface exactly", () => {
-    const actual = extractRoutes(collectSource(srcDir));
+    const actual = extractRoutes(source());
     expect(actual).toEqual([...expected].sort());
   });
 
   it("keeps the extracted HyperCore group wired", () => {
-    const routes = new Set(extractRoutes(collectSource(srcDir)));
+    const routes = new Set(extractRoutes(source()));
     for (const route of [
       "GET /api/v1/hypercore/modes",
       "POST /api/v1/hypercore/run",

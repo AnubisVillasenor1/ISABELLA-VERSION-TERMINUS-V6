@@ -24,38 +24,38 @@
  * Sin ámbito federado declarado, la reutilización de caché se desactiva (no se
  * puede violar el aislamiento entre inquilinos/federaciones).
  */
-import { HIGH_IMPACT_TRIGGERS, type HighImpactTrigger } from "../ingress/isa-api";
-import type { RiskTier } from "../authority/method-id";
-import { sha256 } from "../skills/canonical-json";
-import { planExecution, type ComplexityClass, type AdaptivePlan } from "./adaptive-router";
+import { HIGH_IMPACT_TRIGGERS, type HighImpactTrigger } from '../ingress/isa-api';
+import type { RiskTier } from '../authority/method-id';
+import { sha256 } from '../skills/canonical-json';
+import { planExecution, type ComplexityClass, type AdaptivePlan } from './adaptive-router';
 
-export const TURBO_PLANNER_VERSION = "1.0.0" as const;
+export const TURBO_PLANNER_VERSION = '1.0.0' as const;
 
 /** Identidad de método canónica (AGENTS.md §5). */
 export const TURBO_PLANNER_METHOD_ID =
-  "A.IDENTITY.E00_TURBO.plan_route.v1.0.0.MEDIUM.OPERATIONAL" as const;
+  'A.IDENTITY.E00_TURBO.plan_route.v1.0.0.MEDIUM.OPERATIONAL' as const;
 
 export const TURBO_PLANNER_DISCLAIMER =
-  "El planificador de ruta asigna CÓMO acelerar sin conceder autoridad: la ruta es una recomendación de flujo, no una autorización ni una ejecución. La autoridad permanece en CROWN y la evidencia en BookPI." as const;
+  'El planificador de ruta asigna CÓMO acelerar sin conceder autoridad: la ruta es una recomendación de flujo, no una autorización ni una ejecución. La autoridad permanece en CROWN y la evidencia en BookPI.' as const;
 
 /** Rutas de ejecución, de la más barata (FAST) a la más deliberativa (HUMAN_REVIEW). */
-export const TURBO_ROUTES = ["FAST", "GROUNDED", "AGENT", "HUMAN_REVIEW"] as const;
+export const TURBO_ROUTES = ['FAST', 'GROUNDED', 'AGENT', 'HUMAN_REVIEW'] as const;
 export type TurboRoute = (typeof TURBO_ROUTES)[number];
 
 /** Filtros gobernados que pueden ejecutarse antes de entregar una respuesta. */
 export const TURBO_FILTERS = [
-  "AEGIS",
-  "CROWN",
-  "SANITIZATION",
-  "VIGIA",
-  "GROUNDING",
-  "CONTRADICTION",
-  "PERMISSION_MAP",
+  'AEGIS',
+  'CROWN',
+  'SANITIZATION',
+  'VIGIA',
+  'GROUNDING',
+  'CONTRADICTION',
+  'PERMISSION_MAP',
 ] as const;
 export type TurboFilter = (typeof TURBO_FILTERS)[number];
 
 /** Política de reutilización de caché (fail-closed: NONE no reutiliza nada). */
-export const TURBO_CACHE_POLICIES = ["NONE", "PREFIX", "SEMANTIC"] as const;
+export const TURBO_CACHE_POLICIES = ['NONE', 'PREFIX', 'SEMANTIC'] as const;
 export type TurboCachePolicy = (typeof TURBO_CACHE_POLICIES)[number];
 
 export interface TurboRequest {
@@ -84,7 +84,7 @@ export interface TurboPlan {
   readonly version: typeof TURBO_PLANNER_VERSION;
   readonly route: TurboRoute;
   readonly complexity: ComplexityClass;
-  readonly mode: AdaptivePlan["hypercore"]["mode"];
+  readonly mode: AdaptivePlan['hypercore']['mode'];
   readonly filters: readonly TurboFilterPlan[];
   readonly requiredFilters: readonly TurboFilter[];
   readonly skippedFilters: readonly TurboFilter[];
@@ -92,7 +92,7 @@ export interface TurboPlan {
   readonly federationId: number | null;
   readonly territory: string;
   /** Invariante: la ruta nunca eleva ni reduce la autoridad. */
-  readonly authorityPath: "FULL";
+  readonly authorityPath: 'FULL';
   readonly humanReviewRequired: boolean;
   readonly highImpactTriggered: boolean;
   readonly reasons: readonly string[];
@@ -103,60 +103,80 @@ export interface TurboPlan {
 
 /** Filtros obligatorios por ruta; el resto son omitibles con seguridad. */
 const REQUIRED_BY_ROUTE: Record<TurboRoute, readonly TurboFilter[]> = {
-  FAST: ["AEGIS", "CROWN", "SANITIZATION"],
-  GROUNDED: ["AEGIS", "CROWN", "SANITIZATION", "GROUNDING"],
-  AGENT: ["AEGIS", "CROWN", "SANITIZATION", "VIGIA", "GROUNDING", "CONTRADICTION", "PERMISSION_MAP"],
+  FAST: ['AEGIS', 'CROWN', 'SANITIZATION'],
+  GROUNDED: ['AEGIS', 'CROWN', 'SANITIZATION', 'GROUNDING'],
+  AGENT: [
+    'AEGIS',
+    'CROWN',
+    'SANITIZATION',
+    'VIGIA',
+    'GROUNDING',
+    'CONTRADICTION',
+    'PERMISSION_MAP',
+  ],
   HUMAN_REVIEW: TURBO_FILTERS,
 };
 
-const HIGH_RISK: readonly RiskTier[] = ["HIGH", "CRITICAL"];
+const HIGH_RISK: readonly RiskTier[] = ['HIGH', 'CRITICAL'];
 
 function validate(request: TurboRequest): void {
-  if (!request || typeof request.intent !== "string" || request.intent.trim().length === 0) {
-    throw new Error("TURBO_INTENT_REQUIRED");
+  if (!request || typeof request.intent !== 'string' || request.intent.trim().length === 0) {
+    throw new Error('TURBO_INTENT_REQUIRED');
   }
   if (!Number.isInteger(request.inputTokens) || request.inputTokens < 0) {
-    throw new Error("TURBO_INPUT_TOKENS_INVALID");
+    throw new Error('TURBO_INPUT_TOKENS_INVALID');
   }
-  if (request.expectedOutputTokens !== undefined &&
-    (!Number.isInteger(request.expectedOutputTokens) || request.expectedOutputTokens < 0)) {
-    throw new Error("TURBO_OUTPUT_TOKENS_INVALID");
+  if (
+    request.expectedOutputTokens !== undefined &&
+    (!Number.isInteger(request.expectedOutputTokens) || request.expectedOutputTokens < 0)
+  ) {
+    throw new Error('TURBO_OUTPUT_TOKENS_INVALID');
   }
-  if (request.pressure !== undefined &&
-    (!Number.isFinite(request.pressure) || request.pressure < 0 || request.pressure > 1)) {
-    throw new Error("TURBO_PRESSURE_INVALID");
+  if (
+    request.pressure !== undefined &&
+    (!Number.isFinite(request.pressure) || request.pressure < 0 || request.pressure > 1)
+  ) {
+    throw new Error('TURBO_PRESSURE_INVALID');
   }
   if (!request.principalId || !request.principalId.trim()) {
-    throw new Error("TURBO_PRINCIPAL_REQUIRED");
+    throw new Error('TURBO_PRINCIPAL_REQUIRED');
   }
-  if (request.federationId !== undefined &&
-    (!Number.isInteger(request.federationId) || request.federationId < 1 || request.federationId > 7)) {
-    throw new Error("TURBO_FEDERATION_INVALID");
+  if (
+    request.federationId !== undefined &&
+    (!Number.isInteger(request.federationId) ||
+      request.federationId < 1 ||
+      request.federationId > 7)
+  ) {
+    throw new Error('TURBO_FEDERATION_INVALID');
   }
 }
 
 function chooseRoute(plan: AdaptivePlan, request: TurboRequest, reasons: string[]): TurboRoute {
   const highImpact = (request.highImpactTriggers ?? []).filter((trigger) =>
-    (HIGH_IMPACT_TRIGGERS as readonly string[]).includes(trigger),
+    (HIGH_IMPACT_TRIGGERS as readonly string[]).includes(trigger)
   );
-  if (request.riskTier === "CRITICAL") {
-    reasons.push("CRITICAL_RISK_REQUIRES_HUMAN_REVIEW");
-    return "HUMAN_REVIEW";
+  if (request.riskTier === 'CRITICAL') {
+    reasons.push('CRITICAL_RISK_REQUIRES_HUMAN_REVIEW');
+    return 'HUMAN_REVIEW';
   }
   if (highImpact.length > 0) {
-    reasons.push(`HIGH_IMPACT_TRIGGER:${highImpact.join(",")}`);
-    return "HUMAN_REVIEW";
+    reasons.push(`HIGH_IMPACT_TRIGGER:${highImpact.join(',')}`);
+    return 'HUMAN_REVIEW';
   }
-  if (plan.complexity === "DEEP" || request.requiresTools === true || request.riskTier === "HIGH") {
-    reasons.push("DEEP_OR_TOOLED_OR_HIGH_RISK_ROUTES_TO_AGENT");
-    return "AGENT";
+  if (plan.complexity === 'DEEP' || request.requiresTools === true || request.riskTier === 'HIGH') {
+    reasons.push('DEEP_OR_TOOLED_OR_HIGH_RISK_ROUTES_TO_AGENT');
+    return 'AGENT';
   }
-  if (plan.complexity === "STANDARD" || request.requiresMemory === true || request.riskTier === "MEDIUM") {
-    reasons.push("STANDARD_OR_MEMORY_OR_MEDIUM_RISK_ROUTES_TO_GROUNDED");
-    return "GROUNDED";
+  if (
+    plan.complexity === 'STANDARD' ||
+    request.requiresMemory === true ||
+    request.riskTier === 'MEDIUM'
+  ) {
+    reasons.push('STANDARD_OR_MEMORY_OR_MEDIUM_RISK_ROUTES_TO_GROUNDED');
+    return 'GROUNDED';
   }
-  reasons.push("TRIVIAL_LOW_RISK_ROUTES_TO_FAST");
-  return "FAST";
+  reasons.push('TRIVIAL_LOW_RISK_ROUTES_TO_FAST');
+  return 'FAST';
 }
 
 /**
@@ -197,21 +217,21 @@ export function planTurboRoute(request: TurboRequest): TurboPlan {
   const highRisk = HIGH_RISK.includes(request.riskTier);
   const federationId = request.federationId ?? null;
   let cachePolicy: TurboCachePolicy;
-  if (route === "HUMAN_REVIEW" || highRisk) {
-    cachePolicy = "NONE";
-    reasons.push("CACHE_DISABLED_HIGH_RISK_OR_HUMAN_REVIEW");
+  if (route === 'HUMAN_REVIEW' || highRisk) {
+    cachePolicy = 'NONE';
+    reasons.push('CACHE_DISABLED_HIGH_RISK_OR_HUMAN_REVIEW');
   } else if (federationId === null) {
-    cachePolicy = "NONE";
-    reasons.push("CACHE_DISABLED_NO_FEDERATION_SCOPE");
-  } else if (route === "FAST") {
-    cachePolicy = "SEMANTIC";
+    cachePolicy = 'NONE';
+    reasons.push('CACHE_DISABLED_NO_FEDERATION_SCOPE');
+  } else if (route === 'FAST') {
+    cachePolicy = 'SEMANTIC';
   } else {
-    cachePolicy = "PREFIX";
+    cachePolicy = 'PREFIX';
   }
 
-  const territory = request.territory?.trim() || "global";
-  const humanReviewRequired = route === "HUMAN_REVIEW";
-  const highImpactTriggered = reasons.some((reason) => reason.startsWith("HIGH_IMPACT_TRIGGER"));
+  const territory = request.territory?.trim() || 'global';
+  const humanReviewRequired = route === 'HUMAN_REVIEW';
+  const highImpactTriggered = reasons.some((reason) => reason.startsWith('HIGH_IMPACT_TRIGGER'));
 
   const digest = sha256({
     version: TURBO_PLANNER_VERSION,
@@ -246,7 +266,7 @@ export function planTurboRoute(request: TurboRequest): TurboPlan {
     cachePolicy,
     federationId,
     territory,
-    authorityPath: "FULL",
+    authorityPath: 'FULL',
     humanReviewRequired,
     highImpactTriggered,
     reasons: Object.freeze(reasons),

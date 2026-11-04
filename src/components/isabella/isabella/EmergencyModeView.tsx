@@ -7,7 +7,7 @@
  * Ecosistema: TAMV ONLINE NETWORK / Nodo Cero (Real del Monte, Hidalgo, México)
  */
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 import {
   ShieldAlert,
   Lock,
@@ -18,10 +18,10 @@ import {
   Activity,
   Server,
   MapPin,
-} from "lucide-react";
+} from 'lucide-react';
 
 export interface EmergencyModeProps {
-  mode?: "emergency" | "maintenance" | "critical_error";
+  mode?: 'emergency' | 'maintenance' | 'critical_error';
   errorDetails?: {
     code?: string;
     message?: string;
@@ -32,32 +32,32 @@ export interface EmergencyModeProps {
 }
 
 export const EmergencyModeView: React.FC<EmergencyModeProps> = ({
-  mode = "emergency",
+  mode = 'emergency',
   errorDetails,
   onRetry,
 }) => {
-  const [healthStatus, setHealthStatus] = useState<"checking" | "alive" | "down">("checking");
+  const [healthStatus, setHealthStatus] = useState<'checking' | 'alive' | 'down'>('checking');
   const [copied, setCopied] = useState(false);
-  const [operatorToken, setOperatorToken] = useState("");
+  const [operatorToken, setOperatorToken] = useState('');
   const [tokenError, setTokenError] = useState<string | null>(null);
   const [showOverrideInput, setShowOverrideInput] = useState(false);
 
-  const isMaintenance = mode === "maintenance";
+  const isMaintenance = mode === 'maintenance';
   const traceId = errorDetails?.traceId || `trace-emerg-${Date.now().toString(16)}`;
   const timestamp = errorDetails?.timestamp || new Date().toISOString();
-  const errorCode = errorDetails?.code || (isMaintenance ? "SOVCON-MAINT-400" : "SOVCON-CRIT-001");
+  const errorCode = errorDetails?.code || (isMaintenance ? 'SOVCON-MAINT-400' : 'SOVCON-CRIT-001');
 
   const checkHealth = async () => {
-    setHealthStatus("checking");
+    setHealthStatus('checking');
     try {
-      const res = await fetch("/api/health/live", { cache: "no-store" });
+      const res = await fetch('/api/health/live', { cache: 'no-store' });
       if (res.ok) {
-        setHealthStatus("alive");
+        setHealthStatus('alive');
       } else {
-        setHealthStatus("down");
+        setHealthStatus('down');
       }
     } catch {
-      setHealthStatus("down");
+      setHealthStatus('down');
     }
   };
 
@@ -75,12 +75,12 @@ export const EmergencyModeView: React.FC<EmergencyModeProps> = ({
   const handleOperatorUnlock = (e: React.FormEvent) => {
     e.preventDefault();
     if (!operatorToken.trim()) {
-      setTokenError("Ingresa un token de operador soberano válido.");
+      setTokenError('Ingresa un token de operador soberano válido.');
       return;
     }
     // Validación de prueba / fallback local seguro
     if (operatorToken.trim().length < 8) {
-      setTokenError("Token de operador inválido o expirado por política C.R.O.W.N.");
+      setTokenError('Token de operador inválido o expirado por política C.R.O.W.N.');
       return;
     }
     setTokenError(null);
@@ -105,7 +105,7 @@ export const EmergencyModeView: React.FC<EmergencyModeProps> = ({
       {/* Resplandor superior de alerta */}
       <div
         className={`absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-48 blur-3xl opacity-20 pointer-events-none ${
-          isMaintenance ? "bg-amber-500" : "bg-red-600"
+          isMaintenance ? 'bg-amber-500' : 'bg-red-600'
         }`}
         aria-hidden="true"
       />
@@ -118,8 +118,8 @@ export const EmergencyModeView: React.FC<EmergencyModeProps> = ({
               <div
                 className={`p-2.5 rounded-xl border ${
                   isMaintenance
-                    ? "border-amber-500/30 bg-amber-500/10 text-amber-400"
-                    : "border-red-500/30 bg-red-500/10 text-red-400 animate-pulse"
+                    ? 'border-amber-500/30 bg-amber-500/10 text-amber-400'
+                    : 'border-red-500/30 bg-red-500/10 text-red-400 animate-pulse'
                 }`}
               >
                 {isMaintenance ? <Lock className="size-6" /> : <ShieldAlert className="size-6" />}
@@ -130,8 +130,8 @@ export const EmergencyModeView: React.FC<EmergencyModeProps> = ({
                 </span>
                 <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center gap-2">
                   {isMaintenance
-                    ? "Mantenimiento Soberano Activo"
-                    : "Protocolo de Emergencia SOVCON 1"}
+                    ? 'Mantenimiento Soberano Activo'
+                    : 'Protocolo de Emergencia SOVCON 1'}
                 </h1>
               </div>
             </div>
@@ -140,20 +140,20 @@ export const EmergencyModeView: React.FC<EmergencyModeProps> = ({
               <span
                 className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-medium border ${
                   isMaintenance
-                    ? "border-amber-500/40 bg-amber-950/40 text-amber-300"
-                    : "border-red-500/40 bg-red-950/40 text-red-300"
+                    ? 'border-amber-500/40 bg-amber-950/40 text-amber-300'
+                    : 'border-red-500/40 bg-red-950/40 text-red-300'
                 }`}
               >
                 <span className="size-2 rounded-full bg-current animate-ping" />
-                {isMaintenance ? "VENTANA PROGRAMADA" : "FAIL-CLOSED ACTIVO"}
+                {isMaintenance ? 'VENTANA PROGRAMADA' : 'FAIL-CLOSED ACTIVO'}
               </span>
             </div>
           </div>
 
           <p className="text-sm text-slate-300 leading-relaxed">
             {isMaintenance
-              ? "El sistema se encuentra en un periodo de consolidación criptográfica y actualización programada de memoria y seguridad territorial. El acceso ordinario a las interfaces de inferencia permanece restringido temporalmente."
-              : "Se ha detectado un evento crítico que activa la cláusula de contingencia y aislamiento total. Las herramientas operativas y el canal de inferencia han sido vetados automáticamente por la arquitectura ARGUS Sentinel para proteger la integridad territorial y los datos."}
+              ? 'El sistema se encuentra en un periodo de consolidación criptográfica y actualización programada de memoria y seguridad territorial. El acceso ordinario a las interfaces de inferencia permanece restringido temporalmente.'
+              : 'Se ha detectado un evento crítico que activa la cláusula de contingencia y aislamiento total. Las herramientas operativas y el canal de inferencia han sido vetados automáticamente por la arquitectura ARGUS Sentinel para proteger la integridad territorial y los datos.'}
           </p>
         </header>
 
@@ -231,7 +231,7 @@ export const EmergencyModeView: React.FC<EmergencyModeProps> = ({
                 ) : (
                   <Copy className="size-3.5" />
                 )}
-                <span>{copied ? "Copiado" : "Copiar"}</span>
+                <span>{copied ? 'Copiado' : 'Copiar'}</span>
               </button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 border-t border-slate-900 text-slate-300">
@@ -262,28 +262,28 @@ export const EmergencyModeView: React.FC<EmergencyModeProps> = ({
               className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-slate-700 bg-slate-800/80 hover:bg-slate-800 text-slate-200 text-xs font-mono transition-all w-full sm:w-auto"
             >
               <RefreshCw
-                className={`size-3.5 ${healthStatus === "checking" ? "animate-spin" : ""}`}
+                className={`size-3.5 ${healthStatus === 'checking' ? 'animate-spin' : ''}`}
               />
               <span>Verificar Servicio</span>
             </button>
 
             <span className="text-xs font-mono text-slate-400 flex items-center gap-1.5">
               <Activity className="size-3.5" />
-              Liveness:{" "}
+              Liveness:{' '}
               <strong
                 className={
-                  healthStatus === "alive"
-                    ? "text-emerald-400"
-                    : healthStatus === "checking"
-                      ? "text-amber-400"
-                      : "text-red-400"
+                  healthStatus === 'alive'
+                    ? 'text-emerald-400'
+                    : healthStatus === 'checking'
+                      ? 'text-amber-400'
+                      : 'text-red-400'
                 }
               >
-                {healthStatus === "alive"
-                  ? "OPERATIVO"
-                  : healthStatus === "checking"
-                    ? "SONDEANDO"
-                    : "NO DISPONIBLE"}
+                {healthStatus === 'alive'
+                  ? 'OPERATIVO'
+                  : healthStatus === 'checking'
+                    ? 'SONDEANDO'
+                    : 'NO DISPONIBLE'}
               </strong>
             </span>
           </div>
@@ -294,7 +294,7 @@ export const EmergencyModeView: React.FC<EmergencyModeProps> = ({
               onClick={() => setShowOverrideInput(!showOverrideInput)}
               className="text-xs font-mono text-slate-400 hover:text-slate-200 underline transition-colors"
             >
-              {showOverrideInput ? "Ocultar acceso operador" : "Acceso Soberano"}
+              {showOverrideInput ? 'Ocultar acceso operador' : 'Acceso Soberano'}
             </button>
             <button
               type="button"

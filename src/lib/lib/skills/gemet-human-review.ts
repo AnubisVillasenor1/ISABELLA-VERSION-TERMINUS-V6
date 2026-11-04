@@ -1,6 +1,6 @@
-import { createAuditEvent, SkillContext, SkillResult } from "./contracts";
+import { createAuditEvent, SkillContext, SkillResult } from './contracts';
 
-export type HumanReviewPriority = "NORMAL" | "HIGH" | "CRITICAL";
+export type HumanReviewPriority = 'NORMAL' | 'HIGH' | 'CRITICAL';
 
 export interface HumanReviewRequest {
   reviewId: string;
@@ -11,7 +11,7 @@ export interface HumanReviewRequest {
   priority: HumanReviewPriority;
   createdAt: string;
   expiresAt: string;
-  status: "PENDING";
+  status: 'PENDING';
   metadata: Record<string, unknown>;
 }
 
@@ -36,7 +36,7 @@ export async function escalateToHuman<T>(
   context: SkillContext,
   sink: HumanReviewSink,
   reason: string,
-  priority: HumanReviewPriority = "HIGH",
+  priority: HumanReviewPriority = 'HIGH'
 ): Promise<SkillResult<T>> {
   const now = new Date();
   const request: HumanReviewRequest = {
@@ -48,7 +48,7 @@ export async function escalateToHuman<T>(
     priority,
     createdAt: now.toISOString(),
     expiresAt: new Date(now.getTime() + 30 * 60 * 1000).toISOString(),
-    status: "PENDING",
+    status: 'PENDING',
     metadata: {
       federation: context.federation,
       locale: context.locale,
@@ -59,20 +59,20 @@ export async function escalateToHuman<T>(
 
   return {
     ...result,
-    status: "ESCALATED",
+    status: 'ESCALATED',
     requiresHumanReview: true,
-    warnings: [...result.warnings, "La decisión requiere revisión humana explícita."],
+    warnings: [...result.warnings, 'La decisión requiere revisión humana explícita.'],
     auditEvents: [
       ...result.auditEvents,
       createAuditEvent(
-        "HUMAN_REVIEW_REQUIRED",
+        'HUMAN_REVIEW_REQUIRED',
         result.skillId,
         {
           reviewId: request.reviewId,
           priority,
           reason,
         },
-        context.actorId,
+        context.actorId
       ),
     ],
   };

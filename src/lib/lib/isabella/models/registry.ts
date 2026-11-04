@@ -1,7 +1,7 @@
-import { createHash } from "node:crypto";
+import { createHash } from 'node:crypto';
 
 export type ModelState =
-  "DRAFT" | "TRAINING" | "EVALUATION" | "APPROVED" | "PRODUCTION" | "DEPRECATED" | "ARCHIVED";
+  'DRAFT' | 'TRAINING' | 'EVALUATION' | 'APPROVED' | 'PRODUCTION' | 'DEPRECATED' | 'ARCHIVED';
 
 export interface EvaluationBenchmark {
   benchmarkId: string;
@@ -31,7 +31,7 @@ export interface ModelEntry {
  * Legacy process-local evaluation cache.
  *
  * IMPORTANT: this is intentionally NOT a production authority. Durable model
- * approval lives in src/lib/intelligence/durable-model-registry.ts and is
+ * approval lives in src/lib/lib/intelligence/durable-model-registry.ts and is
  * enforced by production-model-gate.ts. Keeping this cache separate prevents
  * a process restart or a second instance from silently changing authority.
  */
@@ -51,11 +51,11 @@ export class EvaluationRegistry {
   public static addBenchmark(
     modelId: string,
     version: string,
-    benchmark: EvaluationBenchmark,
+    benchmark: EvaluationBenchmark
   ): void {
     const key = `${modelId}@${version}`;
     const model = this.models.get(key);
-    if (!model) throw new Error("Model not found in evaluation cache");
+    if (!model) throw new Error('Model not found in evaluation cache');
     model.benchmarks.push(structuredClone(benchmark));
     model.updatedAt = new Date().toISOString();
   }
@@ -66,13 +66,13 @@ export class EvaluationRegistry {
    */
   public static transitionToProduction(): never {
     throw new Error(
-      "production_authority_is_durable_only: use assertModelRuntimeAuthority and the durable governance registry",
+      'production_authority_is_durable_only: use assertModelRuntimeAuthority and the durable governance registry'
     );
   }
 
   public static benchmarkDigest(modelId: string, version: string): string {
     const model = this.models.get(`${modelId}@${version}`);
-    if (!model) throw new Error("Model not found in evaluation cache");
-    return createHash("sha256").update(JSON.stringify(model.benchmarks)).digest("hex");
+    if (!model) throw new Error('Model not found in evaluation cache');
+    return createHash('sha256').update(JSON.stringify(model.benchmarks)).digest('hex');
   }
 }

@@ -1,6 +1,6 @@
-import { equalSecret } from "./secrets";
+import { equalSecret } from './secrets';
 
-export type ApiTokenVerdict = "AUTHORIZED" | "NOT_CONFIGURED" | "INVALID";
+export type ApiTokenVerdict = 'AUTHORIZED' | 'NOT_CONFIGURED' | 'INVALID';
 
 /**
  * Validates a service bearer token without trusting identity or roles from the caller.
@@ -9,11 +9,11 @@ export type ApiTokenVerdict = "AUTHORIZED" | "NOT_CONFIGURED" | "INVALID";
 export function verifyBearerToken(
   authorizationHeader: string | undefined,
   expectedToken: string | undefined,
-  minimumLength = 32,
+  minimumLength = 32
 ): ApiTokenVerdict {
-  if (!expectedToken || expectedToken.length < minimumLength) return "NOT_CONFIGURED";
-  const prefix = "Bearer ";
-  if (!authorizationHeader?.startsWith(prefix)) return "INVALID";
+  if (!expectedToken || expectedToken.length < minimumLength) return 'NOT_CONFIGURED';
+  const prefix = 'Bearer ';
+  if (!authorizationHeader?.startsWith(prefix)) return 'INVALID';
   const candidate = authorizationHeader.slice(prefix.length);
-  return equalSecret(candidate, expectedToken) ? "AUTHORIZED" : "INVALID";
+  return equalSecret(candidate, expectedToken) ? 'AUTHORIZED' : 'INVALID';
 }

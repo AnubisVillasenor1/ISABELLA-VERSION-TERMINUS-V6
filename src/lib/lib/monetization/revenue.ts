@@ -1,4 +1,4 @@
-import { PLATFORM_FEE_BASIS_POINTS, type RevenueSplit } from "./types";
+import { PLATFORM_FEE_BASIS_POINTS, type RevenueSplit } from './types';
 
 /**
  * COST-FIRST SOVEREIGN MONETIZATION MODEL (antes "Zero-Loss")
@@ -23,8 +23,8 @@ export function splitZeroLossRevenue(input: ZeroLossRevenueInput): RevenueSplit 
   const { grossPaidCents, infrastructureCostCents, refundReserveRatio, communityShareRatio } =
     input;
 
-  if (grossPaidCents < 0) throw new Error("grossPaidCents cannot be negative");
-  if (infrastructureCostCents < 0) throw new Error("infrastructureCostCents cannot be negative");
+  if (grossPaidCents < 0) throw new Error('grossPaidCents cannot be negative');
+  if (infrastructureCostCents < 0) throw new Error('infrastructureCostCents cannot be negative');
 
   // 1. DEDUCT PLATFORM COSTS FIRST (Zero-Loss Guarantee)
   const netMarginCents = grossPaidCents - infrastructureCostCents;

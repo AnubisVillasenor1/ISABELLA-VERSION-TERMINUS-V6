@@ -45,7 +45,7 @@ spec:
           podSelector: {}
       ports:
         - protocol: TCP
-          port: 3000
+          port: 8080
 ---
 # 3) Allow egress DNS (resolución de cluster y de servicio).
 # REQUIERE_VERIFICACION: restringir a kube-system si el DNS del clúster lo permite.

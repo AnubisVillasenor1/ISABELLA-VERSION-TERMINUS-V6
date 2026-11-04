@@ -5,22 +5,22 @@
  */
 
 export type ProjectStatus =
-  | "IDEA"
-  | "BRIEF_NORMALIZED"
-  | "NARRATIVE_PLANNED"
-  | "SCRIPT_DRAFTED"
-  | "SCRIPT_APPROVED"
-  | "VISUAL_BIBLE_LOCKED"
-  | "STORYBOARD_READY"
-  | "ASSETS_GENERATED"
-  | "SHOTS_GENERATED"
-  | "SHOTS_QA"
-  | "AUDIO_READY"
-  | "EDIT_ASSEMBLED"
-  | "MULTIFORMAT_RENDERED"
-  | "MASTER_QA"
-  | "PROVENANCE_SIGNED"
-  | "PUBLISHED";
+  | 'IDEA'
+  | 'BRIEF_NORMALIZED'
+  | 'NARRATIVE_PLANNED'
+  | 'SCRIPT_DRAFTED'
+  | 'SCRIPT_APPROVED'
+  | 'VISUAL_BIBLE_LOCKED'
+  | 'STORYBOARD_READY'
+  | 'ASSETS_GENERATED'
+  | 'SHOTS_GENERATED'
+  | 'SHOTS_QA'
+  | 'AUDIO_READY'
+  | 'EDIT_ASSEMBLED'
+  | 'MULTIFORMAT_RENDERED'
+  | 'MASTER_QA'
+  | 'PROVENANCE_SIGNED'
+  | 'PUBLISHED';
 
 export interface CreativeBrief {
   title: string;
@@ -35,14 +35,14 @@ export interface CreativeBrief {
 }
 
 export type TargetFormat =
-  "16:9_master" | "9:16_vertical" | "1:1_square" | "4:5_social" | "21:9_cinematic";
+  '16:9_master' | '9:16_vertical' | '1:1_square' | '4:5_social' | '21:9_cinematic';
 
 export interface PolicyProfile {
   allowedModels: string[];
   maxGpuBudgetUsd: number;
   c2paSigningRequired: boolean;
-  humanApprovalThreshold: "manual" | "assisted" | "autonomous";
-  watermarkPolicy: "strict" | "allow_historical";
+  humanApprovalThreshold: 'manual' | 'assisted' | 'autonomous';
+  watermarkPolicy: 'strict' | 'allow_historical';
 }
 
 export interface BudgetPolicy {
@@ -63,7 +63,7 @@ export interface VideoProject {
   targetFormats: TargetFormat[];
   policyProfile: PolicyProfile;
   budget: BudgetPolicy;
-  approvalMode: "manual" | "assisted" | "autonomous";
+  approvalMode: 'manual' | 'assisted' | 'autonomous';
   status: ProjectStatus;
   createdAt: string;
   updatedAt: string;
@@ -72,35 +72,35 @@ export interface VideoProject {
 /* NARRATIVE GRAPH TYPES */
 
 export type NarrativeNodeType =
-  | "Project"
-  | "StoryWorld"
-  | "Character"
-  | "Location"
-  | "Scene"
-  | "Event"
-  | "Object"
-  | "Dialogue"
-  | "Emotion"
-  | "Shot"
-  | "Asset"
-  | "Constraint"
-  | "Evidence"
-  | "Decision";
+  | 'Project'
+  | 'StoryWorld'
+  | 'Character'
+  | 'Location'
+  | 'Scene'
+  | 'Event'
+  | 'Object'
+  | 'Dialogue'
+  | 'Emotion'
+  | 'Shot'
+  | 'Asset'
+  | 'Constraint'
+  | 'Evidence'
+  | 'Decision';
 
 export type NarrativeEdgeType =
-  | "appears_in"
-  | "wears"
-  | "has_emotion"
-  | "located_at"
-  | "contains"
-  | "causes"
-  | "uses"
-  | "visualizes"
-  | "references"
-  | "must_follow"
-  | "derived_from"
-  | "constrains"
-  | "supports";
+  | 'appears_in'
+  | 'wears'
+  | 'has_emotion'
+  | 'located_at'
+  | 'contains'
+  | 'causes'
+  | 'uses'
+  | 'visualizes'
+  | 'references'
+  | 'must_follow'
+  | 'derived_from'
+  | 'constrains'
+  | 'supports';
 
 export interface NarrativeNode {
   id: string;
@@ -147,26 +147,26 @@ export interface TimeRange {
 
 export interface CameraRecipe {
   shotSize:
-    | "extreme_wide"
-    | "wide"
-    | "medium_wide"
-    | "medium"
-    | "medium_close_up"
-    | "close_up"
-    | "extreme_close_up";
+    | 'extreme_wide'
+    | 'wide'
+    | 'medium_wide'
+    | 'medium'
+    | 'medium_close_up'
+    | 'close_up'
+    | 'extreme_close_up';
   lensMm: number;
   heightM: number;
   movement:
-    | "static"
-    | "slow_dolly_in"
-    | "pan_left"
-    | "tilt_up"
-    | "handheld_subtle"
-    | "crane_shot"
-    | "tracking";
-  angle: "eye_level" | "low_angle" | "high_angle" | "dutch_angle";
+    | 'static'
+    | 'slow_dolly_in'
+    | 'pan_left'
+    | 'tilt_up'
+    | 'handheld_subtle'
+    | 'crane_shot'
+    | 'tracking';
+  angle: 'eye_level' | 'low_angle' | 'high_angle' | 'dutch_angle';
   composition:
-    "rule_of_thirds_left" | "rule_of_thirds_right" | "centered" | "leading_lines" | "symmetry";
+    'rule_of_thirds_left' | 'rule_of_thirds_right' | 'centered' | 'leading_lines' | 'symmetry';
 }
 
 export interface PerformanceRecipe {
@@ -182,7 +182,7 @@ export interface VisualStyleRecipe {
 }
 
 export interface GenerationRecipe {
-  mode: "text_to_video" | "image_to_video" | "keyframe_interpolation" | "motion_brush";
+  mode: 'text_to_video' | 'image_to_video' | 'keyframe_interpolation' | 'motion_brush';
   referenceAssets: string[];
   seed: number;
   controlnet: string[];
@@ -197,8 +197,8 @@ export interface AudioRecipe {
 }
 
 export interface EditRecipe {
-  transitionIn: "hard_cut" | "cross_fade" | "dip_to_black" | "match_cut";
-  transitionOut: "hard_cut" | "cross_fade" | "dip_to_black" | "match_cut";
+  transitionIn: 'hard_cut' | 'cross_fade' | 'dip_to_black' | 'match_cut';
+  transitionOut: 'hard_cut' | 'cross_fade' | 'dip_to_black' | 'match_cut';
   beatAlignment: string | null;
 }
 
@@ -220,7 +220,7 @@ export interface ITSGShot {
 
 export interface AudioTrackItem {
   id: string;
-  type: "dialogue" | "music" | "ambience" | "foley";
+  type: 'dialogue' | 'music' | 'ambience' | 'foley';
   assetId: string;
   startSample: bigint;
   durationSamples: bigint;
@@ -229,7 +229,7 @@ export interface AudioTrackItem {
 
 export interface GraphicsOverlayItem {
   id: string;
-  type: "lower_third" | "title_card" | "map_annotation" | "subtitle" | "c2pa_badge";
+  type: 'lower_third' | 'title_card' | 'map_annotation' | 'subtitle' | 'c2pa_badge';
   content: string;
   startFrame: number;
   endFrame: number;
@@ -257,14 +257,14 @@ export interface ShotCardX {
   id: string;
   name: string;
   category:
-    | "discovery"
-    | "character_reveal"
-    | "location_reveal"
-    | "tension"
-    | "intimacy"
-    | "transition"
-    | "documentary"
-    | "action";
+    | 'discovery'
+    | 'character_reveal'
+    | 'location_reveal'
+    | 'tension'
+    | 'intimacy'
+    | 'transition'
+    | 'documentary'
+    | 'action';
   semanticTags: string[];
   emotionalUse: string[];
   narrativeFunctions: string[];
@@ -282,7 +282,7 @@ export interface ShotCardX {
 /* CHARACTER IDENTITY PACK */
 
 export interface ConsentProfile {
-  status: "required" | "granted" | "revoked";
+  status: 'required' | 'granted' | 'revoked';
   scope: string[];
   expiresAt: string | null;
 }
@@ -305,9 +305,9 @@ export interface CharacterIdentityPack {
 /* MODEL ROUTER & EXECUTION FABRIC */
 
 export interface InferenceRequest {
-  task: "t2v" | "i2v" | "upscale" | "matting" | "lipsync" | "tts";
-  quality: "preview" | "production" | "master";
-  privacy: "public" | "internal" | "restricted";
+  task: 't2v' | 'i2v' | 'upscale' | 'matting' | 'lipsync' | 'tts';
+  quality: 'preview' | 'production' | 'master';
+  privacy: 'public' | 'internal' | 'restricted';
   latencyBudgetMs: number;
   costBudgetUsd: number;
   requiredCapabilities: string[];
@@ -315,7 +315,7 @@ export interface InferenceRequest {
 
 export interface ModelRouteChoice {
   modelId: string;
-  provider: "comfyui_local" | "cloud_farm" | "partner_api";
+  provider: 'comfyui_local' | 'cloud_farm' | 'partner_api';
   estimatedLatencyMs: number;
   estimatedCostUsd: number;
   privacyMatch: boolean;
@@ -324,7 +324,7 @@ export interface ModelRouteChoice {
 
 /* MULTIMODAL QA & REMEDIATION */
 
-export type QADecision = "pass" | "review" | "regenerate" | "block";
+export type QADecision = 'pass' | 'review' | 'regenerate' | 'block';
 
 export interface FrameQAResult {
   frameIndex: number;
@@ -337,20 +337,20 @@ export interface FrameQAResult {
 
 export interface RemediationPlan {
   failure: string;
-  severity: "low" | "medium" | "high" | "critical";
+  severity: 'low' | 'medium' | 'high' | 'critical';
   range: [number, number];
   action:
-    | "accept"
-    | "trim"
-    | "recolor"
-    | "reframe"
-    | "retranscribe"
-    | "regenerate_audio"
-    | "regenerate_shot"
-    | "inpaint_region"
-    | "replace_asset"
-    | "human_review"
-    | "block_publish";
+    | 'accept'
+    | 'trim'
+    | 'recolor'
+    | 'reframe'
+    | 'retranscribe'
+    | 'regenerate_audio'
+    | 'regenerate_shot'
+    | 'inpaint_region'
+    | 'replace_asset'
+    | 'human_review'
+    | 'block_publish';
   preserveOriginal: boolean;
   requiresApproval: boolean;
   estimatedCost: {

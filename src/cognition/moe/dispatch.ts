@@ -10,11 +10,11 @@
  *   permisos ni herramientas; el router no concede autoridad.
  * Coherencia semántica con `orchestrator.ts` vía `expertPlanForDispatched`.
  */
-import { GENESIS_EXPERTS, planExperts, type ExpertPlan } from "../experts";
-import type { ExpertId, ExpertRegistry, Modality } from "./contract";
-import type { MoeGateDecision } from "./router";
+import { GENESIS_EXPERTS, planExperts, type ExpertPlan } from '../experts';
+import type { ExpertId, ExpertRegistry, Modality } from './contract';
+import type { MoeGateDecision } from './router';
 
-export type DispatchBlockReason = "GHOST_PREVENTED" | "NON_OPERATIONAL" | "MODALITY_UNSUPPORTED";
+export type DispatchBlockReason = 'GHOST_PREVENTED' | 'NON_OPERATIONAL' | 'MODALITY_UNSUPPORTED';
 
 export interface BlockedExpert {
   readonly expertId: ExpertId;
@@ -28,14 +28,14 @@ export interface DispatchResult {
   readonly fallbackReason: string | undefined;
 }
 
-export const DISPATCH_AUTHORITY_FIELDS = ["permissions", "tools", "grants"] as const;
+export const DISPATCH_AUTHORITY_FIELDS = ['permissions', 'tools', 'grants'] as const;
 
 export function dispatch(
   decision: MoeGateDecision,
   registry: ExpertRegistry,
-  requiredModality: Modality = "text",
+  requiredModality: Modality = 'text'
 ): DispatchResult {
-  if (decision.routing === "fallback") {
+  if (decision.routing === 'fallback') {
     return Object.freeze({
       executedExpertIds: Object.freeze([...decision.selectedExpertIds]),
       blocked: Object.freeze([]),
@@ -49,15 +49,15 @@ export function dispatch(
   for (const expertId of decision.selectedExpertIds) {
     const expert = registry.get(expertId);
     if (!expert) {
-      blocked.push({ expertId, reason: "GHOST_PREVENTED" });
+      blocked.push({ expertId, reason: 'GHOST_PREVENTED' });
       continue;
     }
     if (!expert.operational) {
-      blocked.push({ expertId, reason: "NON_OPERATIONAL" });
+      blocked.push({ expertId, reason: 'NON_OPERATIONAL' });
       continue;
     }
     if (!expert.artifact.modalities.includes(requiredModality)) {
-      blocked.push({ expertId, reason: "MODALITY_UNSUPPORTED" });
+      blocked.push({ expertId, reason: 'MODALITY_UNSUPPORTED' });
       continue;
     }
     executed.push(expertId);
@@ -68,7 +68,7 @@ export function dispatch(
     executedExpertIds: Object.freeze(executed),
     blocked: Object.freeze(blocked),
     usedFallback,
-    fallbackReason: usedFallback ? "SELECTED_EXPERTS_UNAVAILABLE_OR_UNSUPPORTED" : undefined,
+    fallbackReason: usedFallback ? 'SELECTED_EXPERTS_UNAVAILABLE_OR_UNSUPPORTED' : undefined,
   });
 }
 
@@ -80,7 +80,9 @@ export function expertPlanForDispatched(executed: readonly ExpertId[]): ExpertPl
   const genesis = new Set<string>(GENESIS_EXPERTS);
   for (const id of executed) {
     if (!genesis.has(id)) {
-      throw new Error(`MOE: experto ejecutado '${id}' fuera del catálogo cognitivo del orquestador`);
+      throw new Error(
+        `MOE: experto ejecutado '${id}' fuera del catálogo cognitivo del orquestador`
+      );
     }
   }
   return planExperts(executed.map((id) => id as (typeof GENESIS_EXPERTS)[number]));

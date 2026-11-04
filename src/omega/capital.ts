@@ -24,7 +24,7 @@ export interface CognitiveCapitalInput {
 }
 
 function unit(value: number, name: string): number {
-  if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || value > 100) {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 100) {
     throw new Error(`CAPITAL_${name}_OUT_OF_RANGE`);
   }
   return value;
@@ -37,13 +37,13 @@ function unit(value: number, name: string): number {
  * (0..100) que contextualizan el valor, no lo inflan de forma opaca.
  */
 export function valuateCapital(input: CognitiveCapitalInput): CognitiveCapital {
-  const utility = unit(input.utility, "UTILITY");
-  const trust = unit(input.trust, "TRUST");
-  const demand = unit(input.demand, "DEMAND");
-  const evidence = unit(input.evidence, "EVIDENCE");
-  const reputation = unit(input.reputation, "REPUTATION");
-  const rarity = unit(input.rarity ?? 50, "RARITY");
-  const reproducibility = unit(input.reproducibility ?? 50, "REPRODUCIBILITY");
+  const utility = unit(input.utility, 'UTILITY');
+  const trust = unit(input.trust, 'TRUST');
+  const demand = unit(input.demand, 'DEMAND');
+  const evidence = unit(input.evidence, 'EVIDENCE');
+  const reputation = unit(input.reputation, 'REPUTATION');
+  const rarity = unit(input.rarity ?? 50, 'RARITY');
+  const reproducibility = unit(input.reproducibility ?? 50, 'REPRODUCIBILITY');
 
   return {
     value: utility + trust + demand + evidence + reputation,

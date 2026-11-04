@@ -1,7 +1,7 @@
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes } from 'node:crypto';
 
 export interface SessionMessage {
-  readonly role: "user" | "assistant";
+  readonly role: 'user' | 'assistant';
   readonly content: string;
   readonly timestamp: string;
 }
@@ -33,10 +33,12 @@ export class SessionMemory {
     const maxMessages = options.maxMessagesPerSession ?? DEFAULT_MAX_MESSAGES_PER_SESSION;
     const maxSessions = options.maxSessions ?? DEFAULT_MAX_SESSIONS;
     if (!Number.isInteger(maxMessages) || maxMessages < 2 || maxMessages > 10_000) {
-      throw new Error("SESSION_MEMORY: maxMessagesPerSession must be an integer between 2 and 10000");
+      throw new Error(
+        'SESSION_MEMORY: maxMessagesPerSession must be an integer between 2 and 10000'
+      );
     }
     if (!Number.isInteger(maxSessions) || maxSessions < 1 || maxSessions > 100_000) {
-      throw new Error("SESSION_MEMORY: maxSessions must be an integer between 1 and 100000");
+      throw new Error('SESSION_MEMORY: maxSessions must be an integer between 1 and 100000');
     }
     this.maxMessagesPerSession = maxMessages;
     this.maxSessions = maxSessions;
@@ -44,11 +46,12 @@ export class SessionMemory {
 
   addToSession(sessionId: string, message: SessionMessage): void {
     const trimmedId = sessionId.trim();
-    if (!trimmedId) throw new Error("SESSION_MEMORY: sessionId required");
-    if (trimmedId.length > 256) throw new Error("SESSION_MEMORY: sessionId too long");
-    if (!message.content.trim()) throw new Error("SESSION_MEMORY: content required");
-    if (message.content.length > MAX_CONTENT_LENGTH) throw new Error("SESSION_MEMORY: content too large");
-    if (message.role !== "user" && message.role !== "assistant") {
+    if (!trimmedId) throw new Error('SESSION_MEMORY: sessionId required');
+    if (trimmedId.length > 256) throw new Error('SESSION_MEMORY: sessionId too long');
+    if (!message.content.trim()) throw new Error('SESSION_MEMORY: content required');
+    if (message.content.length > MAX_CONTENT_LENGTH)
+      throw new Error('SESSION_MEMORY: content too large');
+    if (message.role !== 'user' && message.role !== 'assistant') {
       throw new Error("SESSION_MEMORY: role must be 'user' or 'assistant'");
     }
     if (!this.sessions.has(trimmedId)) {
@@ -60,7 +63,7 @@ export class SessionMemory {
       }
     }
     const history = this.sessions.get(trimmedId);
-    if (history === undefined) throw new Error("SESSION_MEMORY: internal consistency error");
+    if (history === undefined) throw new Error('SESSION_MEMORY: internal consistency error');
     const stamped: SessionMessage = Object.freeze({
       role: message.role,
       content: message.content,
@@ -103,16 +106,19 @@ export class SessionMemory {
 }
 
 export function deriveSessionId(raw: string | undefined | null): string {
-  if (typeof raw === "string" && raw.trim().length > 0) {
-    return createHash("sha256").update(raw.trim()).digest("hex").slice(0, 32);
+  if (typeof raw === 'string' && raw.trim().length > 0) {
+    return createHash('sha256').update(raw.trim()).digest('hex').slice(0, 32);
   }
   // CSPRNG: un id de sesión anónimo no debe ser predecible (Math.random + Date.now son adivinables).
-  return randomBytes(16).toString("hex");
+  return randomBytes(16).toString('hex');
 }
 
 export function formatSessionContext(messages: readonly SessionMessage[], limit = 10): string {
   const recent = messages.slice(-limit);
-  if (recent.length === 0) return "";
-  const lines = recent.map((m) => `[${m.timestamp}] ${m.role === "user" ? "Usuario" : "Isabella"}: ${m.content.length > 300 ? `${m.content.slice(0, 300)}…` : m.content}`);
-  return `Contexto de sesión reciente:\n${lines.join("\n")}`;
+  if (recent.length === 0) return '';
+  const lines = recent.map(
+    (m) =>
+      `[${m.timestamp}] ${m.role === 'user' ? 'Usuario' : 'Isabella'}: ${m.content.length > 300 ? `${m.content.slice(0, 300)}…` : m.content}`
+  );
+  return `Contexto de sesión reciente:\n${lines.join('\n')}`;
 }

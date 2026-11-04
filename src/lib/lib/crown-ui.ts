@@ -12,14 +12,14 @@ import {
   routeRequest,
   type CrownWeights,
   type ModuleId,
-} from "./crown";
+} from './crown';
 
 export { MODULES };
 export type { ModuleId };
 
-export const MODULE_ORDER: ModuleId[] = ["CROWN", "ISA", "SOPHIA", "ORION", "ARGUS"];
+export const MODULE_ORDER: ModuleId[] = ['CROWN', 'ISA', 'SOPHIA', 'ORION', 'ARGUS'];
 
-export type PresetId = "prime" | "empathic" | "strategic" | "executor" | "sentinel";
+export type PresetId = 'prime' | 'empathic' | 'strategic' | 'executor' | 'sentinel';
 
 export interface Preset {
   id: PresetId;
@@ -32,51 +32,51 @@ export interface Preset {
 
 export const PRESETS: Preset[] = [
   {
-    id: "prime",
-    name: "Isabella Prime",
-    tagline: "Equilibrio canónico entre presencia, análisis y gobernanza.",
+    id: 'prime',
+    name: 'Isabella Prime',
+    tagline: 'Equilibrio canónico entre presencia, análisis y gobernanza.',
     temperature: 0.7,
-    bias: "CROWN",
-    directive: "Mantén el equilibrio entre calidez, rigor analítico y control de riesgo.",
+    bias: 'CROWN',
+    directive: 'Mantén el equilibrio entre calidez, rigor analítico y control de riesgo.',
   },
   {
-    id: "empathic",
-    name: "Presencia Empática",
-    tagline: "ISA al frente: acompañamiento sensible y claridad humana.",
+    id: 'empathic',
+    name: 'Presencia Empática',
+    tagline: 'ISA al frente: acompañamiento sensible y claridad humana.',
     temperature: 0.85,
-    bias: "ISA",
+    bias: 'ISA',
     directive:
-      "Prioriza la sensibilidad comunicativa y el acompañamiento, sin manipulación afectiva.",
+      'Prioriza la sensibilidad comunicativa y el acompañamiento, sin manipulación afectiva.',
   },
   {
-    id: "strategic",
-    name: "Dialéctica Estratégica",
-    tagline: "SOPHIA al frente: epistemología, contraste y profundidad.",
+    id: 'strategic',
+    name: 'Dialéctica Estratégica',
+    tagline: 'SOPHIA al frente: epistemología, contraste y profundidad.',
     temperature: 0.55,
-    bias: "SOPHIA",
+    bias: 'SOPHIA',
     directive:
-      "Prioriza el razonamiento estructurado, el contraste de hipótesis y la incertidumbre explícita.",
+      'Prioriza el razonamiento estructurado, el contraste de hipótesis y la incertidumbre explícita.',
   },
   {
-    id: "executor",
-    name: "Ejecución Operativa",
-    tagline: "ORION al frente: planes, artefactos y precisión técnica.",
+    id: 'executor',
+    name: 'Ejecución Operativa',
+    tagline: 'ORION al frente: planes, artefactos y precisión técnica.',
     temperature: 0.4,
-    bias: "ORION",
-    directive: "Prioriza planes accionables, precisión técnica y entregables verificables.",
+    bias: 'ORION',
+    directive: 'Prioriza planes accionables, precisión técnica y entregables verificables.',
   },
   {
-    id: "sentinel",
-    name: "Centinela ARGUS",
-    tagline: "ARGUS al frente: riesgo, privacidad y veto de seguridad.",
+    id: 'sentinel',
+    name: 'Centinela ARGUS',
+    tagline: 'ARGUS al frente: riesgo, privacidad y veto de seguridad.',
     temperature: 0.3,
-    bias: "ARGUS",
+    bias: 'ARGUS',
     directive:
-      "Prioriza la evaluación de riesgo, la privacidad y la escalación a supervisión humana.",
+      'Prioriza la evaluación de riesgo, la privacidad y la escalación a supervisión humana.',
   },
 ];
 
-export type UiPolicy = "allowed" | "requires_approval" | "denied";
+export type UiPolicy = 'allowed' | 'requires_approval' | 'denied';
 
 export interface RoutingDecision {
   traceId: string;
@@ -101,11 +101,11 @@ export interface RoutingDecision {
 }
 
 const TONE: Record<ModuleId, string> = {
-  CROWN: "Sobria",
-  ISA: "Cálida",
-  SOPHIA: "Reflexiva",
-  ORION: "Precisa",
-  ARGUS: "Vigilante",
+  CROWN: 'Sobria',
+  ISA: 'Cálida',
+  SOPHIA: 'Reflexiva',
+  ORION: 'Precisa',
+  ARGUS: 'Vigilante',
 };
 
 const RISK_SCORE: Record<string, number> = {
@@ -117,11 +117,11 @@ const RISK_SCORE: Record<string, number> = {
 };
 
 function toUiPolicy(status: string): UiPolicy {
-  if (status === "denied") return "denied";
-  if (status === "requires_human_approval" || status === "requires_more_information") {
-    return "requires_approval";
+  if (status === 'denied') return 'denied';
+  if (status === 'requires_human_approval' || status === 'requires_more_information') {
+    return 'requires_approval';
   }
-  return "allowed";
+  return 'allowed';
 }
 
 export function route(input: string, preset: Preset): RoutingDecision {
@@ -141,11 +141,11 @@ export function route(input: string, preset: Preset): RoutingDecision {
     supporting: decision.supporting,
     weights,
     policy: toUiPolicy(decision.policy.status),
-    policyReason: decision.policy.reasons[0] ?? "Sin observaciones de política para este ciclo.",
+    policyReason: decision.policy.reasons[0] ?? 'Sin observaciones de política para este ciclo.',
     rulesChecked: decision.policy.rulesChecked,
     risk,
     emotionalTone: TONE[decision.primary],
-    rationale: `Intención ${decision.intent.category} · acción ${decision.intent.action} · apoyo ${decision.supporting.join(", ") || "ninguno"}`,
+    rationale: `Intención ${decision.intent.category} · acción ${decision.intent.action} · apoyo ${decision.supporting.join(', ') || 'ninguno'}`,
     governanceScore: RISK_SCORE[risk] ?? 0.8,
     epistemicCertainty: decision.intent.confidence,
     latencyMs: Math.max(1, Date.now() - started),
@@ -159,7 +159,7 @@ export function route(input: string, preset: Preset): RoutingDecision {
 
 export function buildSystemPrompt(decision: RoutingDecision, preset: Preset): string {
   return [decision.systemPrompt, `Modo de presencia: ${preset.name}. ${preset.directive}`].join(
-    "\n\n",
+    '\n\n'
   );
 }
 

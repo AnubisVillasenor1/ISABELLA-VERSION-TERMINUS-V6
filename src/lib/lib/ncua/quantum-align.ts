@@ -6,8 +6,8 @@
  * SHA3-512 sobre la firma cuántica.
  */
 
-import * as crypto from "node:crypto";
-import type { ContinuousConceptVector } from "./concept-engine";
+import * as crypto from 'node:crypto';
+import type { ContinuousConceptVector } from './concept-engine';
 
 export interface QUPQuantumStateSignature {
   qubitAmplitudes: string[];
@@ -33,9 +33,9 @@ export class QUPQuantumBridgeIntegrator {
     ];
 
     const merkleSeal = crypto
-      .createHash("sha3-512")
+      .createHash('sha3-512')
       .update(`QUP_v3.0_${concept.conceptId}_${parameterShiftGradient}_${entanglementEntropy}`)
-      .digest("hex");
+      .digest('hex');
 
     return { qubitAmplitudes, entanglementEntropy, parameterShiftGradient, merkleSeal };
   }

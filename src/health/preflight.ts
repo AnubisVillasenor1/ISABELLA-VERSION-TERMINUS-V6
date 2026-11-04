@@ -3,7 +3,8 @@
  * Complementa `dependency-readiness` (presencia/IO) con calidad de secretos y coherencia entre variables.
  * Nunca incluye valores de secretos en el informe. No verifica alcance de red de dependencias externas.
  */
-export type PreflightSeverity = "ERROR" | "WARN";
+import { envFlag } from '../lib/env-flags';
+export type PreflightSeverity = 'ERROR' | 'WARN';
 
 export interface PreflightFinding {
   readonly id: string;
@@ -12,25 +13,31 @@ export interface PreflightFinding {
 }
 
 export interface PreflightReport {
-  readonly status: "PASS" | "WARN" | "FAIL";
+  readonly status: 'PASS' | 'WARN' | 'FAIL';
   readonly production: boolean;
   readonly findings: readonly PreflightFinding[];
 }
 
 type Env = Readonly<Record<string, string | undefined>>;
 
-const TOKEN_VARS = ["GENESIS_ADMIN_API_TOKEN", "OPS_API_TOKEN", "HYPERCORE_API_TOKEN", "HSF_API_TOKEN"] as const;
-const PROVIDER_KEYS = [
-  "OPENROUTER_API_KEY",
-  "GEMINI_API_KEY",
-  "GROQ_API_KEY",
-  "HF_TOKEN",
-  "HF_TOKEN_2",
-  "OLLAMA_API_KEY",
-  "LOCAL_VISION_API_KEY",
-  "AI_GATEWAY_API_KEY",
+const TOKEN_VARS = [
+  'GENESIS_ADMIN_API_TOKEN',
+  'OPS_API_TOKEN',
+  'HYPERCORE_API_TOKEN',
+  'HSF_API_TOKEN',
 ] as const;
-const PLACEHOLDER = /^(changeme|change-me|change_me|secret|password|token|test|example|placeholder|todo|xxx+|your[-_ ]?token.*|replace.*)$/i;
+const PROVIDER_KEYS = [
+  'OPENROUTER_API_KEY',
+  'GEMINI_API_KEY',
+  'GROQ_API_KEY',
+  'HF_TOKEN',
+  'HF_TOKEN_2',
+  'OLLAMA_API_KEY',
+  'LOCAL_VISION_API_KEY',
+  'AI_GATEWAY_API_KEY',
+] as const;
+const PLACEHOLDER =
+  /^(changeme|change-me|change_me|secret|password|token|test|example|placeholder|todo|xxx+|your[-_ ]?token.*|replace.*)$/i;
 
 /** Entropía de Shannon estimada en bits totales (cota optimista: asume símbolos iid). */
 export function estimateEntropyBits(value: string): number {
@@ -46,10 +53,10 @@ export function estimateEntropyBits(value: string): number {
 }
 
 export function weakSecretReason(value: string): string | null {
-  if (value.length < 32) return "shorter than 32 characters";
-  if (PLACEHOLDER.test(value.trim())) return "looks like a placeholder";
-  if (new Set(value).size < 8) return "too few distinct characters";
-  if (estimateEntropyBits(value) < 96) return "estimated entropy below 96 bits";
+  if (value.length < 32) return 'shorter than 32 characters';
+  if (PLACEHOLDER.test(value.trim())) return 'looks like a placeholder';
+  if (new Set(value).size < 8) return 'too few distinct characters';
+  if (estimateEntropyBits(value) < 96) return 'estimated entropy below 96 bits';
   return null;
 }
 
@@ -59,77 +66,144 @@ function trimmed(env: Env, name: string): string | undefined {
 }
 
 export function runPreflight(env: Env): PreflightReport {
-  const production = env.NODE_ENV === "production";
+  const production = env.NODE_ENV === 'production';
   const findings: PreflightFinding[] = [];
-  const add = (id: string, severity: PreflightSeverity, message: string): void => void findings.push({ id, severity, message });
+  const add = (id: string, severity: PreflightSeverity, message: string): void =>
+    void findings.push({ id, severity, message });
 
   const seen = new Map<string, string>();
   for (const name of TOKEN_VARS) {
     const v = trimmed(env, name);
     if (v === undefined) {
-      if (name === "GENESIS_ADMIN_API_TOKEN") add("PF-TOKEN-ADMIN-MISSING", production ? "ERROR" : "WARN", "GENESIS_ADMIN_API_TOKEN is not set: every admin route answers 503.");
+      if (name === 'GENESIS_ADMIN_API_TOKEN')
+        add(
+          'PF-TOKEN-ADMIN-MISSING',
+          production ? 'ERROR' : 'WARN',
+          'GENESIS_ADMIN_API_TOKEN is not set: every admin route answers 503.'
+        );
       continue;
     }
     const weak = weakSecretReason(v);
-    if (weak !== null) add(`PF-TOKEN-WEAK-${name}`, production ? "ERROR" : "WARN", `${name} is weak (${weak}).`);
+    if (weak !== null)
+      add(`PF-TOKEN-WEAK-${name}`, production ? 'ERROR' : 'WARN', `${name} is weak (${weak}).`);
     const prior = seen.get(v);
-    if (prior !== undefined) add(`PF-TOKEN-REUSED-${name}`, "ERROR", `${name} reuses the value of ${prior}; privileges are not separated.`);
+    if (prior !== undefined)
+      add(
+        `PF-TOKEN-REUSED-${name}`,
+        'ERROR',
+        `${name} reuses the value of ${prior}; privileges are not separated.`
+      );
     else seen.set(v, name);
   }
 
   const configuredProviders = PROVIDER_KEYS.filter((name) => trimmed(env, name) !== undefined);
   if (configuredProviders.length === 0) {
     add(
-      "PF-AI-PROVIDER-MISSING",
-      production ? "ERROR" : "WARN",
-      "No AI provider credential is configured; inference is unavailable until a provider is connected.",
+      'PF-AI-PROVIDER-MISSING',
+      production ? 'ERROR' : 'WARN',
+      'No AI provider credential is configured; inference is unavailable until a provider is connected.'
     );
   }
   for (const name of configuredProviders) {
     const value = trimmed(env, name);
-    if (value !== undefined && weakSecretReason(value) !== null && name !== "OLLAMA_API_KEY") {
-      add(`PF-PROVIDER-WEAK-${name}`, production ? "ERROR" : "WARN", `${name} is weak or appears to be a placeholder.`);
+    if (value !== undefined && weakSecretReason(value) !== null && name !== 'OLLAMA_API_KEY') {
+      add(
+        `PF-PROVIDER-WEAK-${name}`,
+        production ? 'ERROR' : 'WARN',
+        `${name} is weak or appears to be a placeholder.`
+      );
     }
   }
-  if (trimmed(env, "LOCAL_VISION_BASE_URL") !== undefined && trimmed(env, "LOCAL_VISION_API_KEY") === undefined) {
-    add("PF-LOCAL-VISION-KEY-MISSING", production ? "ERROR" : "WARN", "LOCAL_VISION_BASE_URL is configured without LOCAL_VISION_API_KEY.");
+  if (trimmed(env, 'LOCAL_VISION_BASE_URL') !== undefined && trimmed(env, 'LOCAL_VISION_API_KEY') === undefined) {
+    add(
+      'PF-LOCAL-VISION-KEY-MISSING',
+      production ? 'ERROR' : 'WARN',
+      'LOCAL_VISION_BASE_URL is configured without LOCAL_VISION_API_KEY.'
+    );
   }
 
-  const publicUrl = trimmed(env, "APP_PUBLIC_URL");
+  const publicUrl = trimmed(env, 'APP_PUBLIC_URL');
   if (publicUrl === undefined) {
-    if (production) add("PF-PUBLIC-URL-MISSING", "WARN", "APP_PUBLIC_URL is not set: redirect URLs fall back to the request Host header.");
+    if (production)
+      add(
+        'PF-PUBLIC-URL-MISSING',
+        'WARN',
+        'APP_PUBLIC_URL is not set: redirect URLs fall back to the request Host header.'
+      );
   } else {
     let parsed: URL | null = null;
-    try { parsed = new URL(publicUrl); } catch { parsed = null; }
-    if (parsed === null) add("PF-PUBLIC-URL-INVALID", "ERROR", "APP_PUBLIC_URL is not a valid absolute URL.");
-    else if (production && parsed.protocol !== "https:") add("PF-PUBLIC-URL-INSECURE", "ERROR", "APP_PUBLIC_URL must use https in production.");
+    try {
+      parsed = new URL(publicUrl);
+    } catch {
+      parsed = null;
+    }
+    if (parsed === null)
+      add('PF-PUBLIC-URL-INVALID', 'ERROR', 'APP_PUBLIC_URL is not a valid absolute URL.');
+    else if (production && parsed.protocol !== 'https:')
+      add('PF-PUBLIC-URL-INSECURE', 'ERROR', 'APP_PUBLIC_URL must use https in production.');
   }
 
-  const tp = trimmed(env, "TRUST_PROXY");
-  if (tp !== undefined && !/^(?:[1-9]|10)$/.test(tp)) add("PF-TRUST-PROXY-INVALID", "ERROR", "TRUST_PROXY must be an integer 1..10; any other value is ignored (X-Forwarded-For untrusted).");
+  const tp = trimmed(env, 'TRUST_PROXY');
+  // "false"/"0"/"off" are the documented way to disable proxy trust; only a
+  // non-numeric, non-boolean literal is a configuration error.
+  const trustProxyDisabled = tp !== undefined && /^(?:false|0|no|off)$/i.test(tp);
+  if (tp !== undefined && !trustProxyDisabled && !/^(?:[1-9]|10)$/.test(tp))
+    add(
+      'PF-TRUST-PROXY-INVALID',
+      'ERROR',
+      'TRUST_PROXY must be an integer 1..10 (or false to disable); any other value is ignored (X-Forwarded-For untrusted).'
+    );
 
   const port = env.PORT;
-  if (port !== undefined && port !== "" && !(Number.isInteger(Number(port)) && Number(port) >= 1 && Number(port) <= 65535)) add("PF-PORT-INVALID", "ERROR", "PORT must be an integer between 1 and 65535.");
+  if (
+    port !== undefined &&
+    port !== '' &&
+    !(Number.isInteger(Number(port)) && Number(port) >= 1 && Number(port) <= 65535)
+  )
+    add('PF-PORT-INVALID', 'ERROR', 'PORT must be an integer between 1 and 65535.');
 
-  if (production && trimmed(env, "BOOKPI_LEDGER_PATH") === undefined && !env.VERCEL) add("PF-BOOKPI-VOLATILE", "WARN", "BOOKPI_LEDGER_PATH is not set: the evidence ledger is volatile (lost on restart).");
+  if (production && trimmed(env, 'BOOKPI_LEDGER_PATH') === undefined && !envFlag(env, 'VERCEL'))
+    add(
+      'PF-BOOKPI-VOLATILE',
+      'WARN',
+      'BOOKPI_LEDGER_PATH is not set: the evidence ledger is volatile (lost on restart).'
+    );
 
-  const stripeKey = trimmed(env, "STRIPE_SECRET_KEY");
+  const stripeKey = trimmed(env, 'STRIPE_SECRET_KEY');
   if (stripeKey !== undefined) {
-    if (trimmed(env, "STRIPE_WEBHOOK_SECRET") === undefined) add("PF-STRIPE-WEBHOOK-MISSING", "ERROR", "STRIPE_SECRET_KEY is set without STRIPE_WEBHOOK_SECRET: subscription events cannot be verified.");
-    if (production && stripeKey.startsWith("sk_test_")) add("PF-STRIPE-TEST-KEY", "ERROR", "A Stripe test key is configured in production.");
+    if (trimmed(env, 'STRIPE_WEBHOOK_SECRET') === undefined)
+      add(
+        'PF-STRIPE-WEBHOOK-MISSING',
+        'ERROR',
+        'STRIPE_SECRET_KEY is set without STRIPE_WEBHOOK_SECRET: subscription events cannot be verified.'
+      );
+    if (production && stripeKey.startsWith('sk_test_'))
+      add('PF-STRIPE-TEST-KEY', 'ERROR', 'A Stripe test key is configured in production.');
   }
 
-  if (env.ISA_KILL_SWITCH === "1" || env.ISA_KILL_SWITCH === "true") add("PF-KILL-SWITCH-ENGAGED", "WARN", "ISA_KILL_SWITCH is engaged: every governed scope is HALTED.");
+  if (env.ISA_KILL_SWITCH === '1' || env.ISA_KILL_SWITCH === 'true')
+    add(
+      'PF-KILL-SWITCH-ENGAGED',
+      'WARN',
+      'ISA_KILL_SWITCH is engaged: every governed scope is HALTED.'
+    );
 
-  const status = findings.some((f) => f.severity === "ERROR") ? "FAIL" : findings.length > 0 ? "WARN" : "PASS";
+  const status = findings.some((f) => f.severity === 'ERROR')
+    ? 'FAIL'
+    : findings.length > 0
+      ? 'WARN'
+      : 'PASS';
   return { status, production, findings };
 }
 
 /** Lanza si hay errores bloqueantes. Úsalo detrás de un interruptor explícito (STRICT_PREFLIGHT=1). */
 export function assertPreflight(env: Env): PreflightReport {
   const report = runPreflight(env);
-  if (report.status === "FAIL") {
-    const ids = report.findings.filter((f) => f.severity === "ERROR").map((f) => f.id).join(", ");
+  if (report.status === 'FAIL') {
+    const ids = report.findings
+      .filter((f) => f.severity === 'ERROR')
+      .map((f) => f.id)
+      .join(', ');
     throw new Error(`PREFLIGHT_FAILED: ${ids}`);
   }
   return report;

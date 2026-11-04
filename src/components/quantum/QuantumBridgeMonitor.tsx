@@ -1,1 +1,1 @@
-export { QuantumBridgeMonitor, default } from "@/components/isabella/QuantumBridgeMonitor";
+export { QuantumBridgeMonitor, default } from '@/components/isabella/QuantumBridgeMonitor';

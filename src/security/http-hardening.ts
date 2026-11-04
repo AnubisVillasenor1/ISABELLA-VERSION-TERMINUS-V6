@@ -9,7 +9,7 @@
  * - buildCSPWithNonce: construye CSP con nonce para scripts/estilos inline permitidos.
  */
 
-import { randomBytes } from "node:crypto";
+import { randomBytes } from 'node:crypto';
 
 export interface HeaderSet {
   readonly [name: string]: string;
@@ -21,7 +21,7 @@ export interface CSPNonce {
 }
 
 export function generateCSPNonce(): CSPNonce {
-  const nonce = randomBytes(16).toString("base64");
+  const nonce = randomBytes(16).toString('base64');
   return {
     nonce,
     headerValue: `'nonce-${nonce}'`,
@@ -30,7 +30,7 @@ export function generateCSPNonce(): CSPNonce {
 
 export function buildCSPWithNonce(nonce: string, isApiPath: boolean): string {
   const nonceValue = `'nonce-${nonce}'`;
-  
+
   if (isApiPath) {
     return [
       "default-src 'none'",
@@ -43,9 +43,9 @@ export function buildCSPWithNonce(nonce: string, isApiPath: boolean): string {
       "base-uri 'none'",
       "form-action 'none'",
       "object-src 'none'",
-    ].join("; ");
+    ].join('; ');
   }
-  
+
   return [
     "default-src 'self'",
     `script-src ${nonceValue} 'strict-dynamic'`,
@@ -57,40 +57,44 @@ export function buildCSPWithNonce(nonce: string, isApiPath: boolean): string {
     "base-uri 'none'",
     "form-action 'self'",
     "object-src 'none'",
-  ].join("; ");
+  ].join('; ');
 }
 
 export function isApiPath(path: string): boolean {
-  return path === "/api" || path.startsWith("/api/");
+  return path === '/api' || path.startsWith('/api/');
 }
 
-export function securityHeadersFor(path: string, env: { NODE_ENV?: string }, cspNonce?: string): HeaderSet {
+export function securityHeadersFor(
+  path: string,
+  env: { NODE_ENV?: string },
+  cspNonce?: string
+): HeaderSet {
   const headers: Record<string, string> = {
-    "X-Content-Type-Options": "nosniff",
-    "X-Frame-Options": "DENY",
-    "Referrer-Policy": "strict-origin-when-cross-origin",
-    "Permissions-Policy": "camera=(), microphone=(self), geolocation=()",
-    "Cross-Origin-Opener-Policy": "same-origin",
-    "Cross-Origin-Resource-Policy": "same-origin",
-    "Cross-Origin-Embedder-Policy": "require-corp",
-    "X-Permitted-Cross-Domain-Policies": "none",
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+    'Permissions-Policy': 'camera=(), microphone=(self), geolocation=()',
+    'Cross-Origin-Opener-Policy': 'same-origin',
+    'Cross-Origin-Resource-Policy': 'same-origin',
+    'Cross-Origin-Embedder-Policy': 'require-corp',
+    'X-Permitted-Cross-Domain-Policies': 'none',
   };
-  
-  if (env.NODE_ENV === "production") {
-    headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload";
+
+  if (env.NODE_ENV === 'production') {
+    headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains; preload';
   }
-  
+
   if (isApiPath(path)) {
-    headers["Content-Security-Policy"] = cspNonce 
+    headers['Content-Security-Policy'] = cspNonce
       ? buildCSPWithNonce(cspNonce, true)
       : "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
-    headers["Cache-Control"] = "no-store, no-cache, must-revalidate, proxy-revalidate";
-    headers["Pragma"] = "no-cache";
-    headers["Expires"] = "0";
+    headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, proxy-revalidate';
+    headers['Pragma'] = 'no-cache';
+    headers['Expires'] = '0';
   } else if (cspNonce) {
-    headers["Content-Security-Policy"] = buildCSPWithNonce(cspNonce, false);
+    headers['Content-Security-Policy'] = buildCSPWithNonce(cspNonce, false);
   }
-  
+
   return headers;
 }
 
@@ -101,13 +105,22 @@ export interface SafeHttpError {
 
 export function classifyHttpError(error: unknown): SafeHttpError {
   const e = error as { type?: unknown; status?: unknown; statusCode?: unknown } | null;
-  const type = e !== null && typeof e === "object" ? e.type : undefined;
-  if (type === "entity.parse.failed") return { status: 400, body: { success: false, error: "INVALID_JSON" } };
-  if (type === "entity.too.large") return { status: 413, body: { success: false, error: "PAYLOAD_TOO_LARGE" } };
-  if (type === "encoding.unsupported" || type === "charset.unsupported") return { status: 415, body: { success: false, error: "UNSUPPORTED_ENCODING" } };
-  const raw = e !== null && typeof e === "object" ? (typeof e.status === "number" ? e.status : e.statusCode) : undefined;
-  if (typeof raw === "number" && Number.isInteger(raw) && raw >= 400 && raw < 500) return { status: raw, body: { success: false, error: "BAD_REQUEST" } };
-  return { status: 500, body: { success: false, error: "INTERNAL_ERROR" } };
+  const type = e !== null && typeof e === 'object' ? e.type : undefined;
+  if (type === 'entity.parse.failed')
+    return { status: 400, body: { success: false, error: 'INVALID_JSON' } };
+  if (type === 'entity.too.large')
+    return { status: 413, body: { success: false, error: 'PAYLOAD_TOO_LARGE' } };
+  if (type === 'encoding.unsupported' || type === 'charset.unsupported')
+    return { status: 415, body: { success: false, error: 'UNSUPPORTED_ENCODING' } };
+  const raw =
+    e !== null && typeof e === 'object'
+      ? typeof e.status === 'number'
+        ? e.status
+        : e.statusCode
+      : undefined;
+  if (typeof raw === 'number' && Number.isInteger(raw) && raw >= 400 && raw < 500)
+    return { status: raw, body: { success: false, error: 'BAD_REQUEST' } };
+  return { status: 500, body: { success: false, error: 'INTERNAL_ERROR' } };
 }
 
 /** Acepta solo un entero 0..10 (saltos de proxy de confianza). Cualquier otra cosa → false (no confiar en XFF). */
@@ -132,10 +145,11 @@ export class AuthFailureThrottle {
     private readonly maxFailures = 10,
     private readonly windowMs = 5 * 60_000,
     private readonly blockMs = 5 * 60_000,
-    private readonly maxKeys = 10_000,
+    private readonly maxKeys = 10_000
   ) {
-    if (!Number.isInteger(maxFailures) || maxFailures < 1) throw new RangeError("THROTTLE_MAX_FAILURES_INVALID");
-    if (windowMs < 1 || blockMs < 1) throw new RangeError("THROTTLE_WINDOW_INVALID");
+    if (!Number.isInteger(maxFailures) || maxFailures < 1)
+      throw new RangeError('THROTTLE_MAX_FAILURES_INVALID');
+    if (windowMs < 1 || blockMs < 1) throw new RangeError('THROTTLE_WINDOW_INVALID');
   }
 
   get size(): number {
@@ -206,22 +220,27 @@ export class AuthZMatrixValidator {
     this.rules.push(rule);
   }
 
-  async testMatrix(testFn: (rule: AuthZRule) => Promise<{ authorized: boolean; roles: readonly string[] }>): Promise<AuthZTestResult[]> {
+  async testMatrix(
+    testFn: (rule: AuthZRule) => Promise<{ authorized: boolean; roles: readonly string[] }>
+  ): Promise<AuthZTestResult[]> {
     const results: AuthZTestResult[] = [];
-    
+
     for (const rule of this.rules) {
       try {
         const { authorized, roles } = await testFn(rule);
-        const passed = rule.requiredRoles.every(r => roles.includes(r)) && 
-                       (!rule.allowAnonymous || authorized);
-        
+        const passed =
+          rule.requiredRoles.every((r) => roles.includes(r)) &&
+          (!rule.allowAnonymous || authorized);
+
         results.push({
           path: rule.path,
           method: rule.method,
           passed,
           expectedRoles: rule.requiredRoles,
           actualRoles: roles,
-          error: passed ? undefined : `Expected roles: ${rule.requiredRoles.join(", ")}, got: ${roles.join(", ")}`,
+          error: passed
+            ? undefined
+            : `Expected roles: ${rule.requiredRoles.join(', ')}, got: ${roles.join(', ')}`,
         });
       } catch (error) {
         results.push({
@@ -230,11 +249,11 @@ export class AuthZMatrixValidator {
           passed: false,
           expectedRoles: rule.requiredRoles,
           actualRoles: [],
-          error: error instanceof Error ? error.message : "TEST_ERROR",
+          error: error instanceof Error ? error.message : 'TEST_ERROR',
         });
       }
     }
-    
+
     return results;
   }
 }
@@ -243,49 +262,49 @@ export const defaultAuthZMatrix = new AuthZMatrixValidator();
 
 // Pre-populate with critical routes
 defaultAuthZMatrix.addRule({
-  path: "/api/v1/revenue/settle",
-  method: "POST",
-  requiredRoles: ["admin"],
-  requiredScopes: ["revenue:write"],
+  path: '/api/v1/revenue/settle',
+  method: 'POST',
+  requiredRoles: ['admin'],
+  requiredScopes: ['revenue:write'],
   allowAnonymous: false,
 });
 
 defaultAuthZMatrix.addRule({
-  path: "/api/v1/revenue/wallet/:userId/credit",
-  method: "POST",
-  requiredRoles: ["admin"],
-  requiredScopes: ["revenue:write"],
+  path: '/api/v1/revenue/wallet/:userId/credit',
+  method: 'POST',
+  requiredRoles: ['admin'],
+  requiredScopes: ['revenue:write'],
   allowAnonymous: false,
 });
 
 defaultAuthZMatrix.addRule({
-  path: "/api/v1/revenue/wallet/:userId",
-  method: "GET",
-  requiredRoles: ["user"],
-  requiredScopes: ["revenue:read"],
+  path: '/api/v1/revenue/wallet/:userId',
+  method: 'GET',
+  requiredRoles: ['user'],
+  requiredScopes: ['revenue:read'],
   allowAnonymous: false,
 });
 
 defaultAuthZMatrix.addRule({
-  path: "/api/v1/revenue/usage/:userId",
-  method: "GET",
-  requiredRoles: ["user"],
-  requiredScopes: ["revenue:read"],
+  path: '/api/v1/revenue/usage/:userId',
+  method: 'GET',
+  requiredRoles: ['user'],
+  requiredScopes: ['revenue:read'],
   allowAnonymous: false,
 });
 
 defaultAuthZMatrix.addRule({
-  path: "/api/v1/billing/checkout",
-  method: "POST",
+  path: '/api/v1/billing/checkout',
+  method: 'POST',
   requiredRoles: [],
   requiredScopes: [],
   allowAnonymous: true,
 });
 
 defaultAuthZMatrix.addRule({
-  path: "/api/v1/cognitive/request",
-  method: "POST",
-  requiredRoles: ["user"],
-  requiredScopes: ["cognitive:execute"],
+  path: '/api/v1/cognitive/request',
+  method: 'POST',
+  requiredRoles: ['user'],
+  requiredScopes: ['cognitive:execute'],
   allowAnonymous: false,
 });

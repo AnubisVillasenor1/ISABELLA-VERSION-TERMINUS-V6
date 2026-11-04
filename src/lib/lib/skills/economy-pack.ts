@@ -1,4 +1,4 @@
-import { createAuditEvent, IsabellaSkill, SkillResult } from "./contracts";
+import { createAuditEvent, IsabellaSkill, SkillResult } from './contracts';
 
 // ============================================================================
 // 11. HELIOS (Systemic Analytics Engine)
@@ -13,27 +13,27 @@ export interface HeliosInput {
 export interface HeliosOutput {
   trends: Array<{
     metric: string;
-    direction: "UP" | "DOWN" | "STABLE";
+    direction: 'UP' | 'DOWN' | 'STABLE';
     change: number;
   }>;
   systemSignals: string[];
 }
 
 export const HELIOS: IsabellaSkill<HeliosInput, HeliosOutput> = {
-  id: "HELIOS",
-  name: "Systemic Analytics Engine",
-  version: "v.GENESIS",
-  federation: "ECONOMY",
-  risk: "MEDIUM",
-  description: "Identifica tendencias, señales sistémicas y puntos de atención en series métricas.",
+  id: 'HELIOS',
+  name: 'Systemic Analytics Engine',
+  version: 'v.GENESIS',
+  federation: 'ECONOMY',
+  risk: 'MEDIUM',
+  description: 'Identifica tendencias, señales sistémicas y puntos de atención en series métricas.',
   canRun: (input) => Boolean(input.series?.length),
   async run(input, context): Promise<SkillResult<HeliosOutput>> {
     const trends = input.series.map((series) => {
       const first = series.values[0] ?? 0;
       const last = series.values.at(-1) ?? 0;
       const change = last - first;
-      const direction: HeliosOutput["trends"][number]["direction"] =
-        change > 0.01 ? "UP" : change < -0.01 ? "DOWN" : "STABLE";
+      const direction: HeliosOutput['trends'][number]['direction'] =
+        change > 0.01 ? 'UP' : change < -0.01 ? 'DOWN' : 'STABLE';
       return {
         metric: series.metric,
         direction,
@@ -42,31 +42,31 @@ export const HELIOS: IsabellaSkill<HeliosInput, HeliosOutput> = {
     });
 
     const systemSignals = trends
-      .filter((trend) => trend.direction !== "STABLE")
+      .filter((trend) => trend.direction !== 'STABLE')
       .map(
         (trend) =>
-          `${trend.metric}: tendencia ${trend.direction.toLowerCase()} (${trend.change.toFixed(2)}).`,
+          `${trend.metric}: tendencia ${trend.direction.toLowerCase()} (${trend.change.toFixed(2)}).`
       );
 
     return {
-      skillId: "HELIOS",
-      status: "SUCCESS",
+      skillId: 'HELIOS',
+      status: 'SUCCESS',
       summary: `HELIOS analizó ${trends.length} series métricas.`,
       data: { trends, systemSignals },
       evidence: [],
       warnings: [],
       auditEvents: [
         createAuditEvent(
-          "SKILL_INVOKED",
-          "HELIOS",
+          'SKILL_INVOKED',
+          'HELIOS',
           { seriesCount: input.series.length },
-          context.actorId,
+          context.actorId
         ),
         createAuditEvent(
-          "SKILL_COMPLETED",
-          "HELIOS",
+          'SKILL_COMPLETED',
+          'HELIOS',
           { trendCount: trends.length },
-          context.actorId,
+          context.actorId
         ),
       ],
     };
@@ -98,13 +98,13 @@ export interface KairosOutput {
 }
 
 export const KAIROS: IsabellaSkill<KairosInput, KairosOutput> = {
-  id: "KAIROS",
-  name: "Strategic Prioritization Engine",
-  version: "v.GENESIS",
-  federation: "ECONOMY",
-  risk: "MEDIUM",
+  id: 'KAIROS',
+  name: 'Strategic Prioritization Engine',
+  version: 'v.GENESIS',
+  federation: 'ECONOMY',
+  risk: 'MEDIUM',
   description:
-    "Prioriza iniciativas con métricas explícitas de impacto, urgencia, riesgo y viabilidad.",
+    'Prioriza iniciativas con métricas explícitas de impacto, urgencia, riesgo y viabilidad.',
   canRun: (input) => Boolean(input.initiatives?.length),
   async run(input, context): Promise<SkillResult<KairosOutput>> {
     const ranked = input.initiatives
@@ -125,24 +125,24 @@ export const KAIROS: IsabellaSkill<KairosInput, KairosOutput> = {
       }));
 
     return {
-      skillId: "KAIROS",
-      status: "SUCCESS",
+      skillId: 'KAIROS',
+      status: 'SUCCESS',
       summary: `KAIROS priorizó ${ranked.length} iniciativas.`,
       data: { ranked },
       evidence: [],
       warnings: [],
       auditEvents: [
         createAuditEvent(
-          "SKILL_INVOKED",
-          "KAIROS",
+          'SKILL_INVOKED',
+          'KAIROS',
           { initiativeCount: input.initiatives.length },
-          context.actorId,
+          context.actorId
         ),
         createAuditEvent(
-          "SKILL_COMPLETED",
-          "KAIROS",
+          'SKILL_COMPLETED',
+          'KAIROS',
           { topInitiative: ranked[0]?.id },
-          context.actorId,
+          context.actorId
         ),
       ],
     };

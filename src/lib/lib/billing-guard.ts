@@ -18,28 +18,28 @@
  * red y por tanto verificables por pruebas unitarias.
  */
 
-import { createHash, createHmac, timingSafeEqual } from "node:crypto";
-import type { Role } from "./rbac";
+import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
+import type { Role } from './rbac';
 import {
   hasBillingAuthorization,
   requiredBillingScope,
   type BillingOperation,
-} from "./billing-authorization";
-import { secrets } from "./secrets";
+} from './billing-authorization';
+import { secrets } from './secrets';
 
-const PRIVILEGED_ROLES: ReadonlySet<Role> = new Set<Role>(["SovereignOwner", "governance_admin"]);
+const PRIVILEGED_ROLES: ReadonlySet<Role> = new Set<Role>(['SovereignOwner', 'governance_admin']);
 
 const ALL_BILLING_SCOPES: readonly string[] = [
-  "billing:checkout",
-  "billing:topup",
-  "billing:refund",
-  "billing:authorize-run",
-  "marketplace:publish",
-  "marketplace:purchase",
+  'billing:checkout',
+  'billing:topup',
+  'billing:refund',
+  'billing:authorize-run',
+  'marketplace:publish',
+  'marketplace:purchase',
 ];
 
-export const BILLING_STEP_UP_HEADER = "x-billing-step-up";
-const STEP_UP_PREFIX = "bst1";
+export const BILLING_STEP_UP_HEADER = 'x-billing-step-up';
+const STEP_UP_PREFIX = 'bst1';
 const STEP_UP_DEFAULT_TTL_MS = 300_000;
 const STEP_UP_MAX_TTL_MS = 900_000;
 const STEP_UP_FUTURE_SKEW_MS = 30_000;
@@ -47,7 +47,7 @@ const STEP_UP_FUTURE_SKEW_MS = 30_000;
 type AuthorizationResult = { ok: true } | { ok: false; reason: string };
 
 function stepUpMac(payload: string): string {
-  return createHmac("sha256", secrets.jwtSecret()).update(payload, "utf8").digest("base64url");
+  return createHmac('sha256', secrets.jwtSecret()).update(payload, 'utf8').digest('base64url');
 }
 
 function stepUpPayload(input: {
@@ -97,18 +97,18 @@ export function issueBillingStepUp(input: {
 export function verifyBillingStepUp(
   token: string | null | undefined,
   expected: { tenantId: string; userId: string; operation: BillingOperation },
-  now: number = Date.now(),
+  now: number = Date.now()
 ): boolean {
   if (!token) return false;
-  const parts = token.split(".");
+  const parts = token.split('.');
   if (parts.length !== 3 || parts[0] !== STEP_UP_PREFIX) return false;
   const expiresAt = Number.parseInt(parts[1], 10);
   if (!Number.isFinite(expiresAt)) return false;
   if (expiresAt <= now || expiresAt > now + STEP_UP_MAX_TTL_MS + STEP_UP_FUTURE_SKEW_MS)
     return false;
   const payload = stepUpPayload({ ...expected, expiresAt });
-  const presented = Buffer.from(parts[2], "base64url");
-  const computed = Buffer.from(stepUpMac(payload), "base64url");
+  const presented = Buffer.from(parts[2], 'base64url');
+  const computed = Buffer.from(stepUpMac(payload), 'base64url');
   return presented.length === computed.length && timingSafeEqual(presented, computed);
 }
 
@@ -126,12 +126,12 @@ export function authorizeBillingOperation(input: {
   now?: number;
 }): AuthorizationResult {
   const scopes = deriveBillingScopes(input.role, input.scope);
-  const needsStepUp = input.operation === "refund" || input.operation === "topup";
+  const needsStepUp = input.operation === 'refund' || input.operation === 'topup';
   const stepUpVerified = needsStepUp
     ? verifyBillingStepUp(
         input.stepUpToken,
         { tenantId: input.tenantId, userId: input.userId, operation: input.operation },
-        input.now,
+        input.now
       )
     : undefined;
 
@@ -144,13 +144,13 @@ export function authorizeBillingOperation(input: {
 
   if (allowed) return { ok: true };
   if (!scopes.includes(requiredBillingScope(input.operation))) {
-    return { ok: false, reason: "BILLING_SCOPE_REQUIRED" };
+    return { ok: false, reason: 'BILLING_SCOPE_REQUIRED' };
   }
-  if (needsStepUp && !stepUpVerified) return { ok: false, reason: "STEP_UP_REQUIRED" };
-  return { ok: false, reason: "BILLING_FORBIDDEN" };
+  if (needsStepUp && !stepUpVerified) return { ok: false, reason: 'STEP_UP_REQUIRED' };
+  return { ok: false, reason: 'BILLING_FORBIDDEN' };
 }
 
 /** Hash estable del request para la idempotencia durable de checkout. */
 export function billingRequestHash(value: unknown): string {
-  return createHash("sha256").update(JSON.stringify(value)).digest("hex");
+  return createHash('sha256').update(JSON.stringify(value)).digest('hex');
 }

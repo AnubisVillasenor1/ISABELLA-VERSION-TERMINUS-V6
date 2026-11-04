@@ -6,7 +6,7 @@
  * determinista entre máquinas.
  */
 
-import { encodeUtf8, fnv1a, fnv1aString } from "./bytes";
+import { encodeUtf8, fnv1a, fnv1aString } from './bytes';
 
 export interface EmbedOptions {
   dim?: number;
@@ -156,7 +156,7 @@ export interface LatentEncodeResult {
 
 export function compressBytesToLatent(
   bytes: Uint8Array,
-  options: { chunkSize?: number; dim?: number } = {},
+  options: { chunkSize?: number; dim?: number } = {}
 ): LatentEncodeResult {
   const chunkSize = options.chunkSize ?? 32;
   const dim = options.dim ?? DEFAULT_DIM;
@@ -183,7 +183,7 @@ export function compressBytesToLatent(
 
 export function compressToLatent(
   text: string,
-  options: { chunkSize?: number; dim?: number } = {},
+  options: { chunkSize?: number; dim?: number } = {}
 ): LatentEncodeResult {
   return compressBytesToLatent(encodeUtf8(text), options);
 }

@@ -1,18 +1,18 @@
-import { createHash } from "node:crypto";
-import { Pool } from "pg";
-import { config } from "@/lib/config";
+import { createHash } from 'node:crypto';
+import { Pool } from 'pg';
+import { config } from '@/lib/config';
 import {
   createIsabellaLearningEngine,
   type IsabellaLearningEngine,
   type LearningSnapshot,
-} from "@/lib/isabella-learning";
+} from '@/lib/isabella-learning';
 
 let pool: Pool | null = null;
 let tableReady: Promise<void> | null = null;
 
 function getPool(): Pool {
   const databaseUrl = config().DATABASE_URL;
-  if (!databaseUrl) throw new Error("LEARNING_DATABASE_UNAVAILABLE");
+  if (!databaseUrl) throw new Error('LEARNING_DATABASE_UNAVAILABLE');
   if (!pool) pool = new Pool({ connectionString: databaseUrl, max: 4 });
   return pool;
 }
@@ -29,7 +29,7 @@ async function ensureTable(): Promise<void> {
       snapshot_hash VARCHAR(128) NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
     )
-  `,
+  `
     )
     .then(() => undefined)
     .catch((error) => {
@@ -45,7 +45,7 @@ export interface PersistedLearningRuntime {
 }
 
 export async function loadLearningRuntime(tenantId: string): Promise<PersistedLearningRuntime> {
-  if (!tenantId) throw new Error("TENANT_REQUIRED");
+  if (!tenantId) throw new Error('TENANT_REQUIRED');
   const databaseUrl = config().DATABASE_URL;
   if (!databaseUrl) return { engine: createIsabellaLearningEngine(), durable: false };
 
@@ -56,16 +56,16 @@ export async function loadLearningRuntime(tenantId: string): Promise<PersistedLe
     snapshot_hash: string;
   }>(
     `SELECT version, snapshot, snapshot_hash FROM public.isabella_learning_state WHERE tenant_id = $1`,
-    [tenantId],
+    [tenantId]
   );
   const engine = createIsabellaLearningEngine();
   const row = result.rows[0];
   if (row?.snapshot) {
     if (row.version !== 1 || row.snapshot.version !== 1)
-      throw new Error("LEARNING_SNAPSHOT_VERSION_UNSUPPORTED");
+      throw new Error('LEARNING_SNAPSHOT_VERSION_UNSUPPORTED');
     const canonical = stableStringify(row.snapshot);
-    const expected = createHash("sha3-512").update(canonical).digest("hex");
-    if (expected !== row.snapshot_hash) throw new Error("LEARNING_SNAPSHOT_INTEGRITY_FAILURE");
+    const expected = createHash('sha3-512').update(canonical).digest('hex');
+    if (expected !== row.snapshot_hash) throw new Error('LEARNING_SNAPSHOT_INTEGRITY_FAILURE');
     engine.restore(row.snapshot);
   }
   return { engine, durable: true };
@@ -73,14 +73,14 @@ export async function loadLearningRuntime(tenantId: string): Promise<PersistedLe
 
 export async function persistLearningRuntime(
   tenantId: string,
-  engine: IsabellaLearningEngine,
+  engine: IsabellaLearningEngine
 ): Promise<void> {
-  if (!tenantId) throw new Error("TENANT_REQUIRED");
+  if (!tenantId) throw new Error('TENANT_REQUIRED');
   if (!config().DATABASE_URL) return;
   await ensureTable();
   const snapshot = engine.snapshot();
   const canonical = stableStringify(snapshot);
-  const snapshotHash = createHash("sha3-512").update(canonical).digest("hex");
+  const snapshotHash = createHash('sha3-512').update(canonical).digest('hex');
   await getPool().query(
     `
       INSERT INTO public.isabella_learning_state (tenant_id, version, snapshot, snapshot_hash, updated_at)
@@ -92,7 +92,7 @@ export async function persistLearningRuntime(
         snapshot_hash = EXCLUDED.snapshot_hash,
         updated_at = now()
     `,
-    [tenantId, snapshot.version, canonical, snapshotHash],
+    [tenantId, snapshot.version, canonical, snapshotHash]
   );
 }
 
@@ -106,7 +106,7 @@ export async function verifyLearningPersistence(): Promise<{
     return { ok: false, durable: false, latencyMs: performance.now() - start };
   try {
     await ensureTable();
-    await getPool().query("SELECT 1 FROM public.isabella_learning_state LIMIT 1");
+    await getPool().query('SELECT 1 FROM public.isabella_learning_state LIMIT 1');
     return { ok: true, durable: true, latencyMs: performance.now() - start };
   } catch {
     return { ok: false, durable: true, latencyMs: performance.now() - start };
@@ -114,11 +114,11 @@ export async function verifyLearningPersistence(): Promise<{
 }
 
 function stableStringify(value: unknown): string {
-  if (value === null || typeof value !== "object") return JSON.stringify(value);
-  if (Array.isArray(value)) return `[${value.map(stableStringify).join(",")}]`;
+  if (value === null || typeof value !== 'object') return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
   const object = value as Record<string, unknown>;
   return `{${Object.keys(object)
     .sort()
     .map((key) => `${JSON.stringify(key)}:${stableStringify(object[key])}`)
-    .join(",")}}`;
+    .join(',')}}`;
 }

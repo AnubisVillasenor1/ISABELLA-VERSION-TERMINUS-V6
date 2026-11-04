@@ -1,6 +1,6 @@
-import { lazy, Suspense, useMemo, useState } from "react";
-import { getSessionToken } from "@/lib/auth-client";
-import { Shield, ShieldAlert, ShieldCheck, RefreshCw, Activity, Database } from "lucide-react";
+import { lazy, Suspense, useMemo, useState } from 'react';
+import { getSessionToken } from '@/lib/auth-client';
+import { Shield, ShieldAlert, ShieldCheck, RefreshCw, Activity, Database } from 'lucide-react';
 import {
   ResponsiveContainer,
   XAxis,
@@ -10,21 +10,21 @@ import {
   Legend,
   LineChart,
   Line,
-} from "recharts";
+} from 'recharts';
 
 const ObservabilityPanel = lazy(() =>
-  import("./ObservabilityPanel").then((module) => ({ default: module.ObservabilityPanel })),
+  import('./ObservabilityPanel').then((module) => ({ default: module.ObservabilityPanel }))
 );
 const SovereignCompliancePanel = lazy(() =>
-  import("./SovereignCompliancePanel").then((module) => ({
+  import('./SovereignCompliancePanel').then((module) => ({
     default: module.SovereignCompliancePanel,
-  })),
+  }))
 );
 const SovereignSkillsPanel = lazy(() =>
-  import("./SovereignSkillsPanel").then((module) => ({ default: module.SovereignSkillsPanel })),
+  import('./SovereignSkillsPanel').then((module) => ({ default: module.SovereignSkillsPanel }))
 );
 const SecurityAuditDashboard = lazy(() =>
-  import("./SecurityAuditDashboard").then((module) => ({ default: module.SecurityAuditDashboard })),
+  import('./SecurityAuditDashboard').then((module) => ({ default: module.SecurityAuditDashboard }))
 );
 
 export enum AegisLevel {
@@ -36,7 +36,7 @@ export enum AegisLevel {
   LOCKDOWN = 5,
 }
 
-export type Decision = "allow" | "observe" | "challenge" | "quarantine" | "block";
+export type Decision = 'allow' | 'observe' | 'challenge' | 'quarantine' | 'block';
 
 export interface DetectionResult {
   event_id: string;
@@ -58,12 +58,12 @@ interface AuditRecord {
   record_hash: string;
 }
 
-const GENESIS = "GENESIS_BLOCK_LATAM_AEGIS";
+const GENESIS = 'GENESIS_BLOCK_LATAM_AEGIS';
 
 async function digest(value: string): Promise<string> {
   const bytes = new TextEncoder().encode(value);
-  const hash = await crypto.subtle.digest("SHA-256", bytes);
-  return Array.from(new Uint8Array(hash), (byte) => byte.toString(16).padStart(2, "0")).join("");
+  const hash = await crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(hash), (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
 function PanelLoading() {
@@ -77,7 +77,7 @@ function PanelLoading() {
 }
 
 function levelLabel(level: AegisLevel) {
-  return ["OPEN", "WATCH", "CONTAIN", "ISOLATE", "VAULT", "LOCKDOWN"][level] ?? "UNKNOWN";
+  return ['OPEN', 'WATCH', 'CONTAIN', 'ISOLATE', 'VAULT', 'LOCKDOWN'][level] ?? 'UNKNOWN';
 }
 
 export function LatamAegisDashboard() {
@@ -87,17 +87,17 @@ export function LatamAegisDashboard() {
   const [lastResult, setLastResult] = useState<DetectionResult | null>(null);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [verifyStatus, setVerifyStatus] = useState<"idle" | "verifying" | "valid" | "invalid">(
-    "idle",
+  const [verifyStatus, setVerifyStatus] = useState<'idle' | 'verifying' | 'valid' | 'invalid'>(
+    'idle'
   );
   const [corruptedIndex, setCorruptedIndex] = useState<number | null>(null);
   const [subTab, setSubTab] = useState<
-    "firewall" | "audit" | "observability" | "compliance" | "skills"
-  >("firewall");
-  const [actor, setActor] = useState("operator");
-  const [source, setSource] = useState("client");
-  const [action, setAction] = useState("api_request");
-  const [resource, setResource] = useState("standard_resource");
+    'firewall' | 'audit' | 'observability' | 'compliance' | 'skills'
+  >('firewall');
+  const [actor, setActor] = useState('operator');
+  const [source, setSource] = useState('client');
+  const [action, setAction] = useState('api_request');
+  const [resource, setResource] = useState('standard_resource');
   const [anomalyRate, setAnomalyRate] = useState(0.1);
   const [volumeRatio, setVolumeRatio] = useState(0.1);
   const [secretPattern, setSecretPattern] = useState(false);
@@ -110,25 +110,25 @@ export function LatamAegisDashboard() {
         score: block.payload.score,
         level: block.payload.aegis_level,
       })),
-    [auditChain],
+    [auditChain]
   );
 
   const processPipeline = async () => {
     setProcessing(true);
     setError(null);
-    setVerifyStatus("idle");
-    const token = getSessionToken() || sessionStorage.getItem("isabella_session_token");
+    setVerifyStatus('idle');
+    const token = getSessionToken() || sessionStorage.getItem('isabella_session_token');
     if (!token) {
       setProcessing(false);
       setError(
-        "Sesión autenticada requerida. No se ejecuta análisis de seguridad local ni se fabrican resultados.",
+        'Sesión autenticada requerida. No se ejecuta análisis de seguridad local ni se fabrican resultados.'
       );
       return;
     }
 
     const eventPayload = {
       event_id: crypto.randomUUID(),
-      event_type: "api_request",
+      event_type: 'api_request',
       actor,
       source,
       action,
@@ -139,9 +139,9 @@ export function LatamAegisDashboard() {
     };
 
     try {
-      const res = await fetch("/api/security", {
-        method: "POST",
-        headers: { "content-type": "application/json", Authorization: `Bearer ${token}` },
+      const res = await fetch('/api/security', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(eventPayload),
       });
       const body = await res.json().catch(() => ({}));
@@ -161,7 +161,7 @@ export function LatamAegisDashboard() {
       setEventsProcessed((count) => count + 1);
     } catch (cause) {
       setError(
-        cause instanceof Error ? cause.message : "No fue posible completar el análisis remoto.",
+        cause instanceof Error ? cause.message : 'No fue posible completar el análisis remoto.'
       );
     } finally {
       setProcessing(false);
@@ -169,7 +169,7 @@ export function LatamAegisDashboard() {
   };
 
   const verifyAuditLedger = async () => {
-    setVerifyStatus("verifying");
+    setVerifyStatus('verifying');
     setCorruptedIndex(null);
     let previous = GENESIS;
     for (let index = 0; index < auditChain.length; index += 1) {
@@ -179,18 +179,18 @@ export function LatamAegisDashboard() {
         block.record_hash !== (await digest(`${previous}:${JSON.stringify(block.payload)}`))
       ) {
         setCorruptedIndex(index);
-        setVerifyStatus("invalid");
+        setVerifyStatus('invalid');
         return;
       }
       previous = block.record_hash;
     }
-    setVerifyStatus("valid");
+    setVerifyStatus('valid');
   };
 
   const resetAegisWall = () => {
     setLevel(AegisLevel.OPEN);
     setLastResult(null);
-    setVerifyStatus("idle");
+    setVerifyStatus('idle');
     setCorruptedIndex(null);
   };
 
@@ -203,7 +203,7 @@ export function LatamAegisDashboard() {
           </div>
           <div>
             <h2 className="flex items-center gap-2 text-xl font-bold tracking-wide text-platinum">
-              Muro de Protección LATAM AEGIS-X{" "}
+              Muro de Protección LATAM AEGIS-X{' '}
               <span className="rounded-full bg-red-500/20 px-2 py-0.5 font-mono text-[9px] uppercase tracking-wider text-red-400">
                 Defensa Activa
               </span>
@@ -230,40 +230,40 @@ export function LatamAegisDashboard() {
       </div>
 
       <div className="flex gap-2 overflow-x-auto border-b border-border/15 pb-1">
-        {(["firewall", "audit", "observability", "compliance", "skills"] as const).map((tab) => (
+        {(['firewall', 'audit', 'observability', 'compliance', 'skills'] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setSubTab(tab)}
-            className={`shrink-0 rounded-t-xl border-b-2 px-4 py-2 font-mono text-xs font-bold uppercase tracking-wider ${subTab === tab ? "border-red-500 bg-red-500/5 text-red-400" : "border-transparent text-muted-foreground hover:text-platinum"}`}
+            className={`shrink-0 rounded-t-xl border-b-2 px-4 py-2 font-mono text-xs font-bold uppercase tracking-wider ${subTab === tab ? 'border-red-500 bg-red-500/5 text-red-400' : 'border-transparent text-muted-foreground hover:text-platinum'}`}
           >
             {tab}
           </button>
         ))}
       </div>
 
-      {subTab === "audit" && (
+      {subTab === 'audit' && (
         <Suspense fallback={<PanelLoading />}>
           <SecurityAuditDashboard />
         </Suspense>
       )}
 
-      {subTab === "observability" && (
+      {subTab === 'observability' && (
         <Suspense fallback={<PanelLoading />}>
           <ObservabilityPanel />
         </Suspense>
       )}
-      {subTab === "compliance" && (
+      {subTab === 'compliance' && (
         <Suspense fallback={<PanelLoading />}>
           <SovereignCompliancePanel />
         </Suspense>
       )}
-      {subTab === "skills" && (
+      {subTab === 'skills' && (
         <Suspense fallback={<PanelLoading />}>
           <SovereignSkillsPanel />
         </Suspense>
       )}
 
-      {subTab === "firewall" && (
+      {subTab === 'firewall' && (
         <>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <label className="space-y-1">
@@ -339,7 +339,7 @@ export function LatamAegisDashboard() {
                 type="checkbox"
                 checked={secretPattern}
                 onChange={(e) => setSecretPattern(e.target.checked)}
-              />{" "}
+              />{' '}
               patrón sensible
             </label>
             <label className="flex items-center gap-2">
@@ -347,7 +347,7 @@ export function LatamAegisDashboard() {
                 type="checkbox"
                 checked={massDownload}
                 onChange={(e) => setMassDownload(e.target.checked)}
-              />{" "}
+              />{' '}
               descarga masiva
             </label>
           </div>
@@ -359,10 +359,10 @@ export function LatamAegisDashboard() {
               className="flex items-center gap-2 rounded-xl bg-red-500/15 px-4 py-2 font-mono text-xs font-bold text-red-300 disabled:opacity-50"
             >
               <Activity className="size-4" />
-              {processing ? "Analizando…" : "Ejecutar AEGIS-X"}
+              {processing ? 'Analizando…' : 'Ejecutar AEGIS-X'}
             </button>
             <button
-              disabled={!auditChain.length || verifyStatus === "verifying"}
+              disabled={!auditChain.length || verifyStatus === 'verifying'}
               onClick={() => void verifyAuditLedger()}
               className="flex items-center gap-2 rounded-xl border border-border/20 px-4 py-2 font-mono text-xs disabled:opacity-50"
             >
@@ -388,10 +388,10 @@ export function LatamAegisDashboard() {
               {error}
             </div>
           )}
-          {verifyStatus !== "idle" && (
+          {verifyStatus !== 'idle' && (
             <div className="rounded-xl border border-border/15 p-3 font-mono text-xs">
               Ledger: <strong>{verifyStatus.toUpperCase()}</strong>
-              {corruptedIndex !== null ? ` · bloque ${corruptedIndex + 1}` : ""}
+              {corruptedIndex !== null ? ` · bloque ${corruptedIndex + 1}` : ''}
             </div>
           )}
 
@@ -444,7 +444,7 @@ export function LatamAegisDashboard() {
                     key={block.record_hash}
                     className="rounded-xl bg-secondary/10 p-3 font-mono text-[10px]"
                   >
-                    #{auditChain.length - Math.min(auditChain.length, 5) + index + 1} ·{" "}
+                    #{auditChain.length - Math.min(auditChain.length, 5) + index + 1} ·{' '}
                     {block.payload.decision} · {block.record_hash.slice(0, 16)}…
                   </div>
                 ))}

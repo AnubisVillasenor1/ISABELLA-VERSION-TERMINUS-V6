@@ -1,11 +1,17 @@
-import { createCipheriv, createDecipheriv, createHash, randomBytes, timingSafeEqual } from "node:crypto";
-import { BOOKPI_PROTOCOL } from "../bookpi/types";
-import type { BookPiStorage, JsonValue } from "../bookpi/types";
-import { decodeShards, encodeShards, DATA_SHARDS, TOTAL_SHARDS } from "./erasure-code";
-import type { ShardPiece } from "./erasure-code";
-import { triangulateDigest, verifyTriangulatedDigest } from "../security/triangulated-crypto";
-import type { TriangulatedDigest } from "../security/triangulated-crypto";
-import type { RetentionAdmissionGate, RetentionAdmissionReservation } from "./retention";
+import {
+  createCipheriv,
+  createDecipheriv,
+  createHash,
+  randomBytes,
+  timingSafeEqual,
+} from 'node:crypto';
+import { BOOKPI_PROTOCOL } from '../bookpi/types';
+import type { BookPiStorage, JsonValue } from '../bookpi/types';
+import { decodeShards, encodeShards, DATA_SHARDS, TOTAL_SHARDS } from './erasure-code';
+import type { ShardPiece } from './erasure-code';
+import { triangulateDigest, verifyTriangulatedDigest } from '../security/triangulated-crypto';
+import type { TriangulatedDigest } from '../security/triangulated-crypto';
+import type { RetentionAdmissionGate, RetentionAdmissionReservation } from './retention';
 
 export interface ShardQuota {
   /** Operator-configured hard cap; provider adapters must also enforce current upstream quota atomically. */
@@ -14,7 +20,7 @@ export interface ShardQuota {
 }
 
 export interface StoredShard {
-  schemaVersion: "terminus-shard.v1";
+  schemaVersion: 'terminus-shard.v1';
   objectId: string;
   tenantFingerprint: string;
   shardIndex: number;
@@ -45,7 +51,10 @@ export interface ShardStore {
 }
 
 export interface DataKeyManager {
-  createKey(context: { objectIdDigest: string; tenantFingerprint: string }): Promise<{ keyId: string; key: Uint8Array }>;
+  createKey(context: {
+    objectIdDigest: string;
+    tenantFingerprint: string;
+  }): Promise<{ keyId: string; key: Uint8Array }>;
   getKey(keyId: string): Promise<Uint8Array | null>;
   /** Must be durable and idempotent; destroying the key is the logical erasure boundary. */
   destroyKey(keyId: string): Promise<void>;
@@ -76,12 +85,12 @@ export interface StoredObjectRef {
 }
 
 function sha256(bytes: Uint8Array): string {
-  return createHash("sha256").update(bytes).digest("hex");
+  return createHash('sha256').update(bytes).digest('hex');
 }
 
 function sameDigest(left: string, right: string): boolean {
-  const a = Buffer.from(left, "hex");
-  const b = Buffer.from(right, "hex");
+  const a = Buffer.from(left, 'hex');
+  const b = Buffer.from(right, 'hex');
   return a.length === 32 && b.length === 32 && timingSafeEqual(a, b);
 }
 
@@ -95,31 +104,46 @@ function tenantFingerprint(tenantId: string): string {
 }
 
 function additionalData(objectId: string, tenantId: string): Buffer {
-  return Buffer.from("terminus-shard.v1\u0000" + objectId + "\u0000" + tenantId, "utf8");
+  return Buffer.from('terminus-shard.v1\u0000' + objectId + '\u0000' + tenantId, 'utf8');
 }
 
-function encrypt(plaintext: Uint8Array, key: Uint8Array, aad: Uint8Array): { ciphertext: Uint8Array; ivHex: string; authTagHex: string } {
-  if (key.byteLength !== 32) throw new Error("TERMINUS_AES256_KEY_LENGTH_INVALID");
+function encrypt(
+  plaintext: Uint8Array,
+  key: Uint8Array,
+  aad: Uint8Array
+): { ciphertext: Uint8Array; ivHex: string; authTagHex: string } {
+  if (key.byteLength !== 32) throw new Error('TERMINUS_AES256_KEY_LENGTH_INVALID');
   const iv = randomBytes(12);
   const keyBuffer = Buffer.from(key);
   try {
-    const cipher = createCipheriv("aes-256-gcm", keyBuffer, iv);
+    const cipher = createCipheriv('aes-256-gcm', keyBuffer, iv);
     cipher.setAAD(Buffer.from(aad));
     const ciphertext = Buffer.concat([cipher.update(plaintext), cipher.final()]);
-    return { ciphertext, ivHex: iv.toString("hex"), authTagHex: cipher.getAuthTag().toString("hex") };
+    return {
+      ciphertext,
+      ivHex: iv.toString('hex'),
+      authTagHex: cipher.getAuthTag().toString('hex'),
+    };
   } finally {
     keyBuffer.fill(0);
   }
 }
 
-function decrypt(ciphertext: Uint8Array, key: Uint8Array, ivHex: string, authTagHex: string, aad: Uint8Array): Uint8Array {
-  if (key.byteLength !== 32) throw new Error("TERMINUS_AES256_KEY_LENGTH_INVALID");
-  if (!/^[a-f0-9]{24}$/i.test(ivHex) || !/^[a-f0-9]{32}$/i.test(authTagHex)) throw new Error("TERMINUS_ENVELOPE_METADATA_INVALID");
+function decrypt(
+  ciphertext: Uint8Array,
+  key: Uint8Array,
+  ivHex: string,
+  authTagHex: string,
+  aad: Uint8Array
+): Uint8Array {
+  if (key.byteLength !== 32) throw new Error('TERMINUS_AES256_KEY_LENGTH_INVALID');
+  if (!/^[a-f0-9]{24}$/i.test(ivHex) || !/^[a-f0-9]{32}$/i.test(authTagHex))
+    throw new Error('TERMINUS_ENVELOPE_METADATA_INVALID');
   const keyBuffer = Buffer.from(key);
   try {
-    const decipher = createDecipheriv("aes-256-gcm", keyBuffer, Buffer.from(ivHex, "hex"));
+    const decipher = createDecipheriv('aes-256-gcm', keyBuffer, Buffer.from(ivHex, 'hex'));
     decipher.setAAD(Buffer.from(aad));
-    decipher.setAuthTag(Buffer.from(authTagHex, "hex"));
+    decipher.setAuthTag(Buffer.from(authTagHex, 'hex'));
     return Buffer.concat([decipher.update(ciphertext), decipher.final()]);
   } finally {
     keyBuffer.fill(0);
@@ -127,8 +151,13 @@ function decrypt(ciphertext: Uint8Array, key: Uint8Array, ivHex: string, authTag
 }
 
 function validateQuota(quota: ShardQuota | undefined): quota is ShardQuota {
-  return !!quota && Number.isSafeInteger(quota.maxBytes) && quota.maxBytes > 0
-    && Number.isSafeInteger(quota.maxObjects) && quota.maxObjects > 0;
+  return (
+    !!quota &&
+    Number.isSafeInteger(quota.maxBytes) &&
+    quota.maxBytes > 0 &&
+    Number.isSafeInteger(quota.maxObjects) &&
+    quota.maxObjects > 0
+  );
 }
 
 function makeRecord(
@@ -139,13 +168,13 @@ function makeRecord(
   payload: Uint8Array,
   encrypted: { ciphertext: Uint8Array; ivHex: string; authTagHex: string },
   keyId: string,
-  createdAt: string,
+  createdAt: string
 ): StoredShard {
   const tenantId = tenantFingerprint(tenant);
   const shardSha256 = sha256(payload);
-  const binding = objectId + ":" + tenantId + ":" + index + ":" + shardSha256;
+  const binding = objectId + ':' + tenantId + ':' + index + ':' + shardSha256;
   return {
-    schemaVersion: "terminus-shard.v1",
+    schemaVersion: 'terminus-shard.v1',
     objectId,
     tenantFingerprint: tenantId,
     shardIndex: index,
@@ -174,33 +203,44 @@ export class TerminusShardedStore {
 
   constructor(private readonly options: ShardedStoreOptions) {
     const stores = [...options.stores];
-    if (stores.length !== TOTAL_SHARDS || new Set(stores.map((store) => store.providerId)).size !== TOTAL_SHARDS
-      || stores.some((store) => !store.providerId.trim())) {
-      throw new Error("TERMINUS_REQUIRES_NINE_DISTINCT_STORAGE_PROVIDERS");
+    if (
+      stores.length !== TOTAL_SHARDS ||
+      new Set(stores.map((store) => store.providerId)).size !== TOTAL_SHARDS ||
+      stores.some((store) => !store.providerId.trim())
+    ) {
+      throw new Error('TERMINUS_REQUIRES_NINE_DISTINCT_STORAGE_PROVIDERS');
     }
     for (const store of stores) {
-      if (!validateQuota(options.quotas[store.providerId])) throw new Error("TERMINUS_PROVIDER_QUOTA_MISSING_OR_INVALID:" + store.providerId);
+      if (!validateQuota(options.quotas[store.providerId]))
+        throw new Error('TERMINUS_PROVIDER_QUOTA_MISSING_OR_INVALID:' + store.providerId);
     }
-    if (!Number.isSafeInteger(options.maxObjectBytes) || options.maxObjectBytes < 1) throw new Error("TERMINUS_MAX_OBJECT_BYTES_INVALID");
-    if (typeof options.admissionGate !== "function") throw new Error("TERMINUS_ADMISSION_GATE_REQUIRED");
+    if (!Number.isSafeInteger(options.maxObjectBytes) || options.maxObjectBytes < 1)
+      throw new Error('TERMINUS_MAX_OBJECT_BYTES_INVALID');
+    if (typeof options.admissionGate !== 'function')
+      throw new Error('TERMINUS_ADMISSION_GATE_REQUIRED');
     this.storesByIndex = Object.freeze(stores);
     this.clock = options.clock ?? Date.now;
   }
 
-  async put(input: { objectId: string; tenantId: string; plaintext: string | Uint8Array }): Promise<StoredObjectRef> {
+  async put(input: {
+    objectId: string;
+    tenantId: string;
+    plaintext: string | Uint8Array;
+  }): Promise<StoredObjectRef> {
     if (!input.objectId.trim() || input.objectId.length > 180 || !input.tenantId.trim()) {
-      throw new Error("TERMINUS_OBJECT_ID_OR_TENANT_INVALID");
+      throw new Error('TERMINUS_OBJECT_ID_OR_TENANT_INVALID');
     }
-    const plaintext = typeof input.plaintext === "string"
-      ? Buffer.from(input.plaintext, "utf8")
-      : Buffer.from(input.plaintext);
+    const plaintext =
+      typeof input.plaintext === 'string'
+        ? Buffer.from(input.plaintext, 'utf8')
+        : Buffer.from(input.plaintext);
     if (plaintext.byteLength > this.options.maxObjectBytes) {
       plaintext.fill(0);
-      throw new Error("TERMINUS_OBJECT_MAX_BYTES_EXCEEDED");
+      throw new Error('TERMINUS_OBJECT_MAX_BYTES_EXCEEDED');
     }
 
     const fingerprint = tenantFingerprint(input.tenantId);
-    const objectIdDigest = sha256(Buffer.from(input.objectId, "utf8"));
+    const objectIdDigest = sha256(Buffer.from(input.objectId, 'utf8'));
     const createdAt = new Date(this.clock()).toISOString();
     let keyMaterial: { keyId: string; key: Uint8Array } | null = null;
     let admissionReservation: RetentionAdmissionReservation | null = null;
@@ -208,30 +248,60 @@ export class TerminusShardedStore {
     let intentWritten = false;
     let completed = false;
     try {
-      await this.audit("terminus.object.store.requested", {
-        objectIdDigest, tenantFingerprint: fingerprint, originalLength: plaintext.byteLength, requestedAt: createdAt,
+      await this.audit('terminus.object.store.requested', {
+        objectIdDigest,
+        tenantFingerprint: fingerprint,
+        originalLength: plaintext.byteLength,
+        requestedAt: createdAt,
       });
       intentWritten = true;
       admissionReservation = await this.options.admissionGate({
-        id: input.objectId, tenantFingerprint: fingerprint, byteLength: plaintext.byteLength,
+        id: input.objectId,
+        tenantFingerprint: fingerprint,
+        byteLength: plaintext.byteLength,
       });
-      keyMaterial = await this.options.keyManager.createKey({ objectIdDigest, tenantFingerprint: fingerprint });
+      keyMaterial = await this.options.keyManager.createKey({
+        objectIdDigest,
+        tenantFingerprint: fingerprint,
+      });
       if (!keyMaterial.keyId.trim() || keyMaterial.key.byteLength !== 32) {
-        throw new Error("TERMINUS_KEY_MANAGER_RETURNED_INVALID_KEY");
+        throw new Error('TERMINUS_KEY_MANAGER_RETURNED_INVALID_KEY');
       }
 
-      const envelope = encrypt(plaintext, keyMaterial.key, additionalData(input.objectId, input.tenantId));
+      const envelope = encrypt(
+        plaintext,
+        keyMaterial.key,
+        additionalData(input.objectId, input.tenantId)
+      );
       const encoded = encodeShards(envelope.ciphertext);
       const records = encoded.shards.map((bytes, index) =>
-        makeRecord(input.objectId, input.tenantId, index, encoded, bytes, envelope, keyMaterial!.keyId, createdAt),
+        makeRecord(
+          input.objectId,
+          input.tenantId,
+          index,
+          encoded,
+          bytes,
+          envelope,
+          keyMaterial!.keyId,
+          createdAt
+        )
       );
-      const writes = await Promise.allSettled(records.map((record, index) => {
-        const store = this.storesByIndex[index]!;
-        return store.putIfWithinQuota(record, this.options.quotas[store.providerId]!);
-      }));
-      storedIndexes = writes.flatMap((result, index) => result.status === "fulfilled" ? [index] : []);
+      const writes = await Promise.allSettled(
+        records.map((record, index) => {
+          const store = this.storesByIndex[index]!;
+          return store.putIfWithinQuota(record, this.options.quotas[store.providerId]!);
+        })
+      );
+      storedIndexes = writes.flatMap((result, index) =>
+        result.status === 'fulfilled' ? [index] : []
+      );
       if (storedIndexes.length < DATA_SHARDS) {
-        throw new Error("TERMINUS_SHARD_QUORUM_NOT_MET: durable shards available=" + storedIndexes.length + ", required=" + DATA_SHARDS);
+        throw new Error(
+          'TERMINUS_SHARD_QUORUM_NOT_MET: durable shards available=' +
+            storedIndexes.length +
+            ', required=' +
+            DATA_SHARDS
+        );
       }
 
       const reference: StoredObjectRef = {
@@ -248,25 +318,36 @@ export class TerminusShardedStore {
         degraded: storedIndexes.length < TOTAL_SHARDS,
       };
       await admissionReservation.commit();
-      await this.audit("terminus.object.store.completed", {
-        objectIdDigest, tenantFingerprint: fingerprint, ciphertextSha256: reference.ciphertextSha256,
-        ciphertextLength: reference.ciphertextLength, successfulShardIndexes: storedIndexes,
+      await this.audit('terminus.object.store.completed', {
+        objectIdDigest,
+        tenantFingerprint: fingerprint,
+        ciphertextSha256: reference.ciphertextSha256,
+        ciphertextLength: reference.ciphertextLength,
+        successfulShardIndexes: storedIndexes,
         degraded: reference.degraded,
       });
       completed = true;
       return reference;
     } catch (error) {
-      await Promise.allSettled(storedIndexes.map((index) => this.storesByIndex[index]!.delete(input.objectId, fingerprint, index)));
-      if (keyMaterial) await this.options.keyManager.destroyKey(keyMaterial.keyId).catch(() => undefined);
+      await Promise.allSettled(
+        storedIndexes.map((index) =>
+          this.storesByIndex[index]!.delete(input.objectId, fingerprint, index)
+        )
+      );
+      if (keyMaterial)
+        await this.options.keyManager.destroyKey(keyMaterial.keyId).catch(() => undefined);
       if (intentWritten) {
-        await this.audit("terminus.object.store.failed", {
-          objectIdDigest, tenantFingerprint: fingerprint, storedShardCount: storedIndexes.length,
+        await this.audit('terminus.object.store.failed', {
+          objectIdDigest,
+          tenantFingerprint: fingerprint,
+          storedShardCount: storedIndexes.length,
           failure: error instanceof Error ? error.message : String(error),
         }).catch(() => undefined);
       }
       throw error;
     } finally {
-      if (!completed && admissionReservation) await admissionReservation.release().catch(() => undefined);
+      if (!completed && admissionReservation)
+        await admissionReservation.release().catch(() => undefined);
       keyMaterial?.key.fill(0);
       plaintext.fill(0);
     }
@@ -274,20 +355,40 @@ export class TerminusShardedStore {
 
   async get(ref: StoredObjectRef, tenantId: string): Promise<Uint8Array> {
     this.assertRef(ref, tenantId);
-    const results = await Promise.allSettled(this.storesByIndex.map((store, index) => store.get(ref.objectId, ref.tenantFingerprint, index)));
+    const results = await Promise.allSettled(
+      this.storesByIndex.map((store, index) =>
+        store.get(ref.objectId, ref.tenantFingerprint, index)
+      )
+    );
     const pieces: ShardPiece[] = [];
     const baseline: StoredShard[] = [];
 
     for (let index = 0; index < results.length; index += 1) {
       const result = results[index]!;
-      if (result.status !== "fulfilled" || !result.value) continue;
+      if (result.status !== 'fulfilled' || !result.value) continue;
       const record = result.value;
-      if (record.schemaVersion !== "terminus-shard.v1" || record.objectId !== ref.objectId
-        || record.shardIndex !== index || record.tenantFingerprint !== ref.tenantFingerprint || record.keyId !== ref.keyId
-        || record.ciphertextLength !== ref.ciphertextLength || record.ciphertextSha256 !== ref.ciphertextSha256
-        || record.dataShards !== DATA_SHARDS || record.totalShards !== TOTAL_SHARDS
-        || !validHexDigest(record.shardSha256) || !sameDigest(sha256(record.payload), record.shardSha256)) continue;
-      const binding = record.objectId + ":" + record.tenantFingerprint + ":" + record.shardIndex + ":" + record.shardSha256;
+      if (
+        record.schemaVersion !== 'terminus-shard.v1' ||
+        record.objectId !== ref.objectId ||
+        record.shardIndex !== index ||
+        record.tenantFingerprint !== ref.tenantFingerprint ||
+        record.keyId !== ref.keyId ||
+        record.ciphertextLength !== ref.ciphertextLength ||
+        record.ciphertextSha256 !== ref.ciphertextSha256 ||
+        record.dataShards !== DATA_SHARDS ||
+        record.totalShards !== TOTAL_SHARDS ||
+        !validHexDigest(record.shardSha256) ||
+        !sameDigest(sha256(record.payload), record.shardSha256)
+      )
+        continue;
+      const binding =
+        record.objectId +
+        ':' +
+        record.tenantFingerprint +
+        ':' +
+        record.shardIndex +
+        ':' +
+        record.shardSha256;
       try {
         if (!verifyTriangulatedDigest(binding, record.triangulatedId)) continue;
       } catch {
@@ -298,23 +399,40 @@ export class TerminusShardedStore {
     }
 
     const uniquePieces = [...new Map(pieces.map((piece) => [piece.index, piece])).values()];
-    if (uniquePieces.length < DATA_SHARDS || baseline.length === 0) throw new Error("TERMINUS_SHARD_QUORUM_UNAVAILABLE");
+    if (uniquePieces.length < DATA_SHARDS || baseline.length === 0)
+      throw new Error('TERMINUS_SHARD_QUORUM_UNAVAILABLE');
     const first = baseline[0]!;
-    if (baseline.some((record) => record.ivHex !== first.ivHex || record.authTagHex !== first.authTagHex
-      || record.ciphertextSha256 !== first.ciphertextSha256 || record.keyId !== first.keyId)) {
-      throw new Error("TERMINUS_SHARD_METADATA_CONFLICT");
+    if (
+      baseline.some(
+        (record) =>
+          record.ivHex !== first.ivHex ||
+          record.authTagHex !== first.authTagHex ||
+          record.ciphertextSha256 !== first.ciphertextSha256 ||
+          record.keyId !== first.keyId
+      )
+    ) {
+      throw new Error('TERMINUS_SHARD_METADATA_CONFLICT');
     }
 
     const ciphertext = decodeShards(uniquePieces, ref.ciphertextLength);
-    if (!sameDigest(sha256(ciphertext), ref.ciphertextSha256)) throw new Error("TERMINUS_CIPHERTEXT_INTEGRITY_FAILURE");
+    if (!sameDigest(sha256(ciphertext), ref.ciphertextSha256))
+      throw new Error('TERMINUS_CIPHERTEXT_INTEGRITY_FAILURE');
     const key = await this.options.keyManager.getKey(ref.keyId);
-    if (!key) throw new Error("TERMINUS_DATA_KEY_NOT_FOUND_OR_CRYPTOGRAPHICALLY_ERASED");
+    if (!key) throw new Error('TERMINUS_DATA_KEY_NOT_FOUND_OR_CRYPTOGRAPHICALLY_ERASED');
     let plaintext: Uint8Array | null = null;
     try {
-      plaintext = decrypt(ciphertext, key, first.ivHex, first.authTagHex, additionalData(ref.objectId, tenantId));
-      if (plaintext.byteLength !== ref.originalLength) throw new Error("TERMINUS_ORIGINAL_LENGTH_MISMATCH");
-      await this.audit("terminus.object.read.completed", {
-        objectIdDigest: sha256(Buffer.from(ref.objectId, "utf8")), tenantFingerprint: ref.tenantFingerprint,
+      plaintext = decrypt(
+        ciphertext,
+        key,
+        first.ivHex,
+        first.authTagHex,
+        additionalData(ref.objectId, tenantId)
+      );
+      if (plaintext.byteLength !== ref.originalLength)
+        throw new Error('TERMINUS_ORIGINAL_LENGTH_MISMATCH');
+      await this.audit('terminus.object.read.completed', {
+        objectIdDigest: sha256(Buffer.from(ref.objectId, 'utf8')),
+        tenantFingerprint: ref.tenantFingerprint,
         ciphertextSha256: ref.ciphertextSha256,
       });
       return plaintext;
@@ -329,80 +447,139 @@ export class TerminusShardedStore {
   async getText(ref: StoredObjectRef, tenantId: string): Promise<string> {
     const plaintext = await this.get(ref, tenantId);
     try {
-      return Buffer.from(plaintext).toString("utf8");
+      return Buffer.from(plaintext).toString('utf8');
     } finally {
       plaintext.fill(0);
     }
   }
 
-  async erase(ref: StoredObjectRef, tenantId: string): Promise<{ cryptographicallyErased: true; deletedShards: number; failures: string[]; physicalDeletionComplete: boolean }> {
+  async erase(
+    ref: StoredObjectRef,
+    tenantId: string
+  ): Promise<{
+    cryptographicallyErased: true;
+    deletedShards: number;
+    failures: string[];
+    physicalDeletionComplete: boolean;
+  }> {
     this.assertRef(ref, tenantId);
-    await this.audit("terminus.object.erase.requested", {
-      objectIdDigest: sha256(Buffer.from(ref.objectId, "utf8")), tenantFingerprint: ref.tenantFingerprint,
+    await this.audit('terminus.object.erase.requested', {
+      objectIdDigest: sha256(Buffer.from(ref.objectId, 'utf8')),
+      tenantFingerprint: ref.tenantFingerprint,
       ciphertextSha256: ref.ciphertextSha256,
     });
     await this.options.keyManager.destroyKey(ref.keyId);
-    const results = await Promise.allSettled(this.storesByIndex.map((store, index) =>
-      store.delete(ref.objectId, ref.tenantFingerprint, index)));
-    const failures = results.flatMap((result, index) => result.status === "rejected"
-      ? [this.storesByIndex[index]!.providerId + ":" + String(result.reason)]
-      : []);
-    const deletedShards = results.filter((result) => result.status === "fulfilled").length;
+    const results = await Promise.allSettled(
+      this.storesByIndex.map((store, index) =>
+        store.delete(ref.objectId, ref.tenantFingerprint, index)
+      )
+    );
+    const failures = results.flatMap((result, index) =>
+      result.status === 'rejected'
+        ? [this.storesByIndex[index]!.providerId + ':' + String(result.reason)]
+        : []
+    );
+    const deletedShards = results.filter((result) => result.status === 'fulfilled').length;
     const physicalDeletionComplete = failures.length === 0;
     try {
-      await this.audit(physicalDeletionComplete ? "terminus.object.erase.completed" : "terminus.object.erase.partial", {
-        objectIdDigest: sha256(Buffer.from(ref.objectId, "utf8")), tenantFingerprint: ref.tenantFingerprint,
-        deletedShards, failures, physicalDeletionComplete,
-      });
+      await this.audit(
+        physicalDeletionComplete
+          ? 'terminus.object.erase.completed'
+          : 'terminus.object.erase.partial',
+        {
+          objectIdDigest: sha256(Buffer.from(ref.objectId, 'utf8')),
+          tenantFingerprint: ref.tenantFingerprint,
+          deletedShards,
+          failures,
+          physicalDeletionComplete,
+        }
+      );
     } catch (error) {
-      failures.push("BOOKPI_AUDIT_OUTCOME_UNAVAILABLE:" + (error instanceof Error ? error.message : String(error)));
+      failures.push(
+        'BOOKPI_AUDIT_OUTCOME_UNAVAILABLE:' +
+          (error instanceof Error ? error.message : String(error))
+      );
     }
-    return { cryptographicallyErased: true, deletedShards, failures, physicalDeletionComplete: physicalDeletionComplete && failures.length === 0 };
+    return {
+      cryptographicallyErased: true,
+      deletedShards,
+      failures,
+      physicalDeletionComplete: physicalDeletionComplete && failures.length === 0,
+    };
   }
 
-  async inspectUsage(): Promise<Array<{ providerId: string; usedBytes: number; objectCount: number; maxBytes: number; maxObjects: number; byteLimitReached: boolean; objectLimitReached: boolean }>> {
-    return Promise.all(this.storesByIndex.map(async (store) => {
-      const usage = await store.getUsage();
-      const quota = this.options.quotas[store.providerId]!;
-      return {
-        providerId: store.providerId,
-        ...usage,
-        maxBytes: quota.maxBytes,
-        maxObjects: quota.maxObjects,
-        byteLimitReached: usage.usedBytes >= quota.maxBytes,
-        objectLimitReached: usage.objectCount >= quota.maxObjects,
-      };
-    }));
+  async inspectUsage(): Promise<
+    Array<{
+      providerId: string;
+      usedBytes: number;
+      objectCount: number;
+      maxBytes: number;
+      maxObjects: number;
+      byteLimitReached: boolean;
+      objectLimitReached: boolean;
+    }>
+  > {
+    return Promise.all(
+      this.storesByIndex.map(async (store) => {
+        const usage = await store.getUsage();
+        const quota = this.options.quotas[store.providerId]!;
+        return {
+          providerId: store.providerId,
+          ...usage,
+          maxBytes: quota.maxBytes,
+          maxObjects: quota.maxObjects,
+          byteLimitReached: usage.usedBytes >= quota.maxBytes,
+          objectLimitReached: usage.objectCount >= quota.maxObjects,
+        };
+      })
+    );
   }
 
   private assertRef(ref: StoredObjectRef, tenantId: string): void {
-    if (!ref || typeof ref.objectId !== "string" || !ref.objectId.trim()
-      || typeof ref.keyId !== "string" || !ref.keyId.trim()
-      || typeof ref.tenantFingerprint !== "string" || !validHexDigest(ref.ciphertextSha256)
-      || ref.tenantFingerprint !== tenantFingerprint(tenantId)
-      || !Number.isSafeInteger(ref.ciphertextLength) || ref.ciphertextLength < 0
-      || !Number.isSafeInteger(ref.originalLength) || ref.originalLength < 0
-      || typeof ref.createdAt !== "string" || !Number.isFinite(Date.parse(ref.createdAt))
-      || ref.minimumRecoverableShards !== DATA_SHARDS || ref.configuredShardCount !== TOTAL_SHARDS
-      || !Array.isArray(ref.successfulShardIndexes)
-      || new Set(ref.successfulShardIndexes).size !== ref.successfulShardIndexes.length
-      || ref.successfulShardIndexes.some((index) => !Number.isInteger(index) || index < 0 || index >= TOTAL_SHARDS)) {
-      throw new Error("TERMINUS_OBJECT_REFERENCE_INVALID_OR_TENANT_MISMATCH");
+    if (
+      !ref ||
+      typeof ref.objectId !== 'string' ||
+      !ref.objectId.trim() ||
+      typeof ref.keyId !== 'string' ||
+      !ref.keyId.trim() ||
+      typeof ref.tenantFingerprint !== 'string' ||
+      !validHexDigest(ref.ciphertextSha256) ||
+      ref.tenantFingerprint !== tenantFingerprint(tenantId) ||
+      !Number.isSafeInteger(ref.ciphertextLength) ||
+      ref.ciphertextLength < 0 ||
+      !Number.isSafeInteger(ref.originalLength) ||
+      ref.originalLength < 0 ||
+      typeof ref.createdAt !== 'string' ||
+      !Number.isFinite(Date.parse(ref.createdAt)) ||
+      ref.minimumRecoverableShards !== DATA_SHARDS ||
+      ref.configuredShardCount !== TOTAL_SHARDS ||
+      !Array.isArray(ref.successfulShardIndexes) ||
+      new Set(ref.successfulShardIndexes).size !== ref.successfulShardIndexes.length ||
+      ref.successfulShardIndexes.some(
+        (index) => !Number.isInteger(index) || index < 0 || index >= TOTAL_SHARDS
+      )
+    ) {
+      throw new Error('TERMINUS_OBJECT_REFERENCE_INVALID_OR_TENANT_MISMATCH');
     }
   }
 
-  private async audit(type: string, payload: Record<string, string | number | boolean | string[] | number[]>): Promise<void> {
-    await this.options.ledger.appendEvent({
-      header: {
-        type,
-        source: "isabella.terminus-omega",
-        protocol: BOOKPI_PROTOCOL,
-        hehepcontext: { hexagon: "TERMINUS", domain: "SHARDED_STORAGE" },
+  private async audit(
+    type: string,
+    payload: Record<string, string | number | boolean | string[] | number[]>
+  ): Promise<void> {
+    await this.options.ledger.appendEvent(
+      {
+        header: {
+          type,
+          source: 'isabella.terminus-omega',
+          protocol: BOOKPI_PROTOCOL,
+          hehepcontext: { hexagon: 'TERMINUS', domain: 'SHARDED_STORAGE' },
+        },
+        schemaVersion: 'terminus-storage.v1',
+        meta: { retention: 'payload-policy', audit: 'append-only' },
+        payload: JSON.parse(JSON.stringify(payload)) as JsonValue,
       },
-      schemaVersion: "terminus-storage.v1",
-      meta: { retention: "payload-policy", audit: "append-only" },
-      payload: JSON.parse(JSON.stringify(payload)) as JsonValue,
-    }, { actorId: "terminus-omega" });
+      { actorId: 'terminus-omega' }
+    );
   }
-
 }

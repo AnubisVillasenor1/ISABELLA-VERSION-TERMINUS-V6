@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useId } from "react";
-import { Layers, Zap, RefreshCw, Activity, CheckCircle2 } from "lucide-react";
+import { useState, useEffect, useCallback, useId } from 'react';
+import { Layers, Zap, RefreshCw, Activity, CheckCircle2 } from 'lucide-react';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -11,50 +11,50 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-} from "recharts";
+} from 'recharts';
 import {
   doublePipeline,
   DoublePipelineSnapshot,
   PipelinePort,
-} from "@/lib/isabella/double-pipeline";
+} from '@/lib/isabella/double-pipeline';
 
 const PORTS_METADATA: Record<PipelinePort, { label: string; description: string; role: string }> = {
   Ingest: {
-    label: "P1: Ingest",
-    description: "Sanitización canónica y normalización de clave",
-    role: "Entrada segura y anti-tampering",
+    label: 'P1: Ingest',
+    description: 'Sanitización canónica y normalización de clave',
+    role: 'Entrada segura y anti-tampering',
   },
   Policy: {
-    label: "P2: Policy",
-    description: "Evaluación CROWN y verificación Zero Trust",
-    role: "Gate de gobernanza y soberanía",
+    label: 'P2: Policy',
+    description: 'Evaluación CROWN y verificación Zero Trust',
+    role: 'Gate de gobernanza y soberanía',
   },
   Context: {
-    label: "P3: Context",
-    description: "Resolución de memoria de 5 scopes",
-    role: "Aislamiento tenant y procedencia",
+    label: 'P3: Context',
+    description: 'Resolución de memoria de 5 scopes',
+    role: 'Aislamiento tenant y procedencia',
   },
   Inference: {
-    label: "P4: Inference",
-    description: "Motor cognitivo y transpilación cuántica",
-    role: "Cómputo soberano y síntesis",
+    label: 'P4: Inference',
+    description: 'Motor cognitivo y transpilación cuántica',
+    role: 'Cómputo soberano y síntesis',
   },
   Evidence: {
-    label: "P5: Evidence",
-    description: "Generación de sello criptográfico y Merkle",
-    role: "Auditoría inmutable append-only",
+    label: 'P5: Evidence',
+    description: 'Generación de sello criptográfico y Merkle',
+    role: 'Auditoría inmutable append-only',
   },
   Delivery: {
-    label: "P6: Delivery",
-    description: "Serialización y verificación de salida",
-    role: "Entrega determinista al cliente",
+    label: 'P6: Delivery',
+    description: 'Serialización y verificación de salida',
+    role: 'Entrega determinista al cliente',
   },
 };
 
 export function DoublePipelineMetricsPanel() {
   const [snapshot, setSnapshot] = useState<DoublePipelineSnapshot | null>(null);
   const [isRunningBench, setIsRunningBench] = useState(false);
-  const [selectedPipelineView, setSelectedPipelineView] = useState<"A" | "B" | "BOTH">("BOTH");
+  const [selectedPipelineView, setSelectedPipelineView] = useState<'A' | 'B' | 'BOTH'>('BOTH');
   const panelId = useId();
 
   useEffect(() => {
@@ -109,8 +109,8 @@ export function DoublePipelineMetricsPanel() {
   // Datos para el gráfico de barras comparativo de puertos
   const portsChartData = (Object.keys(PORTS_METADATA) as PipelinePort[]).map((port) => ({
     port: PORTS_METADATA[port].label,
-    "Pipeline A (ms)": metricsA.portBreakdown[port],
-    "Pipeline B (ms)": metricsB.portBreakdown[port],
+    'Pipeline A (ms)': metricsA.portBreakdown[port],
+    'Pipeline B (ms)': metricsB.portBreakdown[port],
   }));
 
   return (
@@ -152,28 +152,28 @@ export function DoublePipelineMetricsPanel() {
             onClick={handleToggleTurbo}
             className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
               snapshot.turboModeEnabled
-                ? "border-amber-400/50 bg-amber-500/20 text-amber-300 shadow-[0_0_12px_rgba(251,191,36,0.25)]"
-                : "border-border/30 bg-background/50 text-muted-foreground hover:text-platinum"
+                ? 'border-amber-400/50 bg-amber-500/20 text-amber-300 shadow-[0_0_12px_rgba(251,191,36,0.25)]'
+                : 'border-border/30 bg-background/50 text-muted-foreground hover:text-platinum'
             }`}
           >
             <Zap
-              className={`size-3.5 ${snapshot.turboModeEnabled ? "fill-amber-400 text-amber-400 animate-pulse" : ""}`}
+              className={`size-3.5 ${snapshot.turboModeEnabled ? 'fill-amber-400 text-amber-400 animate-pulse' : ''}`}
             />
-            <span>{snapshot.turboModeEnabled ? "Super Turbo ON (3.4x)" : "Super Turbo OFF"}</span>
+            <span>{snapshot.turboModeEnabled ? 'Super Turbo ON (3.4x)' : 'Super Turbo OFF'}</span>
           </button>
 
           <div className="flex items-center rounded-xl border border-border/20 bg-background/60 p-0.5 text-[10px] font-mono">
-            {(["A", "B", "BOTH"] as const).map((view) => (
+            {(['A', 'B', 'BOTH'] as const).map((view) => (
               <button
                 key={view}
                 onClick={() => setSelectedPipelineView(view)}
                 className={`rounded-lg px-2.5 py-1 uppercase tracking-wider transition-all cursor-pointer ${
                   selectedPipelineView === view
-                    ? "bg-electric text-black font-bold shadow-sm"
-                    : "text-muted-foreground hover:text-platinum"
+                    ? 'bg-electric text-black font-bold shadow-sm'
+                    : 'text-muted-foreground hover:text-platinum'
                 }`}
               >
-                {view === "BOTH" ? "Comparar" : `Pipeline ${view}`}
+                {view === 'BOTH' ? 'Comparar' : `Pipeline ${view}`}
               </button>
             ))}
           </div>
@@ -184,8 +184,8 @@ export function DoublePipelineMetricsPanel() {
             disabled={isRunningBench}
             className="flex items-center gap-1.5 rounded-xl border border-amber-400/40 bg-amber-400/15 px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-wider text-amber-300 hover:bg-amber-400/25 transition-all cursor-pointer disabled:opacity-50"
           >
-            <Zap className={`size-3 ${isRunningBench ? "animate-spin text-amber-300" : ""}`} />
-            <span>{isRunningBench ? "Midiendo..." : "Turbo Benchmark"}</span>
+            <Zap className={`size-3 ${isRunningBench ? 'animate-spin text-amber-300' : ''}`} />
+            <span>{isRunningBench ? 'Midiendo...' : 'Turbo Benchmark'}</span>
           </button>
 
           <button
@@ -194,8 +194,8 @@ export function DoublePipelineMetricsPanel() {
             disabled={isRunningBench}
             className="flex items-center gap-1.5 rounded-xl border border-electric/30 bg-electric/15 px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-wider text-electric hover:bg-electric/25 transition-all cursor-pointer disabled:opacity-50"
           >
-            <RefreshCw className={`size-3 ${isRunningBench ? "animate-spin text-electric" : ""}`} />
-            <span>{isRunningBench ? "Midiendo..." : "Benchmark"}</span>
+            <RefreshCw className={`size-3 ${isRunningBench ? 'animate-spin text-electric' : ''}`} />
+            <span>{isRunningBench ? 'Midiendo...' : 'Benchmark'}</span>
           </button>
         </div>
       </div>
@@ -214,12 +214,12 @@ export function DoublePipelineMetricsPanel() {
           </div>
           <div className="flex items-center gap-3 text-[11px] text-amber-300/80">
             <span>
-              Ahorro en paralelo:{" "}
+              Ahorro en paralelo:{' '}
               <strong className="text-amber-200">{snapshot.parallelSavingsMs ?? 0} ms</strong>
             </span>
             <span>•</span>
             <span>
-              Caché Triangular Hit:{" "}
+              Caché Triangular Hit:{' '}
               <strong className="text-amber-200">{snapshot.cacheHitRatePct}%</strong>
             </span>
           </div>
@@ -362,12 +362,12 @@ export function DoublePipelineMetricsPanel() {
                 <YAxis stroke="#94a3b8" unit="ms" />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: "#0d1117",
-                    borderColor: "rgba(255,255,255,0.1)",
-                    borderRadius: "12px",
-                    color: "#f8fafc",
-                    fontFamily: "monospace",
-                    fontSize: "11px",
+                    backgroundColor: '#0d1117',
+                    borderColor: 'rgba(255,255,255,0.1)',
+                    borderRadius: '12px',
+                    color: '#f8fafc',
+                    fontFamily: 'monospace',
+                    fontSize: '11px',
                   }}
                 />
                 <Legend />
@@ -425,12 +425,12 @@ export function DoublePipelineMetricsPanel() {
                 <YAxis stroke="#94a3b8" unit="ms" />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: "#0d1117",
-                    borderColor: "rgba(255,255,255,0.1)",
-                    borderRadius: "12px",
-                    color: "#f8fafc",
-                    fontFamily: "monospace",
-                    fontSize: "11px",
+                    backgroundColor: '#0d1117',
+                    borderColor: 'rgba(255,255,255,0.1)',
+                    borderRadius: '12px',
+                    color: '#f8fafc',
+                    fontFamily: 'monospace',
+                    fontSize: '11px',
                   }}
                 />
                 <Legend />

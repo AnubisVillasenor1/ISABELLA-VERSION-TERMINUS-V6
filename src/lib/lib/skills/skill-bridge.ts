@@ -1,5 +1,5 @@
 /**
- * SKILL INVOCATION BRIDGE (src/lib/skills/skill-bridge.ts)
+ * SKILL INVOCATION BRIDGE (src/lib/lib/skills/skill-bridge.ts)
  * -----------------------------------------------------------------
  * Puente canónico que vincula invocaciones de habilidades soberanas (@skill)
  * con el pipeline seguro de ejecución, orquestando:
@@ -11,20 +11,20 @@
  *     (`createBookpiPostgresRepository()`).
  */
 
-import { randomUUID } from "node:crypto";
-import { runIsabellaSkill } from "./run-skill";
-import { evaluateAuthorization, type AuthorizationContext } from "../authorization";
-import { createBookpiPostgresRepository } from "../repositories/bookpi-postgres-repository";
-import { SecuritySystem, type TokenClaims } from "../security";
-import { config } from "../config";
-import { isExplicitDevelopmentAuth, canUseGuestChat } from "../principal-context";
+import { randomUUID } from 'node:crypto';
+import { runIsabellaSkill } from './run-skill';
+import { evaluateAuthorization, type AuthorizationContext } from '../authorization';
+import { createBookpiPostgresRepository } from '../repositories/bookpi-postgres-repository';
+import { SecuritySystem, type TokenClaims } from '../security';
+import { config } from '../config';
+import { isExplicitDevelopmentAuth, canUseGuestChat } from '../principal-context';
 import {
   detectSkillInvocation,
   isSkillTrigger,
   type SkillInvocation,
   type ProcessSkillInvocationParams,
   type ProcessSkillResult,
-} from "./skill-bridge-core";
+} from './skill-bridge-core';
 
 export {
   detectSkillInvocation,
@@ -44,12 +44,12 @@ export {
  */
 export async function processSkillInvocation(
   input: string | ProcessSkillInvocationParams,
-  options?: Partial<ProcessSkillInvocationParams>,
+  options?: Partial<ProcessSkillInvocationParams>
 ): Promise<ProcessSkillResult> {
   const params: ProcessSkillInvocationParams =
-    typeof input === "string" ? { text: input, ...options } : { ...input, ...options };
+    typeof input === 'string' ? { text: input, ...options } : { ...input, ...options };
 
-  const text = params.text || "";
+  const text = params.text || '';
   const invocation = detectSkillInvocation(text);
 
   // Si no es una invocación de skill, señalizar que no coincidió
@@ -57,15 +57,15 @@ export async function processSkillInvocation(
     return {
       matched: false,
       success: false,
-      content: "",
+      content: '',
       bookpiLogged: false,
     };
   }
 
   const requestId = params.requestId || params.correlationId || `req_${randomUUID()}`;
   const traceId = params.traceId || `trace_${randomUUID()}`;
-  const ipAddress = params.ipAddress || "127.0.0.1";
-  const userAgent = params.userAgent || "Isabella-Skill-Bridge/1.0";
+  const ipAddress = params.ipAddress || '127.0.0.1';
+  const userAgent = params.userAgent || 'Isabella-Skill-Bridge/1.0';
 
   // --- PASO 1: Validación de Sesión de Usuario / JWT ---
   let actorId = params.actorId;
@@ -73,14 +73,14 @@ export async function processSkillInvocation(
   let role = params.role;
   let authenticated = params.authenticated;
 
-  const rawToken = params.token ? params.token.replace(/^Bearer\s+/i, "").trim() : undefined;
+  const rawToken = params.token ? params.token.replace(/^Bearer\s+/i, '').trim() : undefined;
 
   if (rawToken) {
     const verification = await SecuritySystem.verifyToken(rawToken, {
       ip: ipAddress,
       traceId,
       correlationId: requestId,
-      requiredScope: "isabella:tools",
+      requiredScope: 'isabella:tools',
     });
 
     if (verification.success && verification.claims) {
@@ -98,8 +98,8 @@ export async function processSkillInvocation(
           success: false,
           skillId: invocation.canonicalName,
           traceId,
-          code: "AUTH_TOKEN_INVALID",
-          error: `Sesión o JWT inválido: ${verification.error || "Token rechazado"}`,
+          code: 'AUTH_TOKEN_INVALID',
+          error: `Sesión o JWT inválido: ${verification.error || 'Token rechazado'}`,
           content: `⚠️ **Acceso Denegado a Habilidad: \`${invocation.canonicalName}\`**\n> Credencial JWT inválida o expirada.`,
           bookpiLogged: false,
         };
@@ -111,14 +111,14 @@ export async function processSkillInvocation(
   if (!actorId || !tenantId || !role) {
     const cfg = config();
     if (isExplicitDevelopmentAuth(cfg)) {
-      actorId = actorId || "dev_user";
-      tenantId = tenantId || "tenant-dev";
-      role = role || "SovereignOwner";
+      actorId = actorId || 'dev_user';
+      tenantId = tenantId || 'tenant-dev';
+      role = role || 'SovereignOwner';
       authenticated = authenticated ?? true;
     } else if (canUseGuestChat(cfg)) {
-      actorId = actorId || "guest_user";
-      tenantId = tenantId || "nodo_cero_rdm";
-      role = role || "Guest";
+      actorId = actorId || 'guest_user';
+      tenantId = tenantId || 'nodo_cero_rdm';
+      role = role || 'Guest';
       authenticated = authenticated ?? false;
     } else {
       return {
@@ -126,8 +126,8 @@ export async function processSkillInvocation(
         success: false,
         skillId: invocation.canonicalName,
         traceId,
-        code: "IDENTITY_REQUIRED",
-        error: "Ejecución denegada: identidad explícita y sesión JWT requerida en producción.",
+        code: 'IDENTITY_REQUIRED',
+        error: 'Ejecución denegada: identidad explícita y sesión JWT requerida en producción.',
         content: `⚠️ **Identidad Requerida para Habilidad: \`${invocation.canonicalName}\`**\n> Se requiere iniciar sesión con credencial soberana.`,
         bookpiLogged: false,
       };
@@ -138,10 +138,10 @@ export async function processSkillInvocation(
   const authContext: AuthorizationContext = {
     tenant_id: tenantId,
     subject_id: actorId,
-    action: "skill.execute",
+    action: 'skill.execute',
     resource: `skill:${invocation.skillId.toLowerCase()}`,
     role,
-    authenticated: authenticated ?? role !== "Guest",
+    authenticated: authenticated ?? role !== 'Guest',
     context: {
       ip_address: ipAddress,
       user_agent: userAgent,
@@ -154,21 +154,21 @@ export async function processSkillInvocation(
 
   if (!crownDecision.allow) {
     const denyReason = crownDecision.obligations?.length
-      ? `Obligaciones pendientes: ${crownDecision.obligations.join(", ")}`
-      : "Acceso denegado por política de gobernanza CROWN centralizada.";
+      ? `Obligaciones pendientes: ${crownDecision.obligations.join(', ')}`
+      : 'Acceso denegado por política de gobernanza CROWN centralizada.';
     return {
       matched: true,
       success: false,
       skillId: invocation.canonicalName,
       decisionId,
       traceId,
-      code: "CROWN_POLICY_DENY",
+      code: 'CROWN_POLICY_DENY',
       error: `Acceso bloqueado por política de gobernanza CROWN: ${denyReason}`,
       content: [
         `⚠️ **Ejecución Bloqueada por Gobernanza CROWN: \`${invocation.canonicalName}\`**`,
         `> **Motivo:** ${denyReason}`,
         `> **Decisión:** \`${decisionId}\` | **Trace:** \`${traceId}\``,
-      ].join("\n"),
+      ].join('\n'),
       bookpiLogged: false,
     };
   }
@@ -181,7 +181,7 @@ export async function processSkillInvocation(
       actorId,
       tenantId,
       role,
-      authenticated: authenticated ?? role !== "Guest",
+      authenticated: authenticated ?? role !== 'Guest',
       ipAddress,
       userAgent,
       intent: invocation.rawInput || `Skill bridge invocation of ${invocation.canonicalName}`,
@@ -189,14 +189,14 @@ export async function processSkillInvocation(
       federation: params.federation,
     });
   } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : "Fallo en ejecución de la habilidad.";
+    const errorMsg = error instanceof Error ? error.message : 'Fallo en ejecución de la habilidad.';
     return {
       matched: true,
       success: false,
       skillId: invocation.canonicalName,
       decisionId,
       traceId,
-      code: "SKILL_EXECUTION_EXCEPTION",
+      code: 'SKILL_EXECUTION_EXCEPTION',
       error: errorMsg,
       content: `⚠️ **Fallo Crítico en Habilidad: \`${invocation.canonicalName}\`**\n> ${errorMsg}`,
       bookpiLogged: false,
@@ -210,7 +210,7 @@ export async function processSkillInvocation(
       skillId: invocation.canonicalName,
       decisionId: skillResponse.meta.decision_id || decisionId,
       traceId: skillResponse.meta.trace_id || traceId,
-      code: skillResponse.error.code || "SKILL_EXECUTION_ERROR",
+      code: skillResponse.error.code || 'SKILL_EXECUTION_ERROR',
       error: skillResponse.error.message,
       content: `⚠️ **Error en Habilidad Soberana: \`${invocation.canonicalName}\`**\n> ${skillResponse.error.message}`,
       bookpiLogged: false,
@@ -227,10 +227,10 @@ export async function processSkillInvocation(
       tenantId,
       userId: actorId,
       operation: `SKILL_BRIDGE_INVOCATION: ${invocation.skillId} | Decision: ${decisionId} | Trace: ${traceId}`,
-      category: "skills",
+      category: 'skills',
       cost: 0,
       tokens: 0,
-      status: "settled",
+      status: 'settled',
       metadata: {
         skillId: invocation.skillId,
         requestId,
@@ -250,18 +250,18 @@ export async function processSkillInvocation(
 
   // Formato visual canónico de respuesta para el chat stream
   const dataFormatted =
-    typeof skillResponse.data === "string"
+    typeof skillResponse.data === 'string'
       ? skillResponse.data
       : JSON.stringify(skillResponse.data, null, 2);
 
   const formattedContent = [
     `⚡ **Habilidad Soberana Ejecutada: \`${invocation.canonicalName}\`**`,
-    `> **Gobernanza CROWN:** \`${decisionId || "ALLOW"}\` | **Trace:** \`${skillResponse.meta.trace_id || traceId}\` | **Evidencia BookPI:** \`${bookpiBlockId ? `Bloque #${bookpiBlockId}` : "Asentada"}\``,
-    "",
-    "```json",
+    `> **Gobernanza CROWN:** \`${decisionId || 'ALLOW'}\` | **Trace:** \`${skillResponse.meta.trace_id || traceId}\` | **Evidencia BookPI:** \`${bookpiBlockId ? `Bloque #${bookpiBlockId}` : 'Asentada'}\``,
+    '',
+    '```json',
     dataFormatted,
-    "```",
-  ].join("\n");
+    '```',
+  ].join('\n');
 
   return {
     matched: true,

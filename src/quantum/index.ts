@@ -1,1 +1,1 @@
-export * from "./pennylane-bridge";
+export * from './pennylane-bridge';

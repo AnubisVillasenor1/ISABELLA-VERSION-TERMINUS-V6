@@ -6,12 +6,12 @@
 export function isLocalModelUrlAllowed(url: string): boolean {
   try {
     const parsed = new URL(url);
-    if (!["http:", "https:"].includes(parsed.protocol)) return false;
+    if (!['http:', 'https:'].includes(parsed.protocol)) return false;
     if (parsed.username || parsed.password) return false;
     return (
-      parsed.hostname === "127.0.0.1" ||
-      parsed.hostname === "localhost" ||
-      parsed.hostname === "::1"
+      parsed.hostname === '127.0.0.1' ||
+      parsed.hostname === 'localhost' ||
+      parsed.hostname === '::1'
     );
   } catch {
     return false;

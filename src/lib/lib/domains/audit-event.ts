@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from "node:crypto";
+import { createHash, randomUUID } from 'node:crypto';
 
 // ============================================================================
 // DOMINIO DE AUDITORÍA (src/lib/domains/audit-event.ts)
@@ -7,8 +7,8 @@ import { createHash, randomUUID } from "node:crypto";
 // Cada evento se encadena criptográficamente con el anterior (SHA-256).
 // ============================================================================
 
-export type AuditSeverity = "S0" | "S1" | "S2" | "S3";
-export type AuditResult = "success" | "failure" | "denied";
+export type AuditSeverity = 'S0' | 'S1' | 'S2' | 'S3';
+export type AuditResult = 'success' | 'failure' | 'denied';
 
 export interface AuditEventDomain {
   action: string;
@@ -54,15 +54,15 @@ export function auditPayload(event: AuditEventDomain, previousHash: string | nul
 /** Calcula el hash de verificación del evento (con encadenado). */
 export function computeVerificationHash(
   event: AuditEventDomain,
-  previousHash: string | null,
+  previousHash: string | null
 ): string {
-  return createHash("sha256").update(auditPayload(event, previousHash)).digest("hex");
+  return createHash('sha256').update(auditPayload(event, previousHash)).digest('hex');
 }
 
 /** Mapea el evento de dominio a la fila persistible (snake_case). */
 export function mapAuditEventToRow(
   event: AuditEventDomain,
-  previousHash: string | null,
+  previousHash: string | null
 ): AuditEventRow {
   const verificationHash = computeVerificationHash(event, previousHash);
   return {
@@ -86,10 +86,10 @@ export function mapAuditRowToDomain(row: AuditEventRow): AuditEventDomain {
     action: row.event,
     resource: row.event,
     actor: row.actor,
-    result: (row.result as AuditResult) ?? "success",
+    result: (row.result as AuditResult) ?? 'success',
     details: safeParseDetails(row.details),
     tenantId: row.tenant_id,
-    severity: (row.severity as AuditSeverity) ?? "S1",
+    severity: (row.severity as AuditSeverity) ?? 'S1',
     timestamp: new Date(row.timestamp),
   };
   if (row.actor_ip) domain.actorIp = row.actor_ip;
@@ -100,7 +100,7 @@ function safeParseDetails(raw: string): Record<string, unknown> {
   if (!raw) return {};
   try {
     const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === "object" ? parsed : { value: raw };
+    return parsed && typeof parsed === 'object' ? parsed : { value: raw };
   } catch {
     return { raw };
   }

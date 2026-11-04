@@ -16,24 +16,33 @@ export function braintrustConfig(env: Record<string, string | undefined>): Brain
   return { apiKey, projectId };
 }
 
-export function describeBraintrustReadiness(env: Record<string, string | undefined>): { configured: boolean; projectId: string | null } {
+export function describeBraintrustReadiness(env: Record<string, string | undefined>): {
+  configured: boolean;
+  projectId: string | null;
+} {
   const c = braintrustConfig(env);
   return { configured: c !== null, projectId: c?.projectId ?? null };
 }
 
-export async function initBraintrust(env: Record<string, string | undefined>): Promise<{ enabled: boolean; projectId: string | null }> {
+export async function initBraintrust(
+  env: Record<string, string | undefined>
+): Promise<{ enabled: boolean; projectId: string | null }> {
   const c = braintrustConfig(env);
   if (!c) return { enabled: false, projectId: null };
   // Lazy import to avoid loading the SDK when disabled.
   try {
-    const bt = await import("braintrust");
+    const bt = await import('braintrust');
     // Braintrust SDK init (best-effort; no hard dependency on specific API surface).
-    if (typeof (bt as { initLogger?: unknown }).initLogger === "function") {
-      (bt as { initLogger: (opts: { apiKey: string; projectName: string }) => unknown }).initLogger({ apiKey: c.apiKey, projectName: c.projectId });
+    if (typeof (bt as { initLogger?: unknown }).initLogger === 'function') {
+      (bt as { initLogger: (opts: { apiKey: string; projectName: string }) => unknown }).initLogger(
+        { apiKey: c.apiKey, projectName: c.projectId }
+      );
     }
     return { enabled: true, projectId: c.projectId };
   } catch (e) {
-    console.warn("[Isabella] braintrust init failed", { message: e instanceof Error ? e.message.slice(0, 180) : String(e) });
+    console.warn('[Isabella] braintrust init failed', {
+      message: e instanceof Error ? e.message.slice(0, 180) : String(e),
+    });
     return { enabled: false, projectId: c.projectId };
   }
 }

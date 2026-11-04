@@ -6,11 +6,11 @@ export interface BodyBudget {
 }
 
 export function bodySizeBytes(body: unknown): number {
-  if (typeof body === "string") {
-    return Buffer.byteLength(body, "utf8");
+  if (typeof body === 'string') {
+    return Buffer.byteLength(body, 'utf8');
   }
   try {
-    return Buffer.byteLength(JSON.stringify(body), "utf8");
+    return Buffer.byteLength(JSON.stringify(body), 'utf8');
   } catch {
     return 0;
   }
@@ -25,7 +25,7 @@ export function checkBodySize(body: unknown, maxBytes: number): void {
 
 export function createBodyBudget(maxBytes: number): BodyBudget {
   if (maxBytes <= 0) {
-    throw new Error("INGRESS: el presupuesto de cuerpo debe ser mayor que cero");
+    throw new Error('INGRESS: el presupuesto de cuerpo debe ser mayor que cero');
   }
   return { maxBytes, consumedBytes: 0 };
 }
@@ -36,7 +36,7 @@ export function consumeBodyBudget(budget: BodyBudget, body: unknown): number {
   if (budget.consumedBytes > budget.maxBytes) {
     budget.consumedBytes -= size;
     throw new Error(
-      `INGRESS: presupuesto de cuerpo agotado (${budget.consumedBytes}/${budget.maxBytes})`,
+      `INGRESS: presupuesto de cuerpo agotado (${budget.consumedBytes}/${budget.maxBytes})`
     );
   }
   return size;

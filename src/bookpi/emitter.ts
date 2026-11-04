@@ -1,14 +1,19 @@
-import { randomUUID } from "node:crypto";
-import { computeEventHash, computeEventIntegrity, eventCore, ZERO_HASH } from "./crypto";
-import { bookPiSecret } from "../security/secrets";
-import type { BookPiEventContext, BookPiEventCore, BookPiEventRecord, BookPiEventSeed } from "./types";
+import { randomUUID } from 'node:crypto';
+import { computeEventHash, computeEventIntegrity, eventCore, ZERO_HASH } from './crypto';
+import { bookPiSecret } from '../security/secrets';
+import type {
+  BookPiEventContext,
+  BookPiEventCore,
+  BookPiEventRecord,
+  BookPiEventSeed,
+} from './types';
 
-export const BOOKPI_INTEGRITY_ALGORITHM = "SHA3-512(secret:eventHash)";
-export const BOOKPI_EVENT_HASH_ALGORITHM = "SHA-256(canonicalEventCore)";
+export const BOOKPI_INTEGRITY_ALGORITHM = 'SHA3-512(secret:eventHash)';
+export const BOOKPI_EVENT_HASH_ALGORITHM = 'SHA-256(canonicalEventCore)';
 
 export function buildBookPiEvent(
   seed: BookPiEventSeed,
-  ctx: Partial<BookPiEventContext> = {},
+  ctx: Partial<BookPiEventContext> = {}
 ): BookPiEventRecord {
   const secret = bookPiSecret(ctx.secret);
   const base: BookPiEventCore = {
@@ -24,5 +29,10 @@ export function buildBookPiEvent(
     meta: seed.meta ?? {},
   };
   const hash = computeEventHash(base);
-  return { ...base, hash, integrity: computeEventIntegrity(hash, secret), canonical: eventCore(base) };
+  return {
+    ...base,
+    hash,
+    integrity: computeEventIntegrity(hash, secret),
+    canonical: eventCore(base),
+  };
 }

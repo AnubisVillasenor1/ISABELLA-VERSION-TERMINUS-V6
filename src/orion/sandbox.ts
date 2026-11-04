@@ -1,8 +1,8 @@
 /** ORION SANDBOX — evaluación representativa sin influencia en producción. */
 
-import type { EvolutionControl } from "../core/types";
-import type { ApprovalRef } from "../identity/approval";
-import type { ChangeProposal } from "./proposal";
+import type { EvolutionControl } from '../core/types';
+import type { ApprovalRef } from '../identity/approval';
+import type { ChangeProposal } from './proposal';
 
 export interface SandboxContext {
   controlsSnapshot: readonly EvolutionControl[];
@@ -17,7 +17,7 @@ export interface SandboxResult {
   replayedAt: string;
 }
 
-const NOT_REPLAYABLE = new Set(["CRITICAL", "HIGH", "MEDIUM"]);
+const NOT_REPLAYABLE = new Set(['CRITICAL', 'HIGH', 'MEDIUM']);
 
 /**
  * ORION equivale a un plano paralelo: la propuesta se replica contra la
@@ -29,8 +29,7 @@ export function runSandbox(proposal: ChangeProposal, ctx: SandboxContext): Sandb
   const replayed: string[] = [];
   const matches = ctx.controlsSnapshot.filter(
     (c) =>
-      c.state !== "blocked" &&
-      (c.domain === proposal.domain || c.plane.name === proposal.plane),
+      c.state !== 'blocked' && (c.domain === proposal.domain || c.plane.name === proposal.plane)
   );
 
   for (const control of matches) {
@@ -51,14 +50,14 @@ export function runSandbox(proposal: ChangeProposal, ctx: SandboxContext): Sandb
   if (replayed.length === 0) {
     return {
       passed: false,
-      reason: "la propuesta no toca ningún control del catálogo (insuficiente)",
+      reason: 'la propuesta no toca ningún control del catálogo (insuficiente)',
       controlsTouched: 0,
       replayedIds: [],
       replayedAt: new Date().toISOString(),
     };
   }
 
-  if (NOT_REPLAYABLE.has(proposal.riskTier) && ctx.approval?.decision !== "ALLOW") {
+  if (NOT_REPLAYABLE.has(proposal.riskTier) && ctx.approval?.decision !== 'ALLOW') {
     return {
       passed: false,
       reason: `riesgo ${proposal.riskTier} requiere aprobación humana para representar la propuesta`,

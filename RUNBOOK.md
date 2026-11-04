@@ -101,9 +101,10 @@ cp .env.example .env
 # 5. Generate secrets
 openssl rand -base64 32  # For BOOKPI_INTEGRITY_SECRET, tokens, etc.
 
-# 6. Create secrets
-mkdir -p secrets
-echo "your-db-password" > secrets/db_password.txt
+# 6. Set the database password in .env (never in the repo)
+# Append to .env:
+#   POSTGRES_PASSWORD=<openssl rand -base64 32>
+#   DATABASE_URL=postgresql://isabella_admin:<same-password>@postgres:5432/isabella_db
 
 # 7. Deploy
 ./scripts/deploy.sh deploy

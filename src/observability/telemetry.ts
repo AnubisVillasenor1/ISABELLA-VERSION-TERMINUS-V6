@@ -1,14 +1,14 @@
 export type MetricName =
-  | "request_total"
-  | "request_latency_ms"
-  | "ttft_ms"
-  | "tokens_per_second"
-  | "cache_hit"
-  | "speculative_acceptance"
-  | "policy_denial"
-  | "security_block"
-  | "memory_recall"
-  | "tool_execution";
+  | 'request_total'
+  | 'request_latency_ms'
+  | 'ttft_ms'
+  | 'tokens_per_second'
+  | 'cache_hit'
+  | 'speculative_acceptance'
+  | 'policy_denial'
+  | 'security_block'
+  | 'memory_recall'
+  | 'tool_execution';
 
 export interface MetricPoint {
   name: MetricName;
@@ -24,7 +24,7 @@ export interface TraceSpan {
   name: string;
   startedAt: string;
   durationMs: number;
-  status: "ok" | "error";
+  status: 'ok' | 'error';
   attributes: Readonly<Record<string, string | number | boolean>>;
 }
 
@@ -37,8 +37,12 @@ export class InMemoryTelemetry implements TelemetrySink {
   readonly metrics: MetricPoint[] = [];
   readonly spans: TraceSpan[] = [];
 
-  metric(point: MetricPoint): void { this.metrics.push(Object.freeze({ ...point })); }
-  span(span: TraceSpan): void { this.spans.push(Object.freeze({ ...span })); }
+  metric(point: MetricPoint): void {
+    this.metrics.push(Object.freeze({ ...point }));
+  }
+  span(span: TraceSpan): void {
+    this.spans.push(Object.freeze({ ...span }));
+  }
 }
 
 export function percentile(values: readonly number[], p: number): number {

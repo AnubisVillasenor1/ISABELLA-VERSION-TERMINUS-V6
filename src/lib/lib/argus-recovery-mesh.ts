@@ -1,4 +1,4 @@
-import { createHmac, createHash, timingSafeEqual } from "node:crypto";
+import { createHmac, createHash, timingSafeEqual } from 'node:crypto';
 
 export interface RecoveryPlan {
   planId: string;
@@ -21,25 +21,25 @@ export function deriveRecoveryEpoch(plan: {
   planDigest: string;
   targetCheckpoint: { sequence: number; digest?: string; stateDigest?: string };
 }): string {
-  return createHash("sha256")
+  return createHash('sha256')
     .update(
-      `${plan.planId}:${plan.planDigest}:${plan.targetCheckpoint.sequence}:${plan.targetCheckpoint.digest ?? plan.targetCheckpoint.stateDigest ?? ""}`,
+      `${plan.planId}:${plan.planDigest}:${plan.targetCheckpoint.sequence}:${plan.targetCheckpoint.digest ?? plan.targetCheckpoint.stateDigest ?? ''}`
     )
-    .digest("hex");
+    .digest('hex');
 }
 
 function sign(epoch: string, nodeId: string, secret: string): string {
-  return createHmac("sha256", secret).update(`${epoch}:${nodeId}`).digest("hex");
+  return createHmac('sha256', secret).update(`${epoch}:${nodeId}`).digest('hex');
 }
 
 export function createNodeAttestation(
   plan: RecoveryPlan,
   nodeId: string,
   secret: string,
-  now = Date.now(),
+  now = Date.now()
 ): NodeAttestation {
   if (!plan.authorizedNodes.includes(nodeId) || now > plan.expiresAt)
-    throw new Error("RECOVERY_PLAN_INVALID");
+    throw new Error('RECOVERY_PLAN_INVALID');
   return {
     nodeId,
     planId: plan.planId,
@@ -62,17 +62,17 @@ export class ArgusRecoveryMesh {
   verify(
     plan: RecoveryPlan,
     attestations: readonly NodeAttestation[],
-    now = Date.now(),
+    now = Date.now()
   ): { approved: boolean; reason: string; epoch: string } {
     const epoch = deriveRecoveryEpoch(plan);
     if (
       !/^([a-f0-9]{64})$/.test(plan.planDigest) ||
       !/^([a-f0-9]{64})$/.test(plan.targetCheckpoint.digest)
     )
-      return { approved: false, reason: "INVALID_DIGEST", epoch };
+      return { approved: false, reason: 'INVALID_DIGEST', epoch };
     if (now > plan.expiresAt || plan.quorum < 1 || plan.quorum > plan.authorizedNodes.length)
-      return { approved: false, reason: "PLAN_EXPIRED_OR_QUORUM_INVALID", epoch };
-    if (this.consumed.has(plan.planId)) return { approved: false, reason: "REPLAY", epoch };
+      return { approved: false, reason: 'PLAN_EXPIRED_OR_QUORUM_INVALID', epoch };
+    if (this.consumed.has(plan.planId)) return { approved: false, reason: 'REPLAY', epoch };
 
     const valid = new Set<string>();
     for (const attestation of attestations) {
@@ -85,14 +85,14 @@ export class ArgusRecoveryMesh {
         continue;
       const secret = this.secretByNode.get(attestation.nodeId);
       if (!secret || !/^[a-f0-9]{64}$/.test(attestation.signature)) continue;
-      const expected = Buffer.from(sign(epoch, attestation.nodeId, secret), "utf8");
-      const received = Buffer.from(attestation.signature, "utf8");
+      const expected = Buffer.from(sign(epoch, attestation.nodeId, secret), 'utf8');
+      const received = Buffer.from(attestation.signature, 'utf8');
       if (expected.length === received.length && timingSafeEqual(expected, received))
         valid.add(attestation.nodeId);
     }
-    if (valid.size < plan.quorum) return { approved: false, reason: "QUORUM_NOT_REACHED", epoch };
+    if (valid.size < plan.quorum) return { approved: false, reason: 'QUORUM_NOT_REACHED', epoch };
     this.consumed.add(plan.planId);
-    return { approved: true, reason: "QUORUM_REACHED", epoch };
+    return { approved: true, reason: 'QUORUM_REACHED', epoch };
   }
 
   static signAttestation(
@@ -103,11 +103,11 @@ export class ArgusRecoveryMesh {
       planDigest: string;
       epoch: string;
       attestedAt: string;
-    },
+    }
   ): NodeAttestation & { planDigest: string; attestedAt: string } {
-    const signature = createHmac("sha256", secret)
+    const signature = createHmac('sha256', secret)
       .update(`${input.epoch}:${input.nodeId}`)
-      .digest("hex");
+      .digest('hex');
     return {
       nodeId: input.nodeId,
       planId: input.planId,
@@ -123,27 +123,27 @@ export class ArgusRecoveryMesh {
     attestations: readonly NodeAttestation[],
     secrets: ReadonlyMap<string, string>,
     epoch: string,
-    now = Date.now(),
+    now = Date.now()
   ) {
     if (epoch !== deriveRecoveryEpoch(plan))
-      return { accepted: false, reason: "EPOCH_MISMATCH" } as const;
+      return { accepted: false, reason: 'EPOCH_MISMATCH' } as const;
     const expiresAt = (plan as { expiresAt?: number }).expiresAt;
-    if (typeof expiresAt === "number" && now > expiresAt)
-      return { accepted: false, reason: "PLAN_EXPIRED" } as const;
+    if (typeof expiresAt === 'number' && now > expiresAt)
+      return { accepted: false, reason: 'PLAN_EXPIRED' } as const;
     if (this.consumed.has(plan.planId))
-      return { accepted: false, reason: "REPLAYED_PLAN" } as const;
+      return { accepted: false, reason: 'REPLAYED_PLAN' } as const;
     const valid = new Set<string>();
     for (const attestation of attestations) {
       const secret = secrets.get(attestation.nodeId);
       if (!secret || attestation.planId !== plan.planId || attestation.epoch !== epoch) continue;
-      const expected = createHmac("sha256", secret)
+      const expected = createHmac('sha256', secret)
         .update(`${epoch}:${attestation.nodeId}`)
-        .digest("hex");
+        .digest('hex');
       if (expected === attestation.signature) valid.add(attestation.nodeId);
     }
     if (valid.size < this.quorum)
-      return { accepted: false, reason: "INVALID_ATTESTATION" } as const;
+      return { accepted: false, reason: 'INVALID_ATTESTATION' } as const;
     this.consumed.add(plan.planId);
-    return { accepted: true, reason: "QUORUM_REACHED" } as const;
+    return { accepted: true, reason: 'QUORUM_REACHED' } as const;
   }
 }

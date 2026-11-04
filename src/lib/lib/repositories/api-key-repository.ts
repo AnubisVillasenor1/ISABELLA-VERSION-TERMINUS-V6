@@ -1,8 +1,8 @@
-import { neon } from "@neondatabase/serverless";
-import { config } from "../config";
+import { neon } from '@neondatabase/serverless';
+import { config } from '../config';
 
 // ============================================================================
-// API KEY REPOSITORY (src/lib/repositories/api-key-repository.ts)
+// API KEY REPOSITORY (src/lib/lib/repositories/api-key-repository.ts)
 // ----------------------------------------------------------------------------
 // Repositorio DEDICADO con SQL explícito (P0-04/P1-19).
 // Contrato canónico, sin conversión genérica: `prefix`, `key_hash`, etc.
@@ -17,7 +17,7 @@ export interface ApiKeyRow {
   key_hash: string;
   role: string;
   scopes: string[];
-  status: "active" | "suspended" | "expired" | "revoked";
+  status: 'active' | 'suspended' | 'expired' | 'revoked';
   created_at: string;
   expires_at: string | null;
   last_used_at: string | null;
@@ -37,7 +37,7 @@ function mapRow(row: Record<string, unknown>): ApiKeyRow {
     key_hash: String(row.key_hash),
     role: String(row.role),
     scopes: Array.isArray(row.scopes) ? (row.scopes as string[]) : [],
-    status: row.status as ApiKeyRow["status"],
+    status: row.status as ApiKeyRow['status'],
     created_at: new Date(String(row.created_at)).toISOString(),
     expires_at: row.expires_at ? new Date(String(row.expires_at)).toISOString() : null,
     last_used_at: row.last_used_at ? new Date(String(row.last_used_at)).toISOString() : null,
@@ -110,7 +110,7 @@ export function createApiKeyPostgresRepository() {
     await sql`UPDATE public.api_keys SET last_used_at = now() WHERE id = ${id}`;
   }
 
-  async function updateStatus(id: string, status: ApiKeyRow["status"]): Promise<void> {
+  async function updateStatus(id: string, status: ApiKeyRow['status']): Promise<void> {
     await sql`UPDATE public.api_keys SET status = ${status} WHERE id = ${id}`;
   }
 

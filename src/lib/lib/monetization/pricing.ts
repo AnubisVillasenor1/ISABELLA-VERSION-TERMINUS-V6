@@ -1,5 +1,5 @@
-import { splitZeroLossRevenue } from "./revenue";
-import type { RevenueSplit } from "./types";
+import { splitZeroLossRevenue } from './revenue';
+import type { RevenueSplit } from './types';
 
 export interface QupPricingFactors {
   qubitCount: number;

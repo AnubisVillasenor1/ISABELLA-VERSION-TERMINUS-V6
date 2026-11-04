@@ -8,45 +8,45 @@
  *   T.TOURISM.E06_UX.recommend_route.synthesize.v1.0.0.MEDIUM.TERRITORIAL
  */
 
-export const TINA_TYPES = ["T", "I", "N", "A"] as const;
+export const TINA_TYPES = ['T', 'I', 'N', 'A'] as const;
 export type TinaType = (typeof TINA_TYPES)[number];
 
 export const TINA_TYPE_LABELS: Record<TinaType, string> = {
-  T: "Territorial",
-  I: "Institucional",
-  N: "Normativa",
-  A: "Auto-cognitiva",
+  T: 'Territorial',
+  I: 'Institucional',
+  N: 'Normativa',
+  A: 'Auto-cognitiva',
 };
 
 export const YUN_FEDERATIONS = [
-  "IDENTITY",
-  "PATRIMONY",
-  "TOURISM",
-  "ECONOMY",
-  "TWINS",
-  "COLLECTIVE_INTELLIGENCE",
-  "RESILIENCE",
+  'IDENTITY',
+  'PATRIMONY',
+  'TOURISM',
+  'ECONOMY',
+  'TWINS',
+  'COLLECTIVE_INTELLIGENCE',
+  'RESILIENCE',
 ] as const;
 export type YunFederation = (typeof YUN_FEDERATIONS)[number];
 
-export const RISK_TIERS = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "NEGLIGIBLE"] as const;
+export const RISK_TIERS = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'NEGLIGIBLE'] as const;
 export type RiskTier = (typeof RISK_TIERS)[number];
 
 export const GOVERNANCE_TIERS = [
-  "CONSTITUTIONAL",
-  "TERRITORIAL",
-  "INSTITUTIONAL",
-  "OPERATIONAL",
-  "AUTONOMOUS",
+  'CONSTITUTIONAL',
+  'TERRITORIAL',
+  'INSTITUTIONAL',
+  'OPERATIONAL',
+  'AUTONOMOUS',
 ] as const;
 export type GovernanceTier = (typeof GOVERNANCE_TIERS)[number];
 
 export const REGISTRATION_PHASES = [
-  "proposal",
-  "design",
-  "validation",
-  "registration",
-  "operation",
+  'proposal',
+  'design',
+  'validation',
+  'registration',
+  'operation',
 ] as const;
 export type RegistrationPhase = (typeof REGISTRATION_PHASES)[number];
 
@@ -56,15 +56,15 @@ export type ExpertModule = string;
 export const EXPERT_MODULE_COUNT = 24;
 
 export const ARCHITECTURAL_ENGINES = [
-  "CROWN",
-  "AEGIS",
-  "NCUA",
-  "BOOKPI",
-  "MOE_ROUTER",
-  "TRINITY_VLLM",
-  "TURBO_PIPELINE",
-  "NATIVE_ML",
-  "HDCVSA_MEMORY",
+  'CROWN',
+  'AEGIS',
+  'NCUA',
+  'BOOKPI',
+  'MOE_ROUTER',
+  'TRINITY_VLLM',
+  'TURBO_PIPELINE',
+  'NATIVE_ML',
+  'HDCVSA_MEMORY',
 ] as const;
 
 const EXPERT_MODULE_RE = /^E\d{2}(?:_[A-Z][A-Z0-9_]*)?$/;
@@ -82,15 +82,7 @@ export interface MethodId {
 }
 
 export function formatMethodId(m: MethodId): string {
-  return [
-    m.tina,
-    m.yun,
-    m.module,
-    m.function,
-    m.version,
-    m.riskTier,
-    m.governanceTier,
-  ].join(".");
+  return [m.tina, m.yun, m.module, m.function, m.version, m.riskTier, m.governanceTier].join('.');
 }
 
 export function isValidModule(module: ExpertModule): boolean {
@@ -105,16 +97,18 @@ export function isValidModule(module: ExpertModule): boolean {
 }
 
 export function parseMethodId(input: string): MethodId {
-  const tokens = input.split(".");
+  const tokens = input.split('.');
   if (tokens.length < 7) {
-    throw new Error(`MethodId inválido: se esperaban al menos 7 segmentos, se recibieron ${tokens.length}`);
+    throw new Error(
+      `MethodId inválido: se esperaban al menos 7 segmentos, se recibieron ${tokens.length}`
+    );
   }
 
-  const tina = tokens[0] as MethodId["tina"];
-  const yun = tokens[1] as MethodId["yun"];
-  const module = tokens[2] as MethodId["module"];
-  const governanceTier = tokens.at(-1) as MethodId["governanceTier"];
-  const riskTier = tokens.at(-2) as MethodId["riskTier"];
+  const tina = tokens[0] as MethodId['tina'];
+  const yun = tokens[1] as MethodId['yun'];
+  const module = tokens[2] as MethodId['module'];
+  const governanceTier = tokens.at(-1) as MethodId['governanceTier'];
+  const riskTier = tokens.at(-2) as MethodId['riskTier'];
 
   // Región [FUNCION + VERSION]: entre el módulo (índice 3) y el risque tier.
   // La versión es el sufijo más largo de la región que cumple semver; permite
@@ -127,7 +121,7 @@ export function parseMethodId(input: string): MethodId {
   const region = tokens.slice(regionStart, regionEnd);
   let versionIndexInRegion = -1;
   for (let suffixLen = region.length; suffixLen >= 1; suffixLen -= 1) {
-    const candidate = region.slice(region.length - suffixLen).join(".");
+    const candidate = region.slice(region.length - suffixLen).join('.');
     if (VERSION_RE.test(candidate)) {
       versionIndexInRegion = region.length - suffixLen;
       break;
@@ -136,8 +130,8 @@ export function parseMethodId(input: string): MethodId {
   if (versionIndexInRegion <= 0) {
     throw new Error(`MethodId inválido: no se halló segmento de versión semver`);
   }
-  const fn = region.slice(0, versionIndexInRegion).join(".");
-  const version = region.slice(versionIndexInRegion).join(".");
+  const fn = region.slice(0, versionIndexInRegion).join('.');
+  const version = region.slice(versionIndexInRegion).join('.');
 
   if (!TINA_TYPES.includes(tina)) {
     throw new Error(`MethodId inválido: TINA tipo desconocido '${tina}'`);
@@ -161,7 +155,7 @@ export function parseMethodId(input: string): MethodId {
   return { tina, yun, module, function: fn, version, riskTier, governanceTier };
 }
 
-export function buildMethodId(parts: Omit<MethodId, "function"> & { function: string }): string {
+export function buildMethodId(parts: Omit<MethodId, 'function'> & { function: string }): string {
   return formatMethodId({
     ...parts,
     function: parts.function,
@@ -169,14 +163,14 @@ export function buildMethodId(parts: Omit<MethodId, "function"> & { function: st
 }
 
 export const CANONICAL_EXAMPLE_METHOD_ID =
-  "T.TOURISM.E06_UX.recommend_route.synthesize.v1.0.0.MEDIUM.TERRITORIAL";
+  'T.TOURISM.E06_UX.recommend_route.synthesize.v1.0.0.MEDIUM.TERRITORIAL';
 
 /** Principios de alineación para registro de métodos. */
 export const ALIGNMENT_PRINCIPLES = [
-  "traceability",
-  "minimum_authority",
-  "reversibility",
-  "ethical_consistency",
-  "radical_transparency",
+  'traceability',
+  'minimum_authority',
+  'reversibility',
+  'ethical_consistency',
+  'radical_transparency',
 ] as const;
 export type AlignmentPrinciple = (typeof ALIGNMENT_PRINCIPLES)[number];

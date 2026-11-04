@@ -5,38 +5,38 @@
  * TAP v1.0 y los tipos de acto. Es un contrato declarativo y determinista; no
  * ejecuta red ni efectos externos.
  */
-import { createHash, randomUUID } from "node:crypto";
+import { createHash, randomUUID } from 'node:crypto';
 
 /** Cadena de autoridad de producción (12 eslabones, canon v40). */
 export const ISA_API_STAGES = [
-  "normalization",
-  "correlation",
-  "authentication",
-  "tenant_resolution",
-  "schema_validation",
-  "authorization",
-  "crown",
-  "moe_route",
-  "sandbox",
-  "veritas",
-  "audit",
-  "response",
+  'normalization',
+  'correlation',
+  'authentication',
+  'tenant_resolution',
+  'schema_validation',
+  'authorization',
+  'crown',
+  'moe_route',
+  'sandbox',
+  'veritas',
+  'audit',
+  'response',
 ] as const;
 
 export type IsaApiStage = (typeof ISA_API_STAGES)[number];
 
 /** Tipos de acto operativo canónico TAP v1.0. */
-export const TAP_ACT_TYPES = ["AI.QUERY", "AI.EXEC", "GOV.VOTE", "MSR.AWARD"] as const;
+export const TAP_ACT_TYPES = ['AI.QUERY', 'AI.EXEC', 'GOV.VOTE', 'MSR.AWARD'] as const;
 
 export type TapActType = (typeof TAP_ACT_TYPES)[number];
 
 export interface TapHumanReview {
   required: boolean;
-  status: "not_required" | "pending" | "approved" | "rejected";
+  status: 'not_required' | 'pending' | 'approved' | 'rejected';
 }
 
 export interface TapSignature {
-  algorithm: "ML-DSA" | "ML-DSA-65" | "SLH-DSA" | "Ed25519" | "NONE";
+  algorithm: 'ML-DSA' | 'ML-DSA-65' | 'SLH-DSA' | 'Ed25519' | 'NONE';
   keyId: string;
   /** prueba criptográfica; "NONE" no es una firma válida. */
   proofValue: string;
@@ -77,17 +77,17 @@ export interface TapActInput {
 
 /** Actos de alto impacto que exigen revisión humana. */
 export const HIGH_IMPACT_TRIGGERS = [
-  "fundamental_rights",
-  "sensitive_data",
-  "legal_effect_decision",
-  "untrusted_code_execution",
-  "policy_modification",
-  "funds_administration",
-  "credential_change",
-  "production_model_change",
-  "critical_infrastructure",
-  "minors_involved",
-  "high_uncertainty",
+  'fundamental_rights',
+  'sensitive_data',
+  'legal_effect_decision',
+  'untrusted_code_execution',
+  'policy_modification',
+  'funds_administration',
+  'credential_change',
+  'production_model_change',
+  'critical_infrastructure',
+  'minors_involved',
+  'high_uncertainty',
 ] as const;
 
 export type HighImpactTrigger = (typeof HIGH_IMPACT_TRIGGERS)[number];
@@ -97,7 +97,9 @@ export function requiresHumanReview(triggers: readonly HighImpactTrigger[]): boo
 }
 
 function commitment(payload: unknown): string {
-  return `sha256:${createHash("sha256").update(JSON.stringify(payload) ?? "").digest("hex")}`;
+  return `sha256:${createHash('sha256')
+    .update(JSON.stringify(payload) ?? '')
+    .digest('hex')}`;
 }
 
 /**
@@ -105,13 +107,17 @@ function commitment(payload: unknown): string {
  * se marca con revisión humana pendiente (fail-closed) y una firma "NONE" no
  * satisface los controles obligatorios.
  */
-export function buildTapAct(input: TapActInput, highImpactTriggers: readonly HighImpactTrigger[] = []): TapAct {
-  if (!input.issuer.trim() || !input.subject.trim()) throw new Error("TAP: issuer and subject are required");
-  if (!input.scope.trim()) throw new Error("TAP: scope is required");
+export function buildTapAct(
+  input: TapActInput,
+  highImpactTriggers: readonly HighImpactTrigger[] = []
+): TapAct {
+  if (!input.issuer.trim() || !input.subject.trim())
+    throw new Error('TAP: issuer and subject are required');
+  if (!input.scope.trim()) throw new Error('TAP: scope is required');
   const highImpact = requiresHumanReview(highImpactTriggers);
   const humanReview: TapHumanReview = highImpact
-    ? { required: true, status: input.humanReview?.status ?? "pending" }
-    : (input.humanReview ?? { required: false, status: "not_required" });
+    ? { required: true, status: input.humanReview?.status ?? 'pending' }
+    : (input.humanReview ?? { required: false, status: 'not_required' });
   return {
     actId: `urn:uuid:${randomUUID()}`,
     actType: input.actType,
@@ -125,7 +131,7 @@ export function buildTapAct(input: TapActInput, highImpactTriggers: readonly Hig
     inputCommitment: commitment(input.payload),
     toolPermissions: Object.freeze([...(input.toolPermissions ?? [])]),
     humanReview,
-    signature: input.signature ?? { algorithm: "NONE", keyId: "unset", proofValue: "" },
+    signature: input.signature ?? { algorithm: 'NONE', keyId: 'unset', proofValue: '' },
     traceId: input.traceId ?? randomUUID(),
   };
 }
@@ -140,17 +146,18 @@ export interface TapActValidation {
 /** Valida los controles obligatorios de un acto TAP (identificador, firma, etc.). */
 export function validateTapAct(act: TapAct): TapActValidation {
   const missing: string[] = [];
-  if (!act.actId) missing.push("act_id");
-  if (!act.issuer) missing.push("issuer");
-  if (!act.subject) missing.push("subject");
-  if (!act.scope) missing.push("scope");
-  if (!act.timestamp) missing.push("timestamp");
-  if (!act.nonce) missing.push("nonce");
-  if (!act.policyVersion) missing.push("policy_version");
-  if (!act.traceId) missing.push("trace_id");
-  const signatureSatisfied = act.signature.algorithm !== "NONE" && act.signature.proofValue.length > 0;
-  if (!signatureSatisfied) missing.push("signature");
-  const requiresHumanApproval = act.humanReview.required && act.humanReview.status !== "approved";
+  if (!act.actId) missing.push('act_id');
+  if (!act.issuer) missing.push('issuer');
+  if (!act.subject) missing.push('subject');
+  if (!act.scope) missing.push('scope');
+  if (!act.timestamp) missing.push('timestamp');
+  if (!act.nonce) missing.push('nonce');
+  if (!act.policyVersion) missing.push('policy_version');
+  if (!act.traceId) missing.push('trace_id');
+  const signatureSatisfied =
+    act.signature.algorithm !== 'NONE' && act.signature.proofValue.length > 0;
+  if (!signatureSatisfied) missing.push('signature');
+  const requiresHumanApproval = act.humanReview.required && act.humanReview.status !== 'approved';
   return { valid: missing.length === 0, missing, requiresHumanApproval, signatureSatisfied };
 }
 
@@ -168,11 +175,19 @@ export function evaluateIsaPipeline(flags: Partial<Record<IsaApiStage, boolean>>
   passed: boolean;
   verdicts: readonly IsaStageVerdict[];
 } {
-  const REQUIRED: readonly IsaApiStage[] = ["normalization", "correlation", "authentication", "tenant_resolution", "schema_validation", "authorization", "crown"];
+  const REQUIRED: readonly IsaApiStage[] = [
+    'normalization',
+    'correlation',
+    'authentication',
+    'tenant_resolution',
+    'schema_validation',
+    'authorization',
+    'crown',
+  ];
   const verdicts = ISA_API_STAGES.map((stage) => {
     const required = REQUIRED.includes(stage);
     const passed = flags[stage] ?? !required;
-    return { stage, passed, detail: passed ? "ok" : "not satisfied" };
+    return { stage, passed, detail: passed ? 'ok' : 'not satisfied' };
   });
   return { passed: verdicts.every((v) => v.passed), verdicts };
 }

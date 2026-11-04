@@ -1,9 +1,9 @@
-import { classifyTextRisk, type TextMLSignal } from "./text-classifier";
-import { predictBinary, trainBinaryClassifier, type BinaryDataset } from "./engine";
-import type { NativeMLHooks, ModelIdentity, PredictionResult, TrainingResult } from "./types";
+import { classifyTextRisk, type TextMLSignal } from './text-classifier';
+import { predictBinary, trainBinaryClassifier, type BinaryDataset } from './engine';
+import type { NativeMLHooks, ModelIdentity, PredictionResult, TrainingResult } from './types';
 
 /** Canonical Isabella ML facade. Every native model remains inspectable and governed. */
-export const NATIVE_ML_CONTRACT_VERSION = "1.0.0";
+export const NATIVE_ML_CONTRACT_VERSION = '1.0.0';
 
 export interface NativeMLRuntime {
   classifyRisk(text: string, hooks?: NativeMLHooks): TextMLSignal;
@@ -11,14 +11,14 @@ export interface NativeMLRuntime {
     input: BinaryDataset,
     ownerId: string,
     territoryId: string,
-    hooks?: NativeMLHooks,
+    hooks?: NativeMLHooks
   ): Promise<TrainingResult>;
   predictBinary(
     model: ModelIdentity,
     weights: number[],
     bias: number,
     features: number[][],
-    hooks?: NativeMLHooks,
+    hooks?: NativeMLHooks
   ): Promise<PredictionResult<number>>;
 }
 

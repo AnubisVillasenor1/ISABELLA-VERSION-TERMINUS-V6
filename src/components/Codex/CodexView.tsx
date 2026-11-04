@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from "react";
-import { BookOpen, FileText, ChevronRight, Lock, Hash } from "lucide-react";
-import { useServerFn } from "../../lib/tanstack-polyfill";
-import { getRegistrySnapshot } from "../../lib/atlas.functions";
+import React, { useEffect, useState } from 'react';
+import { BookOpen, FileText, ChevronRight, Lock, Hash } from 'lucide-react';
+import { useServerFn } from '../../lib/tanstack-polyfill';
+import { getRegistrySnapshot } from '../../lib/atlas.functions';
 
 export const CodexView: React.FC = () => {
   const [data, setData] = useState<any>(null);
@@ -30,7 +30,11 @@ export const CodexView: React.FC = () => {
   }
 
   if (!data) {
-    return <div className="p-8 text-center text-slate-400 animate-pulse">Initializing Codex Connection...</div>;
+    return (
+      <div className="p-8 text-center text-slate-400 animate-pulse">
+        Initializing Codex Connection...
+      </div>
+    );
   }
 
   const { documents, stats } = data;
@@ -52,15 +56,14 @@ export const CodexView: React.FC = () => {
 
       {/* Main Master-Detail Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 border-t border-slate-800/60 pt-12">
-        
         {/* Left Column: Document List */}
         <div className="lg:col-span-4 space-y-6">
           <div className="flex items-center justify-between">
-             <h3 className="text-[10px] font-bold font-mono text-slate-500 uppercase tracking-widest">
-               Registro Documental ({documents.length})
-             </h3>
+            <h3 className="text-[10px] font-bold font-mono text-slate-500 uppercase tracking-widest">
+              Registro Documental ({documents.length})
+            </h3>
           </div>
-          
+
           <div className="space-y-2 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
             {documents.map((doc: any) => {
               const isSelected = selectedDoc?.document_uid === doc.document_uid;
@@ -70,15 +73,21 @@ export const CodexView: React.FC = () => {
                   onClick={() => setSelectedDoc(doc)}
                   className={`p-4 rounded-xl border text-left cursor-pointer transition-all duration-300 ${
                     isSelected
-                      ? "bg-slate-900 border-slate-700 shadow-sm"
-                      : "bg-transparent border-slate-800/50 hover:border-slate-700"
+                      ? 'bg-slate-900 border-slate-700 shadow-sm'
+                      : 'bg-transparent border-slate-800/50 hover:border-slate-700'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <span className="font-mono text-[11px] font-bold text-slate-300">{doc.namespace}</span>
-                    <span className={`text-[10px] px-2 py-0.5 rounded border ${
-                      doc.state === 'published' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                    }`}>
+                    <span className="font-mono text-[11px] font-bold text-slate-300">
+                      {doc.namespace}
+                    </span>
+                    <span
+                      className={`text-[10px] px-2 py-0.5 rounded border ${
+                        doc.state === 'published'
+                          ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                          : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                      }`}
+                    >
                       {doc.state}
                     </span>
                   </div>
@@ -87,7 +96,7 @@ export const CodexView: React.FC = () => {
                   </p>
                   <div className="text-[10px] text-slate-500 font-mono flex items-center gap-1">
                     <Hash className="w-3 h-3" />
-                    {doc.document_uid.split("-").pop()}
+                    {doc.document_uid.split('-').pop()}
                   </div>
                 </div>
               );
@@ -100,9 +109,7 @@ export const CodexView: React.FC = () => {
           {selectedDoc ? (
             <div className="space-y-8 animate-fade-in">
               <div className="space-y-4 border-b border-slate-800/50 pb-8">
-                <h3 className="text-2xl font-light text-slate-100">
-                  {selectedDoc.title}
-                </h3>
+                <h3 className="text-2xl font-light text-slate-100">{selectedDoc.title}</h3>
                 <div className="flex flex-wrap gap-4 text-xs font-mono text-slate-400">
                   <div className="flex items-center gap-1.5 bg-slate-900/50 px-3 py-1.5 rounded-lg border border-slate-800">
                     <FileText className="w-3.5 h-3.5 text-blue-400" />
@@ -113,7 +120,12 @@ export const CodexView: React.FC = () => {
                     Federación: {selectedDoc.federation_id}
                   </div>
                   <div className="flex items-center gap-1.5 bg-slate-900/50 px-3 py-1.5 rounded-lg border border-slate-800">
-                    <span className="text-slate-500">Hash:</span> {selectedDoc.versions[selectedDoc.versions.length - 1].canonical_hash.substring(0, 16)}...
+                    <span className="text-slate-500">Hash:</span>{' '}
+                    {selectedDoc.versions[selectedDoc.versions.length - 1].canonical_hash.substring(
+                      0,
+                      16
+                    )}
+                    ...
                   </div>
                 </div>
               </div>
@@ -132,21 +144,24 @@ export const CodexView: React.FC = () => {
                   Metadatos y Firmas
                 </h4>
                 <pre className="text-[11px] font-mono text-slate-400 break-all leading-relaxed p-4 bg-[#030712] border border-slate-800/60 rounded-xl shadow-inner overflow-x-auto">
-                  {JSON.stringify({
-                    metadata: selectedDoc.versions[selectedDoc.versions.length - 1].metadata,
-                    signature: selectedDoc.versions[selectedDoc.versions.length - 1].signature,
-                    anchors: selectedDoc.anchors,
-                    created_by: selectedDoc.created_by,
-                    created_at: selectedDoc.created_at
-                  }, null, 2)}
+                  {JSON.stringify(
+                    {
+                      metadata: selectedDoc.versions[selectedDoc.versions.length - 1].metadata,
+                      signature: selectedDoc.versions[selectedDoc.versions.length - 1].signature,
+                      anchors: selectedDoc.anchors,
+                      created_by: selectedDoc.created_by,
+                      created_at: selectedDoc.created_at,
+                    },
+                    null,
+                    2
+                  )}
                 </pre>
               </div>
-
             </div>
           ) : (
-             <div className="h-full flex items-center justify-center text-slate-500 font-mono text-xs p-12">
-               Seleccione un documento del códice.
-             </div>
+            <div className="h-full flex items-center justify-center text-slate-500 font-mono text-xs p-12">
+              Seleccione un documento del códice.
+            </div>
           )}
         </div>
       </div>

@@ -8,10 +8,10 @@
  * en H_opt = 1.9 para la selección de umbral.
  */
 
-import * as crypto from "node:crypto";
-import type { BytePatch } from "./entropy-patcher";
-import { averagePatchEntropy, NCUA_ENTROPY_THRESHOLD } from "./entropy-patcher";
-import { computeEri, ENTROPY_TARGET_MIN } from "./eri";
+import * as crypto from 'node:crypto';
+import type { BytePatch } from './entropy-patcher';
+import { averagePatchEntropy, NCUA_ENTROPY_THRESHOLD } from './entropy-patcher';
+import { computeEri, ENTROPY_TARGET_MIN } from './eri';
 
 export interface ContinuousConceptVector {
   conceptId: string;
@@ -58,9 +58,9 @@ export class ContinuousConceptEngine {
       territorialDriftDetected: false,
     });
     const conceptId = `concept_${crypto
-      .createHash("sha256")
-      .update(latentVector.join("|"))
-      .digest("hex")
+      .createHash('sha256')
+      .update(latentVector.join('|'))
+      .digest('hex')
       .slice(0, 8)}`;
     return {
       conceptId,
@@ -80,7 +80,7 @@ export class TunableConceptEngine {
 
   public projectToContinuousConcept(
     patches: BytePatch[],
-    threshold = NCUA_ENTROPY_THRESHOLD,
+    threshold = NCUA_ENTROPY_THRESHOLD
   ): ConceptProjection {
     const latentVector: number[] = new Array(this.latentDim).fill(0);
     for (const patch of patches) {

@@ -1,10 +1,10 @@
-import * as crypto from "node:crypto";
-import { repositoryFactory } from "./persistence/repository-factory";
-import type { ApiKey } from "./persistence/repository";
-import { ApiKeyCrypto } from "./api-key-crypto";
-import type { ApiKeyRecord } from "./credential-types";
-import { config } from "./config";
-import { createApiKeyPostgresRepository } from "./repositories/api-key-repository";
+import * as crypto from 'node:crypto';
+import { repositoryFactory } from './persistence/repository-factory';
+import type { ApiKey } from './persistence/repository';
+import { ApiKeyCrypto } from './api-key-crypto';
+import type { ApiKeyRecord } from './credential-types';
+import { config } from './config';
+import { createApiKeyPostgresRepository } from './repositories/api-key-repository';
 
 export interface ApiKeyMetadata {
   id: string;
@@ -14,7 +14,7 @@ export interface ApiKeyMetadata {
   prefix: string;
   role: string;
   scopes: string[];
-  status: ApiKeyRecord["status"];
+  status: ApiKeyRecord['status'];
   created_at: string;
   expires_at?: string;
   last_used_at?: string;
@@ -32,24 +32,24 @@ function recordToApiKey(r: ApiKeyRecord): Partial<ApiKey> {
     keyHash: r.key_hash,
     keyPrefix: r.prefix,
     name: r.name,
-    secretHint: "",
+    secretHint: '',
     role: r.role,
-    status: (r.status as ApiKey["status"]) ?? "active",
+    status: (r.status as ApiKey['status']) ?? 'active',
     scopes: r.scopes,
     createdAt: r.created_at,
     expiresAt: r.expires_at ?? null,
     rotatedAt: r.rotated_from ?? null,
     revokedAt: r.revoked_at ?? null,
     lastUsedAt: r.last_used_at ?? null,
-    createdBy: r.created_by ?? "",
+    createdBy: r.created_by ?? '',
     metadata: r.metadata ?? {},
   };
 }
 
 function apiKeyToRecord(k: unknown): ApiKeyRecord {
   const kk = k as Record<string, unknown>;
-  const prefix = String(kk.prefix ?? kk.keyPrefix ?? "");
-  const keyHash = String(kk.key_hash ?? kk.keyHash ?? "");
+  const prefix = String(kk.prefix ?? kk.keyPrefix ?? '');
+  const keyHash = String(kk.key_hash ?? kk.keyHash ?? '');
   const record: ApiKeyRecord = {
     id: String(kk.id),
     tenant_id: String(kk.tenant_id ?? kk.tenantId),
@@ -59,7 +59,7 @@ function apiKeyToRecord(k: unknown): ApiKeyRecord {
     key_hash: keyHash,
     role: String(kk.role),
     scopes: (kk.scopes as string[]) ?? [],
-    status: (kk.status as ApiKeyRecord["status"]) ?? "active",
+    status: (kk.status as ApiKeyRecord['status']) ?? 'active',
     created_at: String(kk.created_at ?? kk.createdAt),
     metadata: (kk.metadata as Record<string, unknown>) ?? {},
   };
@@ -87,8 +87,8 @@ function toPublicMetadata(record: ApiKeyRecord): ApiKeyMetadata {
 function resolveCreationPrefix(): string {
   // Existing deployments may still expose the legacy default `isa_live`.
   // New credentials are always issued with the Isabella-owned `isk_live` format.
-  const configured = config().API_KEY_PREFIX || "isk_live";
-  return configured === "isa_live" ? "isk_live" : configured;
+  const configured = config().API_KEY_PREFIX || 'isk_live';
+  return configured === 'isa_live' ? 'isk_live' : configured;
 }
 
 function validateScopes(scopes: string[]): void {
@@ -98,7 +98,7 @@ function validateScopes(scopes: string[]): void {
     scopes.length > 64 ||
     scopes.some((scope) => !/^[a-z0-9:_-]{1,128}$/i.test(scope))
   ) {
-    throw new Error("invalid_api_key_scopes");
+    throw new Error('invalid_api_key_scopes');
   }
 }
 
@@ -117,7 +117,7 @@ export class ApiKeyService {
     role: string,
     scopes: string[],
     expiresInSeconds?: number,
-    createdBy?: string,
+    createdBy?: string
   ): Promise<{
     id: string;
     name: string;
@@ -127,7 +127,7 @@ export class ApiKeyService {
     expiresAt?: string;
   }> {
     if (!tenantId || !ownerId || !name.trim() || name.trim().length > 150) {
-      throw new Error("invalid_api_key_request");
+      throw new Error('invalid_api_key_request');
     }
     validateScopes(scopes);
 
@@ -138,7 +138,7 @@ export class ApiKeyService {
         expiresInSeconds <= 0 ||
         expiresInSeconds > cfg.API_KEY_MAX_TTL)
     ) {
-      throw new Error("invalid_api_key_ttl");
+      throw new Error('invalid_api_key_ttl');
     }
 
     const id = crypto.randomUUID();
@@ -159,7 +159,7 @@ export class ApiKeyService {
       key_hash: keyHash,
       role,
       scopes: [...new Set(scopes)],
-      status: "active",
+      status: 'active',
       created_at: new Date().toISOString(),
       ...(expiresAt ? { expires_at: expiresAt } : {}),
       ...(createdBy ? { created_by: createdBy } : {}),
@@ -172,11 +172,11 @@ export class ApiKeyService {
       tenantId,
       traceId: `trace_ak_${crypto.randomUUID().slice(0, 8)}`,
       timestamp: new Date().toISOString(),
-      action: "api_key.created",
-      resource: "api_key",
-      severity: "S3",
+      action: 'api_key.created',
+      resource: 'api_key',
+      severity: 'S3',
       actor: createdBy || ownerId,
-      result: "success",
+      result: 'success',
       details: { keyId: id, prefix, tenantId, scopes: record.scopes },
     });
 
@@ -196,20 +196,20 @@ export class ApiKeyService {
     error?: string;
   }> {
     if (!rawKey || rawKey.length < 32 || rawKey.length > 512) {
-      return { success: false, error: "invalid_credential" };
+      return { success: false, error: 'invalid_credential' };
     }
 
-    const parts = rawKey.split("_");
+    const parts = rawKey.split('_');
     if (parts.length < 4 || parts.some((part) => part.length === 0)) {
-      return { success: false, error: "invalid_credential" };
+      return { success: false, error: 'invalid_credential' };
     }
 
-    const prefix = parts.slice(0, -1).join("_");
+    const prefix = parts.slice(0, -1).join('_');
     if (
       !/^isk_(live|stage|test)_[A-Za-z0-9]+$/.test(prefix) &&
       !/^isa_(live|stage|test)_[A-Za-z0-9]+$/.test(prefix)
     ) {
-      return { success: false, error: "invalid_credential" };
+      return { success: false, error: 'invalid_credential' };
     }
 
     const cfg = config();
@@ -234,22 +234,22 @@ export class ApiKeyService {
       }
     }
 
-    if (!record) return { success: false, error: "invalid_credential" };
+    if (!record) return { success: false, error: 'invalid_credential' };
 
     const signatureMatch = ApiKeyCrypto.verifySecret(rawKey, record.key_hash);
-    if (!signatureMatch) return { success: false, error: "invalid_credential" };
+    if (!signatureMatch) return { success: false, error: 'invalid_credential' };
 
-    if (record.status !== "active") {
+    if (record.status !== 'active') {
       return { success: false, error: `credential_${record.status}` };
     }
 
     if (record.expires_at && new Date(record.expires_at).getTime() <= Date.now()) {
       if (usePostgres) {
-        await createApiKeyPostgresRepository().updateStatus(record.id, "expired");
+        await createApiKeyPostgresRepository().updateStatus(record.id, 'expired');
       } else {
-        await this.repo.update(record.tenant_id, record.id, { status: "expired" });
+        await this.repo.update(record.tenant_id, record.id, { status: 'expired' });
       }
-      return { success: false, error: "credential_expired" };
+      return { success: false, error: 'credential_expired' };
     }
 
     if (usePostgres) {
@@ -266,13 +266,13 @@ export class ApiKeyService {
   public static async revokeApiKey(
     id: string,
     tenantId: string,
-    actorId?: string,
+    actorId?: string
   ): Promise<boolean> {
     const existing = await this.repo.read(tenantId, id);
     if (!existing) return false;
 
     await this.repo.update(tenantId, id, {
-      status: "revoked",
+      status: 'revoked',
       revokedAt: new Date().toISOString(),
     });
 
@@ -281,11 +281,11 @@ export class ApiKeyService {
       tenantId,
       traceId: `trace_ak_${crypto.randomUUID().slice(0, 8)}`,
       timestamp: new Date().toISOString(),
-      action: "api_key.revoked",
-      resource: "api_key",
-      severity: "S2",
+      action: 'api_key.revoked',
+      resource: 'api_key',
+      severity: 'S2',
       actor: actorId || existing.createdBy,
-      result: "success",
+      result: 'success',
       details: { keyId: id },
     });
 
@@ -295,7 +295,7 @@ export class ApiKeyService {
   public static async rotateApiKey(
     id: string,
     tenantId: string,
-    actorId?: string,
+    actorId?: string
   ): Promise<{
     success: boolean;
     newKey?: {
@@ -309,14 +309,14 @@ export class ApiKeyService {
     error?: string;
   }> {
     const existing = await this.repo.read(tenantId, id);
-    if (!existing) return { success: false, error: "Llave no encontrada." };
+    if (!existing) return { success: false, error: 'Llave no encontrada.' };
 
     const rec = apiKeyToRecord(existing);
     const remainingTtl = rec.expires_at
       ? Math.max(1, Math.floor((new Date(rec.expires_at).getTime() - Date.now()) / 1000))
       : undefined;
     await this.repo.update(tenantId, id, {
-      status: "revoked",
+      status: 'revoked',
       revokedAt: new Date().toISOString(),
     });
 
@@ -327,7 +327,7 @@ export class ApiKeyService {
       rec.role,
       rec.scopes,
       remainingTtl,
-      actorId,
+      actorId
     );
     await this.repo.update(tenantId, newKey.id, { rotatedAt: id });
     return { success: true, newKey };

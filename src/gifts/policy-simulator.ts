@@ -11,14 +11,14 @@
  * Invariante (AGENTS.md): predecir no es decidir. El simulador no despliega ni
  * autoriza; solo proyecta consecuencias para arbitraje humano.
  */
-import { TRAFFIC_BANDS, type TrafficBand } from "../governance/traffic-light";
-import { digest, round } from "./util";
+import { TRAFFIC_BANDS, type TrafficBand } from '../governance/traffic-light';
+import { digest, round } from './util';
 
-export const POLICY_SIMULATOR_VERSION = "1.0.0" as const;
+export const POLICY_SIMULATOR_VERSION = '1.0.0' as const;
 export const POLICY_SIMULATOR_METHOD_ID =
-  "A.TWINS.LEGACY.policy_simulator.simulate.v1.0.0.LOW.AUTONOMOUS" as const;
+  'A.TWINS.LEGACY.policy_simulator.simulate.v1.0.0.LOW.AUTONOMOUS' as const;
 export const POLICY_SIMULATOR_DISCLAIMER =
-  "El simulador de política proyecta consecuencias; no despliega, no autoriza ni modifica configuración.";
+  'El simulador de política proyecta consecuencias; no despliega, no autoriza ni modifica configuración.';
 
 export interface PolicyKnobs {
   /** Vía rápida activa para flujos VERDES. */
@@ -44,7 +44,7 @@ export interface BandSimulation {
   readonly blocked: number;
 }
 
-export type PolicyVerdict = "HEALTHY" | "TOO_RESTRICTIVE" | "CONSTITUTIONAL_RISK";
+export type PolicyVerdict = 'HEALTHY' | 'TOO_RESTRICTIVE' | 'CONSTITUTIONAL_RISK';
 
 export interface PolicySimulation {
   readonly version: typeof POLICY_SIMULATOR_VERSION;
@@ -72,13 +72,13 @@ const DEFAULT_KNOBS: Required<PolicyKnobs> = Object.freeze({
 
 function admitsUnder(band: TrafficBand, knobs: Required<PolicyKnobs>): boolean {
   switch (band) {
-    case "GREEN":
+    case 'GREEN':
       return knobs.fastLaneEnabled;
-    case "YELLOW":
+    case 'YELLOW':
       return !knobs.yellowRequiresApproval;
-    case "ORANGE":
+    case 'ORANGE':
       return !knobs.orangeRequiresApproval;
-    case "RED":
+    case 'RED':
     default:
       return !knobs.redAlwaysBlocked;
   }
@@ -95,9 +95,9 @@ function emptySim(): Record<TrafficBand, BandSimulation> {
 
 export function simulatePolicy(
   knobs: PolicyKnobs,
-  cases: readonly SimulationCase[],
+  cases: readonly SimulationCase[]
 ): PolicySimulation {
-  if (!Array.isArray(cases)) throw new Error("POLICY_SIMULATOR_CASES_REQUIRED");
+  if (!Array.isArray(cases)) throw new Error('POLICY_SIMULATOR_CASES_REQUIRED');
   const list: readonly SimulationCase[] = cases;
   const resolved: Required<PolicyKnobs> = { ...DEFAULT_KNOBS, ...knobs };
   const byBand = emptySim();
@@ -106,10 +106,10 @@ export function simulatePolicy(
 
   for (const item of list) {
     if (!(TRAFFIC_BANDS as readonly string[]).includes(item.band)) {
-      throw new Error("POLICY_SIMULATOR_BAND_INVALID");
+      throw new Error('POLICY_SIMULATOR_BAND_INVALID');
     }
     const count = item.count === undefined ? 1 : item.count;
-    if (!Number.isInteger(count) || count < 0) throw new Error("POLICY_SIMULATOR_COUNT_INVALID");
+    if (!Number.isInteger(count) || count < 0) throw new Error('POLICY_SIMULATOR_COUNT_INVALID');
     const admits = admitsUnder(item.band, resolved);
     const current = byBand[item.band];
     byBand[item.band] = {
@@ -127,23 +127,27 @@ export function simulatePolicy(
 
   const warnings: string[] = [];
   if (resolved.redAlwaysBlocked === false) {
-    warnings.push("CONSTITUCIONAL: flujos ROJOS admitidos sin bloqueo obligatorio.");
+    warnings.push('CONSTITUCIONAL: flujos ROJOS admitidos sin bloqueo obligatorio.');
   }
   if (resolved.orangeRequiresApproval === false) {
-    warnings.push("Riesgo alto (NARANJA) admitido sin aprobación.");
+    warnings.push('Riesgo alto (NARANJA) admitido sin aprobación.');
   }
   if (resolved.fastLaneEnabled === false) {
-    warnings.push("Vía rápida desactivada: los flujos VERDES pasarán por filtrado adicional (más lento).");
+    warnings.push(
+      'Vía rápida desactivada: los flujos VERDES pasarán por filtrado adicional (más lento).'
+    );
   }
   if (predictedBlockRate > 0.5) {
-    warnings.push(`La política bloquearía ${round(predictedBlockRate * 100, 2)}% del tráfico: demasiado dura.`);
+    warnings.push(
+      `La política bloquearía ${round(predictedBlockRate * 100, 2)}% del tráfico: demasiado dura.`
+    );
   }
   const verdict: PolicyVerdict =
     resolved.redAlwaysBlocked === false
-      ? "CONSTITUTIONAL_RISK"
+      ? 'CONSTITUTIONAL_RISK'
       : predictedBlockRate > 0.5
-        ? "TOO_RESTRICTIVE"
-        : "HEALTHY";
+        ? 'TOO_RESTRICTIVE'
+        : 'HEALTHY';
 
   return {
     version: POLICY_SIMULATOR_VERSION,

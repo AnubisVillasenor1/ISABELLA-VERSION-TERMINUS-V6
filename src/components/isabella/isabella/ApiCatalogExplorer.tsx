@@ -1,5 +1,5 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
-import { DOMAINS, CATALOG_ENTRIES, type CatalogEntry } from "@/lib/api-catalog";
+import { useState, useMemo, useEffect, useCallback } from 'react';
+import { DOMAINS, CATALOG_ENTRIES, type CatalogEntry } from '@/lib/api-catalog';
 import {
   Search,
   Terminal,
@@ -19,43 +19,43 @@ import {
   Activity,
   Copy,
   Check,
-} from "lucide-react";
+} from 'lucide-react';
 
 // Colores normativos para verbos HTTP
 const METHOD_COLORS: Record<string, string> = {
-  GET: "bg-teal-500/10 text-teal-400 border-teal-500/20",
-  POST: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-  PATCH: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-  DELETE: "bg-rose-500/10 text-rose-400 border-rose-500/20",
-  PUT: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+  GET: 'bg-teal-500/10 text-teal-400 border-teal-500/20',
+  POST: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+  PATCH: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+  DELETE: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
+  PUT: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
 };
 
 // Estrategias de enrutamiento del gateway (heurística local determinista).
 // NO son MoE ni modelos de terceros: el router decide por señales del texto.
 const AI_ROUTING_STRATEGIES = [
   {
-    id: "moe_dynamic",
-    label: "Enrutamiento heurístico por señales (no MoE)",
+    id: 'moe_dynamic',
+    label: 'Enrutamiento heurístico por señales (no MoE)',
     icon: Network,
-    color: "text-purple-400",
+    color: 'text-purple-400',
   },
   {
-    id: "cot_reasoning",
-    label: "Deep Reasoning CoT (o1/R1)",
+    id: 'cot_reasoning',
+    label: 'Deep Reasoning CoT (o1/R1)',
     icon: BrainCircuit,
-    color: "text-amber-400",
+    color: 'text-amber-400',
   },
   {
-    id: "agentic_swarm",
-    label: "Swarm Multi-Agent (AutoGen)",
+    id: 'agentic_swarm',
+    label: 'Swarm Multi-Agent (AutoGen)',
     icon: Bot,
-    color: "text-blue-400",
+    color: 'text-blue-400',
   },
   {
-    id: "rag_memory",
-    label: "Episodic RAG Memory (MemGPT)",
+    id: 'rag_memory',
+    label: 'Episodic RAG Memory (MemGPT)',
     icon: Database,
-    color: "text-emerald-400",
+    color: 'text-emerald-400',
   },
 ];
 
@@ -72,8 +72,8 @@ interface SimulationResult {
   method: string;
   path: string;
   governanceScore: number;
-  decisionStatus: "allowed" | "allowed_read_only" | "rejected" | "quarantined";
-  riskLevel: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+  decisionStatus: 'allowed' | 'allowed_read_only' | 'rejected' | 'quarantined';
+  riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
   allowedTools: string[];
   latencyMs: number;
   tokensConsumed: number;
@@ -84,22 +84,22 @@ interface SimulationResult {
 }
 
 export function ApiCatalogExplorer() {
-  const [selectedDomain, setSelectedDomain] = useState<string>("all");
-  const [selectedMethod, setSelectedMethod] = useState<string>("all");
-  const [selectedStrategy, setSelectedStrategy] = useState<string>("moe_dynamic");
-  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedDomain, setSelectedDomain] = useState<string>('all');
+  const [selectedMethod, setSelectedMethod] = useState<string>('all');
+  const [selectedStrategy, setSelectedStrategy] = useState<string>('moe_dynamic');
+  const [searchQuery, setSearchQuery] = useState('');
   const [activeEntry, setActiveEntry] = useState<CatalogEntry | null>(null);
 
   const [simulateParams, setSimulateParams] = useState<string>(
     // tenantId/actorId NUNCA se envían desde el cliente: se derivan de la
     // sesión en el servidor (ISA-457/ISA-458).
-    '{\n  "clientId": "isabella-cli-v4",\n  "contextDepth": "deep",\n  "vectorMemoryAccess": true\n}',
+    '{\n  "clientId": "isabella-cli-v4",\n  "contextDepth": "deep",\n  "vectorMemoryAccess": true\n}'
   );
 
   const [isSimulating, setIsProcessing] = useState(false);
   const [simulationResult, setSimulationResult] = useState<SimulationResult | null>(null);
   const [errorNotice, setErrorNotice] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"schemas" | "simulator" | "cot">("simulator");
+  const [activeTab, setActiveTab] = useState<'schemas' | 'simulator' | 'cot'>('simulator');
   const [copied, setCopied] = useState(false);
 
   // Inicialización inteligente del primer contrato activo
@@ -112,10 +112,10 @@ export function ApiCatalogExplorer() {
   // Filtrado multivariable memoiado
   const filteredEntries = useMemo(() => {
     return CATALOG_ENTRIES.filter((entry) => {
-      const matchDomain = selectedDomain === "all" || entry.domain === selectedDomain;
-      const matchMethod = selectedMethod === "all" || entry.method === selectedMethod;
+      const matchDomain = selectedDomain === 'all' || entry.domain === selectedDomain;
+      const matchMethod = selectedMethod === 'all' || entry.method === selectedMethod;
       const matchQuery =
-        searchQuery === "" ||
+        searchQuery === '' ||
         entry.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
         entry.path.toLowerCase().includes(searchQuery.toLowerCase()) ||
         entry.description.toLowerCase().includes(searchQuery.toLowerCase());
@@ -138,15 +138,15 @@ export function ApiCatalogExplorer() {
     try {
       parsedParams = JSON.parse(simulateParams);
     } catch {
-      setErrorNotice("Sintaxis JSON inválida en los parámetros de entrada.");
+      setErrorNotice('Sintaxis JSON inválida en los parámetros de entrada.');
       setIsProcessing(false);
       return;
     }
 
     try {
-      const res = await fetch("/api/catalog", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
+      const res = await fetch('/api/catalog', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           id: entry.id,
           method: entry.method,
@@ -163,7 +163,7 @@ export function ApiCatalogExplorer() {
       const result = (await res.json()) as SimulationResult;
       setSimulationResult(result);
       if (result.reasoningTrace && result.reasoningTrace.length > 0) {
-        setActiveTab("cot");
+        setActiveTab('cot');
       }
     } catch (err: unknown) {
       // Fail-closed: sin respuesta del servidor no se inventa ningún resultado.
@@ -171,7 +171,7 @@ export function ApiCatalogExplorer() {
       setErrorNotice(
         err instanceof Error
           ? `Ejecución no disponible: ${err.message}`
-          : "Ejecución no disponible: el servidor no respondió.",
+          : 'Ejecución no disponible: el servidor no respondió.'
       );
     } finally {
       setIsProcessing(false);
@@ -190,11 +190,11 @@ export function ApiCatalogExplorer() {
           </h3>
           <div className="space-y-1">
             <button
-              onClick={() => setSelectedDomain("all")}
+              onClick={() => setSelectedDomain('all')}
               className={`w-full flex items-center justify-between text-left px-3 py-1.5 rounded-lg text-[11.5px] font-mono transition-all ${
-                selectedDomain === "all"
-                  ? "bg-secondary/60 text-platinum font-semibold border border-border/40"
-                  : "text-muted-foreground hover:text-platinum hover:bg-secondary/20"
+                selectedDomain === 'all'
+                  ? 'bg-secondary/60 text-platinum font-semibold border border-border/40'
+                  : 'text-muted-foreground hover:text-platinum hover:bg-secondary/20'
               }`}
             >
               <span>Todos ({CATALOG_ENTRIES.length})</span>
@@ -207,8 +207,8 @@ export function ApiCatalogExplorer() {
                   onClick={() => setSelectedDomain(dom.id)}
                   className={`w-full flex items-center justify-between text-left px-3 py-1.5 rounded-lg text-[11.5px] font-mono transition-all ${
                     selectedDomain === dom.id
-                      ? "bg-secondary/60 text-platinum font-semibold border border-border/40"
-                      : "text-muted-foreground hover:text-platinum hover:bg-secondary/20"
+                      ? 'bg-secondary/60 text-platinum font-semibold border border-border/40'
+                      : 'text-muted-foreground hover:text-platinum hover:bg-secondary/20'
                   }`}
                 >
                   <span className="flex items-center gap-2 truncate">
@@ -232,17 +232,17 @@ export function ApiCatalogExplorer() {
             Métodos HTTP
           </h3>
           <div className="flex flex-wrap gap-1.5">
-            {["all", "GET", "POST", "PATCH", "DELETE", "PUT"].map((m) => (
+            {['all', 'GET', 'POST', 'PATCH', 'DELETE', 'PUT'].map((m) => (
               <button
                 key={m}
                 onClick={() => setSelectedMethod(m)}
                 className={`px-2.5 py-1 rounded-lg text-[10px] font-mono border transition-all ${
                   selectedMethod === m
-                    ? "bg-electric/20 text-electric border-electric/40 font-semibold"
-                    : "border-border/30 text-muted-foreground hover:text-platinum hover:border-border/60"
+                    ? 'bg-electric/20 text-electric border-electric/40 font-semibold'
+                    : 'border-border/30 text-muted-foreground hover:text-platinum hover:border-border/60'
                 }`}
               >
-                {m === "all" ? "Todos" : m}
+                {m === 'all' ? 'Todos' : m}
               </button>
             ))}
           </div>
@@ -264,8 +264,8 @@ export function ApiCatalogExplorer() {
                   onClick={() => setSelectedStrategy(st.id)}
                   className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-xl text-[11px] font-mono border text-left transition-all ${
                     isSel
-                      ? "bg-secondary/60 border-purple-500/40 text-platinum"
-                      : "border-border/20 text-muted-foreground hover:bg-secondary/20 hover:text-platinum"
+                      ? 'bg-secondary/60 border-purple-500/40 text-platinum'
+                      : 'border-border/20 text-muted-foreground hover:bg-secondary/20 hover:text-platinum'
                   }`}
                 >
                   <Icon className={`size-3.5 shrink-0 ${st.color}`} />
@@ -292,7 +292,7 @@ export function ApiCatalogExplorer() {
             />
             {searchQuery && (
               <button
-                onClick={() => setSearchQuery("")}
+                onClick={() => setSearchQuery('')}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-platinum"
               >
                 <X className="size-3.5" />
@@ -300,8 +300,8 @@ export function ApiCatalogExplorer() {
             )}
           </div>
           <div className="font-mono text-[11px] text-muted-foreground text-right w-full md:w-auto">
-            Catálogo Activo:{" "}
-            <span className="text-electric font-semibold">{filteredEntries.length}</span> de{" "}
+            Catálogo Activo:{' '}
+            <span className="text-electric font-semibold">{filteredEntries.length}</span> de{' '}
             <span className="text-platinum">{CATALOG_ENTRIES.length}</span>
           </div>
         </div>
@@ -335,21 +335,21 @@ export function ApiCatalogExplorer() {
                       }}
                       className={`w-full text-left p-3.5 transition-all flex flex-col gap-1.5 group ${
                         isActive
-                          ? "bg-secondary/50 border-l-2 border-l-electric"
-                          : "hover:bg-secondary/20"
+                          ? 'bg-secondary/50 border-l-2 border-l-electric'
+                          : 'hover:bg-secondary/20'
                       }`}
                     >
                       <div className="flex items-center justify-between gap-2">
                         <span
                           className={`px-2 py-0.5 rounded text-[9px] font-mono border font-semibold ${
-                            METHOD_COLORS[entry.method] || "border-border/40"
+                            METHOD_COLORS[entry.method] || 'border-border/40'
                           }`}
                         >
                           {entry.method}
                         </span>
                         <span
                           className="size-2 rounded-full"
-                          style={{ background: dom?.color || "var(--border)" }}
+                          style={{ background: dom?.color || 'var(--border)' }}
                           title={dom?.name}
                         />
                       </div>
@@ -414,22 +414,22 @@ export function ApiCatalogExplorer() {
                 {/* Sub-Navegación de Trabajo (Simulador / Esquemas / Pensamiento CoT) */}
                 <div className="flex items-center gap-2 border-b border-border/30 pb-2">
                   <button
-                    onClick={() => setActiveTab("simulator")}
+                    onClick={() => setActiveTab('simulator')}
                     className={`px-3 py-1.5 rounded-xl font-mono text-[11px] flex items-center gap-1.5 transition-all ${
-                      activeTab === "simulator"
-                        ? "bg-electric/15 text-electric border border-electric/30 font-semibold"
-                        : "text-muted-foreground hover:text-platinum"
+                      activeTab === 'simulator'
+                        ? 'bg-electric/15 text-electric border border-electric/30 font-semibold'
+                        : 'text-muted-foreground hover:text-platinum'
                     }`}
                   >
                     <Sparkles className="size-3.5" />
                     Consola de Simulación
                   </button>
                   <button
-                    onClick={() => setActiveTab("schemas")}
+                    onClick={() => setActiveTab('schemas')}
                     className={`px-3 py-1.5 rounded-xl font-mono text-[11px] flex items-center gap-1.5 transition-all ${
-                      activeTab === "schemas"
-                        ? "bg-electric/15 text-electric border border-electric/30 font-semibold"
-                        : "text-muted-foreground hover:text-platinum"
+                      activeTab === 'schemas'
+                        ? 'bg-electric/15 text-electric border border-electric/30 font-semibold'
+                        : 'text-muted-foreground hover:text-platinum'
                     }`}
                   >
                     <Code className="size-3.5" />
@@ -437,11 +437,11 @@ export function ApiCatalogExplorer() {
                   </button>
                   {simulationResult?.reasoningTrace && (
                     <button
-                      onClick={() => setActiveTab("cot")}
+                      onClick={() => setActiveTab('cot')}
                       className={`px-3 py-1.5 rounded-xl font-mono text-[11px] flex items-center gap-1.5 transition-all ${
-                        activeTab === "cot"
-                          ? "bg-purple-500/15 text-purple-300 border border-purple-500/30 font-semibold"
-                          : "text-muted-foreground hover:text-platinum"
+                        activeTab === 'cot'
+                          ? 'bg-purple-500/15 text-purple-300 border border-purple-500/30 font-semibold'
+                          : 'text-muted-foreground hover:text-platinum'
                       }`}
                     >
                       <BrainCircuit className="size-3.5" />
@@ -451,7 +451,7 @@ export function ApiCatalogExplorer() {
                 </div>
 
                 {/* Pestaña 1: Consola de Simulación Nativa */}
-                {activeTab === "simulator" && (
+                {activeTab === 'simulator' && (
                   <div className="grid gap-4 lg:grid-cols-2 pt-1">
                     <div className="flex flex-col gap-3">
                       <div className="flex items-center justify-between">
@@ -474,8 +474,8 @@ export function ApiCatalogExplorer() {
                       >
                         <Play className="size-3.5 fill-electric" />
                         {isSimulating
-                          ? "Ejecutando en Inferencia..."
-                          : "Ejecutar Prueba de Contrato"}
+                          ? 'Ejecutando en Inferencia...'
+                          : 'Ejecutar Prueba de Contrato'}
                       </button>
 
                       {errorNotice && (
@@ -527,7 +527,7 @@ export function ApiCatalogExplorer() {
                               <button
                                 onClick={() =>
                                   copyPayload(
-                                    JSON.stringify(simulationResult.responsePayload, null, 2),
+                                    JSON.stringify(simulationResult.responsePayload, null, 2)
                                   )
                                 }
                                 className="text-muted-foreground hover:text-platinum flex items-center gap-1 font-mono text-[9px]"
@@ -537,7 +537,7 @@ export function ApiCatalogExplorer() {
                                 ) : (
                                   <Copy className="size-3" />
                                 )}
-                                {copied ? "Copiado" : "Copiar"}
+                                {copied ? 'Copiado' : 'Copiar'}
                               </button>
                             </div>
                             <pre className="bg-secondary/35 border border-border/40 rounded-xl p-3 font-mono text-[10px] text-teal-300 overflow-x-auto max-h-[22vh] custom-scrollbar">
@@ -557,7 +557,7 @@ export function ApiCatalogExplorer() {
                 )}
 
                 {/* Pestaña 2: Esquemas de Código */}
-                {activeTab === "schemas" && (
+                {activeTab === 'schemas' && (
                   <div className="grid gap-4 lg:grid-cols-2 pt-1">
                     <div>
                       <h4 className="font-mono text-[9.5px] uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
@@ -583,7 +583,7 @@ export function ApiCatalogExplorer() {
                 )}
 
                 {/* Pestaña 3: Cadena de Pensamiento (CoT) */}
-                {activeTab === "cot" && simulationResult?.reasoningTrace && (
+                {activeTab === 'cot' && simulationResult?.reasoningTrace && (
                   <div className="space-y-3 pt-1">
                     <h4 className="font-mono text-[10px] uppercase tracking-wider text-purple-300 flex items-center gap-2">
                       <BrainCircuit className="size-4 text-purple-400" />

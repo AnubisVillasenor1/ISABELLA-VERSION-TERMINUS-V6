@@ -1,7 +1,7 @@
-import { createHash } from "node:crypto";
-import type { IntelligenceProvider, Modality } from "./contracts";
+import { createHash } from 'node:crypto';
+import type { IntelligenceProvider, Modality } from './contracts';
 
-export type ModelStatus = "PROPOSED" | "EVALUATED" | "APPROVED" | "DEPLOYED" | "REVOKED";
+export type ModelStatus = 'PROPOSED' | 'EVALUATED' | 'APPROVED' | 'DEPLOYED' | 'REVOKED';
 export interface ModelIdentity {
   modelId: string;
   version: string;
@@ -35,7 +35,7 @@ function copyDescriptor(model: ModelDescriptor): ModelDescriptor {
 }
 
 export function registerModel(model: ModelDescriptor): void {
-  if (!/^[a-zA-Z0-9._:/-]{2,160}$/.test(model.modelId)) throw new Error("Invalid modelId");
+  if (!/^[a-zA-Z0-9._:/-]{2,160}$/.test(model.modelId)) throw new Error('Invalid modelId');
   runtimeRegistry.set(model.modelId, Object.freeze(copyDescriptor(model)));
 }
 export function getModel(modelId: string): ModelDescriptor | undefined {
@@ -69,9 +69,9 @@ export function disableModel(modelId: string): void {
 export class ModelRegistry {
   private readonly models = new Map<string, ModelIdentity>();
   register(
-    input: Omit<ModelIdentity, "artifactHash" | "status" | "createdAt"> & {
+    input: Omit<ModelIdentity, 'artifactHash' | 'status' | 'createdAt'> & {
       artifact: unknown;
-    },
+    }
   ): ModelIdentity {
     const key = `${input.modelId}@${input.version}`;
     if (this.models.has(key)) throw new Error(`Modelo ya registrado: ${key}`);
@@ -81,9 +81,9 @@ export class ModelRegistry {
       provider: input.provider,
       family: input.family,
       task: input.task,
-      artifactHash: `sha3-512:${createHash("sha3-512").update(stableSerialize(input.artifact)).digest("hex")}`,
+      artifactHash: `sha3-512:${createHash('sha3-512').update(stableSerialize(input.artifact)).digest('hex')}`,
       license: input.license,
-      status: "PROPOSED",
+      status: 'PROPOSED',
       createdAt: new Date().toISOString(),
     };
     this.models.set(key, model);
@@ -106,10 +106,10 @@ export class ModelRegistry {
   }
 }
 function stableSerialize(value: unknown): string {
-  if (value === null || typeof value !== "object") return JSON.stringify(value);
-  if (Array.isArray(value)) return `[${value.map(stableSerialize).join(",")}]`;
+  if (value === null || typeof value !== 'object') return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(stableSerialize).join(',')}]`;
   return `{${Object.keys(value as Record<string, unknown>)
     .sort()
     .map((k) => `${JSON.stringify(k)}:${stableSerialize((value as Record<string, unknown>)[k])}`)
-    .join(",")}}`;
+    .join(',')}}`;
 }

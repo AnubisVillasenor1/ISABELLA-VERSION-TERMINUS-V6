@@ -1,12 +1,12 @@
 /**
- * SKILL BRIDGE CORE (src/lib/skills/skill-bridge-core.ts)
+ * SKILL BRIDGE CORE (src/lib/lib/skills/skill-bridge-core.ts)
  * -----------------------------------------------------------------
  * Utilidades ligeras e isomorfas para detección y tipado de invocaciones
  * a habilidades soberanas (@skill). Seguro para ser importado tanto en
  * el cliente (React / Vite) como en el servidor.
  */
 
-import { isabellaSkills, type IsabellaSkillId } from "./registry";
+import { isabellaSkills, type IsabellaSkillId } from './registry';
 
 export interface SkillInvocation {
   skillId: IsabellaSkillId;
@@ -52,10 +52,10 @@ const skillLookupMap = new Map<string, IsabellaSkillId>();
 for (const key of Object.keys(isabellaSkills) as IsabellaSkillId[]) {
   const normKey = key.toLowerCase();
   skillLookupMap.set(normKey, key);
-  skillLookupMap.set(normKey.replace(/-/g, "_"), key);
-  skillLookupMap.set(normKey.replace(/_/g, "-"), key);
+  skillLookupMap.set(normKey.replace(/-/g, '_'), key);
+  skillLookupMap.set(normKey.replace(/_/g, '-'), key);
   const skillObj = isabellaSkills[key];
-  if (skillObj && typeof skillObj === "object" && "name" in skillObj) {
+  if (skillObj && typeof skillObj === 'object' && 'name' in skillObj) {
     const nameLower = (skillObj.name as string).toLowerCase();
     skillLookupMap.set(nameLower, key);
   }
@@ -65,7 +65,7 @@ for (const key of Object.keys(isabellaSkills) as IsabellaSkillId[]) {
  * Detecta si un texto contiene el prefijo o comando de una habilidad soberana.
  */
 export function isSkillTrigger(text: string): boolean {
-  if (!text || typeof text !== "string") return false;
+  if (!text || typeof text !== 'string') return false;
   return /(?:^|\s)@skill(?:[:\s]|\b)|(?:^|\s)@[a-zA-Z0-9_\-:]+/i.test(text.trim());
 }
 
@@ -77,17 +77,17 @@ export function isSkillTrigger(text: string): boolean {
  *  - `@<nombre> [json|texto]` (para nombres coincidentes con el registro de skills)
  */
 export function detectSkillInvocation(text: string): SkillInvocation | null {
-  if (!text || typeof text !== "string") return null;
+  if (!text || typeof text !== 'string') return null;
   const trimmed = text.trim();
 
   // Patrón 1: @skill:nombre o @skill nombre
   const skillPrefixMatch = trimmed.match(/^@skill[:\s]+([a-zA-Z0-9_\-:]+)([\s\S]*)$/i);
-  let targetSkillName = "";
-  let remainder = "";
+  let targetSkillName = '';
+  let remainder = '';
 
   if (skillPrefixMatch) {
     targetSkillName = skillPrefixMatch[1].trim();
-    remainder = skillPrefixMatch[2]?.trim() ?? "";
+    remainder = skillPrefixMatch[2]?.trim() ?? '';
   } else {
     // Patrón 2: @nombre (ej. @hepta, @gaia, @sophia, @orion)
     const directMatch = trimmed.match(/^@([a-zA-Z0-9_\-:]+)([\s\S]*)$/);
@@ -96,7 +96,7 @@ export function detectSkillInvocation(text: string): SkillInvocation | null {
       const norm = candidate.toLowerCase();
       if (skillLookupMap.has(norm)) {
         targetSkillName = candidate;
-        remainder = directMatch[2]?.trim() ?? "";
+        remainder = directMatch[2]?.trim() ?? '';
       }
     }
   }
@@ -105,8 +105,8 @@ export function detectSkillInvocation(text: string): SkillInvocation | null {
 
   const matchedSkillId =
     skillLookupMap.get(targetSkillName.toLowerCase()) ||
-    skillLookupMap.get(targetSkillName.toLowerCase().replace(/-/g, "_")) ||
-    skillLookupMap.get(targetSkillName.toLowerCase().replace(/_/g, "-"));
+    skillLookupMap.get(targetSkillName.toLowerCase().replace(/-/g, '_')) ||
+    skillLookupMap.get(targetSkillName.toLowerCase().replace(/_/g, '-'));
 
   if (!matchedSkillId) return null;
 
@@ -125,8 +125,8 @@ export function detectSkillInvocation(text: string): SkillInvocation | null {
     }
   } else {
     parsedInput = {
-      query: "Ejecución invocada desde chat stream",
-      intent: "chat_skill_invocation",
+      query: 'Ejecución invocada desde chat stream',
+      intent: 'chat_skill_invocation',
     };
   }
 

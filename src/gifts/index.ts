@@ -11,44 +11,64 @@
  * Invariante (AGENTS.md): el paquete SUGIERE, CALCULA y EXPLICA. No autoriza, no
  * ejecuta efectos externos y no eleva permisos.
  */
-import type { CapabilityDomain } from "../capabilities";
+import type { CapabilityDomain } from '../capabilities';
 import {
   GIFT_MANIFEST,
   GIFT_COUNT,
   GIFT_AUTHOR,
   giftById,
   type GiftManifestEntry,
-} from "./manifest";
-import { EarnedTrustLedger, type TrustOutcome, type FrictionAdjustment } from "./earned-trust";
-import { planLatencyBudget, type LatencyBudgetInput, type LatencyBudgetPlan } from "./latency-budget";
-import { compileIntent, type IntentCompilation } from "./intent-compiler";
-import { planClarification, type ClarifyInput, type ClarifyPlan } from "./clarify-engine";
+} from './manifest';
+import { EarnedTrustLedger, type TrustOutcome, type FrictionAdjustment } from './earned-trust';
+import {
+  planLatencyBudget,
+  type LatencyBudgetInput,
+  type LatencyBudgetPlan,
+} from './latency-budget';
+import { compileIntent, type IntentCompilation } from './intent-compiler';
+import { planClarification, type ClarifyInput, type ClarifyPlan } from './clarify-engine';
 import {
   verifySelfConsistency,
   type ConsistencyResult,
   type ConsistencySample,
   type ConsistencyOptions,
-} from "./self-consistency";
-import { remediateRefusal, type RefusalContext, type Remediation } from "./refusal-remediation";
-import { ProviderBreaker, type ProviderState } from "./provider-breaker";
-import { selectModel, type ModelCandidate, type ModelSelection, type SelectionObjective } from "./model-selector";
-import { FrictionAnalytics, analyzeFriction, type DecisionSample, type FrictionReport, type FrictionOptions } from "./friction-analytics";
-import { simulatePolicy, type PolicyKnobs, type PolicySimulation, type SimulationCase } from "./policy-simulator";
+} from './self-consistency';
+import { remediateRefusal, type RefusalContext, type Remediation } from './refusal-remediation';
+import { ProviderBreaker, type ProviderState } from './provider-breaker';
+import {
+  selectModel,
+  type ModelCandidate,
+  type ModelSelection,
+  type SelectionObjective,
+} from './model-selector';
+import {
+  FrictionAnalytics,
+  analyzeFriction,
+  type DecisionSample,
+  type FrictionReport,
+  type FrictionOptions,
+} from './friction-analytics';
+import {
+  simulatePolicy,
+  type PolicyKnobs,
+  type PolicySimulation,
+  type SimulationCase,
+} from './policy-simulator';
 
 export { GIFT_MANIFEST, GIFT_COUNT, GIFT_AUTHOR, giftById };
 export type { GiftManifestEntry };
 
-export * from "./manifest";
-export * from "./earned-trust";
-export * from "./latency-budget";
-export * from "./intent-compiler";
-export * from "./clarify-engine";
-export * from "./self-consistency";
-export * from "./refusal-remediation";
-export * from "./provider-breaker";
-export * from "./model-selector";
-export * from "./friction-analytics";
-export * from "./policy-simulator";
+export * from './manifest';
+export * from './earned-trust';
+export * from './latency-budget';
+export * from './intent-compiler';
+export * from './clarify-engine';
+export * from './self-consistency';
+export * from './refusal-remediation';
+export * from './provider-breaker';
+export * from './model-selector';
+export * from './friction-analytics';
+export * from './policy-simulator';
 
 export interface GiftBundle {
   readonly author: typeof GIFT_AUTHOR;
@@ -64,15 +84,15 @@ export interface GiftBundle {
 }
 
 function asRecord(input: unknown): Record<string, unknown> {
-  if (input && typeof input === "object") return input as Record<string, unknown>;
-  throw new Error("GIFT_INPUT_OBJECT_REQUIRED");
+  if (input && typeof input === 'object') return input as Record<string, unknown>;
+  throw new Error('GIFT_INPUT_OBJECT_REQUIRED');
 }
 
 function text(input: unknown): string {
-  if (typeof input === "string") return input;
+  if (typeof input === 'string') return input;
   const record = asRecord(input);
   const value = record.input ?? record.text;
-  if (typeof value !== "string") throw new Error("GIFT_INPUT_TEXT_REQUIRED");
+  if (typeof value !== 'string') throw new Error('GIFT_INPUT_TEXT_REQUIRED');
   return value;
 }
 
@@ -83,50 +103,57 @@ export function createGiftBundle(): GiftBundle {
 
   function invoke(capabilityId: string, input: unknown): unknown {
     switch (capabilityId) {
-      case "hsf.legacy.earned-trust": {
+      case 'hsf.legacy.earned-trust': {
         const record = asRecord(input);
-        const principalId = String(record.principalId ?? "");
-        const target = String(record.capabilityId ?? "");
-        if (typeof record.outcome === "string") {
+        const principalId = String(record.principalId ?? '');
+        const target = String(record.capabilityId ?? '');
+        if (typeof record.outcome === 'string') {
           return earnedTrust.record(principalId, target, record.outcome as TrustOutcome);
         }
-        if (typeof record.band === "string") {
-          return earnedTrust.reduceFriction(principalId, target, record.band as FrictionAdjustment["band"]);
+        if (typeof record.band === 'string') {
+          return earnedTrust.reduceFriction(
+            principalId,
+            target,
+            record.band as FrictionAdjustment['band']
+          );
         }
-        throw new Error("GIFT_EARNED_TRUST_ACTION_REQUIRED");
+        throw new Error('GIFT_EARNED_TRUST_ACTION_REQUIRED');
       }
-      case "hsf.legacy.latency-budget":
+      case 'hsf.legacy.latency-budget':
         return planLatencyBudget(input as LatencyBudgetInput);
-      case "hsf.legacy.intent-compiler":
+      case 'hsf.legacy.intent-compiler':
         return compileIntent(text(input));
-      case "hsf.legacy.clarify-engine":
+      case 'hsf.legacy.clarify-engine':
         return planClarification(input as ClarifyInput);
-      case "hsf.legacy.self-consistency": {
+      case 'hsf.legacy.self-consistency': {
         const record = asRecord(input);
         const samples = (record.samples ?? []) as ConsistencySample[];
         return verifySelfConsistency(samples, (record.options ?? {}) as ConsistencyOptions);
       }
-      case "hsf.legacy.refusal-remediation":
+      case 'hsf.legacy.refusal-remediation':
         return remediateRefusal(input as RefusalContext);
-      case "hsf.legacy.provider-breaker": {
+      case 'hsf.legacy.provider-breaker': {
         const record = asRecord(input);
-        const provider = String(record.provider ?? "");
-        const action = String(record.action ?? "allow");
-        if (action === "success") return providerBreaker.recordSuccess(provider);
-        if (action === "failure") return providerBreaker.recordFailure(provider);
-        return { allowed: providerBreaker.allow(provider), state: providerBreaker.stateOf(provider) };
+        const provider = String(record.provider ?? '');
+        const action = String(record.action ?? 'allow');
+        if (action === 'success') return providerBreaker.recordSuccess(provider);
+        if (action === 'failure') return providerBreaker.recordFailure(provider);
+        return {
+          allowed: providerBreaker.allow(provider),
+          state: providerBreaker.stateOf(provider),
+        };
       }
-      case "hsf.legacy.model-selector": {
+      case 'hsf.legacy.model-selector': {
         const record = asRecord(input);
         const candidates = (record.candidates ?? []) as ModelCandidate[];
         return selectModel(candidates, (record.objective ?? {}) as SelectionObjective);
       }
-      case "hsf.legacy.friction-analytics": {
+      case 'hsf.legacy.friction-analytics': {
         const record = asRecord(input);
         const samples = (record.samples ?? []) as DecisionSample[];
         return analyzeFriction(samples, (record.options ?? {}) as FrictionOptions);
       }
-      case "hsf.legacy.policy-simulator": {
+      case 'hsf.legacy.policy-simulator': {
         const record = asRecord(input);
         const knobs = (record.knobs ?? {}) as PolicyKnobs;
         const cases = (record.cases ?? []) as SimulationCase[];
@@ -155,7 +182,7 @@ export function createGiftBundle(): GiftBundle {
 
 /** Tipos de salida por regalo (para consumidores tipados). */
 export type GiftOutputs = {
-  readonly earnedTrust: import("./earned-trust").TrustSnapshot;
+  readonly earnedTrust: import('./earned-trust').TrustSnapshot;
   readonly latencyBudget: LatencyBudgetPlan;
   readonly intentCompiler: IntentCompilation;
   readonly clarifyEngine: ClarifyPlan;

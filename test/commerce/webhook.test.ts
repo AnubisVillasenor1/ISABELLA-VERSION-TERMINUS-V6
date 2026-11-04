@@ -5,6 +5,7 @@ import {
   idempotencyKey,
   normalizeWebhookEvent,
   processWebhookEvent,
+  verifyStripeWebhookSignature,
   verifyWebhookSignature,
 } from "../../src/commerce/webhook";
 
@@ -13,6 +14,19 @@ const SECRET = "test-secret-characters-0123456789";
 function validSignature(rawBody: string, secret = SECRET): string {
   return createHmac("sha256", secret).update(rawBody, "utf8").digest("hex");
 }
+
+describe("Stripe webhook signature", () => {
+  it("verifies timestamped Stripe signatures and rejects stale or altered payloads", () => {
+    const rawBody = JSON.stringify({ id: "evt_test_12345678", type: "customer.subscription.updated" });
+    const timestamp = 1_800_000_000;
+    const digest = createHmac("sha256", SECRET).update(timestamp + "." + rawBody, "utf8").digest("hex");
+    const signature = "t=" + timestamp + ",v1=" + digest;
+    expect(verifyStripeWebhookSignature(rawBody, signature, SECRET, { now: () => timestamp })).toBe(true);
+    expect(verifyStripeWebhookSignature(rawBody + " ", signature, SECRET, { now: () => timestamp })).toBe(false);
+    expect(verifyStripeWebhookSignature(rawBody, signature, SECRET, { now: () => timestamp + 301 })).toBe(false);
+    expect(verifyStripeWebhookSignature(rawBody, signature, "", { now: () => timestamp })).toBe(false);
+  });
+});
 
 describe("commerce/webhook", () => {
   it("acepta una firma HMAC-SHA256 válida", () => {

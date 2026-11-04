@@ -1,20 +1,20 @@
-import { IsabellaCoreId } from "../latam-aegis-x";
-import { CentralizedTelemetryService } from "../latam-aegis-x";
-import { ObservabilityService } from "./observability";
+import { IsabellaCoreId } from '../latam-aegis-x';
+import { CentralizedTelemetryService } from '../latam-aegis-x';
+import { ObservabilityService } from './observability';
 
 export interface HealthEvent {
   timestamp: string;
   coreId: IsabellaCoreId;
-  type: "stack_overflow_warning" | "memory_leak_warning" | "auto_restart" | "healthy";
+  type: 'stack_overflow_warning' | 'memory_leak_warning' | 'auto_restart' | 'healthy';
   message: string;
-  severity: "low" | "medium" | "high" | "critical";
+  severity: 'low' | 'medium' | 'high' | 'critical';
 }
 
 export interface RecoveryLog {
   id: string;
   timestamp: string;
   coreId: IsabellaCoreId;
-  type: "stack_overflow_resolved" | "memory_leak_resolved";
+  type: 'stack_overflow_resolved' | 'memory_leak_resolved';
   message: string;
   reclaimedMemoryBytes: number;
   initialStackDepth: number;
@@ -61,8 +61,8 @@ class HealthHeartbeatMonitor {
     for (const coreId of Object.keys(snapshot.cores) as IsabellaCoreId[]) {
       const core = snapshot.cores[coreId];
       let hasAnomaly = false;
-      let anomalyType: "stack_overflow_resolved" | "memory_leak_resolved" =
-        "stack_overflow_resolved";
+      let anomalyType: 'stack_overflow_resolved' | 'memory_leak_resolved' =
+        'stack_overflow_resolved';
       const initialStackDepth = core.stackDepth;
       const initialMemory = core.memoryUsageBytes;
 
@@ -71,12 +71,12 @@ class HealthHeartbeatMonitor {
         this.logHealthEvent({
           timestamp,
           coreId,
-          type: "stack_overflow_warning",
+          type: 'stack_overflow_warning',
           message: `Stack overflow risk detected! Current depth: ${core.stackDepth}. Threshold: ${this.STACK_OVERFLOW_THRESHOLD}.`,
-          severity: "critical",
+          severity: 'critical',
         });
         hasAnomaly = true;
-        anomalyType = "stack_overflow_resolved";
+        anomalyType = 'stack_overflow_resolved';
       }
 
       // 2. Check for memory leak (growth exceeding memory allocation budget)
@@ -84,12 +84,12 @@ class HealthHeartbeatMonitor {
         this.logHealthEvent({
           timestamp,
           coreId,
-          type: "memory_leak_warning",
+          type: 'memory_leak_warning',
           message: `Memory leak suspected! Usage: ${(core.memoryUsageBytes / (1024 * 1024)).toFixed(2)} MB exceeds limit of ${(this.MEMORY_LEAK_LIMIT_BYTES / (1024 * 1024)).toFixed(0)} MB.`,
-          severity: "high",
+          severity: 'high',
         });
         hasAnomaly = true;
-        anomalyType = "memory_leak_resolved";
+        anomalyType = 'memory_leak_resolved';
       }
 
       // 3. Trigger auto-restart if anomaly was flagged
@@ -98,14 +98,14 @@ class HealthHeartbeatMonitor {
         CentralizedTelemetryService.logEvent(
           core.moduleId,
           coreId,
-          "CoreSelfHealingTriggered",
+          'CoreSelfHealingTriggered',
           {
             diagnosticMessage:
-              "Auto-restarting CROWN core task to reclaim heap memory and reset recursion tree.",
+              'Auto-restarting CROWN core task to reclaim heap memory and reset recursion tree.',
             currentMemoryBytes: core.memoryUsageBytes,
             currentStackDepth: core.stackDepth,
           },
-          "security_incident",
+          'security_incident'
         );
 
         // Perform programmatic auto-restart
@@ -114,15 +114,15 @@ class HealthHeartbeatMonitor {
         this.logHealthEvent({
           timestamp,
           coreId,
-          type: "auto_restart",
+          type: 'auto_restart',
           message: `Self-healing protocol triggered. Clean-restarted core ${coreId} safely.`,
-          severity: "high",
+          severity: 'high',
         });
 
         // Add recovery log entry
         const reclaimedMemoryBytes = Math.max(0, initialMemory - 12 * 1024 * 1024);
         const recoveryMessage =
-          anomalyType === "stack_overflow_resolved"
+          anomalyType === 'stack_overflow_resolved'
             ? `Recursion stack overflow resolved. Reset core ${coreId} to base state (Depth 1).`
             : `Heap allocation cleaned. Reclaimed ${(reclaimedMemoryBytes / (1024 * 1024)).toFixed(2)} MB memory leak for core ${coreId}.`;
 
@@ -146,16 +146,16 @@ class HealthHeartbeatMonitor {
           try {
             listener(recoveryEvent);
           } catch (e) {
-            console.error("Error dispatching recovery listener:", e);
+            console.error('Error dispatching recovery listener:', e);
           }
         });
 
         // Dispatch a custom DOM event for toast notification systems
-        if (typeof window !== "undefined") {
+        if (typeof window !== 'undefined') {
           window.dispatchEvent(
-            new CustomEvent("core-recovery-toast", {
+            new CustomEvent('core-recovery-toast', {
               detail: recoveryEvent,
-            }),
+            })
           );
         }
       }
@@ -170,7 +170,7 @@ class HealthHeartbeatMonitor {
 
     // Direct system output for auditing
     console.log(
-      `[HEALTH_MONITOR] [${event.type.toUpperCase()}] Core: ${event.coreId} - ${event.message}`,
+      `[HEALTH_MONITOR] [${event.type.toUpperCase()}] Core: ${event.coreId} - ${event.message}`
     );
   }
 
@@ -194,9 +194,9 @@ class HealthHeartbeatMonitor {
    */
   public injectDiagnosticAnomaly(
     coreId: IsabellaCoreId,
-    anomalyType: "stack_overflow" | "memory_leak",
+    anomalyType: 'stack_overflow' | 'memory_leak'
   ) {
-    if (anomalyType === "stack_overflow") {
+    if (anomalyType === 'stack_overflow') {
       ObservabilityService.flagCoreWarning(coreId, 95, 192); // exceeds 160 threshold
     } else {
       ObservabilityService.flagCoreError(coreId, 142 * 1024 * 1024); // exceeds 120MB threshold

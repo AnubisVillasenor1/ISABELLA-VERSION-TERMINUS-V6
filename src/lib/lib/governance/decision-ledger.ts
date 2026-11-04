@@ -1,6 +1,6 @@
 /** Tamper-evident decision/evidence ledger. Durable storage is injected by the deployment. */
-import { createHash } from "node:crypto";
-export type Risk = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+import { createHash } from 'node:crypto';
+export type Risk = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 export interface DecisionRecord {
   id: string;
   tenantId: string;
@@ -12,7 +12,7 @@ export interface DecisionRecord {
   modelId?: string;
   inputHash: string;
   outputHash: string;
-  result: "ALLOW" | "DENY" | "REVIEW";
+  result: 'ALLOW' | 'DENY' | 'REVIEW';
   timestamp: string;
   previousHash: string;
   recordHash: string;
@@ -34,21 +34,21 @@ export class MemoryLedger implements LedgerStore {
     return this.records.map((r) => ({ ...r, evidenceIds: [...r.evidenceIds] }));
   }
 }
-export function hashRecord(record: Omit<DecisionRecord, "recordHash">): string {
-  return createHash("sha3-512").update(JSON.stringify(record)).digest("hex");
+export function hashRecord(record: Omit<DecisionRecord, 'recordHash'>): string {
+  return createHash('sha3-512').update(JSON.stringify(record)).digest('hex');
 }
 export async function recordDecision(
   store: LedgerStore,
-  input: Omit<DecisionRecord, "previousHash" | "recordHash">,
+  input: Omit<DecisionRecord, 'previousHash' | 'recordHash'>
 ): Promise<DecisionRecord> {
-  const previousHash = (await store.latestHash(input.tenantId)) ?? "GENESIS";
+  const previousHash = (await store.latestHash(input.tenantId)) ?? 'GENESIS';
   const base = { ...input, previousHash };
   const record = { ...base, recordHash: hashRecord(base) };
   await store.append(record);
   return record;
 }
 export function verifyChain(records: DecisionRecord[]): boolean {
-  let previous = "GENESIS";
+  let previous = 'GENESIS';
   for (const r of records) {
     const { recordHash, ...base } = r;
     if (r.previousHash !== previous || hashRecord(base) !== recordHash) return false;

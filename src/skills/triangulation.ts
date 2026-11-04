@@ -15,9 +15,9 @@
  * If any vertex fails, the triangulation fails: Invalid(K) ⟺ ¬C ∨ ¬P ∨ ¬R.
  * SHA-256 is specified by NIST FIPS 180-4.
  */
-import { sha256, sha256Hex } from "./canonical-json";
-import { validateSchema, type SchemaViolation } from "./schema-validator";
-import type { SkillContract } from "./contracts";
+import { sha256, sha256Hex } from './canonical-json';
+import { validateSchema, type SchemaViolation } from './schema-validator';
+import type { SkillContract } from './contracts';
 
 export interface TriangulationProvenance {
   readonly actorId: string;
@@ -68,7 +68,7 @@ export interface TriangulationResult {
   readonly contract: ContractVertex;
   readonly provenance: ProvenanceVertex;
   readonly result: ResultVertex;
-  readonly invalidVertices: readonly ("contract" | "provenance" | "result")[];
+  readonly invalidVertices: readonly ('contract' | 'provenance' | 'result')[];
 }
 
 export function hashInput(value: unknown): string {
@@ -79,7 +79,11 @@ export function hashOutput(value: unknown): string {
   return sha256(value ?? null);
 }
 
-export function hashPolicy(policy: { policyVersion: string; riskTier: string; requiredScopes: readonly string[] }): string {
+export function hashPolicy(policy: {
+  policyVersion: string;
+  riskTier: string;
+  requiredScopes: readonly string[];
+}): string {
   return sha256({
     policyVersion: policy.policyVersion,
     riskTier: policy.riskTier,
@@ -89,7 +93,7 @@ export function hashPolicy(policy: { policyVersion: string; riskTier: string; re
 
 /** H_evidence = SHA256(H_1 ∥ H_2 ∥ … ∥ H_n). Empty evidence hashes to the empty-string digest. */
 export function hashEvidence(evidenceHashes: readonly string[]): string {
-  return sha256Hex(evidenceHashes.join("|"));
+  return sha256Hex(evidenceHashes.join('|'));
 }
 
 /** H_manifest = SHA256(H_input ∥ H_output ∥ H_policy ∥ H_evidence). */
@@ -99,7 +103,9 @@ export function manifestHash(parts: {
   policyHash: string;
   evidenceHash: string;
 }): string {
-  return sha256Hex([parts.inputHash, parts.outputHash, parts.policyHash, parts.evidenceHash].join("|"));
+  return sha256Hex(
+    [parts.inputHash, parts.outputHash, parts.policyHash, parts.evidenceHash].join('|')
+  );
 }
 
 export function triangulate(params: TriangulationParams): TriangulationResult {
@@ -114,11 +120,14 @@ export function triangulate(params: TriangulationParams): TriangulationResult {
 
   const reasons: string[] = [];
   const { provenance } = params;
-  if (!provenance.actorId.trim()) reasons.push("missing actorId");
-  if (!provenance.tenantId.trim()) reasons.push("missing tenantId");
-  if (!provenance.federationId.trim()) reasons.push("missing federationId");
-  if (!provenance.policyVersion.trim()) reasons.push("missing policyVersion");
-  const provenanceVertex: ProvenanceVertex = { valid: reasons.length === 0, reasons: Object.freeze(reasons) };
+  if (!provenance.actorId.trim()) reasons.push('missing actorId');
+  if (!provenance.tenantId.trim()) reasons.push('missing tenantId');
+  if (!provenance.federationId.trim()) reasons.push('missing federationId');
+  if (!provenance.policyVersion.trim()) reasons.push('missing policyVersion');
+  const provenanceVertex: ProvenanceVertex = {
+    valid: reasons.length === 0,
+    reasons: Object.freeze(reasons),
+  };
 
   const inputHash = hashInput(params.input);
   const outputHash = hashOutput(params.output);
@@ -130,11 +139,14 @@ export function triangulate(params: TriangulationParams): TriangulationResult {
   const evidenceHash = hashEvidence(params.evidenceHashes ?? []);
   const computedManifestHash = manifestHash({ inputHash, outputHash, policyHash, evidenceHash });
 
-  const manifestMatches = params.expectedManifestHash === undefined || params.expectedManifestHash === computedManifestHash;
+  const manifestMatches =
+    params.expectedManifestHash === undefined ||
+    params.expectedManifestHash === computedManifestHash;
   const signatureValid =
     params.signature === undefined
       ? null
-      : Boolean(params.verifySignature?.(computedManifestHash)) && params.expectedManifestHash === computedManifestHash;
+      : Boolean(params.verifySignature?.(computedManifestHash)) &&
+        params.expectedManifestHash === computedManifestHash;
 
   const resultValid = manifestMatches && signatureValid !== false;
   const result: ResultVertex = {
@@ -147,10 +159,10 @@ export function triangulate(params: TriangulationParams): TriangulationResult {
     signatureValid,
   };
 
-  const invalidVertices: ("contract" | "provenance" | "result")[] = [];
-  if (!contract.valid) invalidVertices.push("contract");
-  if (!provenanceVertex.valid) invalidVertices.push("provenance");
-  if (!result.valid) invalidVertices.push("result");
+  const invalidVertices: ('contract' | 'provenance' | 'result')[] = [];
+  if (!contract.valid) invalidVertices.push('contract');
+  if (!provenanceVertex.valid) invalidVertices.push('provenance');
+  if (!result.valid) invalidVertices.push('result');
 
   return {
     valid: invalidVertices.length === 0,

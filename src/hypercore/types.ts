@@ -15,33 +15,39 @@
  * VERIFIED ≠ DEPLOYED ≠ CERTIFIED.
  */
 
-export const HYPERCORE_MODULE = "HYPERCORE" as const;
-export const HYPERCORE_ID = "ISABELLA-HYPERCORE-OMEGA-2" as const;
-export const HYPERCORE_VERSION = "1.0.0" as const;
-export const HYPERPREDICT_POLICY_VERSION = "HP-v1" as const;
-export const CROWN_POLICY_VERSION = "CROWN-v20" as const;
+export const HYPERCORE_MODULE = 'HYPERCORE' as const;
+export const HYPERCORE_ID = 'ISABELLA-HYPERCORE-OMEGA-2' as const;
+export const HYPERCORE_VERSION = '1.0.0' as const;
+export const HYPERPREDICT_POLICY_VERSION = 'HP-v1' as const;
+export const CROWN_POLICY_VERSION = 'CROWN-v20' as const;
 
 /** Canonical method id: [TINA].[YUN].[MODULO].[FUNCION].[VERSION].[RISK].[GOV]. */
 export const HYPERCORE_METHOD_IDS = {
-  accelerateTask: "TINA.YUN.HYPERCORE.accelerate_task.v1.0.0.HIGH.CONSTITUTIONAL",
-  predictIntent: "TINA.YUN.HYPERPREDICT.predict_intent.v1.0.0.MEDIUM.INSTITUTIONAL",
-  governMode: "TINA.YUN.HYPERCORE.govern_mode.v1.0.0.MEDIUM.INSTITUTIONAL",
-  verifyResponse: "TINA.YUN.HYPERCORE.verify_response.v1.0.0.HIGH.CONSTITUTIONAL",
-  cacheLookup: "TINA.YUN.HYPERCORE.cache_lookup.v1.0.0.LOW.OPERATIONAL",
-  recordDecision: "TINA.YUN.HYPERCORE.record_decision.v1.0.0.LOW.INSTITUTIONAL",
+  accelerateTask: 'TINA.YUN.HYPERCORE.accelerate_task.v1.0.0.HIGH.CONSTITUTIONAL',
+  predictIntent: 'TINA.YUN.HYPERPREDICT.predict_intent.v1.0.0.MEDIUM.INSTITUTIONAL',
+  governMode: 'TINA.YUN.HYPERCORE.govern_mode.v1.0.0.MEDIUM.INSTITUTIONAL',
+  verifyResponse: 'TINA.YUN.HYPERCORE.verify_response.v1.0.0.HIGH.CONSTITUTIONAL',
+  cacheLookup: 'TINA.YUN.HYPERCORE.cache_lookup.v1.0.0.LOW.OPERATIONAL',
+  recordDecision: 'TINA.YUN.HYPERCORE.record_decision.v1.0.0.LOW.INSTITUTIONAL',
 } as const;
 
 export const HYPERCORE_DISCLAIMER =
-  "HyperCore Ω² reduces waste (predict, compress, cache, route, speculate, verify, audit); it does not execute side effects and does not authorize. " +
-  "Authorization is CROWN-only. A speculative draft is never final without verification. " +
-  "Cache reuse never grants authority. Energy, confidence and speedup figures are declared heuristic estimates, not measured accuracy. " +
-  "Modes OMEGA/HYPERBOOST are governance envelopes, not unlimited-consumption grants.";
+  'HyperCore Ω² reduces waste (predict, compress, cache, route, speculate, verify, audit); it does not execute side effects and does not authorize. ' +
+  'Authorization is CROWN-only. A speculative draft is never final without verification. ' +
+  'Cache reuse never grants authority. Energy, confidence and speedup figures are declared heuristic estimates, not measured accuracy. ' +
+  'Modes OMEGA/HYPERBOOST are governance envelopes, not unlimited-consumption grants.';
 
-export type HyperCoreMode = "ECO" | "CRUISE" | "BOOST" | "HYPERBOOST" | "OMEGA";
+export type HyperCoreMode = 'ECO' | 'CRUISE' | 'BOOST' | 'HYPERBOOST' | 'OMEGA';
 /** Ω² modes. Named to avoid clashing with the V5 `HYPERCORE_MODES` in core/types. */
-export const HYPERCORE_OMEGA_MODES: readonly HyperCoreMode[] = ["ECO", "CRUISE", "BOOST", "HYPERBOOST", "OMEGA"] as const;
+export const HYPERCORE_OMEGA_MODES: readonly HyperCoreMode[] = [
+  'ECO',
+  'CRUISE',
+  'BOOST',
+  'HYPERBOOST',
+  'OMEGA',
+] as const;
 
-export type RiskClass = "low" | "medium" | "high" | "critical";
+export type RiskClass = 'low' | 'medium' | 'high' | 'critical';
 
 export interface EnergyBudget {
   readonly maxWatts: number;
@@ -72,11 +78,11 @@ export interface ModeProfile {
   readonly cpuLimitPercent: number;
   readonly speculative: boolean;
   readonly parallelBranches: number;
-  readonly cacheBias: "minimum" | "moderate" | "high" | "maximum" | "total";
-  readonly governance: "standard" | "elevated" | "maximum";
+  readonly cacheBias: 'minimum' | 'moderate' | 'high' | 'maximum' | 'total';
+  readonly governance: 'standard' | 'elevated' | 'maximum';
 }
 
-export type RiskClassLike = "low" | "medium" | "high" | "critical";
+export type RiskClassLike = 'low' | 'medium' | 'high' | 'critical';
 
 export interface HyperCoreTask {
   readonly taskId: string;
@@ -161,7 +167,8 @@ export interface SpeculativeDraft {
   readonly finalized: false;
 }
 
-export type HyperCoreVerifierName = "safety" | "policy" | "security" | "factuality" | "financial" | "provenance";
+export type HyperCoreVerifierName =
+  'safety' | 'policy' | 'security' | 'factuality' | 'financial' | 'provenance';
 
 export interface HyperCoreVerifierCheck {
   readonly name: HyperCoreVerifierName;
@@ -169,7 +176,7 @@ export interface HyperCoreVerifierCheck {
   readonly detail?: string;
 }
 
-export type VeritasVerdictCode = "ALLOW" | "DENY" | "ESCALATE" | "RETRY_SAFE";
+export type VeritasVerdictCode = 'ALLOW' | 'DENY' | 'ESCALATE' | 'RETRY_SAFE';
 
 export interface VeritasVerdict {
   readonly verdict: VeritasVerdictCode;
@@ -205,7 +212,7 @@ export interface SemanticMatch {
   readonly similarity: number;
 }
 
-export type PrefetchDecision = "OBSERVE" | "PREFETCH" | "DEFER" | "DENY";
+export type PrefetchDecision = 'OBSERVE' | 'PREFETCH' | 'DEFER' | 'DENY';
 
 export interface IntentPrediction {
   readonly intent: string;
@@ -221,7 +228,7 @@ export interface IntentPrediction {
 }
 
 export interface PrefetchOutcome {
-  readonly status: "prepared" | "cache-hit" | "deferred" | "not-prepared";
+  readonly status: 'prepared' | 'cache-hit' | 'deferred' | 'not-prepared';
   readonly intent: string;
   readonly cacheKey: string;
   readonly artifacts: readonly string[];
@@ -241,12 +248,12 @@ export interface HyperPredictSession {
   readonly risk: RiskClass;
 }
 
-export type HyperCoreStatus = "CACHE_HIT" | "COMPLETED" | "DENIED" | "ESCALATED";
+export type HyperCoreStatus = 'CACHE_HIT' | 'COMPLETED' | 'DENIED' | 'ESCALATED';
 
 export interface HyperCoreObservation {
   readonly requestId: string;
   readonly mode: HyperCoreMode;
-  readonly cache: "hit" | "miss";
+  readonly cache: 'hit' | 'miss';
   readonly contextCompression: number;
   readonly activatedExperts: readonly string[];
   readonly speculativeAcceptance: number;

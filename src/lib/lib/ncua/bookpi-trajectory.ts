@@ -7,14 +7,14 @@
  * recalcular la cadena completa y rechaza manipulación en tiempo constante.
  */
 
-import * as crypto from "node:crypto";
-import { SovereignAudit } from "../sovereign-audit";
-import type { ContinuousConceptVector } from "./concept-engine";
-import type { QUPQuantumStateSignature } from "./quantum-align";
+import * as crypto from 'node:crypto';
+import { SovereignAudit } from '../sovereign-audit';
+import type { ContinuousConceptVector } from './concept-engine';
+import type { QUPQuantumStateSignature } from './quantum-align';
 
 export const BOOKPI_NCUA_GENESIS =
-  "0000000000000000000000000000000000000000000000000000000000000000";
-export const BOOKPI_NCUA_SIGNATURE_PREFIX = "ncua-bookpi-v1:";
+  '0000000000000000000000000000000000000000000000000000000000000000';
+export const BOOKPI_NCUA_SIGNATURE_PREFIX = 'ncua-bookpi-v1:';
 
 export interface BookPILedgerEntry {
   entryId: string;
@@ -61,21 +61,21 @@ export class BookPILedgerAuditor {
     const key = this.resolveKey();
     if (!key) {
       throw new Error(
-        "[BookPILedgerAuditor] AEGIS_AUDIT_SECRET ausente: sello NCUA denegado (fail-closed).",
+        '[BookPILedgerAuditor] AEGIS_AUDIT_SECRET ausente: sello NCUA denegado (fail-closed).'
       );
     }
     return key;
   }
 
   private hmacSign(key: string, payloadHash: string, prefix: string): string {
-    const mac = crypto.createHmac("sha3-512", key).update(payloadHash, "utf8").digest("base64url");
+    const mac = crypto.createHmac('sha3-512', key).update(payloadHash, 'utf8').digest('base64url');
     return `${prefix}${mac}`;
   }
 
   private hmacVerify(key: string, payloadHash: string, signature: string, prefix: string): boolean {
     if (!signature.startsWith(prefix)) return false;
-    const expected = crypto.createHmac("sha3-512", key).update(payloadHash, "utf8").digest();
-    const presented = Buffer.from(signature.slice(prefix.length), "base64url");
+    const expected = crypto.createHmac('sha3-512', key).update(payloadHash, 'utf8').digest();
+    const presented = Buffer.from(signature.slice(prefix.length), 'base64url');
     if (presented.length !== expected.length) return false;
     return crypto.timingSafeEqual(presented, expected);
   }
@@ -100,15 +100,15 @@ export class BookPILedgerAuditor {
     tenantId: string,
     patchCount: number,
     concept: ContinuousConceptVector,
-    quantumSig: QUPQuantumStateSignature,
+    quantumSig: QUPQuantumStateSignature
   ): BookPILedgerEntry {
     const key = this.requireKey();
     const entryIndex = this.entries.length + 1;
-    const entryHash = crypto.createHash("sha256").update(this.lastHash).digest("hex").slice(0, 6);
+    const entryHash = crypto.createHash('sha256').update(this.lastHash).digest('hex').slice(0, 6);
     const entryId = `bpi_${entryIndex.toString(16)}_${entryHash}`;
     const timestamp = new Date().toISOString();
     const payload = `${this.lastHash}|${entryId}|${tenantId}|${patchCount}|${concept.conceptId}|${quantumSig.merkleSeal}|${timestamp}`;
-    const currentHash = crypto.createHash("sha3-512").update(payload).digest("hex");
+    const currentHash = crypto.createHash('sha3-512').update(payload).digest('hex');
     const merkleRoot = this.merkleRootFor([
       ...this.entries.map((entry) => entry.currentHash),
       currentHash,
@@ -141,7 +141,7 @@ export class BookPILedgerAuditor {
         valid: false,
         checkedEntries: this.entries.length,
         firstBrokenIndex: 0,
-        reason: "Sin clave de firma HMAC-SHA3-512 para verificación.",
+        reason: 'Sin clave de firma HMAC-SHA3-512 para verificación.',
       };
     }
     let previous = this.genesis;
@@ -156,7 +156,7 @@ export class BookPILedgerAuditor {
         };
       }
       const payload = `${entry.previousHash}|${entry.entryId}|${entry.tenantId}|${entry.patchCount}|${entry.conceptTrajectoryHash}|${entry.quantumSeal}|${entry.timestamp}`;
-      const expectedHash = crypto.createHash("sha3-512").update(payload).digest("hex");
+      const expectedHash = crypto.createHash('sha3-512').update(payload).digest('hex');
       if (expectedHash !== entry.currentHash) {
         return {
           valid: false,

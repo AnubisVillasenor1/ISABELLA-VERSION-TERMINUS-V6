@@ -1,5 +1,5 @@
-import { neon } from "@neondatabase/serverless";
-import { config } from "../../lib/config";
+import { neon } from '@neondatabase/serverless';
+import { config } from '../../lib/config';
 import type {
   Account,
   JournalEntry,
@@ -9,13 +9,13 @@ import type {
   BalanceSheet,
   AccountType,
   TransactionStatus,
-} from "./types";
+} from './types';
 import type {
   AccountingRepository,
   CreateAccountDTO,
   CreateJournalEntryDTO,
-} from "./accounting-repository";
-import { randomUUID } from "node:crypto";
+} from './accounting-repository';
+import { randomUUID } from 'node:crypto';
 
 /**
  * Cliente diferido: se resuelve al INVOCAR cada método (no al importar el
@@ -23,10 +23,10 @@ import { randomUUID } from "node:crypto";
  * rechaza con error fail-closed.
  */
 function deferredSql() {
-  const url = config().DATABASE_URL || "";
+  const url = config().DATABASE_URL || '';
   if (!url) {
     throw new Error(
-      "PostgresAccountingRepository: DATABASE_URL ausente. Contabilidad durable requiere PostgreSQL.",
+      'PostgresAccountingRepository: DATABASE_URL ausente. Contabilidad durable requiere PostgreSQL.'
     );
   }
   return neon(url);
@@ -74,7 +74,7 @@ export class PostgresAccountingRepository implements AccountingRepository {
   async createAccount(dto: CreateAccountDTO, tx: Sql = deferredSql()): Promise<Account> {
     const rows = await tx`
       INSERT INTO accounting_accounts (tenant_id, code, name, type, parent_id, currency)
-      VALUES (${dto.tenantId}, ${dto.code}, ${dto.name}, ${dto.type}, ${dto.parentId || null}, ${dto.currency || "USD"})
+      VALUES (${dto.tenantId}, ${dto.code}, ${dto.name}, ${dto.type}, ${dto.parentId || null}, ${dto.currency || 'USD'})
       RETURNING *;
     `;
     return this.mapAccount(rows[0] as unknown as AccountRow);
@@ -93,11 +93,11 @@ export class PostgresAccountingRepository implements AccountingRepository {
   async updateAccount(
     id: string,
     updates: Partial<Account>,
-    tx: Sql = deferredSql(),
+    tx: Sql = deferredSql()
   ): Promise<Account> {
     // Basic dynamic update simulation for raw sql (neon)
     const existing = await this.getAccountById(id, tx);
-    if (!existing) throw new Error("Account not found");
+    if (!existing) throw new Error('Account not found');
     const name = updates.name !== undefined ? updates.name : existing.name;
     const type = updates.type !== undefined ? updates.type : existing.type;
     const rows = await tx`
@@ -111,7 +111,7 @@ export class PostgresAccountingRepository implements AccountingRepository {
 
   async createJournalEntry(
     dto: CreateJournalEntryDTO,
-    tx: Sql = deferredSql(),
+    tx: Sql = deferredSql()
   ): Promise<JournalEntry> {
     const entryNumber = `JE-${Date.now()}-${randomUUID().slice(0, 8)}`;
     const rows = await tx`
@@ -129,7 +129,7 @@ export class PostgresAccountingRepository implements AccountingRepository {
 
   async getJournalEntriesByTenant(
     tenantId: string,
-    tx: Sql = deferredSql(),
+    tx: Sql = deferredSql()
   ): Promise<JournalEntry[]> {
     const rows = await tx`SELECT * FROM accounting_journal_entries WHERE tenant_id = ${tenantId}`;
     return rows.map((r) => this.mapJournalEntry(r as unknown as JournalEntryRow));
@@ -138,9 +138,9 @@ export class PostgresAccountingRepository implements AccountingRepository {
   async updateJournalEntryStatus(
     id: string,
     status: TransactionStatus,
-    tx: Sql = deferredSql(),
+    tx: Sql = deferredSql()
   ): Promise<JournalEntry> {
-    const postedAt = status === "posted" ? new Date().toISOString() : null;
+    const postedAt = status === 'posted' ? new Date().toISOString() : null;
     const rows = await tx`
       UPDATE accounting_journal_entries 
       SET status = ${status}, posted_at = COALESCE(posted_at, ${postedAt})
@@ -151,8 +151,8 @@ export class PostgresAccountingRepository implements AccountingRepository {
   }
 
   async createLedgerLines(
-    lines: Omit<LedgerLine, "id" | "createdAt">[],
-    tx: Sql = deferredSql(),
+    lines: Omit<LedgerLine, 'id' | 'createdAt'>[],
+    tx: Sql = deferredSql()
   ): Promise<LedgerLine[]> {
     const created: LedgerLine[] = [];
     for (const line of lines) {
@@ -175,15 +175,15 @@ export class PostgresAccountingRepository implements AccountingRepository {
     entry: JournalEntry;
     lines: LedgerLine[];
   }> {
-    const { Pool } = await import("pg");
-    const url = config().DATABASE_URL || "";
+    const { Pool } = await import('pg');
+    const url = config().DATABASE_URL || '';
     if (!url) {
-      throw new Error("createJournalEntryAtomic: DATABASE_URL ausente.");
+      throw new Error('createJournalEntryAtomic: DATABASE_URL ausente.');
     }
     const pool = new Pool({ connectionString: url, max: 1 });
     const client = await pool.connect();
     try {
-      await client.query("BEGIN");
+      await client.query('BEGIN');
       const entryNumber = `JE-${Date.now()}-${randomUUID().slice(0, 8)}`;
       const entryRows = await client.query(
         `INSERT INTO accounting_journal_entries (tenant_id, entry_number, description, status, created_by, metadata)
@@ -195,7 +195,7 @@ export class PostgresAccountingRepository implements AccountingRepository {
           dto.description,
           dto.createdBy,
           dto.metadata ? JSON.stringify(dto.metadata) : null,
-        ],
+        ]
       );
       const entry = this.mapJournalEntry(entryRows.rows[0] as unknown as JournalEntryRow);
       const lines: LedgerLine[] = [];
@@ -212,14 +212,14 @@ export class PostgresAccountingRepository implements AccountingRepository {
             line.creditCents || 0,
             line.description || null,
             line.description ? JSON.stringify({ note: line.description }) : null,
-          ],
+          ]
         );
         lines.push(this.mapLedgerLine(lineRows.rows[0] as unknown as LedgerLineRow));
       }
-      await client.query("COMMIT");
+      await client.query('COMMIT');
       return { entry, lines };
     } catch (error) {
-      await client.query("ROLLBACK");
+      await client.query('ROLLBACK');
       throw error;
     } finally {
       client.release();
@@ -241,10 +241,10 @@ export class PostgresAccountingRepository implements AccountingRepository {
     accountId: string,
     periodStart: Date,
     periodEnd: Date,
-    tx: Sql = deferredSql(),
+    tx: Sql = deferredSql()
   ): Promise<AccountBalance> {
     const account = await this.getAccountById(accountId, tx);
-    if (!account) throw new Error("Account not found");
+    if (!account) throw new Error('Account not found');
 
     const rows = await tx`
       SELECT 
@@ -277,11 +277,11 @@ export class PostgresAccountingRepository implements AccountingRepository {
     tenantId: string,
     periodStart: Date,
     periodEnd: Date,
-    tx: Sql = deferredSql(),
+    tx: Sql = deferredSql()
   ): Promise<TrialBalance> {
     const accounts = await this.getAccountsByTenant(tenantId, tx);
     const accountBalances = await Promise.all(
-      accounts.map((acc) => this.calculateAccountBalance(acc.id, periodStart, periodEnd, tx)),
+      accounts.map((acc) => this.calculateAccountBalance(acc.id, periodStart, periodEnd, tx))
     );
 
     let totalDebits = 0;
@@ -315,12 +315,12 @@ export class PostgresAccountingRepository implements AccountingRepository {
   async generateBalanceSheet(
     tenantId: string,
     asOfDate: Date,
-    tx: Sql = deferredSql(),
+    tx: Sql = deferredSql()
   ): Promise<BalanceSheet> {
     const periodStart = new Date(asOfDate.getFullYear(), 0, 1);
     const accounts = await this.getAccountsByTenant(tenantId, tx);
     const balances = await Promise.all(
-      accounts.map((acc) => this.calculateAccountBalance(acc.id, periodStart, asOfDate, tx)),
+      accounts.map((acc) => this.calculateAccountBalance(acc.id, periodStart, asOfDate, tx))
     );
 
     type BalanceItem = {
@@ -341,15 +341,15 @@ export class PostgresAccountingRepository implements AccountingRepository {
         name: accounts[idx].name,
         balanceCents: balance.closingBalanceCents,
       };
-      if (type === "asset") {
+      if (type === 'asset') {
         assets.push(item);
         totalAssets += item.balanceCents;
       }
-      if (type === "liability") {
+      if (type === 'liability') {
         liabilities.push(item);
         totalLiabilitiesEquity += item.balanceCents;
       }
-      if (type === "equity") {
+      if (type === 'equity') {
         equity.push(item);
         totalLiabilitiesEquity += item.balanceCents;
       }
@@ -372,15 +372,15 @@ export class PostgresAccountingRepository implements AccountingRepository {
     // Sin transacción interactiva real en este adaptador (neon HTTP es
     // auto-commit por query). Usar createJournalEntryAtomic() para
     // escritura atómica. Falla cerrado en lugar de fingir TX.
-    throw new Error("Transacciones interactivas no soportadas: usar createJournalEntryAtomic().");
+    throw new Error('Transacciones interactivas no soportadas: usar createJournalEntryAtomic().');
   }
 
   async commitTransaction(): Promise<void> {
-    throw new Error("Transacciones interactivas no soportadas: usar createJournalEntryAtomic().");
+    throw new Error('Transacciones interactivas no soportadas: usar createJournalEntryAtomic().');
   }
 
   async rollbackTransaction(): Promise<void> {
-    throw new Error("Transacciones interactivas no soportadas: usar createJournalEntryAtomic().");
+    throw new Error('Transacciones interactivas no soportadas: usar createJournalEntryAtomic().');
   }
 
   private mapAccount(row: AccountRow): Account {
@@ -391,7 +391,7 @@ export class PostgresAccountingRepository implements AccountingRepository {
       name: row.name,
       type: row.type as AccountType,
       parentId: row.parent_id ?? undefined,
-      currency: row.currency ?? "USD",
+      currency: row.currency ?? 'USD',
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),
     };

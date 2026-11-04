@@ -7,14 +7,20 @@
  *
  * CAPABILITY ≠ AUTHORITY ≠ EXECUTION ≠ EVIDENCE ≠ LEARNING ≠ PRODUCTION.
  */
-import OpenAI from "openai";
 
-export const PERPLEXITY_ROUTER_BASE_URL = "https://api.perplexity.ai/router/v1";
+import OpenAI from 'openai';
+
+export const PERPLEXITY_ROUTER_BASE_URL = 'https://api.perplexity.ai/router/v1';
 
 export interface PerplexityModel {
   readonly id: string;
   readonly owned_by?: string;
-  readonly pricing?: { readonly input?: number; readonly output?: number; readonly cache_read?: number; readonly unit?: string };
+  readonly pricing?: {
+    readonly input?: number;
+    readonly output?: number;
+    readonly cache_read?: number;
+    readonly unit?: string;
+  };
 }
 
 export function perplexityApiKey(env: Record<string, string | undefined>): string | null {
@@ -33,21 +39,25 @@ export interface PerplexityGenerationConfig {
 }
 
 export function resolvePerplexityGenerationConfig(
-  env: Record<string, string | undefined>,
+  env: Record<string, string | undefined>
 ): PerplexityGenerationConfig | null {
   const apiKey = perplexityApiKey(env);
   const model = env.PERPLEXITY_ROUTER_MODEL?.trim();
-  if (env.ALLOW_PAID_PROVIDER_FALLBACK !== "true" || !apiKey || !model) return null;
+  if (env.ALLOW_PAID_PROVIDER_FALLBACK !== 'true' || !apiKey || !model) return null;
   return Object.freeze({ apiKey, model });
 }
 
-export function createPerplexityRouterClient(env: Record<string, string | undefined>): OpenAI | null {
+export function createPerplexityRouterClient(
+  env: Record<string, string | undefined>
+): OpenAI | null {
   const key = perplexityApiKey(env);
   if (!key) return null;
   return new OpenAI({ apiKey: key, baseURL: PERPLEXITY_ROUTER_BASE_URL });
 }
 
-export async function listPerplexityModels(env: Record<string, string | undefined>): Promise<PerplexityModel[]> {
+export async function listPerplexityModels(
+  env: Record<string, string | undefined>
+): Promise<PerplexityModel[]> {
   const client = createPerplexityRouterClient(env);
   if (!client) return [];
   try {
@@ -65,7 +75,7 @@ export async function generatePerplexityNarrative(
   history: { role: string; content: string }[] = [],
   model: string,
   timeoutMs = 30_000,
-  signal?: AbortSignal,
+  signal?: AbortSignal
 ): Promise<string | null> {
   const config = resolvePerplexityGenerationConfig(env);
   // Fail closed when a caller passes an unconfigured model or provider credentials are missing.
@@ -74,18 +84,20 @@ export async function generatePerplexityNarrative(
   if (!client) return null;
   try {
     const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
-      { role: "system", content: systemPrompt },
-      ...history.map((t) => ({ role: t.role as "user" | "assistant", content: t.content })),
-      { role: "user", content: input },
+      { role: 'system', content: systemPrompt },
+      ...history.map((t) => ({ role: t.role as 'user' | 'assistant', content: t.content })),
+      { role: 'user', content: input },
     ];
     const resp = await client.chat.completions.create(
       { model, messages, max_tokens: 1024, stream: false },
-      { timeout: timeoutMs, ...(signal ? { signal } : {}) },
+      { timeout: timeoutMs, ...(signal ? { signal } : {}) }
     );
     const content = resp.choices?.[0]?.message?.content;
-    return typeof content === "string" && content.trim().length > 0 ? content.trim() : null;
+    return typeof content === 'string' && content.trim().length > 0 ? content.trim() : null;
   } catch (e) {
-    console.warn("[Isabella] perplexity router unavailable", { message: e instanceof Error ? e.message.slice(0, 180) : String(e) });
+    console.warn('[Isabella] perplexity router unavailable', {
+      message: e instanceof Error ? e.message.slice(0, 180) : String(e),
+    });
     return null;
   }
 }

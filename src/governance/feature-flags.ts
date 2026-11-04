@@ -6,7 +6,7 @@
  * - Fail-closed: bandera desconocida o malformada = apagada. Un kill switch del alcance de la bandera la apaga.
  * - Una bandera CONFIGURA exposición; no concede autoridad (CAPABILITY ≠ AUTHORITY).
  */
-import { createHash } from "node:crypto";
+import { createHash } from 'node:crypto';
 
 export interface FeatureFlag {
   readonly key: string;
@@ -20,7 +20,15 @@ export interface FeatureFlag {
   readonly salt?: string;
 }
 
-export type FlagReason = "UNKNOWN_FLAG" | "INVALID_SUBJECT" | "KILL_SWITCH" | "DISABLED" | "DENY_LIST" | "ALLOW_LIST" | "ROLLOUT_IN" | "ROLLOUT_OUT";
+export type FlagReason =
+  | 'UNKNOWN_FLAG'
+  | 'INVALID_SUBJECT'
+  | 'KILL_SWITCH'
+  | 'DISABLED'
+  | 'DENY_LIST'
+  | 'ALLOW_LIST'
+  | 'ROLLOUT_IN'
+  | 'ROLLOUT_OUT';
 
 export interface FlagDecision {
   readonly key: string;
@@ -36,7 +44,7 @@ export interface HaltSource {
 const KEY_RE = /^[a-z0-9][a-z0-9._:-]{0,63}$/;
 
 export function rolloutBucket(salt: string, key: string, subject: string): number {
-  const h = createHash("sha256").update(`${salt}:${key}:${subject}`).digest();
+  const h = createHash('sha256').update(`${salt}:${key}:${subject}`).digest();
   return (h.readUInt32BE(0) % 10_000) / 100;
 }
 
@@ -46,25 +54,57 @@ export class FeatureFlags {
   constructor(private readonly halt?: HaltSource) {}
 
   define(flag: FeatureFlag): void {
-    if (!KEY_RE.test(flag.key)) throw new RangeError("FLAGS: invalid key");
-    if (!Number.isFinite(flag.rolloutPercent) || flag.rolloutPercent < 0 || flag.rolloutPercent > 100) throw new RangeError("FLAGS: rolloutPercent must be 0..100");
-    this.flags.set(flag.key, Object.freeze({ ...flag, allowList: [...(flag.allowList ?? [])], denyList: [...(flag.denyList ?? [])] }));
+    if (!KEY_RE.test(flag.key)) throw new RangeError('FLAGS: invalid key');
+    if (
+      !Number.isFinite(flag.rolloutPercent) ||
+      flag.rolloutPercent < 0 ||
+      flag.rolloutPercent > 100
+    )
+      throw new RangeError('FLAGS: rolloutPercent must be 0..100');
+    this.flags.set(
+      flag.key,
+      Object.freeze({
+        ...flag,
+        allowList: [...(flag.allowList ?? [])],
+        denyList: [...(flag.denyList ?? [])],
+      })
+    );
   }
 
   evaluate(key: string, subject: string, now = Date.now()): FlagDecision {
     const flag = this.flags.get(key);
-    if (flag === undefined) return { key, enabled: false, reason: "UNKNOWN_FLAG", bucket: null };
-    if (typeof subject !== "string" || subject.length === 0 || subject.length > 256) return { key, enabled: false, reason: "INVALID_SUBJECT", bucket: null };
-    if (flag.killScope !== undefined && this.halt?.isHalted(flag.killScope, now)) return { key, enabled: false, reason: "KILL_SWITCH", bucket: null };
-    if (!flag.enabled) return { key, enabled: false, reason: "DISABLED", bucket: null };
-    if (flag.denyList?.includes(subject)) return { key, enabled: false, reason: "DENY_LIST", bucket: null };
-    if (flag.allowList?.includes(subject)) return { key, enabled: true, reason: "ALLOW_LIST", bucket: null };
-    const bucket = rolloutBucket(flag.salt ?? "", key, subject);
-    return bucket < flag.rolloutPercent ? { key, enabled: true, reason: "ROLLOUT_IN", bucket } : { key, enabled: false, reason: "ROLLOUT_OUT", bucket };
+    if (flag === undefined) return { key, enabled: false, reason: 'UNKNOWN_FLAG', bucket: null };
+    if (typeof subject !== 'string' || subject.length === 0 || subject.length > 256)
+      return { key, enabled: false, reason: 'INVALID_SUBJECT', bucket: null };
+    if (flag.killScope !== undefined && this.halt?.isHalted(flag.killScope, now))
+      return { key, enabled: false, reason: 'KILL_SWITCH', bucket: null };
+    if (!flag.enabled) return { key, enabled: false, reason: 'DISABLED', bucket: null };
+    if (flag.denyList?.includes(subject))
+      return { key, enabled: false, reason: 'DENY_LIST', bucket: null };
+    if (flag.allowList?.includes(subject))
+      return { key, enabled: true, reason: 'ALLOW_LIST', bucket: null };
+    const bucket = rolloutBucket(flag.salt ?? '', key, subject);
+    return bucket < flag.rolloutPercent
+      ? { key, enabled: true, reason: 'ROLLOUT_IN', bucket }
+      : { key, enabled: false, reason: 'ROLLOUT_OUT', bucket };
   }
 
   /** Configuración sin listas de sujetos (no expone identificadores). */
-  snapshot(): readonly { key: string; enabled: boolean; rolloutPercent: number; killScope: string | null; allow: number; deny: number }[] {
-    return [...this.flags.values()].map((f) => ({ key: f.key, enabled: f.enabled, rolloutPercent: f.rolloutPercent, killScope: f.killScope ?? null, allow: f.allowList?.length ?? 0, deny: f.denyList?.length ?? 0 }));
+  snapshot(): readonly {
+    key: string;
+    enabled: boolean;
+    rolloutPercent: number;
+    killScope: string | null;
+    allow: number;
+    deny: number;
+  }[] {
+    return [...this.flags.values()].map((f) => ({
+      key: f.key,
+      enabled: f.enabled,
+      rolloutPercent: f.rolloutPercent,
+      killScope: f.killScope ?? null,
+      allow: f.allowList?.length ?? 0,
+      deny: f.denyList?.length ?? 0,
+    }));
   }
 }

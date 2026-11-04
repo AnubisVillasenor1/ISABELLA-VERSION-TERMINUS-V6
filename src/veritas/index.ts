@@ -1,2 +1,2 @@
-export * from "./verifier";
-export * from "./grounding";
+export * from './verifier';
+export * from './grounding';

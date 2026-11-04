@@ -1,4 +1,9 @@
-import type { GenerationRequest, GenerationResult, InferenceAdapter, ModelDescriptor } from "./types";
+import type {
+  GenerationRequest,
+  GenerationResult,
+  InferenceAdapter,
+  ModelDescriptor,
+} from './types';
 
 export interface FreeProviderConfig {
   baseUrl: string;
@@ -15,15 +20,17 @@ export interface RetryOptions {
   timeoutMs: number;
 }
 
-
-
-function log(level: "info" | "warn" | "error", message: string, meta?: Record<string, unknown>): void {
+function log(
+  level: 'info' | 'warn' | 'error',
+  message: string,
+  meta?: Record<string, unknown>
+): void {
   const timestamp = new Date().toISOString();
-  const metaStr = meta ? ` ${JSON.stringify(meta)}` : "";
+  const metaStr = meta ? ` ${JSON.stringify(meta)}` : '';
   const line = `[${timestamp}] [${level.toUpperCase()}] ${message}${metaStr}`;
-  if (level === "error") {
+  if (level === 'error') {
     console.error(line);
-  } else if (level === "warn") {
+  } else if (level === 'warn') {
     console.warn(line);
   } else {
     console.log(line);
@@ -38,16 +45,16 @@ function isRetryableError(error: unknown): boolean {
   if (error instanceof Error) {
     const msg = error.message.toLowerCase();
     return (
-      msg.includes("econnrefused") ||
-      msg.includes("econnreset") ||
-      msg.includes("etimedout") ||
-      msg.includes("timeout") ||
-      msg.includes("429") ||
-      msg.includes("500") ||
-      msg.includes("502") ||
-      msg.includes("503") ||
-      msg.includes("504") ||
-      msg.includes("network")
+      msg.includes('econnrefused') ||
+      msg.includes('econnreset') ||
+      msg.includes('etimedout') ||
+      msg.includes('timeout') ||
+      msg.includes('429') ||
+      msg.includes('500') ||
+      msg.includes('502') ||
+      msg.includes('503') ||
+      msg.includes('504') ||
+      msg.includes('network')
     );
   }
   return false;
@@ -56,7 +63,7 @@ function isRetryableError(error: unknown): boolean {
 async function fetchWithTimeout(
   url: string,
   init: RequestInit,
-  timeoutMs: number,
+  timeoutMs: number
 ): Promise<Response> {
   // Keep the timeout signal alive for the response body, not just until headers arrive.
   // Clearing a manual timer when fetch() resolves leaves response.json()/text() unbounded.
@@ -67,7 +74,7 @@ async function fetchWithTimeout(
 async function retryWithBackoff<T>(
   operation: (attemptTimeoutMs: number) => Promise<T>,
   options: RetryOptions,
-  context: string,
+  context: string
 ): Promise<T> {
   // timeoutMs is the deadline for the entire retry sequence, not a fresh allowance per attempt.
   const deadlineAt = Date.now() + options.timeoutMs;
@@ -85,7 +92,7 @@ async function retryWithBackoff<T>(
       const remainingAfterFailure = deadlineAt - Date.now();
       // Do not sleep through the entire remaining budget just to start a retry that cannot run.
       if (delay >= remainingAfterFailure) break;
-      log("warn", `${context}: attempt ${attempt + 1} failed, retrying in ${delay}ms`, {
+      log('warn', `${context}: attempt ${attempt + 1} failed, retrying in ${delay}ms`, {
         error: error instanceof Error ? error.message : String(error),
       });
       await sleep(delay);
@@ -100,34 +107,34 @@ export class OllamaAdapter implements InferenceAdapter {
 
   constructor(config: Partial<FreeProviderConfig> = {}) {
     this.config = {
-      baseUrl: config.baseUrl ?? process.env.OLLAMA_BASE_URL ?? "http://localhost:11434",
-      model: config.model ?? process.env.OLLAMA_MODEL ?? "llama3.2",
+      baseUrl: config.baseUrl ?? process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434',
+      model: config.model ?? process.env.OLLAMA_MODEL ?? 'llama3.2',
       timeoutMs: config.timeoutMs ?? 30_000,
       maxRetries: config.maxRetries ?? 2,
       retryBaseDelayMs: config.retryBaseDelayMs ?? 500,
     };
     this.descriptor = {
       id: `ollama-${this.config.model}`,
-      version: "local",
-      provider: "ollama",
-      capabilities: ["chat"],
+      version: 'local',
+      provider: 'ollama',
+      capabilities: ['chat'],
       contextWindow: 128_000,
       maxOutputTokens: 4096,
-      latencyClass: "BALANCED",
+      latencyClass: 'BALANCED',
     };
   }
 
   async generate(request: GenerationRequest): Promise<GenerationResult> {
     const started = Date.now();
-    const url = `${this.config.baseUrl.replace(/\/$/, "")}/api/generate`;
+    const url = `${this.config.baseUrl.replace(/\/$/, '')}/api/generate`;
 
     const result = await retryWithBackoff(
       async (attemptTimeoutMs) => {
         const response = await fetchWithTimeout(
           url,
           {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               model: this.config.model,
               prompt: request.prompt,
@@ -138,7 +145,7 @@ export class OllamaAdapter implements InferenceAdapter {
               },
             }),
           },
-          Math.min(this.config.timeoutMs, attemptTimeoutMs),
+          Math.min(this.config.timeoutMs, attemptTimeoutMs)
         );
 
         if (!response.ok) {
@@ -153,7 +160,7 @@ export class OllamaAdapter implements InferenceAdapter {
         };
 
         if (!data.response) {
-          throw new Error("OLLAMA_EMPTY_RESPONSE");
+          throw new Error('OLLAMA_EMPTY_RESPONSE');
         }
 
         return data;
@@ -163,26 +170,26 @@ export class OllamaAdapter implements InferenceAdapter {
         baseDelayMs: this.config.retryBaseDelayMs,
         timeoutMs: this.config.timeoutMs,
       },
-      "OllamaAdapter",
+      'OllamaAdapter'
     );
 
-    const text = result.response ?? "";
+    const text = result.response ?? '';
     return {
       modelId: this.descriptor.id,
       text,
       inputTokens: result.prompt_eval_count ?? Math.ceil(request.prompt.length / 4),
       outputTokens: result.eval_count ?? Math.ceil(text.length / 4),
       latencyMs: Date.now() - started,
-      finishReason: result.done === false ? "length" : "stop",
+      finishReason: result.done === false ? 'length' : 'stop',
     };
   }
 
   async healthCheck(): Promise<boolean> {
     try {
       const response = await fetchWithTimeout(
-        `${this.config.baseUrl.replace(/\/$/, "")}/api/tags`,
-        { method: "GET" },
-        5_000,
+        `${this.config.baseUrl.replace(/\/$/, '')}/api/tags`,
+        { method: 'GET' },
+        5_000
       );
       return response.ok;
     } catch {
@@ -197,21 +204,21 @@ export class GratisAPIAdapter implements InferenceAdapter {
 
   constructor(config: Partial<FreeProviderConfig> = {}) {
     this.config = {
-      baseUrl: config.baseUrl ?? process.env.GRATIS_API_URL ?? "https://api.gratis.ai/v1",
+      baseUrl: config.baseUrl ?? process.env.GRATIS_API_URL ?? 'https://api.gratis.ai/v1',
       apiKey: config.apiKey ?? process.env.GRATIS_API_KEY,
-      model: config.model ?? process.env.GRATIS_API_MODEL ?? "gpt-4o-mini",
+      model: config.model ?? process.env.GRATIS_API_MODEL ?? 'gpt-4o-mini',
       timeoutMs: config.timeoutMs ?? 30_000,
       maxRetries: config.maxRetries ?? 2,
       retryBaseDelayMs: config.retryBaseDelayMs ?? 500,
     };
     this.descriptor = {
       id: `gratis-${this.config.model}`,
-      version: "external",
-      provider: "gratis-api",
-      capabilities: ["chat"],
+      version: 'external',
+      provider: 'gratis-api',
+      capabilities: ['chat'],
       contextWindow: 128_000,
       maxOutputTokens: 4096,
-      latencyClass: "BALANCED",
+      latencyClass: 'BALANCED',
     };
   }
 
@@ -220,9 +227,9 @@ export class GratisAPIAdapter implements InferenceAdapter {
       const headers: Record<string, string> = {};
       if (this.config.apiKey) headers.Authorization = `Bearer ${this.config.apiKey}`;
       const response = await fetchWithTimeout(
-        `${this.config.baseUrl.replace(/\/$/, "")}/models`,
-        { method: "GET", headers },
-        5_000,
+        `${this.config.baseUrl.replace(/\/$/, '')}/models`,
+        { method: 'GET', headers },
+        5_000
       );
       return response.ok;
     } catch {
@@ -232,13 +239,13 @@ export class GratisAPIAdapter implements InferenceAdapter {
 
   async generate(request: GenerationRequest): Promise<GenerationResult> {
     const started = Date.now();
-    const url = `${this.config.baseUrl.replace(/\/$/, "")}/chat/completions`;
+    const url = `${this.config.baseUrl.replace(/\/$/, '')}/chat/completions`;
 
     const headers: Record<string, string> = {
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
     };
     if (this.config.apiKey) {
-      headers["Authorization"] = `Bearer ${this.config.apiKey}`;
+      headers['Authorization'] = `Bearer ${this.config.apiKey}`;
     }
 
     const result = await retryWithBackoff(
@@ -246,16 +253,16 @@ export class GratisAPIAdapter implements InferenceAdapter {
         const response = await fetchWithTimeout(
           url,
           {
-            method: "POST",
+            method: 'POST',
             headers,
             body: JSON.stringify({
               model: this.config.model,
-              messages: [{ role: "user", content: request.prompt }],
+              messages: [{ role: 'user', content: request.prompt }],
               max_tokens: request.maxTokens,
               temperature: request.temperature ?? 0.35,
             }),
           },
-          Math.min(this.config.timeoutMs, attemptTimeoutMs),
+          Math.min(this.config.timeoutMs, attemptTimeoutMs)
         );
 
         if (!response.ok) {
@@ -269,7 +276,7 @@ export class GratisAPIAdapter implements InferenceAdapter {
 
         const content = data.choices?.[0]?.message?.content;
         if (!content) {
-          throw new Error("GRATIS_API_EMPTY_RESPONSE");
+          throw new Error('GRATIS_API_EMPTY_RESPONSE');
         }
 
         return { content, usage: data.usage, finishReason: data.choices?.[0]?.finish_reason };
@@ -279,7 +286,7 @@ export class GratisAPIAdapter implements InferenceAdapter {
         baseDelayMs: this.config.retryBaseDelayMs,
         timeoutMs: this.config.timeoutMs,
       },
-      "GratisAPIAdapter",
+      'GratisAPIAdapter'
     );
 
     return {
@@ -288,7 +295,116 @@ export class GratisAPIAdapter implements InferenceAdapter {
       inputTokens: result.usage?.prompt_tokens ?? Math.ceil(request.prompt.length / 4),
       outputTokens: result.usage?.completion_tokens ?? Math.ceil(result.content.length / 4),
       latencyMs: Date.now() - started,
-      finishReason: result.finishReason === "length" ? "length" : "stop",
+      finishReason: result.finishReason === 'length' ? 'length' : 'stop',
+    };
+  }
+}
+
+export class HuggingFaceFreeAdapter implements InferenceAdapter {
+  readonly descriptor: ModelDescriptor;
+  private readonly config: FreeProviderConfig;
+
+  constructor(config: Partial<FreeProviderConfig> = {}) {
+    const defaultModel =
+      (process.env.HF_FREE_MODELS ?? 'google/gemma-2-2b-it')
+        .split(',')
+        .map((m) => m.trim())
+        .filter(Boolean)[0] ?? 'google/gemma-2-2b-it';
+    this.config = {
+      baseUrl:
+        config.baseUrl ??
+        process.env.HF_INFERENCE_URL ??
+        'https://router.huggingface.co/hf-inference/models',
+      apiKey: config.apiKey ?? process.env.HF_TOKEN,
+      model: config.model ?? defaultModel,
+      timeoutMs: config.timeoutMs ?? 45_000,
+      maxRetries: config.maxRetries ?? 2,
+      retryBaseDelayMs: config.retryBaseDelayMs ?? 1_000,
+    };
+    this.descriptor = {
+      id: `hf-${this.config.model.replace(/[^a-zA-Z0-9_-]/g, '-')}`,
+      version: 'external',
+      provider: 'huggingface-free',
+      capabilities: ['chat'],
+      contextWindow: 8_192,
+      maxOutputTokens: 1_024,
+      latencyClass: 'BALANCED',
+    };
+  }
+
+  async healthCheck(): Promise<boolean> {
+    if (!this.config.apiKey) return false;
+    try {
+      const response = await fetchWithTimeout(
+        `${this.config.baseUrl.replace(/\/$/, '')}/${this.config.model}`,
+        { method: 'GET', headers: { Authorization: `Bearer ${this.config.apiKey}` } },
+        5_000
+      );
+      return response.ok || response.status === 503; // 503 = model loading, still reachable
+    } catch {
+      return false;
+    }
+  }
+
+  async generate(request: GenerationRequest): Promise<GenerationResult> {
+    if (!this.config.apiKey) throw new Error('HF_TOKEN_MISSING');
+    const started = Date.now();
+    const url = `${this.config.baseUrl.replace(/\/$/, '')}/${this.config.model}`;
+
+    const result = await retryWithBackoff(
+      async (attemptTimeoutMs) => {
+        const response = await fetchWithTimeout(
+          url,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${this.config.apiKey}`,
+            },
+            body: JSON.stringify({
+              inputs: request.prompt,
+              parameters: {
+                max_new_tokens: Math.min(request.maxTokens, this.descriptor.maxOutputTokens),
+                temperature: request.temperature ?? 0.35,
+                return_full_text: false,
+              },
+            }),
+          },
+          Math.min(this.config.timeoutMs, attemptTimeoutMs)
+        );
+        if (!response.ok) {
+          throw new Error(`HF_HTTP_${response.status}: ${response.statusText}`);
+        }
+        const data = (await response.json()) as unknown;
+        let text = '';
+        if (Array.isArray(data)) {
+          const first = data[0] as { generated_text?: string } | undefined;
+          text = first?.generated_text ?? '';
+        } else if (data && typeof data === 'object') {
+          const obj = data as { generated_text?: string; error?: string };
+          if (obj.error) throw new Error(`HF_ERROR: ${obj.error}`);
+          text = obj.generated_text ?? '';
+        }
+        if (!text) throw new Error('HF_EMPTY_RESPONSE');
+        // Strip the echoed prompt if the provider returned full text.
+        if (text.startsWith(request.prompt)) text = text.slice(request.prompt.length).trim();
+        return text;
+      },
+      {
+        maxRetries: this.config.maxRetries,
+        baseDelayMs: this.config.retryBaseDelayMs,
+        timeoutMs: this.config.timeoutMs,
+      },
+      'HuggingFaceFreeAdapter'
+    );
+
+    return {
+      modelId: this.descriptor.id,
+      text: result,
+      inputTokens: Math.ceil(request.prompt.length / 4),
+      outputTokens: Math.ceil(result.length / 4),
+      latencyMs: Date.now() - started,
+      finishReason: 'stop',
     };
   }
 }
@@ -305,20 +421,20 @@ export class FreeProviderRouter {
 
     for (const adapter of this.adapters) {
       try {
-        log("info", `Trying provider: ${adapter.descriptor.provider}/${adapter.descriptor.id}`);
+        log('info', `Trying provider: ${adapter.descriptor.provider}/${adapter.descriptor.id}`);
         const result = await adapter.generate(request);
-        log("info", `Provider succeeded: ${adapter.descriptor.provider}`, {
+        log('info', `Provider succeeded: ${adapter.descriptor.provider}`, {
           latencyMs: result.latencyMs,
         });
         return result;
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
-        log("warn", `Provider failed: ${adapter.descriptor.provider}`, { error: msg });
+        log('warn', `Provider failed: ${adapter.descriptor.provider}`, { error: msg });
         errors.push(`${adapter.descriptor.provider}: ${msg}`);
       }
     }
 
-    throw new Error(`ALL_PROVIDERS_FAILED: ${errors.join(" | ")}`);
+    throw new Error(`ALL_PROVIDERS_FAILED: ${errors.join(' | ')}`);
   }
 
   async healthCheck(): Promise<Record<string, boolean>> {
@@ -346,7 +462,15 @@ export function createDefaultFreeProviderRouter(): FreeProviderRouter {
     const gratis = new GratisAPIAdapter();
     router.register(gratis);
   } else {
-    log("info", "GRATIS_API_KEY not set, skipping GratisAPIAdapter");
+    log('info', 'GRATIS_API_KEY not set, skipping GratisAPIAdapter');
+  }
+
+  if (process.env.HF_TOKEN) {
+    const hf = new HuggingFaceFreeAdapter();
+    router.register(hf);
+    log('info', 'HF_TOKEN set, registered HuggingFaceFreeAdapter', { model: hf.descriptor.id });
+  } else {
+    log('info', 'HF_TOKEN not set, skipping HuggingFaceFreeAdapter');
   }
 
   return router;

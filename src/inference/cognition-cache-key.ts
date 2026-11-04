@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash } from 'node:crypto';
 
 /**
  * Hash a canonical request tuple instead of retaining user prompts/history as
@@ -9,8 +9,9 @@ export function buildCognitionCacheKey(
   history: unknown,
   modelEngine: string,
   focusLens: string,
-  methodId: string,
+  methodId: string
 ): string {
-  const canonical = JSON.stringify([modelEngine, focusLens, methodId, input, history ?? []]) ?? "null";
-  return createHash("sha256").update(canonical, "utf8").digest("hex");
+  const canonical =
+    JSON.stringify([modelEngine, focusLens, methodId, input, history ?? []]) ?? 'null';
+  return createHash('sha256').update(canonical, 'utf8').digest('hex');
 }

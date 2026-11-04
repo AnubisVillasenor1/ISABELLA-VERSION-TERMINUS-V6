@@ -7,14 +7,15 @@
  * concurrency, or WORM durability. A report is `ready` only when every required
  * dependency is healthy; fail-closed when evidence is missing (RA-018).
  */
-import { accessSync, constants, existsSync } from "node:fs";
-import { dirname } from "node:path";
+import { accessSync, constants, existsSync } from 'node:fs';
+import { dirname } from 'node:path';
+import { parseMethodId } from '../authority/method-id';
 import {
   assessProductionReadiness,
   type DependencyHealth,
   type HealthStatus,
   type ProductionReadinessReport,
-} from "../deployment/production-ops";
+} from '../deployment/production-ops';
 
 export type EnvLike = Readonly<Record<string, string | undefined>>;
 
@@ -50,93 +51,127 @@ export const nodeFilesystemProbe: FilesystemProbe = {
 };
 
 function isConfigured(env: EnvLike, keys: readonly string[]): boolean {
-  return keys.some((key) => (env[key] ?? "").trim().length > 0);
+  return keys.some((key) => (env[key] ?? '').trim().length > 0);
 }
 
 export function probeBookPiLedger(env: EnvLike, filesystem: FilesystemProbe): DependencyEvidence {
-  const ledgerPath = (env.BOOKPI_LEDGER_PATH ?? "").trim();
+  const ledgerPath = (env.BOOKPI_LEDGER_PATH ?? '').trim();
   if (ledgerPath.length === 0) {
     return {
-      dependency: "bookpi-ledger",
-      status: "degraded",
+      dependency: 'bookpi-ledger',
+      status: 'degraded',
       required: true,
-      detail: "In-memory SHA-256 hash chain only; events do not survive a process restart.",
+      detail: 'In-memory SHA-256 hash chain only; events do not survive a process restart.',
     };
   }
   if (!filesystem.isWritableDirectory(ledgerPath)) {
     return {
-      dependency: "bookpi-ledger",
-      status: "unavailable",
+      dependency: 'bookpi-ledger',
+      status: 'unavailable',
       required: true,
-      detail: "BOOKPI_LEDGER_PATH is set but its directory is missing or not writable.",
+      detail: 'BOOKPI_LEDGER_PATH is set but its directory is missing or not writable.',
     };
   }
   return {
-    dependency: "bookpi-ledger",
-    status: "healthy",
+    dependency: 'bookpi-ledger',
+    status: 'healthy',
     required: true,
-    detail: "Durable append-only JSONL path is writable (local scope; not shared storage or WORM).",
+    detail: 'Durable append-only JSONL path is writable (local scope; not shared storage or WORM).',
   };
 }
 
 export function probeInferenceProvider(env: EnvLike): DependencyEvidence {
   const singleKeyConfigured = isConfigured(env, [
-    "OPENROUTER_API_KEY",
-    "GEMINI_API_KEY",
-    "INFERENCE_API_KEY",
-    "MODEL_API_KEY",
-    "OLLAMA_API_KEY",
-    "GROQ_API_KEY",
-    "CEREBRAS_API_KEY",
-    "TOGETHER_API_KEY",
-    "DEEPINFRA_API_KEY",
-    "FIREWORKS_API_KEY",
+    'OPENROUTER_API_KEY',
+    'GEMINI_API_KEY',
+    'INFERENCE_API_KEY',
+    'MODEL_API_KEY',
+    'OLLAMA_API_KEY',
+    'GROQ_API_KEY',
+    'CEREBRAS_API_KEY',
+    'TOGETHER_API_KEY',
+    'DEEPINFRA_API_KEY',
+    'FIREWORKS_API_KEY',
   ]);
-  const huggingFaceConfigured = isConfigured(env, ["HF_TOKEN"]) && isConfigured(env, ["HF_FREE_MODELS"]);
+  const huggingFaceConfigured =
+    isConfigured(env, ['HF_TOKEN']) && isConfigured(env, ['HF_FREE_MODELS']);
   const configured = singleKeyConfigured || huggingFaceConfigured;
   return {
-    dependency: "inference-provider",
-    status: "degraded",
+    dependency: 'inference-provider',
+    status: configured ? 'healthy' : 'degraded',
     required: false,
     detail: configured
-      ? "At least one external provider credential is configured; reachability, quota, and a real inference response are not verified here."
-      : "No external provider credential configured; only the local fallback engine is available.",
+      ? 'At least one external provider credential is configured; reachability and quota are not verified here.'
+      : 'No external provider credential configured; only the local fallback engine is available.',
   };
 }
 
 export function probeAtlasPersistence(env: EnvLike): DependencyEvidence {
-  const configured = isConfigured(env, ["POSTGRES_URL", "POSTGRES_URL_NON_POOLING", "SUPABASE_URL"]);
+  const configured = isConfigured(env, [
+    'POSTGRES_URL',
+    'POSTGRES_URL_NON_POOLING',
+    'SUPABASE_URL',
+  ]);
   return {
-    dependency: "atlas-persistence",
-    status: "degraded",
+    dependency: 'atlas-persistence',
+    status: configured ? 'healthy' : 'degraded',
     required: false,
     detail: configured
-      ? "A persistence URL is configured; a live query, RLS, and multi-tenant isolation are not verified by this shallow probe."
-      : "No Postgres/Supabase persistence URL configured; Atlas storage is unavailable.",
+      ? 'A persistence URL is configured; a live query, RLS and multi-tenant isolation are not performed here.'
+      : 'No Postgres/Supabase persistence URL configured; Atlas storage is unavailable.',
+  };
+}
+
+/**
+ * Conformancia del canon de 7 segmentos para todo methodId que llegue a CROWN.
+ *
+ * Un literal no canónico no produce un error de arranque: `parseMethodId` lanza,
+ * CROWN lo marca como riesgo crítico y la capacidad queda bloqueada en 403 de forma
+ * silenciosa e irreversible desde el punto de vista del operador. Por eso se reporta
+ * aquí como dependencia requerida: una capacidad que nunca podrá invocarse es un
+ * defecto de producción, no un detalle de estilo.
+ */
+export function probeMethodIdConformance(gateMethodIds: readonly string[]): DependencyEvidence {
+  const offenders = gateMethodIds.filter((methodId) => {
+    try {
+      parseMethodId(methodId);
+      return false;
+    } catch {
+      return true;
+    }
+  });
+  return {
+    dependency: 'method-id-conformance',
+    status: offenders.length === 0 ? 'healthy' : 'unavailable',
+    required: true,
+    detail:
+      offenders.length === 0
+        ? `Las ${gateMethodIds.length} capacidades del gate cumplen el canon de 7 segmentos.`
+        : `CROWN rechaza estas capacidades registradas por identificador no canónico: ${offenders.join(', ')}`,
   };
 }
 
 export function probeSigningAuthority(env: EnvLike): DependencyEvidence {
-  const configured = isConfigured(env, ["HYPERCORE_SIGNING_KEY", "BOOKPI_INTEGRITY_SECRET"]);
+  const configured = isConfigured(env, ['HYPERCORE_SIGNING_KEY', 'BOOKPI_INTEGRITY_SECRET']);
   return {
-    dependency: "signing-authority",
-    status: configured ? "healthy" : "degraded",
+    dependency: 'signing-authority',
+    status: configured ? 'healthy' : 'degraded',
     required: true,
     detail: configured
-      ? "An HMAC evidence-signing secret is configured."
-      : "No evidence signing secret configured; sealed manifests cannot be produced.",
+      ? 'An HMAC evidence-signing secret is configured.'
+      : 'No evidence signing secret configured; sealed manifests cannot be produced.',
   };
 }
 
 export function probeObservability(env: EnvLike): DependencyEvidence {
-  const configured = isConfigured(env, ["OTEL_EXPORTER_OTLP_ENDPOINT"]);
+  const configured = isConfigured(env, ['OTEL_EXPORTER_OTLP_ENDPOINT']);
   return {
-    dependency: "observability",
-    status: configured ? "healthy" : "degraded",
+    dependency: 'observability',
+    status: configured ? 'healthy' : 'degraded',
     required: false,
     detail: configured
-      ? "An OTLP exporter endpoint is configured; export success is not verified here."
-      : "No telemetry exporter configured; observability is limited to in-process metrics.",
+      ? 'An OTLP exporter endpoint is configured; export success is not verified here.'
+      : 'No telemetry exporter configured; observability is limited to in-process metrics.',
   };
 }
 
@@ -144,6 +179,7 @@ export function collectDependencyReadiness(
   env: EnvLike,
   filesystem: FilesystemProbe = nodeFilesystemProbe,
   now: Date = new Date(),
+  gateMethodIds: readonly string[] = []
 ): DependencyReadinessReport {
   const evidence: DependencyEvidence[] = [
     probeBookPiLedger(env, filesystem),
@@ -151,6 +187,7 @@ export function collectDependencyReadiness(
     probeAtlasPersistence(env),
     probeSigningAuthority(env),
     probeObservability(env),
+    probeMethodIdConformance(gateMethodIds),
   ];
   const dependencies: DependencyHealth[] = evidence.map((entry) => ({
     name: entry.dependency,

@@ -2,7 +2,7 @@
  * TAMV Federated Runtime Ω - Heptafederated Cognitive Mesh
  * state: engine-generated
  * Part of ISABELLA-Q Ω Cognitive Architecture
- * 
+ *
  * Implements 7 federations with consensus, memory mesh, experts, policy, telemetry:
  * 1. IDENTITY - Identity & Access Federation
  * 2. COGNITION - Reasoning & Inference Federation
@@ -13,21 +13,15 @@
  * 7. SECURITY - Threat & Protection Federation
  */
 
-import { EventEmitter } from "node:events";
-import { randomBytes, createHash } from "node:crypto";
+import { EventEmitter } from 'node:events';
+import { randomBytes, createHash } from 'node:crypto';
 
-export type FederationId = 
-  | "identity" 
-  | "cognition" 
-  | "memory" 
-  | "governance" 
-  | "value" 
-  | "experience" 
-  | "security";
+export type FederationId =
+  'identity' | 'cognition' | 'memory' | 'governance' | 'value' | 'experience' | 'security';
 
-export type ConsensusAlgorithm = "raft" | "pbft" | "hotstuff" | "tendermint" | "custom";
+export type ConsensusAlgorithm = 'raft' | 'pbft' | 'hotstuff' | 'tendermint' | 'custom';
 
-export type NodeRole = "leader" | "follower" | "candidate" | "observer";
+export type NodeRole = 'leader' | 'follower' | 'candidate' | 'observer';
 
 export interface FederationNode {
   readonly id: string;
@@ -36,13 +30,13 @@ export interface FederationNode {
   readonly publicKey: string;
   readonly role: NodeRole;
   readonly capabilities: NodeCapabilities;
-  readonly status: "active" | "inactive" | "syncing" | "error";
+  readonly status: 'active' | 'inactive' | 'syncing' | 'error';
   readonly lastHeartbeat: number;
   readonly metadata: Record<string, unknown>;
 }
 
 export interface NodeCapabilities {
-  readonly compute: "low" | "medium" | "high";
+  readonly compute: 'low' | 'medium' | 'high';
   readonly storage: number; // GB
   readonly memory: number; // GB
   readonly gpu: boolean;
@@ -78,19 +72,19 @@ export interface RetryPolicy {
 export interface FederationPolicy {
   readonly id: string;
   readonly name: string;
-  readonly type: "resource" | "access" | "quality" | "privacy" | "custom";
+  readonly type: 'resource' | 'access' | 'quality' | 'privacy' | 'custom';
   readonly rules: PolicyRule[];
 }
 
 export interface PolicyRule {
   readonly condition: string;
-  readonly action: "allow" | "deny" | "throttle" | "route" | "transform";
+  readonly action: 'allow' | 'deny' | 'throttle' | 'route' | 'transform';
   readonly params: Record<string, unknown>;
 }
 
 export interface FederationMessage {
   readonly id: string;
-  readonly type: "request" | "response" | "broadcast" | "consensus" | "heartbeat" | "sync";
+  readonly type: 'request' | 'response' | 'broadcast' | 'consensus' | 'heartbeat' | 'sync';
   readonly federationId: FederationId;
   readonly from: string;
   readonly to?: string; // undefined = broadcast
@@ -102,20 +96,102 @@ export interface FederationMessage {
 
 export interface ConsensusProposal {
   readonly id: string;
+  /** Raft term in which the entry was created (needed for log up-to-date comparison). */
+  readonly term: number;
   readonly federationId: FederationId;
   readonly proposer: string;
   readonly payload: unknown;
   readonly votes: ConsensusVote[];
-  status: "pending" | "committed" | "rejected" | "expired";
+  status: 'pending' | 'committed' | 'rejected' | 'expired';
   readonly createdAt: number;
   committedAt?: number;
 }
 
 export interface ConsensusVote {
   readonly voter: string;
-  readonly vote: "yes" | "no" | "abstain";
+  readonly vote: 'yes' | 'no' | 'abstain';
   readonly signature: string;
   readonly timestamp: number;
+}
+
+export interface RequestVotePayload {
+  readonly type: 'request_vote';
+  readonly term: number;
+  readonly candidateId: string;
+  readonly lastLogIndex: number;
+  readonly lastLogTerm: number;
+}
+export interface AppendEntriesPayload {
+  readonly type: 'append_entries';
+  readonly term: number;
+  readonly leaderId: string;
+  readonly entries: readonly ConsensusProposal[];
+  readonly commitIndex: number;
+}
+export interface VoteResponsePayload {
+  readonly type: 'vote_response';
+  readonly voter: string;
+  readonly voteGranted: boolean;
+  readonly term: number;
+}
+export type ConsensusPayload = RequestVotePayload | AppendEntriesPayload | VoteResponsePayload;
+
+const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null;
+const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+
+/** Network input is untrusted: validate shape and primitive types before it touches consensus state. */
+export function parseConsensusPayload(raw: unknown): ConsensusPayload | null {
+  if (!isRecord(raw)) return null;
+  switch (raw.type) {
+    case 'request_vote':
+      return isNum(raw.term) &&
+        typeof raw.candidateId === 'string' &&
+        isNum(raw.lastLogIndex) &&
+        isNum(raw.lastLogTerm)
+        ? {
+            type: 'request_vote',
+            term: raw.term,
+            candidateId: raw.candidateId,
+            lastLogIndex: raw.lastLogIndex,
+            lastLogTerm: raw.lastLogTerm,
+          }
+        : null;
+    case 'append_entries': {
+      if (
+        !isNum(raw.term) ||
+        typeof raw.leaderId !== 'string' ||
+        !isNum(raw.commitIndex) ||
+        !Array.isArray(raw.entries)
+      )
+        return null;
+      const entries: ConsensusProposal[] = [];
+      for (const e of raw.entries as unknown[]) {
+        if (
+          !isRecord(e) ||
+          typeof e.id !== 'string' ||
+          !isNum(e.term) ||
+          typeof e.proposer !== 'string'
+        )
+          return null;
+        entries.push(e as unknown as ConsensusProposal);
+      }
+      return {
+        type: 'append_entries',
+        term: raw.term,
+        leaderId: raw.leaderId,
+        entries,
+        commitIndex: raw.commitIndex,
+      };
+    }
+    case 'vote_response':
+      return isNum(raw.term) &&
+        typeof raw.voter === 'string' &&
+        typeof raw.voteGranted === 'boolean'
+        ? { type: 'vote_response', term: raw.term, voter: raw.voter, voteGranted: raw.voteGranted }
+        : null;
+    default:
+      return null;
+  }
 }
 
 export interface FederationState {
@@ -140,7 +216,7 @@ export interface CrossFederationRequest {
 }
 
 export interface RoutingPolicy {
-  readonly priority: "low" | "normal" | "high" | "critical";
+  readonly priority: 'low' | 'normal' | 'high' | 'critical';
   readonly timeoutMs: number;
   readonly retry: boolean;
   readonly fallbackFederations?: FederationId[];
@@ -172,10 +248,10 @@ export interface ResourceUtilization {
 }
 
 export interface FederationHealth {
-  readonly status: "healthy" | "degraded" | "unhealthy";
+  readonly status: 'healthy' | 'degraded' | 'unhealthy';
   readonly nodeCount: number;
   readonly activeNodes: number;
-  readonly syncStatus: "synced" | "syncing" | "lagging";
+  readonly syncStatus: 'synced' | 'syncing' | 'lagging';
   readonly issues: string[];
 }
 
@@ -201,12 +277,12 @@ export class ConsensusEngine extends EventEmitter {
   constructor(config: FederationConfig, initialNodes: FederationNode[]) {
     super();
     this.config = config;
-    
+
     this.state = {
       federationId: config.id,
       term: 0,
-      role: "follower",
-      nodes: new Map(initialNodes.map(n => [n.id, n])),
+      role: 'follower',
+      nodes: new Map(initialNodes.map((n) => [n.id, n])),
       log: [],
       commitIndex: 0,
       lastApplied: 0,
@@ -227,12 +303,12 @@ export class ConsensusEngine extends EventEmitter {
 
   private startElection(): void {
     this.state.term++;
-    this.state.role = "candidate";
+    this.state.role = 'candidate';
     this.voteCount.clear();
     this.voteCount.set(this.getSelfId(), 1);
-    
+
     this.broadcastRequestVote();
-    this.emit("election:started", { term: this.state.term });
+    this.emit('election:started', { term: this.state.term });
   }
 
   private broadcastRequestVote(): void {
@@ -241,27 +317,28 @@ export class ConsensusEngine extends EventEmitter {
       term: this.state.term,
       candidateId: this.getSelfId(),
       lastLogIndex: lastLog ? this.state.log.indexOf(lastLog) : 0,
-      lastLogTerm: lastLog ? lastLog.id : 0,
+      lastLogTerm: lastLog ? lastLog.term : 0,
     };
-    
-    this.broadcast("consensus", { type: "request_vote", ...request });
+
+    this.broadcast('consensus', { type: 'request_vote', ...request });
   }
 
-  handleRequestVote(request: any): { voteGranted: boolean; term: number } {
+  handleRequestVote(request: RequestVotePayload): { voteGranted: boolean; term: number } {
     if (request.term > this.state.term) {
       this.state.term = request.term;
       this.becomeFollower();
     }
-    
-    const voteGranted = request.term >= this.state.term && 
+
+    const voteGranted =
+      request.term >= this.state.term &&
       !this.voteCount.has(request.candidateId) &&
       this.isLogUpToDate(request.lastLogIndex, request.lastLogTerm);
-    
+
     if (voteGranted) {
       this.voteCount.set(request.candidateId, 1);
       this.resetElectionTimer();
     }
-    
+
     return { voteGranted, term: this.state.term };
   }
 
@@ -274,16 +351,16 @@ export class ConsensusEngine extends EventEmitter {
   }
 
   private becomeFollower(): void {
-    this.state.role = "follower";
+    this.state.role = 'follower';
     this.state.leader = undefined;
     this.resetElectionTimer();
   }
 
   private becomeLeader(): void {
-    this.state.role = "leader";
+    this.state.role = 'leader';
     this.state.leader = this.getSelfId();
     this.startHeartbeat();
-    this.emit("leader:elected", { term: this.state.term, leader: this.getSelfId() });
+    this.emit('leader:elected', { term: this.state.term, leader: this.getSelfId() });
   }
 
   private startHeartbeat(): void {
@@ -292,7 +369,7 @@ export class ConsensusEngine extends EventEmitter {
   }
 
   private sendHeartbeat(): void {
-    this.broadcast("heartbeat", {
+    this.broadcast('heartbeat', {
       term: this.state.term,
       leaderId: this.getSelfId(),
       commitIndex: this.state.commitIndex,
@@ -301,48 +378,49 @@ export class ConsensusEngine extends EventEmitter {
 
   propose(payload: unknown): Promise<ConsensusProposal> {
     return new Promise((resolve, reject) => {
-      if (this.state.role !== "leader") {
-        reject(new Error("NOT_LEADER"));
+      if (this.state.role !== 'leader') {
+        reject(new Error('NOT_LEADER'));
         return;
       }
 
       const proposal: ConsensusProposal = {
-        id: `prop_${randomBytes(12).toString("hex")}`,
+        id: `prop_${randomBytes(12).toString('hex')}`,
+        term: this.state.term,
         federationId: this.config.id,
         proposer: this.getSelfId(),
         payload,
         votes: [],
-        status: "pending",
+        status: 'pending',
         createdAt: Date.now(),
       };
 
       this.state.log.push(proposal);
       this.broadcastAppendEntries();
-      
+
       // Wait for consensus
       const checkConsensus = setInterval(() => {
-        const votes = proposal.votes.filter(v => v.vote === "yes").length;
+        const votes = proposal.votes.filter((v) => v.vote === 'yes').length;
         const quorum = Math.floor(this.config.quorumSize / 2) + 1;
-        
+
         if (votes >= quorum) {
           clearInterval(checkConsensus);
-          proposal.status = "committed";
+          proposal.status = 'committed';
           proposal.committedAt = Date.now();
           this.state.commitIndex = this.state.log.indexOf(proposal);
-          this.emit("proposal:committed", proposal);
+          this.emit('proposal:committed', proposal);
           resolve(proposal);
         } else if (Date.now() - proposal.createdAt > this.config.timeoutMs) {
           clearInterval(checkConsensus);
-          proposal.status = "expired";
-          reject(new Error("CONSENSUS_TIMEOUT"));
+          proposal.status = 'expired';
+          reject(new Error('CONSENSUS_TIMEOUT'));
         }
       }, 100);
     });
   }
 
   private broadcastAppendEntries(): void {
-    this.broadcast("consensus", {
-      type: "append_entries",
+    this.broadcast('consensus', {
+      type: 'append_entries',
       term: this.state.term,
       leaderId: this.getSelfId(),
       entries: this.state.log.slice(this.state.commitIndex),
@@ -350,24 +428,24 @@ export class ConsensusEngine extends EventEmitter {
     });
   }
 
-  handleAppendEntries(request: any): { success: boolean; term: number } {
+  handleAppendEntries(request: AppendEntriesPayload): { success: boolean; term: number } {
     if (request.term >= this.state.term) {
       this.state.term = request.term;
       this.becomeFollower();
       this.state.leader = request.leaderId;
       this.resetElectionTimer();
-      
+
       // Apply entries
       for (const entry of request.entries) {
-        if (!this.state.log.some(e => e.id === entry.id)) {
+        if (!this.state.log.some((e) => e.id === entry.id)) {
           this.state.log.push(entry);
         }
       }
-      
+
       this.state.commitIndex = request.commitIndex;
       return { success: true, term: this.state.term };
     }
-    
+
     return { success: false, term: this.state.term };
   }
 
@@ -377,21 +455,21 @@ export class ConsensusEngine extends EventEmitter {
       this.becomeFollower();
       return;
     }
-    
+
     if (response.voteGranted) {
       this.voteCount.set(response.voter, 1);
       const votes = this.voteCount.size;
       const quorum = Math.floor(this.config.quorumSize / 2) + 1;
-      
-      if (votes >= quorum && this.state.role === "candidate") {
+
+      if (votes >= quorum && this.state.role === 'candidate') {
         this.becomeLeader();
       }
     }
   }
 
-  private broadcast(type: FederationMessage["type"], payload: unknown): void {
+  private broadcast(type: FederationMessage['type'], payload: unknown): void {
     const message: FederationMessage = {
-      id: `msg_${randomBytes(10).toString("hex")}`,
+      id: `msg_${randomBytes(10).toString('hex')}`,
       type,
       federationId: this.config.id,
       from: this.getSelfId(),
@@ -400,17 +478,17 @@ export class ConsensusEngine extends EventEmitter {
       signature: this.sign(payload),
       metadata: {},
     };
-    
-    this.emit("message:outbound", message);
+
+    this.emit('message:outbound', message);
   }
 
   private sign(payload: unknown): string {
-    return createHash("sha256").update(JSON.stringify(payload)).digest("hex").slice(0, 32);
+    return createHash('sha256').update(JSON.stringify(payload)).digest('hex').slice(0, 32);
   }
 
   private getSelfId(): string {
     // In production, would be configured
-    return `node-${this.config.id}-${randomBytes(6).toString("hex")}`;
+    return `node-${this.config.id}-${randomBytes(6).toString('hex')}`;
   }
 
   getState(): FederationState {
@@ -422,7 +500,7 @@ export class ConsensusEngine extends EventEmitter {
   }
 
   isLeader(): boolean {
-    return this.state.role === "leader";
+    return this.state.role === 'leader';
   }
 
   shutdown(): void {
@@ -440,7 +518,7 @@ export class FederationRegistry extends EventEmitter {
 
   register(federation: FederationRuntime): void {
     this.federations.set(federation.config.id, federation);
-    this.emit("federation:registered", federation.config.id);
+    this.emit('federation:registered', federation.config.id);
   }
 
   unregister(federationId: FederationId): void {
@@ -448,7 +526,7 @@ export class FederationRegistry extends EventEmitter {
     if (federation) {
       federation.shutdown();
       this.federations.delete(federationId);
-      this.emit("federation:unregistered", federationId);
+      this.emit('federation:unregistered', federationId);
     }
   }
 
@@ -463,12 +541,12 @@ export class FederationRegistry extends EventEmitter {
   async routeCrossFederation(request: CrossFederationRequest): Promise<unknown> {
     const target = this.federations.get(request.targetFederation);
     if (!target) throw new Error(`FEDERATION_NOT_FOUND: ${request.targetFederation}`);
-    
+
     return target.handleCrossFederationRequest(request);
   }
 
   getTelemetrySnapshot(): TelemetrySnapshot[] {
-    return this.getAll().map(f => f.getTelemetrySnapshot());
+    return this.getAll().map((f) => f.getTelemetrySnapshot());
   }
 
   setGlobalConfig(key: string, value: unknown): void {
@@ -492,26 +570,38 @@ export class FederationRuntime extends EventEmitter {
   constructor(config: FederationConfig) {
     super();
     this.config = config;
-    this.consensus = new ConsensusEngine(config, Array.from(config.consensus.validatorSet.map(id => ({
-      id,
-      federationId: config.id,
-      endpoint: "",
-      publicKey: "",
-      role: "follower" as NodeRole,
-      capabilities: { compute: "medium", storage: 100, memory: 16, gpu: false, specialized: [], maxConcurrentRequests: 100 },
-      status: "active",
-      lastHeartbeat: Date.now(),
-      metadata: {},
-    }))));
-    
+    this.consensus = new ConsensusEngine(
+      config,
+      Array.from(
+        config.consensus.validatorSet.map((id) => ({
+          id,
+          federationId: config.id,
+          endpoint: '',
+          publicKey: '',
+          role: 'follower' as NodeRole,
+          capabilities: {
+            compute: 'medium',
+            storage: 100,
+            memory: 16,
+            gpu: false,
+            specialized: [],
+            maxConcurrentRequests: 100,
+          },
+          status: 'active',
+          lastHeartbeat: Date.now(),
+          metadata: {},
+        }))
+      )
+    );
+
     this.setupMessageHandlers();
   }
 
   private setupMessageHandlers(): void {
-    this.registerHandler("request", this.handleRequest.bind(this));
-    this.registerHandler("consensus", this.handleConsensus.bind(this));
-    this.registerHandler("heartbeat", this.handleHeartbeat.bind(this));
-    this.registerHandler("sync", this.handleSync.bind(this));
+    this.registerHandler('request', this.handleRequest.bind(this));
+    this.registerHandler('consensus', this.handleConsensus.bind(this));
+    this.registerHandler('heartbeat', this.handleHeartbeat.bind(this));
+    this.registerHandler('sync', this.handleSync.bind(this));
   }
 
   registerHandler(type: string, handler: MessageHandler): void {
@@ -525,18 +615,19 @@ export class FederationRuntime extends EventEmitter {
   }
 
   private async handleConsensus(message: FederationMessage): Promise<void> {
-    const payload = message.payload as any;
-    
+    const payload = parseConsensusPayload(message.payload);
+    if (!payload) return; // malformed or unknown consensus message: drop, never act on it
+
     switch (payload.type) {
-      case "request_vote":
+      case 'request_vote':
         const voteResponse = this.consensus.handleRequestVote(payload);
         this.sendResponse(message, voteResponse);
         break;
-      case "append_entries":
+      case 'append_entries':
         const appendResponse = this.consensus.handleAppendEntries(payload);
         this.sendResponse(message, appendResponse);
         break;
-      case "vote_response":
+      case 'vote_response':
         this.consensus.handleVoteResponse(payload);
         break;
     }
@@ -544,12 +635,12 @@ export class FederationRuntime extends EventEmitter {
 
   private async handleHeartbeat(message: FederationMessage): Promise<void> {
     // Update leader info
-    this.emit("heartbeat:received", message.payload);
+    this.emit('heartbeat:received', message.payload);
   }
 
   private async handleSync(message: FederationMessage): Promise<void> {
     // Handle state synchronization
-    this.emit("sync:requested", message.payload);
+    this.emit('sync:requested', message.payload);
   }
 
   private async processRequest(payload: unknown): Promise<unknown> {
@@ -559,8 +650,8 @@ export class FederationRuntime extends EventEmitter {
 
   private sendResponse(original: FederationMessage, payload: unknown): void {
     const response: FederationMessage = {
-      id: `msg_${randomBytes(10).toString("hex")}`,
-      type: "response",
+      id: `msg_${randomBytes(10).toString('hex')}`,
+      type: 'response',
       federationId: this.config.id,
       from: this.getSelfId(),
       to: original.from,
@@ -569,7 +660,7 @@ export class FederationRuntime extends EventEmitter {
       signature: this.sign(payload),
       metadata: { inReplyTo: original.id },
     };
-    this.emit("message:outbound", response);
+    this.emit('message:outbound', response);
   }
 
   async handleCrossFederationRequest(request: CrossFederationRequest): Promise<unknown> {
@@ -584,7 +675,7 @@ export class FederationRuntime extends EventEmitter {
     routing: RoutingPolicy
   ): Promise<unknown> {
     const request: CrossFederationRequest = {
-      id: `xreq_${++this.requestIdCounter}_${randomBytes(8).toString("hex")}`,
+      id: `xreq_${++this.requestIdCounter}_${randomBytes(8).toString('hex')}`,
       sourceFederation: this.config.id,
       targetFederation,
       operation,
@@ -592,8 +683,8 @@ export class FederationRuntime extends EventEmitter {
       routing,
       timestamp: Date.now(),
     };
-    
-    this.emit("cross_federation:outbound", request);
+
+    this.emit('cross_federation:outbound', request);
     // In production, would route through mesh
     return { success: true };
   }
@@ -611,10 +702,10 @@ export class FederationRuntime extends EventEmitter {
         resourceUtilization: { cpu: 0, memory: 0, disk: 0, network: 0 },
       },
       health: {
-        status: "healthy",
+        status: 'healthy',
         nodeCount: this.nodes.size,
-        activeNodes: Array.from(this.nodes.values()).filter(n => n.status === "active").length,
-        syncStatus: "synced",
+        activeNodes: Array.from(this.nodes.values()).filter((n) => n.status === 'active').length,
+        syncStatus: 'synced',
         issues: [],
       },
       consensus: {
@@ -629,15 +720,15 @@ export class FederationRuntime extends EventEmitter {
   }
 
   updateConfig(config: Record<string, unknown>): void {
-    this.emit("config:updated", config);
+    this.emit('config:updated', config);
   }
 
   private sign(payload: unknown): string {
-    return createHash("sha256").update(JSON.stringify(payload)).digest("hex").slice(0, 32);
+    return createHash('sha256').update(JSON.stringify(payload)).digest('hex').slice(0, 32);
   }
 
   private getSelfId(): string {
-    return `node-${this.config.id}-${randomBytes(6).toString("hex")}`;
+    return `node-${this.config.id}-${randomBytes(6).toString('hex')}`;
   }
 
   shutdown(): void {
@@ -665,12 +756,12 @@ export class HeptafederatedMesh extends EventEmitter {
 
   private initializeFederations(): void {
     const federationConfigs = this.createFederationConfigs();
-    
+
     for (const config of federationConfigs) {
       const federation = new FederationRuntime(config);
       this.federations.set(config.id, federation);
       this.registry.register(federation);
-      
+
       // Set up cross-federation routing
       this.setupCrossFederationRouting(config.id);
     }
@@ -679,129 +770,135 @@ export class HeptafederatedMesh extends EventEmitter {
   private createFederationConfigs(): FederationConfig[] {
     return [
       {
-        id: "identity",
-        name: "Identity Federation",
-        description: "Identity & Access Management across the mesh",
+        id: 'identity',
+        name: 'Identity Federation',
+        description: 'Identity & Access Management across the mesh',
         consensus: {
-          algorithm: "raft",
+          algorithm: 'raft',
           blockTime: 1000,
           maxBlockSize: 1024 * 1024,
-          validatorSet: ["identity-1", "identity-2", "identity-3"],
+          validatorSet: ['identity-1', 'identity-2', 'identity-3'],
         },
         quorumSize: 3,
         timeoutMs: 5000,
         retryPolicy: { maxRetries: 3, baseDelayMs: 100, maxDelayMs: 5000, backoffMultiplier: 2 },
         policies: [
-          { id: "pol-id-1", name: "Identity Verification", type: "access", rules: [] },
-          { id: "pol-id-2", name: "Credential Rotation", type: "resource", rules: [] },
+          { id: 'pol-id-1', name: 'Identity Verification', type: 'access', rules: [] },
+          { id: 'pol-id-2', name: 'Credential Rotation', type: 'resource', rules: [] },
         ],
       },
       {
-        id: "cognition",
-        name: "Cognition Federation",
-        description: "Reasoning, Inference & MoE Routing",
+        id: 'cognition',
+        name: 'Cognition Federation',
+        description: 'Reasoning, Inference & MoE Routing',
         consensus: {
-          algorithm: "pbft",
+          algorithm: 'pbft',
           blockTime: 500,
           maxBlockSize: 10 * 1024 * 1024,
-          validatorSet: ["cognition-1", "cognition-2", "cognition-3", "cognition-4"],
+          validatorSet: ['cognition-1', 'cognition-2', 'cognition-3', 'cognition-4'],
         },
         quorumSize: 4,
         timeoutMs: 3000,
         retryPolicy: { maxRetries: 3, baseDelayMs: 50, maxDelayMs: 2000, backoffMultiplier: 2 },
         policies: [
-          { id: "pol-cog-1", name: "Expert Routing", type: "resource", rules: [] },
-          { id: "pol-cog-2", name: "Inference Quality", type: "quality", rules: [] },
+          { id: 'pol-cog-1', name: 'Expert Routing', type: 'resource', rules: [] },
+          { id: 'pol-cog-2', name: 'Inference Quality', type: 'quality', rules: [] },
         ],
       },
       {
-        id: "memory",
-        name: "Memory Federation",
-        description: "Knowledge Storage, Retrieval & RAG",
+        id: 'memory',
+        name: 'Memory Federation',
+        description: 'Knowledge Storage, Retrieval & RAG',
         consensus: {
-          algorithm: "tendermint",
+          algorithm: 'tendermint',
           blockTime: 2000,
           maxBlockSize: 50 * 1024 * 1024,
-          validatorSet: ["memory-1", "memory-2", "memory-3"],
+          validatorSet: ['memory-1', 'memory-2', 'memory-3'],
         },
         quorumSize: 3,
         timeoutMs: 10000,
         retryPolicy: { maxRetries: 5, baseDelayMs: 200, maxDelayMs: 10000, backoffMultiplier: 1.5 },
         policies: [
-          { id: "pol-mem-1", name: "Data Integrity", type: "quality", rules: [] },
-          { id: "pol-mem-2", name: "Privacy Preservation", type: "privacy", rules: [] },
+          { id: 'pol-mem-1', name: 'Data Integrity', type: 'quality', rules: [] },
+          { id: 'pol-mem-2', name: 'Privacy Preservation', type: 'privacy', rules: [] },
         ],
       },
       {
-        id: "governance",
-        name: "Governance Federation",
-        description: "Policy Enforcement, Ethics & Compliance",
+        id: 'governance',
+        name: 'Governance Federation',
+        description: 'Policy Enforcement, Ethics & Compliance',
         consensus: {
-          algorithm: "hotstuff",
+          algorithm: 'hotstuff',
           blockTime: 5000,
           maxBlockSize: 5 * 1024 * 1024,
-          validatorSet: ["governance-1", "governance-2", "governance-3", "governance-4", "governance-5"],
+          validatorSet: [
+            'governance-1',
+            'governance-2',
+            'governance-3',
+            'governance-4',
+            'governance-5',
+          ],
         },
         quorumSize: 5,
         timeoutMs: 15000,
         retryPolicy: { maxRetries: 3, baseDelayMs: 500, maxDelayMs: 30000, backoffMultiplier: 2 },
         policies: [
-          { id: "pol-gov-1", name: "Constitutional Compliance", type: "custom", rules: [] },
-          { id: "pol-gov-2", name: "Ethical Review", type: "custom", rules: [] },
+          { id: 'pol-gov-1', name: 'Constitutional Compliance', type: 'custom', rules: [] },
+          { id: 'pol-gov-2', name: 'Ethical Review', type: 'custom', rules: [] },
         ],
       },
       {
-        id: "value",
-        name: "Value Federation",
-        description: "Economics, Settlement & Revenue Fabric",
+        id: 'value',
+        name: 'Value Federation',
+        description: 'Economics, Settlement & Revenue Fabric',
         consensus: {
-          algorithm: "raft",
+          algorithm: 'raft',
           blockTime: 2000,
           maxBlockSize: 1024 * 1024,
-          validatorSet: ["value-1", "value-2", "value-3"],
+          validatorSet: ['value-1', 'value-2', 'value-3'],
         },
         quorumSize: 3,
         timeoutMs: 5000,
         retryPolicy: { maxRetries: 3, baseDelayMs: 100, maxDelayMs: 5000, backoffMultiplier: 2 },
         policies: [
-          { id: "pol-val-1", name: "Settlement Finality", type: "resource", rules: [] },
-          { id: "pol-val-2", name: "Trust Score Integrity", type: "quality", rules: [] },
+          { id: 'pol-val-1', name: 'Settlement Finality', type: 'resource', rules: [] },
+          { id: 'pol-val-2', name: 'Trust Score Integrity', type: 'quality', rules: [] },
         ],
       },
       {
-        id: "experience",
-        name: "Experience Federation",
-        description: "Interfaces, Interaction & UX",
+        id: 'experience',
+        name: 'Experience Federation',
+        description: 'Interfaces, Interaction & UX',
         consensus: {
-          algorithm: "tendermint",
+          algorithm: 'tendermint',
           blockTime: 1000,
           maxBlockSize: 5 * 1024 * 1024,
-          validatorSet: ["experience-1", "experience-2", "experience-3"],
+          validatorSet: ['experience-1', 'experience-2', 'experience-3'],
         },
         quorumSize: 3,
         timeoutMs: 3000,
         retryPolicy: { maxRetries: 3, baseDelayMs: 100, maxDelayMs: 5000, backoffMultiplier: 2 },
         policies: [
-          { id: "pol-exp-1", name: "Accessibility", type: "custom", rules: [] },
-          { id: "pol-exp-2", name: "Performance Budget", type: "quality", rules: [] },
+          { id: 'pol-exp-1', name: 'Accessibility', type: 'custom', rules: [] },
+          { id: 'pol-exp-2', name: 'Performance Budget', type: 'quality', rules: [] },
         ],
       },
       {
-        id: "security",
-        name: "Security Federation",
-        description: "Threat Detection, Protection & Zero-Trust",
+        id: 'security',
+        name: 'Security Federation',
+        description: 'Threat Detection, Protection & Zero-Trust',
         consensus: {
-          algorithm: "pbft",
+          algorithm: 'pbft',
           blockTime: 1000,
           maxBlockSize: 2 * 1024 * 1024,
-          validatorSet: ["security-1", "security-2", "security-3", "security-4"],
+          validatorSet: ['security-1', 'security-2', 'security-3', 'security-4'],
         },
         quorumSize: 4,
         timeoutMs: 3000,
         retryPolicy: { maxRetries: 5, baseDelayMs: 50, maxDelayMs: 2000, backoffMultiplier: 2 },
         policies: [
-          { id: "pol-sec-1", name: "Threat Response", type: "custom", rules: [] },
-          { id: "pol-sec-2", name: "Zero-Trust Enforcement", type: "access", rules: [] },
+          { id: 'pol-sec-1', name: 'Threat Response', type: 'custom', rules: [] },
+          { id: 'pol-sec-2', name: 'Zero-Trust Enforcement', type: 'access', rules: [] },
         ],
       },
     ];
@@ -811,7 +908,7 @@ export class HeptafederatedMesh extends EventEmitter {
     const federation = this.federations.get(federationId);
     if (!federation) return;
 
-    federation.on("cross_federation:outbound", (request: CrossFederationRequest) => {
+    federation.on('cross_federation:outbound', (request: CrossFederationRequest) => {
       this.routeCrossFederation(request);
     });
   }
@@ -820,16 +917,16 @@ export class HeptafederatedMesh extends EventEmitter {
     try {
       const target = this.federations.get(request.targetFederation);
       if (!target) throw new Error(`TARGET_FEDERATION_NOT_FOUND: ${request.targetFederation}`);
-      
+
       const result = await target.handleCrossFederationRequest(request);
-      
+
       const source = this.federations.get(request.sourceFederation);
       if (source) {
-        source.emit("cross_federation:response", { request, result });
+        source.emit('cross_federation:response', { request, result });
       }
     } catch (error) {
-      this.emit("cross_federation:error", { request, error: String(error) });
-      
+      this.emit('cross_federation:error', { request, error: String(error) });
+
       // Handle fallback
       if (request.routing.fallbackFederations?.length) {
         for (const fallback of request.routing.fallbackFederations) {
@@ -861,20 +958,20 @@ export class HeptafederatedMesh extends EventEmitter {
     routing?: Partial<RoutingPolicy>
   ): Promise<unknown> {
     const request: CrossFederationRequest = {
-      id: `xreq_${randomBytes(12).toString("hex")}`,
+      id: `xreq_${randomBytes(12).toString('hex')}`,
       sourceFederation: source,
       targetFederation: target,
       operation,
       payload,
       routing: {
-        priority: "normal",
+        priority: 'normal',
         timeoutMs: 30000,
         retry: true,
         ...routing,
       },
       timestamp: Date.now(),
     };
-    
+
     return this.registry.routeCrossFederation(request);
   }
 
@@ -890,18 +987,24 @@ export class HeptafederatedMesh extends EventEmitter {
     return this.registry.getTelemetrySnapshot();
   }
 
-  getMeshHealth(): { overall: "healthy" | "degraded" | "unhealthy"; federations: Record<FederationId, FederationHealth> } {
-    const federations: Record<FederationId, FederationHealth> = {} as any;
-    let overall: "healthy" | "degraded" | "unhealthy" = "healthy";
-    
+  getMeshHealth(): {
+    overall: 'healthy' | 'degraded' | 'unhealthy';
+    federations: Record<FederationId, FederationHealth>;
+  } {
+    const federations: Record<FederationId, FederationHealth> = {} as Record<
+      FederationId,
+      FederationHealth
+    >;
+    let overall: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
+
     for (const [id, fed] of this.federations) {
       const snapshot = fed.getTelemetrySnapshot();
       federations[id] = snapshot.health;
-      
-      if (snapshot.health.status === "unhealthy") overall = "unhealthy";
-      else if (snapshot.health.status === "degraded" && overall === "healthy") overall = "degraded";
+
+      if (snapshot.health.status === 'unhealthy') overall = 'unhealthy';
+      else if (snapshot.health.status === 'degraded' && overall === 'healthy') overall = 'degraded';
     }
-    
+
     return { overall, federations };
   }
 
@@ -924,8 +1027,8 @@ interface MeshConfig {
  * Default TAMV Heptafederated Mesh
  */
 export const defaultTamvMesh = new HeptafederatedMesh({
-  name: "ISABELLA-Q-Ω Heptafederated Mesh",
-  version: "1.0.0",
+  name: 'ISABELLA-Q-Ω Heptafederated Mesh',
+  version: '1.0.0',
   crossFederationTimeout: 30000,
   maxConcurrentCrossRequests: 1000,
 });

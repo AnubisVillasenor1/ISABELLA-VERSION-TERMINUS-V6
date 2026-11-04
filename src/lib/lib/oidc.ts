@@ -13,9 +13,9 @@
  * discovery.
  */
 
-import { createPublicKey } from "node:crypto";
-import { JwksCache } from "./jwks-cache";
-import { verifyJwt, type JwtClaims, type JwtVerifierOptions } from "./jwt-verifier";
+import { createPublicKey } from 'node:crypto';
+import { JwksCache } from './jwks-cache';
+import { verifyJwt, type JwtClaims, type JwtVerifierOptions } from './jwt-verifier';
 
 /** Documento de discovery OIDC (RFC 8414). */
 export interface OidcDiscoveryDocument {
@@ -62,9 +62,9 @@ const DEFAULT_TIMEOUT_MS = 10_000;
 export async function createOidcProvider(
   issuer: string,
   discovery?: OidcDiscoveryDocument,
-  options: OidcProviderOptions = {},
+  options: OidcProviderOptions = {}
 ): Promise<OidcProvider> {
-  const baseIssuer = (options.overrides?.issuer ?? issuer).replace(/\/+$/, "");
+  const baseIssuer = (options.overrides?.issuer ?? issuer).replace(/\/+$/, '');
   const document = discovery ?? (await fetchDocument(baseIssuer, options.timeoutMs));
   const effectiveIssuer = options.overrides?.issuer ?? document.issuer ?? baseIssuer;
 
@@ -96,8 +96,8 @@ export async function createOidcProvider(
     verifierOptions(clientId?: string): JwtVerifierOptions & { oidc: true } {
       const audiences = clientId ? [clientId] : undefined;
       const opts: JwtVerifierOptions = {
-        key: "",
-        algorithm: "RS256",
+        key: '',
+        algorithm: 'RS256',
         issuer: effectiveIssuer,
         ...(audiences ? { audiences } : {}),
       };
@@ -112,14 +112,14 @@ async function fetchDocument(issuer: string, timeoutMs?: number): Promise<OidcDi
   try {
     const url = `${issuer}/.well-known/openid-configuration`;
     const response = await fetch(url, {
-      headers: { accept: "application/json" },
+      headers: { accept: 'application/json' },
       signal: controller.signal,
     });
     if (!response.ok) {
       throw new Error(`OIDC discovery HTTP ${response.status}`);
     }
     const document = (await response.json()) as OidcDiscoveryDocument;
-    if (typeof document?.issuer !== "string") {
+    if (typeof document?.issuer !== 'string') {
       throw new Error("OIDC discovery inválido: falta 'issuer'.");
     }
     return document;
@@ -135,22 +135,22 @@ async function fetchDocument(issuer: string, timeoutMs?: number): Promise<OidcDi
 export async function verifyIdToken(
   provider: OidcProvider,
   idToken: string,
-  clientId?: string,
+  clientId?: string
 ): Promise<JwtClaims> {
-  const firstSegment = idToken.split(".");
+  const firstSegment = idToken.split('.');
   const headerSegment = firstSegment[0];
   if (!headerSegment) {
-    throw new Error("id_token: formato inválido.");
+    throw new Error('id_token: formato inválido.');
   }
   let kid: string | undefined;
   try {
-    const normalized = headerSegment.replace(/-/g, "+").replace(/_/g, "/");
-    const header = JSON.parse(Buffer.from(normalized, "base64").toString("utf-8")) as {
+    const normalized = headerSegment.replace(/-/g, '+').replace(/_/g, '/');
+    const header = JSON.parse(Buffer.from(normalized, 'base64').toString('utf-8')) as {
       kid?: string;
     };
     kid = header.kid;
   } catch {
-    throw new Error("id_token: cabecera no decodificable.");
+    throw new Error('id_token: cabecera no decodificable.');
   }
 
   const key = await provider.getJwks().keyByKid(kid);
@@ -164,18 +164,18 @@ export async function verifyIdToken(
 
 /** Convierte un JWK RSA público a formato PEM/SPKI para `createPublicKey`. */
 export function jwkToPem(jwk: { kty: string; n?: string; e?: string }): string {
-  if (jwk.kty !== "RSA" || !jwk.n || !jwk.e) {
-    throw new Error("Solo se admite conversión de JWK RSA.");
+  if (jwk.kty !== 'RSA' || !jwk.n || !jwk.e) {
+    throw new Error('Solo se admite conversión de JWK RSA.');
   }
   const key = createPublicKey({
-    key: { kty: "RSA", n: jwk.n, e: jwk.e },
-    format: "jwk",
+    key: { kty: 'RSA', n: jwk.n, e: jwk.e },
+    format: 'jwk',
   }) as KeyExporter;
-  return key.export({ format: "pem", type: "spki" });
+  return key.export({ format: 'pem', type: 'spki' });
 }
 
 interface KeyExporter {
-  export(parameters: { format: "pem"; type: "spki" }): string;
+  export(parameters: { format: 'pem'; type: 'spki' }): string;
 }
 
 export const OIDC = {

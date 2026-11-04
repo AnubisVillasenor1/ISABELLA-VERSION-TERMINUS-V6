@@ -1,17 +1,17 @@
-import { createHash } from "node:crypto";
+import { createHash } from 'node:crypto';
 
 export type KnowledgeDomain =
-  | "factual"
-  | "technical"
-  | "scientific"
-  | "security"
-  | "ethical"
-  | "operational"
-  | "creative"
-  | "temporal";
+  | 'factual'
+  | 'technical'
+  | 'scientific'
+  | 'security'
+  | 'ethical'
+  | 'operational'
+  | 'creative'
+  | 'temporal';
 
-export type EvidenceLevel = "E0" | "E1" | "E2" | "E3" | "E4";
-export type EpistemicState = "SUPPORTED" | "PROBABLE" | "CONTESTED" | "UNKNOWN";
+export type EvidenceLevel = 'E0' | 'E1' | 'E2' | 'E3' | 'E4';
+export type EpistemicState = 'SUPPORTED' | 'PROBABLE' | 'CONTESTED' | 'UNKNOWN';
 
 export interface KnowledgeObservation {
   teacherId: string;
@@ -52,11 +52,11 @@ function clamp(value: number): number {
 }
 
 function hash(value: unknown): string {
-  return createHash("sha256").update(JSON.stringify(value)).digest("hex");
+  return createHash('sha256').update(JSON.stringify(value)).digest('hex');
 }
 
 function normalizedClaim(claim: string): string {
-  return claim.normalize("NFKC").trim().toLocaleLowerCase("es-MX");
+  return claim.normalize('NFKC').trim().toLocaleLowerCase('es-MX');
 }
 
 function tokenizeClaim(claim: string): Set<string> {
@@ -72,12 +72,12 @@ function cosineFromSets(a: Set<string>, b: Set<string>): number {
 
 function unknownResult(
   reason: string,
-  observations: readonly KnowledgeObservation[],
+  observations: readonly KnowledgeObservation[]
 ): ConvergenceResult {
   const participatingTeachers = observations.map((item) => item.teacherId).filter(Boolean);
-  const rationale = [reason, "No se fabricó ni aceptó evidencia sintética como segundo maestro."];
+  const rationale = [reason, 'No se fabricó ni aceptó evidencia sintética como segundo maestro.'];
   return {
-    state: "UNKNOWN",
+    state: 'UNKNOWN',
     consensusScore: 0,
     evidenceScore: 0,
     freshnessScore: 0,
@@ -104,12 +104,12 @@ function unknownResult(
  * from an actual independent teacher/model path.
  */
 export function convergeKnowledge(
-  observations: readonly KnowledgeObservation[],
+  observations: readonly KnowledgeObservation[]
 ): ConvergenceResult {
   if (observations.length < 2) {
-    return unknownResult("convergence_requires_multiple_observations", observations);
+    return unknownResult('convergence_requires_multiple_observations', observations);
   }
-  if (observations.length > 32) throw new Error("convergence_batch_too_large");
+  if (observations.length > 32) throw new Error('convergence_batch_too_large');
 
   const valid = observations.filter(
     (item) =>
@@ -122,20 +122,20 @@ export function convergeKnowledge(
       item.confidence <= 1 &&
       item.freshness >= 0 &&
       item.freshness <= 1 &&
-      /^[a-f0-9]{64}$/u.test(item.provenanceHash),
+      /^[a-f0-9]{64}$/u.test(item.provenanceHash)
   );
-  if (valid.length < 2) return unknownResult("insufficient_valid_observations", valid);
+  if (valid.length < 2) return unknownResult('insufficient_valid_observations', valid);
 
   const syntheticValidatorObservations = valid.filter((item) =>
-    /(?:^|_)validator(?:_|$)/u.test(item.teacherId),
+    /(?:^|_)validator(?:_|$)/u.test(item.teacherId)
   );
   if (syntheticValidatorObservations.length > 0) {
-    return unknownResult("synthetic_validator_observation_rejected", valid);
+    return unknownResult('synthetic_validator_observation_rejected', valid);
   }
 
   const teacherIds = valid.map((item) => item.teacherId);
   if (new Set(teacherIds).size !== teacherIds.length) {
-    return unknownResult("duplicate_teacher_identity_rejected", valid);
+    return unknownResult('duplicate_teacher_identity_rejected', valid);
   }
 
   // Tokenize every claim once and evaluate each pair a single time (symmetric
@@ -144,7 +144,7 @@ export function convergeKnowledge(
   const tokenSets = valid.map((item) => tokenizeClaim(item.claim));
   const size = valid.length;
   const similarityMatrix: number[][] = Array.from({ length: size }, () =>
-    new Array<number>(size).fill(0),
+    new Array<number>(size).fill(0)
   );
   for (let i = 0; i < size; i++) {
     for (let j = i + 1; j < size; j++) {
@@ -166,7 +166,7 @@ export function convergeKnowledge(
       0.38 * agreement +
         0.27 * evidence +
         0.2 * observation.confidence +
-        0.15 * observation.freshness,
+        0.15 * observation.freshness
     );
     return { observation, score, agreement };
   });
@@ -178,7 +178,7 @@ export function convergeKnowledge(
   const consensusScore = clamp(0.65 * winner.agreement + 0.35 * (1 - disagreementScore));
   const evidenceScore = clamp(
     scored.reduce((sum, item) => sum + EVIDENCE_WEIGHT[item.observation.evidenceLevel], 0) /
-      scored.length,
+      scored.length
   );
   const freshnessScore =
     scored.reduce((sum, item) => sum + item.observation.freshness, 0) / scored.length;
@@ -189,14 +189,14 @@ export function convergeKnowledge(
 
   const state: EpistemicState =
     consensusScore >= 0.78 && evidenceScore >= 0.7
-      ? "SUPPORTED"
+      ? 'SUPPORTED'
       : consensusScore >= 0.58 && evidenceScore >= 0.5
-        ? "PROBABLE"
+        ? 'PROBABLE'
         : consensusScore < 0.35
-          ? "CONTESTED"
-          : "UNKNOWN";
+          ? 'CONTESTED'
+          : 'UNKNOWN';
 
-  const selectedClaim = state === "CONTESTED" ? null : winner.observation.claim;
+  const selectedClaim = state === 'CONTESTED' ? null : winner.observation.claim;
   const participatingTeachers = scored
     .filter((item) => item.agreement >= 0.45)
     .map((item) => item.observation.teacherId);

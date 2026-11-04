@@ -24,9 +24,10 @@ export class DeadlineBudget {
   constructor(
     private readonly totalMs: number,
     private readonly clock: DeadlineClock = SYSTEM_CLOCK,
-    private readonly parentSignal?: AbortSignal,
+    private readonly parentSignal?: AbortSignal
   ) {
-    if (!Number.isFinite(totalMs) || totalMs <= 0) throw new Error("DEADLINE: totalMs must be a positive finite number");
+    if (!Number.isFinite(totalMs) || totalMs <= 0)
+      throw new Error('DEADLINE: totalMs must be a positive finite number');
     this.startedAt = clock.now();
   }
 
@@ -50,7 +51,8 @@ export class DeadlineBudget {
 
   /** Timeout for the next attempt: never longer than the per-attempt cap nor the remaining budget. */
   attemptMs(perAttemptMs: number): number {
-    if (!Number.isFinite(perAttemptMs) || perAttemptMs <= 0) throw new Error("DEADLINE: perAttemptMs must be positive");
+    if (!Number.isFinite(perAttemptMs) || perAttemptMs <= 0)
+      throw new Error('DEADLINE: perAttemptMs must be positive');
     return Math.max(1, Math.min(perAttemptMs, this.remainingMs()));
   }
 
@@ -61,7 +63,12 @@ export class DeadlineBudget {
 }
 
 /** Parse a bounded millisecond value from an env-like string; invalid input falls back. */
-export function boundedBudgetMs(raw: string | undefined, fallback: number, min: number, max: number): number {
+export function boundedBudgetMs(
+  raw: string | undefined,
+  fallback: number,
+  min: number,
+  max: number
+): number {
   const parsed = raw === undefined ? Number.NaN : Number(raw);
   const candidate = Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
   return Math.min(max, Math.max(min, Math.trunc(candidate)));
@@ -88,9 +95,10 @@ export interface HedgedWinner<T> {
 export function hedgedFirst<T>(
   tasks: readonly HedgedTask<T>[],
   hedgeDelayMs: number,
-  budget?: DeadlineBudget,
+  budget?: DeadlineBudget
 ): Promise<HedgedWinner<T> | null> {
-  if (!Number.isFinite(hedgeDelayMs) || hedgeDelayMs < 0) throw new Error("HEDGE: hedgeDelayMs must be >= 0");
+  if (!Number.isFinite(hedgeDelayMs) || hedgeDelayMs < 0)
+    throw new Error('HEDGE: hedgeDelayMs must be >= 0');
   return new Promise((resolve) => {
     let started = 0;
     let finished = 0;
@@ -114,15 +122,21 @@ export function hedgedFirst<T>(
       task.run().then(
         (value) => {
           finished++;
-          if (value !== null && value !== undefined) done({ label: task.label, value, startedCount: started });
-          else { if (finished >= started && started >= tasks.length) done(null); else startNext(); }
+          if (value !== null && value !== undefined)
+            done({ label: task.label, value, startedCount: started });
+          else {
+            if (finished >= started && started >= tasks.length) done(null);
+            else startNext();
+          }
         },
         () => {
           finished++;
-          if (finished >= started && started >= tasks.length) done(null); else startNext();
-        },
+          if (finished >= started && started >= tasks.length) done(null);
+          else startNext();
+        }
       );
     };
-    if (tasks.length === 0) done(null); else startNext();
+    if (tasks.length === 0) done(null);
+    else startNext();
   });
 }

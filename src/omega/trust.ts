@@ -14,7 +14,7 @@ export interface TrustAttestation {
 export interface TrustNode {
   subject: string;
   score: number;
-  grade: "high" | "medium" | "low" | "untrusted";
+  grade: 'high' | 'medium' | 'low' | 'untrusted';
   attestationCount: number;
 }
 
@@ -28,11 +28,11 @@ function round4(value: number): number {
   return Math.round(value * 10000) / 10000;
 }
 
-function gradeFor(score: number): TrustNode["grade"] {
-  if (score >= 0.9) return "high";
-  if (score >= 0.6) return "medium";
-  if (score >= 0.3) return "low";
-  return "untrusted";
+function gradeFor(score: number): TrustNode['grade'] {
+  if (score >= 0.9) return 'high';
+  if (score >= 0.6) return 'medium';
+  if (score >= 0.3) return 'low';
+  return 'untrusted';
 }
 
 export function computeTrustMesh(attestations: TrustAttestation[]): { nodes: TrustNode[] } {
@@ -40,8 +40,8 @@ export function computeTrustMesh(attestations: TrustAttestation[]): { nodes: Tru
 
   for (const attestation of attestations) {
     const weight = attestation.weight;
-    if (typeof weight !== "number" || !Number.isFinite(weight) || weight < 0 || weight > 1) {
-      throw new Error("TRUST_WEIGHT_OUT_OF_RANGE");
+    if (typeof weight !== 'number' || !Number.isFinite(weight) || weight < 0 || weight > 1) {
+      throw new Error('TRUST_WEIGHT_OUT_OF_RANGE');
     }
     const current = bySubject.get(attestation.subject) ?? {
       totalWeight: 0,

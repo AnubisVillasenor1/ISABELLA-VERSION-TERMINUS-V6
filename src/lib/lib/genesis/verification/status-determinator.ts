@@ -1,6 +1,6 @@
-import { Claim, ClaimStatus, Evidence, Finding } from "../schemas";
-import { PolicyEngine } from "../engines/policy-engine";
-import { EvidenceGraph, createEvidenceGraphAnalyzer } from "../graph/evidence-graph";
+import { Claim, ClaimStatus, Evidence, Finding } from '../schemas';
+import { PolicyEngine } from '../engines/policy-engine';
+import { EvidenceGraph, createEvidenceGraphAnalyzer } from '../graph/evidence-graph';
 
 export interface VerificationConfig {
   policyEngine: PolicyEngine;
@@ -10,7 +10,7 @@ export interface VerificationConfig {
 interface GraphAnalysisView {
   coverageAnalysis?: { coveragePercentage?: number };
   confidenceAnalysis?: Array<{ claimId: string; confidenceScore: number }>;
-  contradictions?: Array<{ severity: "CRITICAL" | string }>;
+  contradictions?: Array<{ severity: 'CRITICAL' | string }>;
 }
 
 export interface ClaimVerificationResult {
@@ -36,9 +36,9 @@ export interface EvidenceQualityAssessment {
 
 export interface ContradictionDetection {
   contradictions: Array<{
-    type: "claim_vs_code" | "docs_vs_implementation" | "test_vs_behavior" | "evidence_vs_claim";
+    type: 'claim_vs_code' | 'docs_vs_implementation' | 'test_vs_behavior' | 'evidence_vs_claim';
     description: string;
-    severity: "CRITICAL" | "HIGH" | "MEDIUM";
+    severity: 'CRITICAL' | 'HIGH' | 'MEDIUM';
     nodes: string[];
   }>;
 }
@@ -55,7 +55,7 @@ export class StatusDeterminator {
   determineStatus(
     claim: Claim,
     evidences: Evidence[],
-    findings: Finding[],
+    findings: Finding[]
   ): ClaimVerificationResult {
     const policyEvaluation = this.policyEngine.evaluateClaim(claim, evidences, findings);
     const graphAnalyzer = createEvidenceGraphAnalyzer(this.evidenceGraph);
@@ -64,15 +64,15 @@ export class StatusDeterminator {
     const confidence = this.calculateConfidence(claim, evidences, analysis);
     const evidenceQuality = this.assessEvidenceQuality(evidences);
 
-    let status: ClaimStatus = "UNKNOWN";
+    let status: ClaimStatus = 'UNKNOWN';
 
     if (policyEvaluation.blockingFindings.length > 0) {
-      status = "FAILED";
+      status = 'FAILED';
     } else if (!policyEvaluation.meetsRequirements) {
       const missingCount = policyEvaluation.gaps.length;
-      if (missingCount === claim.evidenceRequired.length) status = "PLANNED";
-      else if (missingCount > claim.evidenceRequired.length / 2) status = "PARTIAL";
-      else status = "IMPLEMENTED";
+      if (missingCount === claim.evidenceRequired.length) status = 'PLANNED';
+      else if (missingCount > claim.evidenceRequired.length / 2) status = 'PARTIAL';
+      else status = 'IMPLEMENTED';
     } else {
       status = claim.requiredStatus;
     }
@@ -91,13 +91,13 @@ export class StatusDeterminator {
   private calculateConfidence(
     claim: Claim,
     evidences: Evidence[],
-    analysis: GraphAnalysisView,
+    analysis: GraphAnalysisView
   ): number {
     const coverage = analysis.coverageAnalysis?.coveragePercentage ?? 0;
     const avgConfidence =
       analysis.confidenceAnalysis?.find((c) => c.claimId === claim.id)?.confidenceScore ?? 0;
     const hasBlockingFindings =
-      analysis.contradictions?.some((c) => c.severity === "CRITICAL") ?? false;
+      analysis.contradictions?.some((c) => c.severity === 'CRITICAL') ?? false;
 
     let confidence = (coverage / 100) * 0.4 + avgConfidence * 0.6;
     if (hasBlockingFindings) confidence *= 0.5;
@@ -131,7 +131,7 @@ export class CriteriaEvaluator {
 
   evaluateClaimCriteria(
     claim: Claim,
-    evidences: Evidence[],
+    evidences: Evidence[]
   ): {
     passed: boolean;
     criteria: Array<{ criterion: string; passed: boolean; details: string }>;
@@ -156,7 +156,7 @@ export class CriteriaEvaluator {
       criteria.push({
         criterion: `Required evidence type: ${requiredType}`,
         passed: covered,
-        details: covered ? "Found" : "Missing",
+        details: covered ? 'Found' : 'Missing',
       });
     }
 
@@ -184,11 +184,11 @@ export class CriteriaEvaluator {
     }
 
     if (requirements.externalReviewRequired) {
-      const hasExternalAudit = evidences.some((e) => e.type === "EXTERNAL_AUDIT");
+      const hasExternalAudit = evidences.some((e) => e.type === 'EXTERNAL_AUDIT');
       criteria.push({
-        criterion: "External audit/review completed",
+        criterion: 'External audit/review completed',
         passed: hasExternalAudit,
-        details: hasExternalAudit ? "External audit evidence found" : "No external audit evidence",
+        details: hasExternalAudit ? 'External audit evidence found' : 'No external audit evidence',
       });
     }
 
@@ -227,7 +227,7 @@ export class EvidenceQualityChecker {
   }
 
   private checkIndependence(evidence: Evidence): boolean {
-    return evidence.source === "external" || evidence.metadata.independentlyVerifiable === true;
+    return evidence.source === 'external' || evidence.metadata.independentlyVerifiable === true;
   }
 
   private checkRecency(evidence: Evidence): boolean {

@@ -5,9 +5,24 @@ export {
   type SkillInvocation,
   type SkillAuthorization,
   type SkillBudget,
-} from "./registry";
-export { CANONICAL_SKILLS } from "./catalog";
-export { FOUNDATIONAL_SKILLS } from "./foundational";
+} from './registry';
+export { CANONICAL_SKILLS } from './catalog';
+export { FOUNDATIONAL_SKILLS } from './foundational';
+export {
+  EVOLVED_SKILL_DESCRIPTORS,
+  toEvolvedSkillDescriptor,
+  evolvedMethodId,
+  EVOLVED_BRIDGE_VERSION,
+  EVOLVED_SCOPE,
+} from './evolved-bridge';
+export {
+  catalogCoherence,
+  executableSkillIds,
+  normalizeSkillKey,
+  CATALOG_COHERENCE_VERSION,
+  type CatalogBinding,
+  type CatalogCoherence,
+} from './catalog-coherence';
 export {
   type SkillContract,
   type SkillAuthority,
@@ -17,12 +32,12 @@ export {
   type RollbackStrategy,
   type EvidenceRef,
   type RiskTier,
-} from "./contracts";
+} from './contracts';
 // `canonicalJson` and `sha256Hex` are intentionally NOT re-exported here:
 // the BookPI barrel (`src/bookpi/crypto.ts`) owns those canonical names. The
 // skill runtime imports them directly from `./canonical-json` when needed.
-export { sha256, manifestDigest } from "./canonical-json";
-export { validateSchema, type SchemaValidation, type SchemaViolation } from "./schema-validator";
+export { sha256, manifestDigest } from './canonical-json';
+export { validateSchema, type SchemaValidation, type SchemaViolation } from './schema-validator';
 export {
   triangulate,
   hashInput,
@@ -33,13 +48,13 @@ export {
   type TriangulationParams,
   type TriangulationResult,
   type TriangulationProvenance,
-} from "./triangulation";
+} from './triangulation';
 export {
   evaluateCrownPolicy,
   type CrownPolicyVerdict,
   type CrownPolicyInput,
   type CrownPolicyDecision,
-} from "./crown-policy";
+} from './crown-policy';
 export {
   HyperCoreEngine,
   HYPERCORE_OMEGA_PHASES,
@@ -47,11 +62,11 @@ export {
   type SkillExecutionRequest,
   type SkillExecutionResult,
   type ExecutionStatus as SkillExecutionStatus,
-} from "./hypercore-engine";
+} from './hypercore-engine';
 export {
   SkillMcpServer,
   type McpToolDescriptor,
   type McpIdentity,
   type JsonRpcRequest,
   type JsonRpcResponse,
-} from "./mcp-server";
+} from './mcp-server';

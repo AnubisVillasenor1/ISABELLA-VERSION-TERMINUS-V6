@@ -7,7 +7,7 @@
  * Flujo: intención → Alpha → propuesta → Beta → respuesta
  */
 
-import { createHash } from "node:crypto";
+import { createHash } from 'node:crypto';
 import type {
   IsabellaDualRequest,
   IsabellaDualResponse,
@@ -16,23 +16,23 @@ import type {
   ProvenanceRecord,
   TelemetryRecord,
   Proposal,
-} from "../contracts";
+} from '../contracts';
 
 // Alpha modules
-import { perceptionEngine } from "../alpha/perception";
-import { contextBuilder } from "../alpha/context";
-import { alphaMemory } from "../alpha/memory";
-import { researchEngine } from "../alpha/research";
-import { hypothesisEngine } from "../alpha/hypothesis";
-import { proposalEngine } from "../alpha/proposal";
+import { perceptionEngine } from '../alpha/perception';
+import { contextBuilder } from '../alpha/context';
+import { alphaMemory } from '../alpha/memory';
+import { researchEngine } from '../alpha/research';
+import { hypothesisEngine } from '../alpha/hypothesis';
+import { proposalEngine } from '../alpha/proposal';
 
 // Beta modules
-import { identityResolver } from "../beta/identity";
-import { classificationEngine } from "../beta/classification";
-import { riskEngine } from "../beta/risk";
-import { policyEngine } from "../beta/policy";
-import { capabilityRegistry } from "../beta/capability";
-import { verificationEngine } from "../beta/verification";
+import { identityResolver } from '../beta/identity';
+import { classificationEngine } from '../beta/classification';
+import { riskEngine } from '../beta/risk';
+import { policyEngine } from '../beta/policy';
+import { capabilityRegistry } from '../beta/capability';
+import { verificationEngine } from '../beta/verification';
 
 // ============================================================================
 // DUAL KERNEL
@@ -44,12 +44,12 @@ export class DualKernel {
    */
   async process(request: IsabellaDualRequest): Promise<IsabellaDualResponse> {
     const startTime = Date.now();
-    let state: OperationState = "received";
+    let state: OperationState = 'received';
     const evidence: EvidenceRecord[] = [];
 
     try {
       // ─── BETA: Identity Resolution ─────────────────────────
-      state = "identified";
+      state = 'identified';
       const identity = identityResolver.resolve({
         actorId: request.actorId,
         tenantId: request.tenantId,
@@ -57,17 +57,17 @@ export class DualKernel {
       });
 
       // ─── BETA: Classification ──────────────────────────────
-      state = "classified";
+      state = 'classified';
       const classification = classificationEngine.classify(request.intent, {
         intentCategory: request.mode,
       });
 
       // ─── ALPHA: Perception ─────────────────────────────────
-      state = "alpha_processing";
+      state = 'alpha_processing';
       const perception = await perceptionEngine.process(request.intent);
 
       // ─── ALPHA: Context Building ───────────────────────────
-      state = "context_ready";
+      state = 'context_ready';
       const _context = contextBuilder.build({
         session: {
           sessionId: request.sessionId ?? crypto.randomUUID(),
@@ -80,7 +80,7 @@ export class DualKernel {
           projectId: request.context?.projectId,
         },
         territory: {
-          territoryName: request.context?.territory ?? "Mineral del Monte",
+          territoryName: request.context?.territory ?? 'Mineral del Monte',
         },
         constraints: {
           maxLatencyMs: request.constraints?.maxLatencyMs,
@@ -97,7 +97,7 @@ export class DualKernel {
           query: request.intent,
           tenantId: request.tenantId,
           actorId: request.actorId,
-          scopes: ["session", "project", "territorial"],
+          scopes: ['session', 'project', 'territorial'],
           sensitivityMax: classification.classification,
           maxResults: 10,
           // Adición para trazabilidad y no simplificación: límite por tenant + proyecto
@@ -108,7 +108,7 @@ export class DualKernel {
         for (const mem of memories) {
           evidence.push({
             evidenceId: crypto.randomUUID(),
-            type: "data",
+            type: 'data',
             claim: mem.content,
             confidence: mem.confidence,
             source: mem.source,
@@ -121,7 +121,7 @@ export class DualKernel {
       // ─── ALPHA: Research ───────────────────────────────────
       const research = await researchEngine.research({
         query: request.intent,
-        methods: ["lexical", "vector"],
+        methods: ['lexical', 'vector'],
         maxResults: 5,
         minRelevance: 0.5,
       });
@@ -129,7 +129,7 @@ export class DualKernel {
       for (const result of research.results) {
         evidence.push({
           evidenceId: crypto.randomUUID(),
-          type: "source",
+          type: 'source',
           claim: result.content,
           confidence: result.confidence,
           source: result.source,
@@ -147,7 +147,7 @@ export class DualKernel {
       });
 
       // ─── ALPHA: Proposal Generation ────────────────────────
-      state = "proposal_ready";
+      state = 'proposal_ready';
       const proposal = proposalEngine.generate({
         query: request.intent,
         intent: perception.intent,
@@ -162,12 +162,12 @@ export class DualKernel {
       const risk = riskEngine.assess({
         intent: request.intent,
         classification: classification.classification,
-        involvesFinancial: request.mode === "monetization",
-        involvesGovernance: request.mode === "implementation",
+        involvesFinancial: request.mode === 'monetization',
+        involvesGovernance: request.mode === 'implementation',
       });
 
       // ─── BETA: Policy Evaluation (CROWN) ───────────────────
-      state = "beta_evaluating";
+      state = 'beta_evaluating';
       const governance = policyEngine.evaluate({
         identity: {
           actorId: identity.actorId,
@@ -186,7 +186,7 @@ export class DualKernel {
       });
 
       // ─── BETA: Capability Selection ────────────────────────
-      if (governance.result === "allow" || governance.result === "review") {
+      if (governance.result === 'allow' || governance.result === 'review') {
         const capability = capabilityRegistry.select({
           intent: request.intent,
           requestedCapabilities: request.requestedCapabilities ?? [],
@@ -197,10 +197,10 @@ export class DualKernel {
         if (capability) {
           evidence.push({
             evidenceId: crypto.randomUUID(),
-            type: "data",
+            type: 'data',
             claim: `Selected capability: ${capability.capabilityId}`,
             confidence: 0.9,
-            source: "capability_registry",
+            source: 'capability_registry',
             retrievedAt: new Date().toISOString(),
             isExpired: false,
           });
@@ -208,7 +208,7 @@ export class DualKernel {
       }
 
       // ─── BETA: Verification ────────────────────────────────
-      state = "verifying";
+      state = 'verifying';
       const answer = this.generateAnswer(proposal);
 
       const verification = verificationEngine.verify({
@@ -229,7 +229,7 @@ export class DualKernel {
       });
 
       // ─── BUILD RESPONSE ────────────────────────────────────
-      state = governance.result === "review" ? "approval_required" : "completed";
+      state = governance.result === 'review' ? 'approval_required' : 'completed';
 
       const provenance: ProvenanceRecord = {
         auditId: crypto.randomUUID(),
@@ -242,7 +242,7 @@ export class DualKernel {
       };
 
       const telemetry: TelemetryRecord = {
-        traceId: crypto.randomUUID().replace(/-/g, "").slice(0, 32),
+        traceId: crypto.randomUUID().replace(/-/g, '').slice(0, 32),
         alpha: {
           intentConfidence: perception.intentConfidence,
           memoryHitRate: evidence.length > 0 ? 0.8 : 0,
@@ -252,12 +252,12 @@ export class DualKernel {
           proposalGenerationMs: Date.now() - startTime,
         },
         beta: {
-          policyAllowTotal: governance.result === "allow" ? 1 : 0,
-          policyDenyTotal: governance.result === "deny" ? 1 : 0,
-          reviewRequiredTotal: governance.result === "review" ? 1 : 0,
+          policyAllowTotal: governance.result === 'allow' ? 1 : 0,
+          policyDenyTotal: governance.result === 'deny' ? 1 : 0,
+          reviewRequiredTotal: governance.result === 'review' ? 1 : 0,
           scopeDenialTotal: governance.scopeDenials.length,
           verificationFailureTotal: verification.checks.filter(
-            (c: { passed: boolean }) => !c.passed,
+            (c: { passed: boolean }) => !c.passed
           ).length,
           fallbackTotal: 0,
         },
@@ -271,7 +271,7 @@ export class DualKernel {
 
       return {
         requestId: request.requestId,
-        status: governance.result === "review" ? "review_required" : "completed",
+        status: governance.result === 'review' ? 'review_required' : 'completed',
         answer,
         proposal,
         governance,
@@ -282,18 +282,18 @@ export class DualKernel {
         createdAt: new Date().toISOString(),
       };
     } catch (error) {
-      state = "degraded";
+      state = 'degraded';
       return {
         requestId: request.requestId,
-        status: "degraded",
-        answer: `Processing error: ${error instanceof Error ? error.message : "Unknown error"}`,
+        status: 'degraded',
+        answer: `Processing error: ${error instanceof Error ? error.message : 'Unknown error'}`,
         governance: {
           decisionId: crypto.randomUUID(),
-          result: "defer",
-          riskLevel: "R2_moderate",
-          classification: "internal",
+          result: 'defer',
+          riskLevel: 'R2_moderate',
+          classification: 'internal',
           policyIds: [],
-          reason: "Error during processing",
+          reason: 'Error during processing',
           scopeDenials: [],
           reviewRequired: true,
           reversible: true,
@@ -302,15 +302,15 @@ export class DualKernel {
         evidence: [],
         provenance: {
           auditId: crypto.randomUUID(),
-          requestHash: "",
-          outputHash: "",
-          policyHash: "",
+          requestHash: '',
+          outputHash: '',
+          policyHash: '',
           toolRefs: [],
           memoryRefs: [],
           createdAt: new Date().toISOString(),
         },
         telemetry: {
-          traceId: crypto.randomUUID().replace(/-/g, "").slice(0, 32),
+          traceId: crypto.randomUUID().replace(/-/g, '').slice(0, 32),
           alpha: {
             intentConfidence: 0,
             memoryHitRate: 0,
@@ -352,14 +352,14 @@ export class DualKernel {
   private hashString(input: string): string {
     // Evolución: SHA-256 canónico + fallback djb para entorno browser sin node:crypto — no simplifica, aumenta robustez
     try {
-      return createHash("sha256").update(input, "utf8").digest("hex");
+      return createHash('sha256').update(input, 'utf8').digest('hex');
     } catch {
       // Fallback no criptográfico: solo cuando node:crypto no está disponible (browser sin shim).
       let hash = 0;
       for (let i = 0; i < input.length; i++) {
         hash = ((hash << 5) - hash + input.charCodeAt(i)) | 0;
       }
-      return `fallback_djb_${Math.abs(hash).toString(16).padStart(8, "0")}`;
+      return `fallback_djb_${Math.abs(hash).toString(16).padStart(8, '0')}`;
     }
   }
 }

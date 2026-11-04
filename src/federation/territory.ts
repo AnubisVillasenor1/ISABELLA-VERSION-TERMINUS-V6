@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash } from 'node:crypto';
 
 export interface TerritoryPack {
   id: string;
@@ -12,15 +12,13 @@ export interface TerritoryPack {
   contentHash: string;
 }
 
-export function createTerritoryPack(input: Omit<TerritoryPack, "contentHash">): TerritoryPack {
-  const contentHash = createHash("sha256")
-    .update(JSON.stringify(input), "utf8")
-    .digest("hex");
+export function createTerritoryPack(input: Omit<TerritoryPack, 'contentHash'>): TerritoryPack {
+  const contentHash = createHash('sha256').update(JSON.stringify(input), 'utf8').digest('hex');
   return Object.freeze({ ...input, contentHash });
 }
 
 export function verifyTerritoryPack(pack: TerritoryPack): boolean {
   const { contentHash, ...content } = pack;
-  const expected = createHash("sha256").update(JSON.stringify(content), "utf8").digest("hex");
+  const expected = createHash('sha256').update(JSON.stringify(content), 'utf8').digest('hex');
   return expected === contentHash;
 }

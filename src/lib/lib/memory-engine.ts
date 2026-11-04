@@ -15,12 +15,12 @@ import {
   type MemoryRepository,
   type MemoryRecord,
   type MemoryScope,
-} from "./repositories/memory-repository";
-import { createMemoryPostgresRepository } from "./repositories/memory-postgres-repository";
-import { config } from "./config";
-import { isProductionLike, resolveRuntimeMode } from "./runtime-mode";
+} from './repositories/memory-repository';
+import { createMemoryPostgresRepository } from './repositories/memory-postgres-repository';
+import { config } from './config';
+import { isProductionLike, resolveRuntimeMode } from './runtime-mode';
 
-export type MemoryActorRole = "SovereignOwner" | "Operator" | "Auditor" | "Guest" | "System";
+export type MemoryActorRole = 'SovereignOwner' | 'Operator' | 'Auditor' | 'Guest' | 'System';
 
 export interface MemoryAccessRequest {
   tenantId: string;
@@ -38,7 +38,7 @@ export interface MemoryDecision {
 }
 
 export interface MemoryRepositoryAsync {
-  add: MemoryRepository["add"];
+  add: MemoryRepository['add'];
   list: (tenantId: string, scope?: MemoryScope) => MemoryRecord[] | Promise<MemoryRecord[]>;
   prune: (now?: number) => { removed: number } | Promise<{ removed: number }>;
   verifyIntegrity: () =>
@@ -57,7 +57,7 @@ export function canAccessScope(request: MemoryAccessRequest): MemoryDecision {
   if (!request.authenticated) {
     return {
       allowed: false,
-      reason: "Actor no autenticado: memoria denegada.",
+      reason: 'Actor no autenticado: memoria denegada.',
     };
   }
   if (!request.grantedScopes.includes(request.scope)) {
@@ -74,31 +74,31 @@ export function canReadRecord(request: MemoryAccessRequest, record: MemoryRecord
   if (record.tenantId !== request.tenantId) {
     return {
       allowed: false,
-      reason: "Frontera de tenant violada al leer memoria.",
+      reason: 'Frontera de tenant violada al leer memoria.',
     };
   }
 
-  if (record.sensitivity === "personal" || record.sensitivity === "restricted") {
+  if (record.sensitivity === 'personal' || record.sensitivity === 'restricted') {
     const isOwner = record.ownerId === request.actorId;
-    if (record.sensitivity === "restricted") {
-      if (request.role === "SovereignOwner")
-        return { allowed: true, reason: "Propietario soberano." };
-      if (request.role === "Auditor") return { allowed: true, reason: "Auditoría autorizada." };
+    if (record.sensitivity === 'restricted') {
+      if (request.role === 'SovereignOwner')
+        return { allowed: true, reason: 'Propietario soberano.' };
+      if (request.role === 'Auditor') return { allowed: true, reason: 'Auditoría autorizada.' };
       return isOwner
-        ? { allowed: true, reason: "Propietario del registro restringido." }
-        : { allowed: false, reason: "Registro restringido ajeno." };
+        ? { allowed: true, reason: 'Propietario del registro restringido.' }
+        : { allowed: false, reason: 'Registro restringido ajeno.' };
     }
     if (!isOwner) {
-      if (request.role === "SovereignOwner" || request.role === "Auditor") {
+      if (request.role === 'SovereignOwner' || request.role === 'Auditor') {
         return {
           allowed: true,
-          reason: "Acceso autorizado por rol de alto nivel.",
+          reason: 'Acceso autorizado por rol de alto nivel.',
         };
       }
-      return { allowed: false, reason: "Dato personal ajeno." };
+      return { allowed: false, reason: 'Dato personal ajeno.' };
     }
   }
-  return { allowed: true, reason: "Acceso a memoria permitido." };
+  return { allowed: true, reason: 'Acceso a memoria permitido.' };
 }
 
 /**
@@ -110,7 +110,7 @@ export function createMemoryEngine(repository?: MemoryRepositoryAsync) {
 
   return {
     retrieve(
-      request: MemoryAccessRequest,
+      request: MemoryAccessRequest
     ):
       | { records: MemoryRecord[]; denied: number }
       | Promise<{ records: MemoryRecord[]; denied: number }> {

@@ -1,4 +1,4 @@
-import type { MultiplierBound, PricingInput, PricingQuote } from "./types";
+import type { MultiplierBound, PricingInput, PricingQuote } from './types';
 
 // SCER Dynamic Pricing (state: draft | engine-generated).
 // Motor determinista y puro: multiplica la base por cada factor (clampeado a sus
@@ -16,7 +16,7 @@ export const PRICING_BOUNDS: Readonly<Record<string, MultiplierBound>> = {
 export const MAX_LOYALTY_DISCOUNT = 0.5;
 
 function clamp(value: number, bound: MultiplierBound, factor: string): number {
-  if (typeof value !== "number" || !Number.isFinite(value)) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
     throw new Error(`Pricing factor "${factor}" must be a finite number.`);
   }
   return Math.min(bound.max, Math.max(bound.min, value));
@@ -29,14 +29,26 @@ function clamp(value: number, bound: MultiplierBound, factor: string): number {
  */
 export function quotePrice(input: PricingInput): PricingQuote {
   if (!Number.isInteger(input.basePriceMinor) || input.basePriceMinor < 0) {
-    throw new Error("Pricing basePriceMinor must be a non-negative integer (units minor).");
+    throw new Error('Pricing basePriceMinor must be a non-negative integer (units minor).');
   }
 
   const factors: readonly { name: string; raw: number | undefined; bound: MultiplierBound }[] = [
-    { name: "demand", raw: input.demandMultiplier, bound: PRICING_BOUNDS.demand as MultiplierBound },
-    { name: "compute", raw: input.computeMultiplier, bound: PRICING_BOUNDS.compute as MultiplierBound },
-    { name: "scarcity", raw: input.scarcityMultiplier, bound: PRICING_BOUNDS.scarcity as MultiplierBound },
-    { name: "risk", raw: input.riskMultiplier, bound: PRICING_BOUNDS.risk as MultiplierBound },
+    {
+      name: 'demand',
+      raw: input.demandMultiplier,
+      bound: PRICING_BOUNDS.demand as MultiplierBound,
+    },
+    {
+      name: 'compute',
+      raw: input.computeMultiplier,
+      bound: PRICING_BOUNDS.compute as MultiplierBound,
+    },
+    {
+      name: 'scarcity',
+      raw: input.scarcityMultiplier,
+      bound: PRICING_BOUNDS.scarcity as MultiplierBound,
+    },
+    { name: 'risk', raw: input.riskMultiplier, bound: PRICING_BOUNDS.risk as MultiplierBound },
   ];
 
   let product = 1;
@@ -49,7 +61,7 @@ export function quotePrice(input: PricingInput): PricingQuote {
   const discount = clamp(
     input.loyaltyDiscount ?? 0,
     { min: 0, max: MAX_LOYALTY_DISCOUNT },
-    "loyaltyDiscount",
+    'loyaltyDiscount'
   );
 
   const finalPriceMinor = Math.max(0, Math.round(input.basePriceMinor * product * (1 - discount)));

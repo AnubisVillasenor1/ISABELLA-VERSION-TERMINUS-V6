@@ -11,20 +11,20 @@
  * §17: si el algoritmo configurado es simulación (ML-DSA-87), serechaza firmar
  * en producción (esta función NO produce autoridad criptográfica simulada).
  */
-import { createHash, randomBytes, randomUUID } from "node:crypto";
-import { signBlockHash, getSigningAlgorithm, isSimulatedAlgorithm } from "../crypto/bookpi-signer";
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
+import { signBlockHash, getSigningAlgorithm, isSimulatedAlgorithm } from '../crypto/bookpi-signer';
 
 export interface ChunkProof {
   chunkIndex: number;
   chunkHash: string;
-  proofPath: Array<{ hash: string; position: "left" | "right" }>;
+  proofPath: Array<{ hash: string; position: 'left' | 'right' }>;
   root: string;
 }
 
 export interface BookPiRegistrationPayload {
   authorId: string;
   title: string;
-  category: "MANUSCRIPT" | "CODE_REPOS" | "ACADEMIC_PAPER" | "AUDIO_SCORE";
+  category: 'MANUSCRIPT' | 'CODE_REPOS' | 'ACADEMIC_PAPER' | 'AUDIO_SCORE';
   fileBuffer: Buffer;
   secretSalt?: string;
 }
@@ -48,7 +48,7 @@ export interface RoyaltySplitResult {
 }
 
 function sha256Hex(input: string | Buffer): string {
-  return createHash("sha256").update(input).digest("hex");
+  return createHash('sha256').update(input).digest('hex');
 }
 
 export class BookPiEngine {
@@ -77,7 +77,7 @@ export class BookPiEngine {
     tree: string[][];
   } {
     if (leafHashes.length === 0) {
-      throw new Error("No se pueden procesar hojas vacías para el árbol de Merkle.");
+      throw new Error('No se pueden procesar hojas vacías para el árbol de Merkle.');
     }
     const tree: string[][] = [leafHashes];
     let currentLevel = leafHashes;
@@ -97,10 +97,10 @@ export class BookPiEngine {
   /** Prueba de inclusión de Merkle para un chunk (O(log N)). */
   public static generateMerkleProof(leafHashes: string[], targetIndex: number): ChunkProof {
     if (targetIndex < 0 || targetIndex >= leafHashes.length) {
-      throw new Error("Índice de chunk fuera de rango.");
+      throw new Error('Índice de chunk fuera de rango.');
     }
     const { root, tree } = this.buildMerkleTree(leafHashes);
-    const proofPath: Array<{ hash: string; position: "left" | "right" }> = [];
+    const proofPath: Array<{ hash: string; position: 'left' | 'right' }> = [];
     let index = targetIndex;
 
     for (let level = 0; level < tree.length - 1; level++) {
@@ -111,12 +111,12 @@ export class BookPiEngine {
       if (siblingIndex < currentLevel.length) {
         proofPath.push({
           hash: currentLevel[siblingIndex] as string,
-          position: isRightNode ? "left" : "right",
+          position: isRightNode ? 'left' : 'right',
         });
       } else {
         proofPath.push({
           hash: currentLevel[index] as string,
-          position: "right",
+          position: 'right',
         });
       }
       index = Math.floor(index / 2);
@@ -135,7 +135,7 @@ export class BookPiEngine {
     let currentHash = proof.chunkHash;
     for (const step of proof.proofPath) {
       const concatenated =
-        step.position === "left" ? step.hash + currentHash : currentHash + step.hash;
+        step.position === 'left' ? step.hash + currentHash : currentHash + step.hash;
       currentHash = sha256Hex(concatenated);
     }
     return currentHash.toLowerCase() === proof.root.toLowerCase();
@@ -148,9 +148,9 @@ export class BookPiEngine {
   public static generateZKCommitment(
     merkleRoot: string,
     authorId: string,
-    secretSalt?: string,
+    secretSalt?: string
   ): { commitment: string; salt: string } {
-    const salt = secretSalt || randomBytes(32).toString("hex");
+    const salt = secretSalt || randomBytes(32).toString('hex');
     const commitment = sha256Hex(`${merkleRoot}:${authorId}:${salt}`);
     return { commitment, salt };
   }
@@ -159,20 +159,20 @@ export class BookPiEngine {
   public static processManuscript(payload: BookPiRegistrationPayload): BookPiRegistrationResult {
     if (isSimulatedAlgorithm()) {
       throw new Error(
-        "CRITICAL_SECURITY_ERROR: algoritmo de firma simulado no puede registrar obras en producción.",
+        'CRITICAL_SECURITY_ERROR: algoritmo de firma simulado no puede registrar obras en producción.'
       );
     }
     const { hashes } = this.chunkBuffer(payload.fileBuffer);
     const { root: merkleRoot } = this.buildMerkleTree(hashes);
 
     const payloadHash = sha256Hex(
-      `${merkleRoot}:${payload.authorId}:${payload.title}:${payload.category}`,
+      `${merkleRoot}:${payload.authorId}:${payload.title}:${payload.category}`
     );
 
     const { commitment: zkCommitment } = this.generateZKCommitment(
       merkleRoot,
       payload.authorId,
-      payload.secretSalt,
+      payload.secretSalt
     );
 
     // Firma REAL sobre el payloadHash con la autoridad configurada (§6.4/§6.5).

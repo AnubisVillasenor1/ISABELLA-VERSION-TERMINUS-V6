@@ -25,9 +25,9 @@ export class HypothesisEngine {
         hypothesisId: crypto.randomUUID(),
         statement: `Hipótesis principal: resolución coherente de ${input.query.slice(0, 80)}`,
         confidence: input.researchConfidence,
-        alternatives: ["Resolución determinista", "Resolución con asistencia de agentes"],
-        risks: ["Riesgo operacional mínimo", "Validación requerida"],
-        experiments: ["Prueba de concepto en sandbox"],
+        alternatives: ['Resolución determinista', 'Resolución con asistencia de agentes'],
+        risks: ['Riesgo operacional mínimo', 'Validación requerida'],
+        experiments: ['Prueba de concepto en sandbox'],
       },
     ];
   }

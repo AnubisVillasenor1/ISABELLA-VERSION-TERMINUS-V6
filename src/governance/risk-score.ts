@@ -16,7 +16,7 @@ export interface RiskInputs {
   readonly U: number;
 }
 
-export type RiskTier = "OBSERVE" | "SELECTIVE" | "RELEVANT_HEADS" | "EPIC";
+export type RiskTier = 'OBSERVE' | 'SELECTIVE' | 'RELEVANT_HEADS' | 'EPIC';
 
 export const RISK_WEIGHTS = { C: 0.25, S: 0.25, F: 0.2, P: 0.15, U: 0.15 } as const;
 
@@ -27,13 +27,13 @@ export interface RiskAssessment {
   readonly description: string;
 }
 
-const KEYS = ["C", "S", "F", "P", "U"] as const;
+const KEYS = ['C', 'S', 'F', 'P', 'U'] as const;
 
 export function riskScore(inputs: RiskInputs): number {
   let total = 0;
   for (const k of KEYS) {
     const v = inputs[k];
-    if (typeof v !== "number" || !Number.isFinite(v) || v < 0 || v > 1) {
+    if (typeof v !== 'number' || !Number.isFinite(v) || v < 0 || v > 1) {
       throw new RangeError(`RISK: ${k} must be a finite number in [0,1]`);
     }
     total += RISK_WEIGHTS[k] * v;
@@ -42,22 +42,23 @@ export function riskScore(inputs: RiskInputs): number {
 }
 
 export function riskTier(score: number): RiskTier {
-  if (!Number.isFinite(score) || score < 0 || score > 1) throw new RangeError("RISK: score must be in [0,1]");
-  if (score >= 0.85) return "EPIC";
-  if (score >= 0.65) return "RELEVANT_HEADS";
-  if (score >= 0.35) return "SELECTIVE";
-  return "OBSERVE";
+  if (!Number.isFinite(score) || score < 0 || score > 1)
+    throw new RangeError('RISK: score must be in [0,1]');
+  if (score >= 0.85) return 'EPIC';
+  if (score >= 0.65) return 'RELEVANT_HEADS';
+  if (score >= 0.35) return 'SELECTIVE';
+  return 'OBSERVE';
 }
 
 const DESCRIPTIONS: Record<RiskTier, string> = {
-  OBSERVE: "Alpha y Beta en modo observación",
-  SELECTIVE: "Beta selectivo",
-  RELEVANT_HEADS: "Beta con cabezas relevantes",
-  EPIC: "Modo EPIC: bloqueo hasta aprobación humana",
+  OBSERVE: 'Alpha y Beta en modo observación',
+  SELECTIVE: 'Beta selectivo',
+  RELEVANT_HEADS: 'Beta con cabezas relevantes',
+  EPIC: 'Modo EPIC: bloqueo hasta aprobación humana',
 };
 
 export function assessRisk(inputs: RiskInputs): RiskAssessment {
   const score = riskScore(inputs);
   const tier = riskTier(score);
-  return { score, tier, requiresHumanApproval: tier === "EPIC", description: DESCRIPTIONS[tier] };
+  return { score, tier, requiresHumanApproval: tier === 'EPIC', description: DESCRIPTIONS[tier] };
 }

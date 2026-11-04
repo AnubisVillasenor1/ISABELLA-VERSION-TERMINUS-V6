@@ -6,8 +6,8 @@
  * y los adaptadores de desarrollo/test aislados.
  */
 
-export type LedgerCategory = "inference" | "processing" | "apis" | "skills" | "other";
-export type LedgerStatus = "settled" | "pending" | "refunded" | "pruned";
+export type LedgerCategory = 'inference' | 'processing' | 'apis' | 'skills' | 'other';
+export type LedgerStatus = 'settled' | 'pending' | 'refunded' | 'pruned';
 
 export interface BlockPIBlock {
   index: number;

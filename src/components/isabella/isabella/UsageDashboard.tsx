@@ -1,4 +1,4 @@
-import { Activity, RefreshCw } from "lucide-react";
+import { Activity, RefreshCw } from 'lucide-react';
 
 interface UsageDashboardProps {
   activePlanId: string | null;
@@ -25,16 +25,16 @@ export function UsageDashboard({
 }: UsageDashboardProps) {
   const getPlanName = (id: string | null) => {
     switch (id) {
-      case "free":
-        return "Isabella Free (Freemium)";
-      case "personal":
-        return "Isabella Personal";
-      case "pro":
-        return "Isabella Creator (Pro)";
-      case "enterprise":
-        return "Isabella Enterprise";
+      case 'free':
+        return 'Isabella Free (Freemium)';
+      case 'personal':
+        return 'Isabella Personal';
+      case 'pro':
+        return 'Isabella Creator (Pro)';
+      case 'enterprise':
+        return 'Isabella Enterprise';
       default:
-        return "Isabella Free (Invitado)";
+        return 'Isabella Free (Invitado)';
     }
   };
 
@@ -50,9 +50,9 @@ export function UsageDashboard({
       : 0;
 
   const getRateLimitColor = (pct: number) => {
-    if (pct >= 90) return "bg-rose-500 text-rose-400 border-rose-500/30";
-    if (pct >= 70) return "bg-amber-500 text-amber-400 border-amber-500/30";
-    return "bg-electric text-electric border-electric/30";
+    if (pct >= 90) return 'bg-rose-500 text-rose-400 border-rose-500/30';
+    if (pct >= 70) return 'bg-amber-500 text-amber-400 border-amber-500/30';
+    return 'bg-electric text-electric border-electric/30';
   };
 
   return (
@@ -78,7 +78,7 @@ export function UsageDashboard({
           className="p-1.5 rounded-lg border border-border/30 hover:border-border/50 text-muted-foreground hover:text-platinum transition-all disabled:opacity-30"
           title="Sincronizar límites"
         >
-          <RefreshCw className={`size-3.5 ${isRefreshing ? "animate-spin text-electric" : ""}`} />
+          <RefreshCw className={`size-3.5 ${isRefreshing ? 'animate-spin text-electric' : ''}`} />
         </button>
       </div>
 
@@ -112,7 +112,7 @@ export function UsageDashboard({
               Mensajes Utilizados
             </span>
             <span className="font-mono text-[11px] text-platinum font-semibold">
-              {messagesUsed == null ? "No disponible" : `${messagesUsed} / ${messageLimit ?? "—"}`}
+              {messagesUsed == null ? 'No disponible' : `${messagesUsed} / ${messageLimit ?? '—'}`}
             </span>
           </div>
           <div className="mt-3">
@@ -136,7 +136,7 @@ export function UsageDashboard({
               Tokens de Memoria
             </span>
             <span className="font-mono text-[11px] text-platinum font-semibold">
-              {tokensRemaining == null ? "No disponible" : tokensRemaining.toLocaleString()}
+              {tokensRemaining == null ? 'No disponible' : tokensRemaining.toLocaleString()}
             </span>
           </div>
           <div className="mt-3">
@@ -150,7 +150,7 @@ export function UsageDashboard({
           <div className="mt-3 pt-2.5 border-t border-border/15 text-[10px] text-muted-foreground font-mono flex justify-between">
             <span>Cuota máxima</span>
             <span>
-              {tokenLimit == null ? "No disponible" : `${tokenLimit.toLocaleString()} tokens`}
+              {tokenLimit == null ? 'No disponible' : `${tokenLimit.toLocaleString()} tokens`}
             </span>
           </div>
         </div>
@@ -163,8 +163,8 @@ export function UsageDashboard({
             </span>
             <span className="font-mono text-[11px] text-platinum font-semibold">
               {currentRequestsPerMin == null
-                ? "No disponible"
-                : `${currentRequestsPerMin} / ${rateLimitThreshold ?? "—"} req/min`}
+                ? 'No disponible'
+                : `${currentRequestsPerMin} / ${rateLimitThreshold ?? '—'} req/min`}
             </span>
           </div>
           <div className="mt-3 space-y-1">
@@ -172,10 +172,10 @@ export function UsageDashboard({
               <div
                 className={`h-full rounded-full transition-all duration-500 ${
                   rateLimitPercentage >= 90
-                    ? "bg-rose-500"
+                    ? 'bg-rose-500'
                     : rateLimitPercentage >= 70
-                      ? "bg-amber-400"
-                      : "bg-electric"
+                      ? 'bg-amber-400'
+                      : 'bg-electric'
                 }`}
                 style={{ width: `${rateLimitPercentage}%` }}
               />
@@ -185,14 +185,14 @@ export function UsageDashboard({
             <span>Límite (Threshold)</span>
             <span
               className={`px-1.5 py-0.5 rounded text-[9px] font-bold border ${getRateLimitColor(
-                rateLimitPercentage,
+                rateLimitPercentage
               )}`}
             >
               {rateLimitPercentage >= 90
-                ? "CRÍTICO"
+                ? 'CRÍTICO'
                 : rateLimitPercentage >= 70
-                  ? "ELEVADO"
-                  : "NORMAL"}
+                  ? 'ELEVADO'
+                  : 'NORMAL'}
             </span>
           </div>
         </div>

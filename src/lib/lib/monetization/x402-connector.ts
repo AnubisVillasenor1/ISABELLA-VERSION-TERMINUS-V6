@@ -26,15 +26,15 @@ import {
   sign as cryptoSign,
   verify as cryptoVerify,
   type KeyObject,
-} from "node:crypto";
-import { createBookpiPostgresRepository } from "../repositories/bookpi-postgres-repository";
-import { config } from "../config";
+} from 'node:crypto';
+import { createBookpiPostgresRepository } from '../repositories/bookpi-postgres-repository';
+import { config } from '../config';
 
 // ============================================================================
 // 1. CONTRATOS E INTERFACES DE NÚCLEO
 // ============================================================================
 
-export type SubscriptionStatus = "ACTIVE" | "PAST_DUE" | "INACTIVE" | "EXPIRED";
+export type SubscriptionStatus = 'ACTIVE' | 'PAST_DUE' | 'INACTIVE' | 'EXPIRED';
 
 export interface PrincipalContext {
   tenantId: string;
@@ -72,7 +72,7 @@ export interface BookPIEconomicEvent {
 export interface x402PaymentPayload {
   v: 1;
   amountCents: number;
-  currency: "USDC";
+  currency: 'USDC';
   resourceId: string;
   tenantId: string;
   nonce: string;
@@ -91,7 +91,7 @@ export interface x402PaymentExpectation {
 export type x402VerificationResult =
   { ok: true; payload: x402PaymentPayload } | { ok: false; reason: string };
 
-const X402_HEADER_PREFIX = "x402 v1.";
+const X402_HEADER_PREFIX = 'x402 v1.';
 const X402_SIGNATURE_WINDOW_MS = 5 * 60 * 1000;
 const X402_HEADER_WINDOW_MAX_MS = X402_SIGNATURE_WINDOW_MS * 2;
 const ECDSA_P384_SIG_HEX = /^[a-f0-9]{192}$/;
@@ -103,7 +103,7 @@ const ECDSA_P384_SIG_HEX = /^[a-f0-9]{192}$/;
 interface X402Keys {
   privateKey: KeyObject;
   publicKey: KeyObject;
-  source: "configured-pem" | "ephemeral-dev";
+  source: 'configured-pem' | 'ephemeral-dev';
 }
 
 let cachedKeys: X402Keys | null = null;
@@ -119,7 +119,7 @@ function configuredSigningPem(): string | undefined {
 function isProductionLikeRuntime(): boolean {
   try {
     const mode = config().ISABELLA_RUNTIME_MODE;
-    return mode === "production" || mode === "staging";
+    return mode === 'production' || mode === 'staging';
   } catch {
     return false;
   }
@@ -136,41 +136,41 @@ export function getX402PaymentVaultAddress(): string {
   if (configured && /^0x[a-fA-F0-9]{40}$/.test(configured)) return configured;
   if (isProductionLikeRuntime()) {
     throw new Error(
-      "CRITICAL_SECURITY_ERROR: X402_PAYMENT_VAULT_ADDRESS is required and must be a valid EVM address in staging/production.",
+      'CRITICAL_SECURITY_ERROR: X402_PAYMENT_VAULT_ADDRESS is required and must be a valid EVM address in staging/production.'
     );
   }
-  return "0x0000000000000000000000000000000000000001";
+  return '0x0000000000000000000000000000000000000001';
 }
 
 function loadX402Keys(): X402Keys {
   if (cachedKeys) return cachedKeys;
   const pem = configuredSigningPem();
-  if (pem && pem.includes("BEGIN")) {
+  if (pem && pem.includes('BEGIN')) {
     try {
       const privateKey = createPrivateKey(pem);
-      cachedKeys = { privateKey, publicKey: createPublicKey(privateKey), source: "configured-pem" };
+      cachedKeys = { privateKey, publicKey: createPublicKey(privateKey), source: 'configured-pem' };
       return cachedKeys;
     } catch {
       // PEM inválido: en producción/staging es fail-closed; en local se genera efímera.
       if (isProductionLikeRuntime()) {
         throw new Error(
-          "CRITICAL_SECURITY_ERROR: BOOKPI_SIGNING_KEY must be a valid ECDSA P-384 PEM in staging/production.",
+          'CRITICAL_SECURITY_ERROR: BOOKPI_SIGNING_KEY must be a valid ECDSA P-384 PEM in staging/production.'
         );
       }
     }
   } else if (isProductionLikeRuntime()) {
     throw new Error(
-      "CRITICAL_SECURITY_ERROR: BOOKPI_SIGNING_KEY (ECDSA P-384 PEM) is required for x402 payment signing in staging/production.",
+      'CRITICAL_SECURITY_ERROR: BOOKPI_SIGNING_KEY (ECDSA P-384 PEM) is required for x402 payment signing in staging/production.'
     );
   }
-  const { privateKey, publicKey } = generateKeyPairSync("ec", { namedCurve: "secp384r1" });
-  cachedKeys = { privateKey, publicKey, source: "ephemeral-dev" };
+  const { privateKey, publicKey } = generateKeyPairSync('ec', { namedCurve: 'secp384r1' });
+  cachedKeys = { privateKey, publicKey, source: 'ephemeral-dev' };
   return cachedKeys;
 }
 
 /** Exporta la clave pública PEM (para clientes que verifican pagos x402). */
 export function getX402PublicKeyPem(): string {
-  return loadX402Keys().publicKey.export({ type: "spki", format: "pem" }).toString();
+  return loadX402Keys().publicKey.export({ type: 'spki', format: 'pem' }).toString();
 }
 
 /** Solo para tests: resetea claves y replay cache entre suites. */
@@ -180,11 +180,11 @@ export function __resetX402CryptoState(): void {
 
 function ecdsaP384Sign(data: string): string {
   const { privateKey } = loadX402Keys();
-  const sig = cryptoSign("sha384", Buffer.from(data, "utf8"), {
+  const sig = cryptoSign('sha384', Buffer.from(data, 'utf8'), {
     key: privateKey,
-    dsaEncoding: "ieee-p1363",
+    dsaEncoding: 'ieee-p1363',
   });
-  return sig.toString("hex");
+  return sig.toString('hex');
 }
 
 function ecdsaP384Verify(data: string, sigHex: string): boolean {
@@ -192,10 +192,10 @@ function ecdsaP384Verify(data: string, sigHex: string): boolean {
   try {
     const { publicKey } = loadX402Keys();
     return cryptoVerify(
-      "sha384",
-      Buffer.from(data, "utf8"),
-      { key: publicKey, dsaEncoding: "ieee-p1363" },
-      Buffer.from(sigHex, "hex"),
+      'sha384',
+      Buffer.from(data, 'utf8'),
+      { key: publicKey, dsaEncoding: 'ieee-p1363' },
+      Buffer.from(sigHex, 'hex')
     );
   } catch {
     return false;
@@ -219,11 +219,11 @@ export function verifyPayloadECDSAP384(payload: string, signature: string): bool
 // ============================================================================
 
 function b64url(input: string): string {
-  return Buffer.from(input, "utf8").toString("base64url");
+  return Buffer.from(input, 'utf8').toString('base64url');
 }
 
 function unb64url(input: string): string {
-  return Buffer.from(input, "base64url").toString("utf8");
+  return Buffer.from(input, 'base64url').toString('utf8');
 }
 
 /**
@@ -233,7 +233,7 @@ function unb64url(input: string): string {
  */
 export function signX402Payment(
   payload: x402PaymentPayload,
-  signer?: (canonical: string) => string,
+  signer?: (canonical: string) => string
 ): string {
   const payloadB64 = b64url(JSON.stringify(payload));
   const canonical = `${X402_HEADER_PREFIX}${payloadB64}`;
@@ -249,70 +249,70 @@ export function signX402Payment(
 export function verifyX402Payment(
   header: string,
   expected: x402PaymentExpectation,
-  replayStore?: Map<string, number>,
+  replayStore?: Map<string, number>
 ): x402VerificationResult {
   const trimmed = header.trim();
   if (!trimmed.startsWith(X402_HEADER_PREFIX)) {
-    return { ok: false, reason: "MALFORMED_X402_HEADER" };
+    return { ok: false, reason: 'MALFORMED_X402_HEADER' };
   }
   const rest = trimmed.slice(X402_HEADER_PREFIX.length);
-  const dot = rest.lastIndexOf(".");
-  if (dot <= 0) return { ok: false, reason: "MALFORMED_X402_HEADER" };
+  const dot = rest.lastIndexOf('.');
+  if (dot <= 0) return { ok: false, reason: 'MALFORMED_X402_HEADER' };
 
   const payloadB64 = rest.slice(0, dot);
   const sigB64 = rest.slice(dot + 1);
-  if (!payloadB64 || !sigB64) return { ok: false, reason: "MALFORMED_X402_HEADER" };
+  if (!payloadB64 || !sigB64) return { ok: false, reason: 'MALFORMED_X402_HEADER' };
 
   let canonical: string;
   try {
     canonical = `${X402_HEADER_PREFIX}${payloadB64}`;
     const sigHex = unb64url(sigB64);
     if (!ecdsaP384Verify(canonical, sigHex)) {
-      return { ok: false, reason: "INVALID_X402_SIGNATURE" };
+      return { ok: false, reason: 'INVALID_X402_SIGNATURE' };
     }
   } catch {
-    return { ok: false, reason: "INVALID_X402_SIGNATURE" };
+    return { ok: false, reason: 'INVALID_X402_SIGNATURE' };
   }
 
   let payload: x402PaymentPayload;
   try {
     payload = JSON.parse(unb64url(payloadB64)) as x402PaymentPayload;
   } catch {
-    return { ok: false, reason: "MALFORMED_X402_PAYLOAD" };
+    return { ok: false, reason: 'MALFORMED_X402_PAYLOAD' };
   }
 
-  if (payload.v !== 1 || payload.currency !== "USDC") {
-    return { ok: false, reason: "UNSUPPORTED_X402_PAYLOAD_VERSION" };
+  if (payload.v !== 1 || payload.currency !== 'USDC') {
+    return { ok: false, reason: 'UNSUPPORTED_X402_PAYLOAD_VERSION' };
   }
   if (
-    typeof payload.amountCents !== "number" ||
+    typeof payload.amountCents !== 'number' ||
     !Number.isInteger(payload.amountCents) ||
     payload.amountCents <= 0
   ) {
-    return { ok: false, reason: "INVALID_AMOUNT" };
+    return { ok: false, reason: 'INVALID_AMOUNT' };
   }
   if (payload.amountCents !== expected.amountCents) {
-    return { ok: false, reason: "AMOUNT_BINDING_MISMATCH" };
+    return { ok: false, reason: 'AMOUNT_BINDING_MISMATCH' };
   }
   if (payload.resourceId !== expected.resourceId) {
-    return { ok: false, reason: "RESOURCE_BINDING_MISMATCH" };
+    return { ok: false, reason: 'RESOURCE_BINDING_MISMATCH' };
   }
   if (payload.tenantId !== expected.tenantId) {
-    return { ok: false, reason: "TENANT_BINDING_MISMATCH" };
+    return { ok: false, reason: 'TENANT_BINDING_MISMATCH' };
   }
 
   const now = expected.now ?? Date.now();
   const issuedAt = Date.parse(payload.issuedAt);
   const expiresAt = Date.parse(payload.expiresAt);
   if (Number.isNaN(issuedAt) || Number.isNaN(expiresAt)) {
-    return { ok: false, reason: "INVALID_TIMESTAMP" };
+    return { ok: false, reason: 'INVALID_TIMESTAMP' };
   }
   // Tolerancia de reloj 60s para issuedAt; expiresAt estricto.
   if (now > expiresAt || now < issuedAt - 60_000) {
-    return { ok: false, reason: "EXPIRED_OR_NOT_YET_VALID" };
+    return { ok: false, reason: 'EXPIRED_OR_NOT_YET_VALID' };
   }
   if (expiresAt - issuedAt > X402_HEADER_WINDOW_MAX_MS) {
-    return { ok: false, reason: "TIMESTAMP_WINDOW_TOO_LARGE" };
+    return { ok: false, reason: 'TIMESTAMP_WINDOW_TOO_LARGE' };
   }
 
   if (replayStore) {
@@ -321,7 +321,7 @@ export function verifyX402Payment(
       if (exp < now) replayStore.delete(nonce);
     }
     if (replayStore.has(payload.nonce)) {
-      return { ok: false, reason: "NONCE_REPLAY_DETECTED" };
+      return { ok: false, reason: 'NONCE_REPLAY_DETECTED' };
     }
     replayStore.set(payload.nonce, expiresAt);
   }
@@ -334,7 +334,7 @@ export function verifyX402Payment(
 // ============================================================================
 
 export class GovernanceMonetizationGuard {
-  private readonly POLICY_VERSION = "v4.2.0-sovereign";
+  private readonly POLICY_VERSION = 'v4.2.0-sovereign';
 
   /**
    * Evalúa si el usuario cumple con la autenticación ARGUS y la política CROWN.
@@ -343,19 +343,19 @@ export class GovernanceMonetizationGuard {
   public evaluateAccess(context: PrincipalContext): { allowed: boolean; reason?: string } {
     // 1. Verificación de Identidad ARGUS
     if (!context.tenantId || !context.actorId) {
-      return { allowed: false, reason: "ARGUS_AUTH_FAILED: Invalid principal context" };
+      return { allowed: false, reason: 'ARGUS_AUTH_FAILED: Invalid principal context' };
     }
 
     // 2. Verificación de Scope
-    if (!context.scopes.includes("monetization:execute") && !context.scopes.includes("economic")) {
-      return { allowed: false, reason: "CROWN_POLICY_DENY: Missing monetization:execute scope" };
+    if (!context.scopes.includes('monetization:execute') && !context.scopes.includes('economic')) {
+      return { allowed: false, reason: 'CROWN_POLICY_DENY: Missing monetization:execute scope' };
     }
 
     // 3. Condición Inflexible de Suscripción Mensual Activa
-    if (context.subscriptionStatus !== "ACTIVE") {
+    if (context.subscriptionStatus !== 'ACTIVE') {
       return {
         allowed: false,
-        reason: "CROWN_POLICY_DENY: Active monthly subscription required to monetize features",
+        reason: 'CROWN_POLICY_DENY: Active monthly subscription required to monetize features',
       };
     }
 
@@ -373,13 +373,13 @@ export class GovernanceMonetizationGuard {
 
 export class BookPILedgerService {
   private lastBlockHash =
-    "sha3-512:0000000000000000000000000000000000000000000000000000000000000000";
+    'sha3-512:0000000000000000000000000000000000000000000000000000000000000000';
 
   /**
    * Calcula el Hash SHA3-512 acumulativo para la cadena append-only.
    */
   public calculateSHA3_512(data: string): string {
-    return "sha3-512:" + createHash("sha3-512").update(data).digest("hex");
+    return 'sha3-512:' + createHash('sha3-512').update(data).digest('hex');
   }
 
   /**
@@ -402,10 +402,10 @@ export class BookPILedgerService {
     context: PrincipalContext,
     idempotencyKey: string,
     grossAmountCents: number,
-    policyVersion: string,
+    policyVersion: string
   ): Promise<BookPIEconomicEvent> {
     if (!Number.isInteger(grossAmountCents) || grossAmountCents <= 0) {
-      throw new Error("INVALID_GROSS_AMOUNT: must be a positive integer in cents");
+      throw new Error('INVALID_GROSS_AMOUNT: must be a positive integer in cents');
     }
 
     // Cálculo estricto del reparto 75% Creador / 25% Plataforma
@@ -427,7 +427,7 @@ export class BookPILedgerService {
       this.lastBlockHash,
       timestamp,
       policyVersion,
-    ].join("|");
+    ].join('|');
 
     const currentHash = this.calculateSHA3_512(rawPayload);
     const signature = this.signPayloadECDSAP384(currentHash);
@@ -457,10 +457,10 @@ export class BookPILedgerService {
         tenantId: context.tenantId,
         userId: context.actorId,
         operation: `X402_SETTLEMENT_75_25:${idempotencyKey}`,
-        category: "other",
+        category: 'other',
         cost: platformFeeCents / 100,
         tokens: grossAmountCents,
-        status: "settled",
+        status: 'settled',
       });
     } catch (_err) {
       // Degradación elegante en test si la base de datos no está disponible
@@ -493,7 +493,7 @@ export class x402MonetizationConnector {
     resourceId: string,
     grossAmountCents: number,
     paymentHeader?: string,
-    idempotencyKey: string = `idemp_${randomUUID()}`,
+    idempotencyKey: string = `idemp_${randomUUID()}`
   ) {
     // 0. Contrato económico fuerte (entero positivo, máximo razonable)
     if (
@@ -505,8 +505,8 @@ export class x402MonetizationConnector {
         status: 400,
         headers: {},
         body: {
-          error: "INVALID_AMOUNT",
-          evidenceStatus: "E4_ACTION_REQUIRED",
+          error: 'INVALID_AMOUNT',
+          evidenceStatus: 'E4_ACTION_REQUIRED',
         },
       };
     }
@@ -520,7 +520,7 @@ export class x402MonetizationConnector {
         body: {
           error: access.reason,
           policyVersion: this.guard.getPolicyVersion(),
-          evidenceStatus: "E4_ACTION_REQUIRED",
+          evidenceStatus: 'E4_ACTION_REQUIRED',
         },
       };
     }
@@ -530,7 +530,7 @@ export class x402MonetizationConnector {
       const terms: x402PaymentTerms = {
         resourceId,
         priceCentsUSD: grossAmountCents,
-        currency: "USDC",
+        currency: 'USDC',
         recipientAddress: getX402PaymentVaultAddress(),
         idempotencyKey,
         expiresAt: new Date(Date.now() + X402_SIGNATURE_WINDOW_MS).toISOString(),
@@ -539,14 +539,14 @@ export class x402MonetizationConnector {
       return {
         status: 402,
         headers: {
-          "X-402-Payment-Required": "true",
-          "X-402-Price-Cents": grossAmountCents.toString(),
-          "X-402-Currency": "USDC",
+          'X-402-Payment-Required': 'true',
+          'X-402-Price-Cents': grossAmountCents.toString(),
+          'X-402-Currency': 'USDC',
         },
         body: {
-          message: "Payment Required via x402 Protocol",
+          message: 'Payment Required via x402 Protocol',
           terms,
-          evidenceStatus: "E0_CERTAINTY",
+          evidenceStatus: 'E0_CERTAINTY',
         },
       };
     }
@@ -559,16 +559,16 @@ export class x402MonetizationConnector {
         resourceId,
         tenantId: context.tenantId,
       },
-      this.replayStore,
+      this.replayStore
     );
     if (!verification.ok) {
       return {
         status: 400,
         headers: {},
         body: {
-          error: "INVALID_X402_PAYMENT_SIGNATURE",
+          error: 'INVALID_X402_PAYMENT_SIGNATURE',
           reason: verification.reason,
-          evidenceStatus: "E4_ACTION_REQUIRED",
+          evidenceStatus: 'E4_ACTION_REQUIRED',
         },
       };
     }
@@ -578,26 +578,26 @@ export class x402MonetizationConnector {
       context,
       idempotencyKey,
       grossAmountCents,
-      this.guard.getPolicyVersion(),
+      this.guard.getPolicyVersion()
     );
 
     return {
       status: 200,
       headers: {
-        "X-BookPI-Event-Id": ledgerEvent.eventId,
-        "X-BookPI-Hash": ledgerEvent.currentHash,
+        'X-BookPI-Event-Id': ledgerEvent.eventId,
+        'X-BookPI-Hash': ledgerEvent.currentHash,
       },
       body: {
         success: true,
-        message: "Monetization transaction settled successfully",
+        message: 'Monetization transaction settled successfully',
         distribution: {
           totalGrossUSD: grossAmountCents / 100,
           creator75PercentUSD: ledgerEvent.creatorCreditCents / 100,
           platform25PercentUSD: ledgerEvent.platformFeeCents / 100,
-          splitRule: "CANONICAL_75_25_SPLIT",
+          splitRule: 'CANONICAL_75_25_SPLIT',
         },
         bookPIEntry: ledgerEvent,
-        schemaVersion: "v3.0-MASTER-EXTENDED",
+        schemaVersion: 'v3.0-MASTER-EXTENDED',
       },
     };
   }
@@ -609,18 +609,18 @@ export class x402MonetizationConnector {
   public verifyX402PaymentSignature(
     header: string,
     expected: x402PaymentExpectation | number,
-    maybeRest?: Partial<x402PaymentExpectation>,
+    maybeRest?: Partial<x402PaymentExpectation>
   ): x402VerificationResult | boolean {
-    if (typeof expected === "number") {
+    if (typeof expected === 'number') {
       // Compatibilidad: solo monto → exige resourceId/tenantId en maybeRest (o false).
       const full: x402PaymentExpectation = {
         amountCents: expected,
-        resourceId: maybeRest?.resourceId ?? "",
-        tenantId: maybeRest?.tenantId ?? "",
+        resourceId: maybeRest?.resourceId ?? '',
+        tenantId: maybeRest?.tenantId ?? '',
         now: maybeRest?.now,
       };
       if (!full.resourceId || !full.tenantId) {
-        return { ok: false, reason: "MISSING_BINDING_EXPECTATION" };
+        return { ok: false, reason: 'MISSING_BINDING_EXPECTATION' };
       }
       return verifyX402Payment(header, full, this.replayStore);
     }

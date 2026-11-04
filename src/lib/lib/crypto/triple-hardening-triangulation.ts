@@ -1,6 +1,6 @@
 /**
  * TRIPLE HARDENING EN TRIANGULACIÓN CRIPTOGRÁFICA
- * (src/lib/crypto/triple-hardening-triangulation.ts)
+ * (src/lib/lib/crypto/triple-hardening-triangulation.ts)
  * ============================================================================
  * Ecosistema TAMV / RDM Digital Hub / Isabella Villaseñor AI v4.2.0
  *
@@ -37,12 +37,12 @@ import {
   pbkdf2Sync,
   randomBytes,
   timingSafeEqual,
-} from "node:crypto";
-import { config } from "../config";
-import { SovereignAudit } from "../sovereign-audit";
+} from 'node:crypto';
+import { config } from '../config';
+import { SovereignAudit } from '../sovereign-audit';
 
 export interface TriangulatedEnvelope {
-  version: "triangulation-v3-hardened";
+  version: 'triangulation-v3-hardened';
   envelopeId: string;
   tenantId: string;
   purpose: string;
@@ -50,7 +50,7 @@ export interface TriangulatedEnvelope {
 
   // Vértice Alfa: AES-256-GCM
   vertexAlpha: {
-    cipher: "aes-256-gcm";
+    cipher: 'aes-256-gcm';
     nonce: string; // base64url
     ciphertext: string; // base64url
     tag: string; // base64url
@@ -59,7 +59,7 @@ export interface TriangulatedEnvelope {
 
   // Vértice Beta: ChaCha20-Poly1305
   vertexBeta: {
-    cipher: "chacha20-poly1305";
+    cipher: 'chacha20-poly1305';
     salt: string; // base64url
     iv: string; // base64url
     ciphertext: string; // base64url
@@ -69,7 +69,7 @@ export interface TriangulatedEnvelope {
 
   // Vértice Gamma: Sello de Consenso e Integridad BookPI
   vertexGamma: {
-    consensusAlgorithm: "HMAC-SHA3-512/bookpi-consensus-v3";
+    consensusAlgorithm: 'HMAC-SHA3-512/bookpi-consensus-v3';
     merkleRoot: string; // hex
     blockSeal: string; // hex
     tripartiteChecksum: string; // sha384 hex
@@ -77,7 +77,7 @@ export interface TriangulatedEnvelope {
 }
 
 export class CryptographicTriangulation {
-  private static readonly VERSION = "triangulation-v3-hardened";
+  private static readonly VERSION = 'triangulation-v3-hardened';
   private static readonly PBKDF2_ROUNDS = 120_000;
 
   /**
@@ -89,19 +89,19 @@ export class CryptographicTriangulation {
     if (overrideKey !== undefined) {
       if (overrideKey.length < 32) {
         throw new Error(
-          "TriangulationSecurityError: overrideKey must be at least 32 characters (fail-closed).",
+          'TriangulationSecurityError: overrideKey must be at least 32 characters (fail-closed).'
         );
       }
-      return Buffer.from(overrideKey, "utf8").subarray(0, 32);
+      return Buffer.from(overrideKey, 'utf8').subarray(0, 32);
     }
     const cfg = config();
     const secret = cfg.ENCRYPTION_MASTER_KEY || cfg.AUTH_JWT_SECRET;
     if (!secret || secret.trim().length < 32) {
       throw new Error(
-        "TriangulationSecurityError: ENCRYPTION_MASTER_KEY (>=32) o AUTH_JWT_SECRET (>=32) requerido; sin secreto maestro no se cifra (fail-closed).",
+        'TriangulationSecurityError: ENCRYPTION_MASTER_KEY (>=32) o AUTH_JWT_SECRET (>=32) requerido; sin secreto maestro no se cifra (fail-closed).'
       );
     }
-    return Buffer.from(createHash("sha256").update(secret).digest());
+    return Buffer.from(createHash('sha256').update(secret).digest());
   }
 
   /**
@@ -109,8 +109,8 @@ export class CryptographicTriangulation {
    */
   private static computeTenantBinding(tenantId: string, purpose: string): Buffer {
     return Buffer.from(
-      createHash("sha256").update(`isabella-triangulation|${tenantId}|${purpose}`).digest("hex"),
-      "utf8",
+      createHash('sha256').update(`isabella-triangulation|${tenantId}|${purpose}`).digest('hex'),
+      'utf8'
     );
   }
 
@@ -124,18 +124,18 @@ export class CryptographicTriangulation {
       tenantId: string;
       purpose: string;
       masterKey?: string;
-    },
+    }
   ): Promise<TriangulatedEnvelope> {
-    if (!plaintext || typeof plaintext !== "string") {
-      throw new Error("TriangulationError: Plaintext must be a non-empty string.");
+    if (!plaintext || typeof plaintext !== 'string') {
+      throw new Error('TriangulationError: Plaintext must be a non-empty string.');
     }
     if (!options.tenantId || !options.purpose) {
       throw new Error(
-        "TriangulationError: tenantId and purpose are mandatory for cryptographic binding.",
+        'TriangulationError: tenantId and purpose are mandatory for cryptographic binding.'
       );
     }
 
-    const envelopeId = `tri_${randomBytes(12).toString("hex")}`;
+    const envelopeId = `tri_${randomBytes(12).toString('hex')}`;
     const timestamp = new Date().toISOString();
     const masterKey = this.resolveMasterKey(options.masterKey);
     const tenantBinding = this.computeTenantBinding(options.tenantId, options.purpose);
@@ -145,16 +145,16 @@ export class CryptographicTriangulation {
     // ------------------------------------------------------------------------
     const dek = randomBytes(32);
     const alphaNonce = randomBytes(12);
-    const alphaCipher = createCipheriv("aes-256-gcm", dek, alphaNonce);
+    const alphaCipher = createCipheriv('aes-256-gcm', dek, alphaNonce);
     alphaCipher.setAAD(tenantBinding);
     const alphaCiphertext = Buffer.concat([
-      alphaCipher.update(plaintext, "utf8"),
+      alphaCipher.update(plaintext, 'utf8'),
       alphaCipher.final(),
     ]);
     const alphaTag = alphaCipher.getAuthTag();
 
     // Envolver el DEK usando la llave maestra mediante XOR y Hash HKDF
-    const dekWrapMask = createHmac("sha256", masterKey)
+    const dekWrapMask = createHmac('sha256', masterKey)
       .update(Buffer.concat([alphaNonce, tenantBinding]))
       .digest();
     const wrappedDek = Buffer.alloc(32);
@@ -167,26 +167,26 @@ export class CryptographicTriangulation {
     // ------------------------------------------------------------------------
     const betaSalt = randomBytes(16);
     const betaIv = randomBytes(12);
-    const derivedBeta = pbkdf2Sync(masterKey, betaSalt, this.PBKDF2_ROUNDS, 64, "sha512");
+    const derivedBeta = pbkdf2Sync(masterKey, betaSalt, this.PBKDF2_ROUNDS, 64, 'sha512');
     const betaKey = derivedBeta.subarray(0, 32);
     const betaMacKey = derivedBeta.subarray(32, 64);
 
     const betaCipher = createCipheriv(
-      "chacha20-poly1305",
+      'chacha20-poly1305',
       betaKey,
-      betaIv,
+      betaIv
     ) as unknown as ReturnType<typeof createCipheriv> & {
       setAAD: (aad: Buffer) => void;
       getAuthTag: () => Buffer;
     };
     betaCipher.setAAD(tenantBinding);
     const betaCiphertext = Buffer.concat([
-      betaCipher.update(plaintext, "utf8"),
+      betaCipher.update(plaintext, 'utf8'),
       betaCipher.final(),
     ]);
     const betaTag = betaCipher.getAuthTag();
 
-    const secondaryMac = createHmac("sha256", betaMacKey)
+    const secondaryMac = createHmac('sha256', betaMacKey)
       .update(Buffer.concat([tenantBinding, betaSalt, betaIv, betaCiphertext, betaTag]))
       .digest();
 
@@ -194,32 +194,32 @@ export class CryptographicTriangulation {
     // 3. VÉRTICE GAMMA (HMAC-SHA3-512 + BookPI Consensus Proof)
     // ------------------------------------------------------------------------
     // Árbol Merkle de los 2 vértices anteriores
-    const hashAlpha = createHash("sha256")
+    const hashAlpha = createHash('sha256')
       .update(Buffer.concat([alphaNonce, alphaCiphertext, alphaTag, wrappedDek]))
-      .digest("hex");
-    const hashBeta = createHash("sha256")
+      .digest('hex');
+    const hashBeta = createHash('sha256')
       .update(Buffer.concat([betaSalt, betaIv, betaCiphertext, betaTag, secondaryMac]))
-      .digest("hex");
+      .digest('hex');
 
-    const merkleRoot = createHash("sha3-256")
+    const merkleRoot = createHash('sha3-256')
       .update(`${hashAlpha}:${hashBeta}:${envelopeId}:${options.tenantId}`)
-      .digest("hex");
+      .digest('hex');
 
     const blockSeal = await SovereignAudit.signAuditSeal(merkleRoot);
 
     // Checksum tripartito unificado SHA-384
     // blockSeal es `audit-seal-v1:<base64url>` (UTF-8), NO hex.
-    const tripartiteChecksum = createHash("sha384")
+    const tripartiteChecksum = createHash('sha384')
       .update(
         Buffer.concat([
-          Buffer.from(merkleRoot, "hex"),
-          Buffer.from(blockSeal, "utf8"),
+          Buffer.from(merkleRoot, 'hex'),
+          Buffer.from(blockSeal, 'utf8'),
           tenantBinding,
           alphaTag,
           betaTag,
-        ]),
+        ])
       )
-      .digest("hex");
+      .digest('hex');
 
     return {
       version: this.VERSION,
@@ -228,22 +228,22 @@ export class CryptographicTriangulation {
       purpose: options.purpose,
       timestamp,
       vertexAlpha: {
-        cipher: "aes-256-gcm",
-        nonce: alphaNonce.toString("base64url"),
-        ciphertext: alphaCiphertext.toString("base64url"),
-        tag: alphaTag.toString("base64url"),
-        wrappedDek: wrappedDek.toString("base64url"),
+        cipher: 'aes-256-gcm',
+        nonce: alphaNonce.toString('base64url'),
+        ciphertext: alphaCiphertext.toString('base64url'),
+        tag: alphaTag.toString('base64url'),
+        wrappedDek: wrappedDek.toString('base64url'),
       },
       vertexBeta: {
-        cipher: "chacha20-poly1305",
-        salt: betaSalt.toString("base64url"),
-        iv: betaIv.toString("base64url"),
-        ciphertext: betaCiphertext.toString("base64url"),
-        tag: betaTag.toString("base64url"),
-        secondaryMac: secondaryMac.toString("base64url"),
+        cipher: 'chacha20-poly1305',
+        salt: betaSalt.toString('base64url'),
+        iv: betaIv.toString('base64url'),
+        ciphertext: betaCiphertext.toString('base64url'),
+        tag: betaTag.toString('base64url'),
+        secondaryMac: secondaryMac.toString('base64url'),
       },
       vertexGamma: {
-        consensusAlgorithm: "HMAC-SHA3-512/bookpi-consensus-v3",
+        consensusAlgorithm: 'HMAC-SHA3-512/bookpi-consensus-v3',
         merkleRoot,
         blockSeal,
         tripartiteChecksum,
@@ -262,16 +262,16 @@ export class CryptographicTriangulation {
       tenantId: string;
       purpose: string;
       masterKey?: string;
-    },
+    }
   ): Promise<string> {
     if (envelope.version !== this.VERSION) {
       throw new Error(`TriangulationError: Unsupported envelope version '${envelope.version}'.`);
     }
     if (envelope.tenantId !== options.tenantId) {
-      throw new Error("TriangulationSecurityError: Tenant binding mismatch (Fail-Closed).");
+      throw new Error('TriangulationSecurityError: Tenant binding mismatch (Fail-Closed).');
     }
     if (envelope.purpose !== options.purpose) {
-      throw new Error("TriangulationSecurityError: Purpose binding mismatch.");
+      throw new Error('TriangulationSecurityError: Purpose binding mismatch.');
     }
 
     const masterKey = this.resolveMasterKey(options.masterKey);
@@ -280,61 +280,61 @@ export class CryptographicTriangulation {
     // 1. Verificar resonancia del Vértice Gamma (Sello de auditoría y Checksum tripartito)
     const isSealValid = await SovereignAudit.verifyAuditSeal(
       envelope.vertexGamma.merkleRoot,
-      envelope.vertexGamma.blockSeal,
+      envelope.vertexGamma.blockSeal
     );
     if (!isSealValid) {
       throw new Error(
-        "TriangulationSecurityError: Vertex Gamma consensus seal verification failed.",
+        'TriangulationSecurityError: Vertex Gamma consensus seal verification failed.'
       );
     }
 
-    const alphaTag = Buffer.from(envelope.vertexAlpha.tag, "base64url");
-    const betaTag = Buffer.from(envelope.vertexBeta.tag, "base64url");
+    const alphaTag = Buffer.from(envelope.vertexAlpha.tag, 'base64url');
+    const betaTag = Buffer.from(envelope.vertexBeta.tag, 'base64url');
 
-    const expectedChecksum = createHash("sha384")
+    const expectedChecksum = createHash('sha384')
       .update(
         Buffer.concat([
-          Buffer.from(envelope.vertexGamma.merkleRoot, "hex"),
-          Buffer.from(envelope.vertexGamma.blockSeal, "utf8"),
+          Buffer.from(envelope.vertexGamma.merkleRoot, 'hex'),
+          Buffer.from(envelope.vertexGamma.blockSeal, 'utf8'),
           tenantBinding,
           alphaTag,
           betaTag,
-        ]),
+        ])
       )
-      .digest("hex");
+      .digest('hex');
 
     if (
       !timingSafeEqual(
-        Buffer.from(expectedChecksum, "hex"),
-        Buffer.from(envelope.vertexGamma.tripartiteChecksum, "hex"),
+        Buffer.from(expectedChecksum, 'hex'),
+        Buffer.from(envelope.vertexGamma.tripartiteChecksum, 'hex')
       )
     ) {
-      throw new Error("TriangulationSecurityError: Tripartite resonance checksum mismatch.");
+      throw new Error('TriangulationSecurityError: Tripartite resonance checksum mismatch.');
     }
 
     // 2. Verificar Vértice Beta (ChaCha20-Poly1305 secondary MAC)
-    const betaSalt = Buffer.from(envelope.vertexBeta.salt, "base64url");
-    const betaIv = Buffer.from(envelope.vertexBeta.iv, "base64url");
-    const betaCiphertext = Buffer.from(envelope.vertexBeta.ciphertext, "base64url");
-    const secondaryMac = Buffer.from(envelope.vertexBeta.secondaryMac, "base64url");
+    const betaSalt = Buffer.from(envelope.vertexBeta.salt, 'base64url');
+    const betaIv = Buffer.from(envelope.vertexBeta.iv, 'base64url');
+    const betaCiphertext = Buffer.from(envelope.vertexBeta.ciphertext, 'base64url');
+    const secondaryMac = Buffer.from(envelope.vertexBeta.secondaryMac, 'base64url');
 
-    const derivedBeta = pbkdf2Sync(masterKey, betaSalt, this.PBKDF2_ROUNDS, 64, "sha512");
+    const derivedBeta = pbkdf2Sync(masterKey, betaSalt, this.PBKDF2_ROUNDS, 64, 'sha512');
     const betaMacKey = derivedBeta.subarray(32, 64);
 
-    const expectedBetaMac = createHmac("sha256", betaMacKey)
+    const expectedBetaMac = createHmac('sha256', betaMacKey)
       .update(Buffer.concat([tenantBinding, betaSalt, betaIv, betaCiphertext, betaTag]))
       .digest();
 
     if (!timingSafeEqual(expectedBetaMac, secondaryMac)) {
-      throw new Error("TriangulationSecurityError: Vertex Beta secondary MAC integrity failed.");
+      throw new Error('TriangulationSecurityError: Vertex Beta secondary MAC integrity failed.');
     }
 
     // 3. Desencriptar Vértice Alfa (AES-256-GCM con DEK desenvuelta)
-    const alphaNonce = Buffer.from(envelope.vertexAlpha.nonce, "base64url");
-    const alphaCiphertext = Buffer.from(envelope.vertexAlpha.ciphertext, "base64url");
-    const wrappedDek = Buffer.from(envelope.vertexAlpha.wrappedDek, "base64url");
+    const alphaNonce = Buffer.from(envelope.vertexAlpha.nonce, 'base64url');
+    const alphaCiphertext = Buffer.from(envelope.vertexAlpha.ciphertext, 'base64url');
+    const wrappedDek = Buffer.from(envelope.vertexAlpha.wrappedDek, 'base64url');
 
-    const dekWrapMask = createHmac("sha256", masterKey)
+    const dekWrapMask = createHmac('sha256', masterKey)
       .update(Buffer.concat([alphaNonce, tenantBinding]))
       .digest();
     const dek = Buffer.alloc(32);
@@ -342,7 +342,7 @@ export class CryptographicTriangulation {
       dek[i] = wrappedDek[i] ^ dekWrapMask[i];
     }
 
-    const alphaDecipher = createDecipheriv("aes-256-gcm", dek, alphaNonce);
+    const alphaDecipher = createDecipheriv('aes-256-gcm', dek, alphaNonce);
     alphaDecipher.setAAD(tenantBinding);
     alphaDecipher.setAuthTag(alphaTag);
 
@@ -350,12 +350,12 @@ export class CryptographicTriangulation {
       const decryptedAlpha = Buffer.concat([
         alphaDecipher.update(alphaCiphertext),
         alphaDecipher.final(),
-      ]).toString("utf8");
+      ]).toString('utf8');
 
       return decryptedAlpha;
     } catch {
       throw new Error(
-        "TriangulationSecurityError: Vertex Alpha AES-GCM decryption failed (tampered data).",
+        'TriangulationSecurityError: Vertex Alpha AES-GCM decryption failed (tampered data).'
       );
     }
   }

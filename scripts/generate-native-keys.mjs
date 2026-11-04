@@ -47,6 +47,11 @@ const opsApiToken = token();
 const connectorWebhookSecret = secret();
 const webhookSigningSecret = secret();
 const tokenEncryptionKey = hexKey();
+const apiKeyPepper = secret();
+const federationSecret = secret();
+const federationVerifyToken = token();
+const ivccSubjectSalt = secret();
+const ivccWatermarkSecret = secret();
 
 const { privateKey, publicKey } = generateKeyPairSync("ed25519");
 const privatePem = privateKey.export({ format: "pem", type: "pkcs8" }).toString();
@@ -88,6 +93,11 @@ const lines = [
   "",
   "# --- Cifrado de tokens (reservado; AES-256-GCM, 32 bytes hex) ---",
   `TOKEN_ENCRYPTION_KEY=${quote(tokenEncryptionKey)}`,
+  `ISABELLA_API_KEY_PEPPER=${quote(apiKeyPepper)}`,
+  `ISABELLA_FEDERATION_SECRET=${quote(federationSecret)}`,
+  `ISABELLA_FEDERATION_VERIFY_TOKEN=${quote(federationVerifyToken)}`,
+  `IVCC_SUBJECT_SALT=${quote(ivccSubjectSalt)}`,
+  `IVCC_WATERMARK_SECRET=${quote(ivccWatermarkSecret)}`,
   "",
   "# --- T2/T3 · firmante Ed25519 de aprobación humana ---",
   `ISABELLA_APPROVAL_KEY_ID=${quote(keyId)}`,
@@ -122,6 +132,11 @@ const summary = [
   ["CONNECTOR_WEBHOOK_SECRET", connectorWebhookSecret],
   ["WEBHOOK_SIGNING_SECRET", webhookSigningSecret],
   ["TOKEN_ENCRYPTION_KEY", tokenEncryptionKey],
+  ["ISABELLA_API_KEY_PEPPER", apiKeyPepper],
+  ["ISABELLA_FEDERATION_SECRET", federationSecret],
+  ["ISABELLA_FEDERATION_VERIFY_TOKEN", federationVerifyToken],
+  ["IVCC_SUBJECT_SALT", ivccSubjectSalt],
+  ["IVCC_WATERMARK_SECRET", ivccWatermarkSecret],
 ];
 
 console.log(`[keys] Escrito: ${OUT}`);

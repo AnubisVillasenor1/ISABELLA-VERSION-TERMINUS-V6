@@ -17,7 +17,7 @@ export type AtlasProtocolExecution = {
   id: string;
   protocolId: string;
   actorId: string;
-  phase: "completed";
+  phase: 'completed';
   selectedPath: unknown;
   evaluatedPaths: unknown;
   collapsedAt: string;
@@ -29,7 +29,7 @@ export type LedgerEntry = {
   userId: string;
   amount: number;
   reason: string;
-  kind: "credit" | "debit";
+  kind: 'credit' | 'debit';
   he_hep_context: HeHepContext;
   createdAt: string;
 };
@@ -53,7 +53,7 @@ export type RecordEconomyEntryInput = {
   userId: string;
   amount: number;
   reason: string;
-  kind: "credit" | "debit";
+  kind: 'credit' | 'debit';
   he_hep_context?: HeHepContext;
 };
 

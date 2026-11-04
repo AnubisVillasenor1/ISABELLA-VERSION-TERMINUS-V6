@@ -1,17 +1,17 @@
-import { config } from "@/lib/config";
-import { GeminiProvider } from "./gemini-provider";
-import { OllamaProvider } from "./ollama-provider";
-import { OpenAICompatibleLocalProvider } from "./openai-compatible-provider";
-import { registerFreeAIFederation } from "./free-ai-federation";
-import { addProvider, invokeIntelligence, governIntelligence } from "./router";
+import { config } from '@/lib/config';
+import { GeminiProvider } from './gemini-provider';
+import { OllamaProvider } from './ollama-provider';
+import { OpenAICompatibleLocalProvider } from './openai-compatible-provider';
+import { registerFreeAIFederation } from './free-ai-federation';
+import { addProvider, invokeIntelligence, governIntelligence } from './router';
 
 let initialized = false;
 
 export function initializeIntelligencePlane(): void {
   if (initialized) return;
   const runtime = config();
-  const configured = runtime.LLM_DEFAULT_MODEL || "google/gemini-3.8-flash";
-  const model = configured.split("/").at(-1) ?? "gemini-3.8-flash";
+  const configured = runtime.LLM_DEFAULT_MODEL || 'google/gemini-3.8-flash';
+  const model = configured.split('/').at(-1) ?? 'gemini-3.8-flash';
 
   // Registration is not authorization. Production approval must come from the durable governance registry.
   addProvider(new GeminiProvider(model), false);
@@ -31,6 +31,6 @@ export function initializeIntelligencePlane(): void {
 }
 
 export { invokeIntelligence, governIntelligence };
-export * from "./contracts";
-export * from "./model-registry";
-export * from "./free-ai-federation";
+export * from './contracts';
+export * from './model-registry';
+export * from './free-ai-federation';

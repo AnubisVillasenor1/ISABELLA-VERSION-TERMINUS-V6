@@ -9,9 +9,9 @@
  * Los scripts de ejecución y tests imprimen los resultados.
  */
 
-import { performance } from "node:perf_hooks";
-import { ByteEntropyPatcher, NCUA_WINDOW_BYTES } from "./entropy-patcher";
-import { TunableConceptEngine } from "./concept-engine";
+import { performance } from 'node:perf_hooks';
+import { ByteEntropyPatcher, NCUA_WINDOW_BYTES } from './entropy-patcher';
+import { TunableConceptEngine } from './concept-engine';
 
 export const BENCHMARK_ENTROPY_THRESHOLDS: readonly number[] = [1.2, 1.5, 1.8, 2.0, 2.5];
 
@@ -22,16 +22,16 @@ export interface BenchmarkPrompt {
 
 export const NCUA_BENCHMARK_PROMPTS: readonly BenchmarkPrompt[] = [
   {
-    name: "Prompt Corto (Comando de Gobernanza)",
-    text: "Ejecutar auditoría C.R.O.W.N. en Nodo Cero.",
+    name: 'Prompt Corto (Comando de Gobernanza)',
+    text: 'Ejecutar auditoría C.R.O.W.N. en Nodo Cero.',
   },
   {
-    name: "Prompt Mediano (Inspección Territorial)",
-    text: "Ejecutar análisis de soberanía territorial e inspección cuántica en el Gemelo Digital de Real del Monte, verificando el sellado BookPI y la resonancia con PennyLane QUP v3.0.",
+    name: 'Prompt Mediano (Inspección Territorial)',
+    text: 'Ejecutar análisis de soberanía territorial e inspección cuántica en el Gemelo Digital de Real del Monte, verificando el sellado BookPI y la resonancia con PennyLane QUP v3.0.',
   },
   {
-    name: "Prompt Complejo (Inferencia Multicapa)",
-    text: "Simular escenario SOVCON 3 con cuarentena de herramientas externas, aislamiento estricto de tenants en Supabase Neon PostgreSQL y cálculo de gradientes Parameter-Shift en espacio de Hilbert de 16 qubits.",
+    name: 'Prompt Complejo (Inferencia Multicapa)',
+    text: 'Simular escenario SOVCON 3 con cuarentena de herramientas externas, aislamiento estricto de tenants en Supabase Neon PostgreSQL y cálculo de gradientes Parameter-Shift en espacio de Hilbert de 16 qubits.',
   },
 ];
 
@@ -103,9 +103,9 @@ export interface NcuaBenchmarkReport {
 
 function tuneThresholds(
   prompts: readonly BenchmarkPrompt[],
-  thresholds: readonly number[],
+  thresholds: readonly number[]
 ): NcuaBenchmarkReport {
-  const mediumText = prompts[1]?.text ?? prompts[0]?.text ?? "";
+  const mediumText = prompts[1]?.text ?? prompts[0]?.text ?? '';
   const conceptEngine = new TunableConceptEngine(8);
   const rows: ThresholdBenchmarkRow[] = [];
 
@@ -118,9 +118,9 @@ function tuneThresholds(
     const patches = patcher.segmentIntoBytePatches(mediumText);
     const concept = conceptEngine.projectToContinuousConcept(patches, threshold);
     const latencyMs = parseFloat((performance.now() - start).toFixed(3));
-    let diagnosis = "Sub-óptimo (Alta Fragmentación)";
-    if (concept.eriScore >= 90) diagnosis = "ÓPTIMO (Equilibrio Soberano)";
-    else if (threshold > 2.2) diagnosis = "Sub-óptimo (Agrupación Excesiva)";
+    let diagnosis = 'Sub-óptimo (Alta Fragmentación)';
+    if (concept.eriScore >= 90) diagnosis = 'ÓPTIMO (Equilibrio Soberano)';
+    else if (threshold > 2.2) diagnosis = 'Sub-óptimo (Agrupación Excesiva)';
     rows.push({
       threshold,
       patches: patches.length,
@@ -183,7 +183,7 @@ function tuneThresholds(
 
 export function executeNcuaBenchmark(
   prompts: readonly BenchmarkPrompt[] = NCUA_BENCHMARK_PROMPTS,
-  thresholds: readonly number[] = BENCHMARK_ENTROPY_THRESHOLDS,
+  thresholds: readonly number[] = BENCHMARK_ENTROPY_THRESHOLDS
 ): NcuaBenchmarkReport {
   return tuneThresholds(prompts, thresholds);
 }

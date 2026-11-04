@@ -10,10 +10,10 @@
  *   ESCALATE — high/critical risk without a valid human approval.
  *   DEGRADE  — the per-minute call budget is exhausted.
  */
-import type { RiskTier } from "../authority/method-id";
-import type { SkillContract } from "./contracts";
+import type { RiskTier } from '../authority/method-id';
+import type { SkillContract } from './contracts';
 
-export type CrownPolicyVerdict = "ALLOW" | "DENY" | "ESCALATE" | "DEGRADE";
+export type CrownPolicyVerdict = 'ALLOW' | 'DENY' | 'ESCALATE' | 'DEGRADE';
 
 export interface CrownPolicyInput {
   readonly contract: SkillContract;
@@ -32,21 +32,25 @@ export interface CrownPolicyDecision {
 
 export function evaluateCrownPolicy(input: CrownPolicyInput): CrownPolicyDecision {
   const missingScopes = input.contract.authority.requiredScopes.filter(
-    (scope) => !input.grantedScopes.includes(scope),
+    (scope) => !input.grantedScopes.includes(scope)
   );
   if (missingScopes.length > 0) {
-    return { verdict: "DENY", reason: `missing required scopes: ${missingScopes.join(", ")}`, missingScopes };
+    return {
+      verdict: 'DENY',
+      reason: `missing required scopes: ${missingScopes.join(', ')}`,
+      missingScopes,
+    };
   }
 
-  const highRisk = input.riskTier === "HIGH" || input.riskTier === "CRITICAL";
+  const highRisk = input.riskTier === 'HIGH' || input.riskTier === 'CRITICAL';
   const needsApproval = highRisk || input.contract.authority.requiresStepUp;
   if (needsApproval && !input.approvalProvided) {
-    return { verdict: "ESCALATE", reason: "human approval required", missingScopes };
+    return { verdict: 'ESCALATE', reason: 'human approval required', missingScopes };
   }
 
   if (input.callsThisWindow >= input.contract.limits.maxCallsPerMinute) {
-    return { verdict: "DEGRADE", reason: "calls-per-minute budget exhausted", missingScopes };
+    return { verdict: 'DEGRADE', reason: 'calls-per-minute budget exhausted', missingScopes };
   }
 
-  return { verdict: "ALLOW", reason: "policy satisfied", missingScopes };
+  return { verdict: 'ALLOW', reason: 'policy satisfied', missingScopes };
 }

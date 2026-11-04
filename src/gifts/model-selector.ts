@@ -10,13 +10,13 @@
  * Invariante (AGENTS.md): solo recomienda un recurso; no autoriza ni invoca
  * proveedores. Fail-closed: sin candidato factible no hay selección.
  */
-import { clamp, digest, round } from "./util";
+import { clamp, digest, round } from './util';
 
-export const MODEL_SELECTOR_VERSION = "1.0.0" as const;
+export const MODEL_SELECTOR_VERSION = '1.0.0' as const;
 export const MODEL_SELECTOR_METHOD_ID =
-  "A.TWINS.LEGACY.model_selector.select.v1.0.0.LOW.AUTONOMOUS" as const;
+  'A.TWINS.LEGACY.model_selector.select.v1.0.0.LOW.AUTONOMOUS' as const;
 export const MODEL_SELECTOR_DISCLAIMER =
-  "El selector de modelo recomienda un recurso por latencia·costo·calidad; no concede autoridad ni ejecuta inferencia.";
+  'El selector de modelo recomienda un recurso por latencia·costo·calidad; no concede autoridad ni ejecuta inferencia.';
 
 export interface ModelCandidate {
   readonly id: string;
@@ -74,10 +74,19 @@ function normalizeWeights(weights: SelectionWeights | undefined): Required<Selec
   return { latency: merged.latency / sum, cost: merged.cost / sum, quality: merged.quality / sum };
 }
 
-function feasibilityReason(model: ModelCandidate, objective: SelectionObjective): string | undefined {
-  if (objective.maxLatencyMs !== undefined && model.latencyMs > objective.maxLatencyMs) return "LATENCY_EXCEEDED";
-  if (objective.maxCostPer1kTokens !== undefined && model.costPer1kTokens > objective.maxCostPer1kTokens) return "COST_EXCEEDED";
-  if (objective.minQuality !== undefined && model.quality < objective.minQuality) return "QUALITY_BELOW_MINIMUM";
+function feasibilityReason(
+  model: ModelCandidate,
+  objective: SelectionObjective
+): string | undefined {
+  if (objective.maxLatencyMs !== undefined && model.latencyMs > objective.maxLatencyMs)
+    return 'LATENCY_EXCEEDED';
+  if (
+    objective.maxCostPer1kTokens !== undefined &&
+    model.costPer1kTokens > objective.maxCostPer1kTokens
+  )
+    return 'COST_EXCEEDED';
+  if (objective.minQuality !== undefined && model.quality < objective.minQuality)
+    return 'QUALITY_BELOW_MINIMUM';
   return undefined;
 }
 
@@ -88,23 +97,30 @@ function normalize(value: number, min: number, max: number): number {
 
 export function selectModel(
   candidates: readonly ModelCandidate[],
-  objective: SelectionObjective = {},
+  objective: SelectionObjective = {}
 ): ModelSelection {
-  if (!Array.isArray(candidates) || candidates.length === 0) throw new Error("MODEL_SELECTOR_CANDIDATES_REQUIRED");
+  if (!Array.isArray(candidates) || candidates.length === 0)
+    throw new Error('MODEL_SELECTOR_CANDIDATES_REQUIRED');
   for (const c of candidates) {
-    if (!c.id || !c.id.trim()) throw new Error("MODEL_SELECTOR_ID_REQUIRED");
-    if (!Number.isFinite(c.latencyMs) || c.latencyMs < 0) throw new Error("MODEL_SELECTOR_LATENCY_INVALID");
-    if (!Number.isFinite(c.costPer1kTokens) || c.costPer1kTokens < 0) throw new Error("MODEL_SELECTOR_COST_INVALID");
-    if (!Number.isFinite(c.quality) || c.quality < 0 || c.quality > 1) throw new Error("MODEL_SELECTOR_QUALITY_INVALID");
+    if (!c.id || !c.id.trim()) throw new Error('MODEL_SELECTOR_ID_REQUIRED');
+    if (!Number.isFinite(c.latencyMs) || c.latencyMs < 0)
+      throw new Error('MODEL_SELECTOR_LATENCY_INVALID');
+    if (!Number.isFinite(c.costPer1kTokens) || c.costPer1kTokens < 0)
+      throw new Error('MODEL_SELECTOR_COST_INVALID');
+    if (!Number.isFinite(c.quality) || c.quality < 0 || c.quality > 1)
+      throw new Error('MODEL_SELECTOR_QUALITY_INVALID');
   }
 
   const weights = normalizeWeights(objective.weights);
   const latencies = candidates.map((c) => c.latencyMs);
   const costs = candidates.map((c) => c.costPer1kTokens);
   const qualities = candidates.map((c) => c.quality);
-  const minLat = Math.min(...latencies), maxLat = Math.max(...latencies);
-  const minCost = Math.min(...costs), maxCost = Math.max(...costs);
-  const minQ = Math.min(...qualities), maxQ = Math.max(...qualities);
+  const minLat = Math.min(...latencies),
+    maxLat = Math.max(...latencies);
+  const minCost = Math.min(...costs),
+    maxCost = Math.max(...costs);
+  const minQ = Math.min(...qualities),
+    maxQ = Math.max(...qualities);
 
   const ranked: RankedModel[] = candidates.map((model) => {
     const lat = 1 - normalize(model.latencyMs, minLat, maxLat);
@@ -129,8 +145,12 @@ export function selectModel(
     ranked: Object.freeze(ranked),
     feasible: chosen !== undefined,
     weights,
-    reason: chosen ? "BEST_FEASIBLE_SCORE" : "NO_FEASIBLE_MODEL",
-    digest: digest({ objective, weights, ranked: ranked.map((r) => ({ id: r.model.id, score: r.score, feasible: r.feasible })) }),
+    reason: chosen ? 'BEST_FEASIBLE_SCORE' : 'NO_FEASIBLE_MODEL',
+    digest: digest({
+      objective,
+      weights,
+      ranked: ranked.map((r) => ({ id: r.model.id, score: r.score, feasible: r.feasible })),
+    }),
     methodId: MODEL_SELECTOR_METHOD_ID,
     disclaimer: MODEL_SELECTOR_DISCLAIMER,
   };

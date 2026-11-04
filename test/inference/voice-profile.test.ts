@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { compareToProfile, measure, parseWav16 } from "../../src/inference/voice-analysis";
-import { chunkForSpeech, ISABELLA_VOICE_PROFILE, pickVoice, scoreVoiceCandidate } from "../../src/inference/voice-profile";
+import {
+  CANONICAL_VOICE_ID,
+  chunkForSpeech,
+  ISABELLA_VOICE_PROFILE,
+  pickVoice,
+  resolveCanonicalVoice,
+  scoreVoiceCandidate,
+} from "../../src/inference/voice-profile";
 
 function wav(samples: Float32Array, sr: number): Uint8Array {
   const buf = new Uint8Array(44 + samples.length * 2);
@@ -29,6 +36,36 @@ describe("voice profile", () => {
     ]);
     expect(best?.name).toBe("Microsoft Dalia Online");
     expect(pickVoice([{ name: "Alex", lang: "en-US" }])).toBeNull();
+  });
+
+  it("never selects a male Spanish voice", () => {
+    expect(scoreVoiceCandidate({ name: "Microsoft Jorge", lang: "es-MX" })).toBe(-1);
+    expect(scoreVoiceCandidate({ name: "Microsoft Sabina", lang: "es-MX" })).toBeGreaterThan(0);
+    expect(
+      pickVoice([
+        { name: "Microsoft Jorge", lang: "es-MX" },
+        { name: "Microsoft Sabina", lang: "es-MX" },
+      ])?.name
+    ).toBe("Microsoft Sabina");
+    expect(pickVoice([{ name: "Microsoft Raul", lang: "es-MX" }])).toBeNull();
+  });
+
+  it("resolves one canonical female voice and refuses male or unknown overrides", () => {
+    const canonical = resolveCanonicalVoice({});
+    expect(canonical).toMatchObject({
+      id: CANONICAL_VOICE_ID,
+      language: "es-MX",
+      gender: "female",
+      providerVoice: "Celeste-PlayAI",
+      nativeVoiceId: "isabella-esmx-v1",
+    });
+    expect(Object.isFrozen(canonical)).toBe(true);
+    expect(resolveCanonicalVoice({ GROQ_TTS_VOICE: "troy" }).providerVoice).toBe("Celeste-PlayAI");
+    expect(resolveCanonicalVoice({ GROQ_TTS_VOICE: "female-en" }).providerVoice).toBe("Celeste-PlayAI");
+    expect(resolveCanonicalVoice({ GROQ_TTS_VOICE: "Nyla-PlayAI" }).providerVoice).toBe("Nyla-PlayAI");
+    expect(resolveCanonicalVoice({ ISABELLA_NATIVE_VOICE_ID: "mi-voz-femenina" }).nativeVoiceId).toBe(
+      "mi-voz-femenina"
+    );
   });
 
   it("chunks speech by sentence and bounds chunk length", () => {

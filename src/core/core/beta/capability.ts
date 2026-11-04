@@ -4,7 +4,7 @@
  * Registro y selección de capacidades/herramientas autorizadas.
  */
 
-import type { IsabellaDualRequest } from "../contracts";
+import type { IsabellaDualRequest } from '../contracts';
 
 export interface CapabilitySelection {
   capabilityId: string;
@@ -17,7 +17,7 @@ export class CapabilityRegistry {
     intent: string;
     requestedCapabilities: string[];
     allowedScopes: string[];
-    constraints?: IsabellaDualRequest["constraints"];
+    constraints?: IsabellaDualRequest['constraints'];
   }): CapabilitySelection | null {
     if (input.requestedCapabilities.length === 0) {
       return null;
@@ -28,7 +28,7 @@ export class CapabilityRegistry {
     return {
       capabilityId: first,
       name: `Capability_${first}`,
-      authorized: input.allowedScopes.includes(first) || input.allowedScopes.includes("all"),
+      authorized: input.allowedScopes.includes(first) || input.allowedScopes.includes('all'),
     };
   }
 }

@@ -10,22 +10,15 @@
  * con apariencia de secretos, omite binarios y registra en BookPI solo metadatos y
  * hashes (nunca contenido del diff).
  */
-import { createHash } from "node:crypto";
+import { createHash } from 'node:crypto';
 
 export type DiffStatus =
-  | "added"
-  | "modified"
-  | "deleted"
-  | "renamed"
-  | "copied"
-  | "untracked"
-  | "ignored"
-  | "binary";
+  'added' | 'modified' | 'deleted' | 'renamed' | 'copied' | 'untracked' | 'ignored' | 'binary';
 
-export type DiffRiskLevel = "none" | "low" | "medium" | "high" | "critical";
+export type DiffRiskLevel = 'none' | 'low' | 'medium' | 'high' | 'critical';
 
 export interface DiffLine {
-  type: "context" | "addition" | "deletion" | "meta";
+  type: 'context' | 'addition' | 'deletion' | 'meta';
   text: string;
   oldLine?: number;
   newLine?: number;
@@ -93,16 +86,20 @@ export interface DiffObservatoryContext {
   };
   transcript: { appendUserContext?: (context: DiffAskContext) => void };
   ui: {
-    registerCommand: (command: { name: string; description: string; run: (args?: string[]) => void }) => void;
+    registerCommand: (command: {
+      name: string;
+      description: string;
+      run: (args?: string[]) => void;
+    }) => void;
     registerPane: (pane: DiffPaneDefinition) => void;
     isTerminalWideEnough?: (minimumColumns: number) => boolean;
-    notify?: (message: string, level?: "info" | "success" | "warning" | "error") => void;
+    notify?: (message: string, level?: 'info' | 'success' | 'warning' | 'error') => void;
   };
   events?: { on: (event: string, listener: () => void) => () => void };
   bookpi?: DiffBookPiSink;
 }
 
-export const DIFF_PLUGIN_ID = "isabella.diff";
+export const DIFF_PLUGIN_ID = 'isabella.diff';
 export const DIFF_MIN_TERMINAL_COLUMNS = 118;
 const REFRESH_DEBOUNCE_MS = 180;
 
@@ -114,7 +111,10 @@ const SECRET_PATTERNS: readonly RegExp[] = [
 ];
 
 export function redactDiffText(text: string): string {
-  return SECRET_PATTERNS.reduce((value, pattern) => value.replace(pattern, "[REDACTED_SECRET]"), text);
+  return SECRET_PATTERNS.reduce(
+    (value, pattern) => value.replace(pattern, '[REDACTED_SECRET]'),
+    text
+  );
 }
 
 const SENSITIVE_PATH = /(auth|security|policy|rls|migration|payment|stripe|deploy|workflow)/;
@@ -124,21 +124,22 @@ const CREDENTIAL_PATH = /\.env|credentials|id_rsa|\.pem$/;
 export function assessDiffRisk(file: DiffFile): { risk: DiffRiskLevel; reasons: string[] } {
   const reasons: string[] = [];
   const path = file.path.toLowerCase();
-  if ((file.secretLikeMatches ?? 0) > 0) reasons.push("possible-secret");
-  if (SENSITIVE_PATH.test(path)) reasons.push("sensitive-path");
-  if (file.deletions > 300 || file.additions > 500) reasons.push("large-change");
-  if (LOCKFILE.test(path)) reasons.push("dependency-lock");
-  if (CREDENTIAL_PATH.test(path)) reasons.push("credential-like-path");
+  if ((file.secretLikeMatches ?? 0) > 0) reasons.push('possible-secret');
+  if (SENSITIVE_PATH.test(path)) reasons.push('sensitive-path');
+  if (file.deletions > 300 || file.additions > 500) reasons.push('large-change');
+  if (LOCKFILE.test(path)) reasons.push('dependency-lock');
+  if (CREDENTIAL_PATH.test(path)) reasons.push('credential-like-path');
 
-  const risk: DiffRiskLevel = reasons.includes("possible-secret") || reasons.includes("credential-like-path")
-    ? "critical"
-    : reasons.includes("sensitive-path")
-      ? "high"
-      : reasons.includes("large-change") || reasons.includes("dependency-lock")
-        ? "medium"
-        : reasons.length
-          ? "low"
-          : "none";
+  const risk: DiffRiskLevel =
+    reasons.includes('possible-secret') || reasons.includes('credential-like-path')
+      ? 'critical'
+      : reasons.includes('sensitive-path')
+        ? 'high'
+        : reasons.includes('large-change') || reasons.includes('dependency-lock')
+          ? 'medium'
+          : reasons.length
+            ? 'low'
+            : 'none';
   return { risk, reasons };
 }
 
@@ -147,7 +148,12 @@ export function sanitizeDiffSnapshot(snapshot: DiffSnapshot): DiffSnapshot {
   const files = snapshot.files.map((file) => {
     if (file.isBinary) {
       const assessed = assessDiffRisk({ ...file, secretLikeMatches: 0 });
-      return { ...file, hunks: [], risk: assessed.risk, riskReasons: [...assessed.reasons, "binary-omitted"] };
+      return {
+        ...file,
+        hunks: [],
+        risk: assessed.risk,
+        riskReasons: [...assessed.reasons, 'binary-omitted'],
+      };
     }
     let secretLikeMatches = 0;
     const hunks = file.hunks.map((hunk) => ({
@@ -185,7 +191,7 @@ export function snapshotMetadataHash(snapshot: DiffSnapshot): string {
     risk: file.risk,
     contentHash: file.contentHash,
   }));
-  return createHash("sha256").update(JSON.stringify(metadata), "utf8").digest("hex");
+  return createHash('sha256').update(JSON.stringify(metadata), 'utf8').digest('hex');
 }
 
 export interface DiffObservatory {
@@ -209,13 +215,16 @@ export function createDiffObservatory(context: DiffObservatoryContext): DiffObse
       refreshTimer = setTimeout(() => {
         void (async () => {
           try {
-            state.snapshot = sanitizeDiffSnapshot(await context.workspace.readDiff({ redacted: true }));
+            state.snapshot = sanitizeDiffSnapshot(
+              await context.workspace.readDiff({ redacted: true })
+            );
             if (!observedFirstEdit && state.snapshot.files.length > 0) {
               observedFirstEdit = true;
-              if (context.ui.isTerminalWideEnough?.(DIFF_MIN_TERMINAL_COLUMNS) ?? true) state.open = true;
+              if (context.ui.isTerminalWideEnough?.(DIFF_MIN_TERMINAL_COLUMNS) ?? true)
+                state.open = true;
             }
             await context.bookpi?.append({
-              type: "diff.observation",
+              type: 'diff.observation',
               metadata: {
                 plugin: DIFF_PLUGIN_ID,
                 snapshotId: state.snapshot.id,
@@ -227,7 +236,10 @@ export function createDiffObservatory(context: DiffObservatoryContext): DiffObse
               },
             });
           } catch (error) {
-            context.ui.notify?.(`No se pudo actualizar Diff Observatory: ${String(error)}`, "error");
+            context.ui.notify?.(
+              `No se pudo actualizar Diff Observatory: ${String(error)}`,
+              'error'
+            );
           } finally {
             resolve();
           }
@@ -238,31 +250,38 @@ export function createDiffObservatory(context: DiffObservatoryContext): DiffObse
 
   const pane: DiffPaneDefinition = {
     id: DIFF_PLUGIN_ID,
-    title: "Isabella · Diff Observatory",
-    open: () => { state.open = true; },
-    close: () => { state.open = false; },
+    title: 'Isabella · Diff Observatory',
+    open: () => {
+      state.open = true;
+    },
+    close: () => {
+      state.open = false;
+    },
     refresh,
     render: () => ({
-      type: "diff-observatory",
+      type: 'diff-observatory',
       open: state.open,
       snapshot: state.snapshot,
-      actions: { refresh: "refresh", askFile: "ask-file", openBookPI: "open-bookpi" },
+      actions: { refresh: 'refresh', askFile: 'ask-file', openBookPI: 'open-bookpi' },
     }),
   };
 
   context.ui.registerPane(pane);
   context.ui.registerCommand({
-    name: "/diff",
-    description: "Abrir o actualizar el observatorio de cambios de Isabella.",
+    name: '/diff',
+    description: 'Abrir o actualizar el observatorio de cambios de Isabella.',
     run: (args = []) => {
-      const action = args[0] ?? "open";
-      if (action === "close") state.open = false;
-      else if (action === "refresh") void refresh();
-      else { state.open = true; void refresh(); }
+      const action = args[0] ?? 'open';
+      if (action === 'close') state.open = false;
+      else if (action === 'refresh') void refresh();
+      else {
+        state.open = true;
+        void refresh();
+      }
     },
   });
 
-  for (const event of ["claude.edit", "shell.command", "turn.finished", "workspace.changed"]) {
+  for (const event of ['claude.edit', 'shell.command', 'turn.finished', 'workspace.changed']) {
     const unsubscribe = context.events?.on(event, () => void refresh());
     if (unsubscribe) unsubscribers.push(unsubscribe);
   }
@@ -278,7 +297,12 @@ export function createDiffObservatory(context: DiffObservatoryContext): DiffObse
     ask: (path, prompt) => {
       const file = state.snapshot?.files.find((f) => f.path === path);
       if (!file || !state.snapshot) return;
-      context.transcript.appendUserContext?.({ path, snapshotId: state.snapshot.id, hunks: file.hunks, prompt });
+      context.transcript.appendUserContext?.({
+        path,
+        snapshotId: state.snapshot.id,
+        hunks: file.hunks,
+        prompt,
+      });
     },
     dispose: () => {
       if (refreshTimer) clearTimeout(refreshTimer);

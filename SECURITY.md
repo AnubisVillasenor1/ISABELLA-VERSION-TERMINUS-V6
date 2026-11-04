@@ -28,6 +28,25 @@ Until a dedicated private security contact is configured, report suspected vulne
 - Evolution evidence cannot promote a control from self-reported passed=true records alone; an external evidence verifier must be wired.
 - The post-quantum and HSM providers are not configured. The system must not claim FIPS/ML-DSA/ML-KEM verification until an actual provider and test evidence exist.
 
+## Cryptographic verification implemented in-process
+
+These controls now verify real signatures and hashes instead of returning placeholder successes. They remain process-local and have not been externally audited.
+
+- **Passwords:** scrypt with a random per-hash salt and self-describing cost parameters (`N`, `r`, `p`). Legacy unsalted SHA-256 hashes are rejected.
+- **TOTP:** requires an enrolled secret, accepts a ±1 time-step window, and refuses a time step already consumed by the same credential.
+- **WebAuthn:** validates `clientDataJSON` type, exact challenge, origin, `crossOrigin`, RP ID hash, user-presence flag, optional user-verification flag, monotonically increasing `signCount`, and the assertion signature. `WEBAUTHN_RP_ID` and `WEBAUTHN_ORIGIN` (or per-credential metadata) are required trust anchors; without them assertions fail closed.
+- **Certificates:** requires a currently valid X.509 certificate whose SPKI exactly matches the pinned credential key, plus a signature over the challenge. A self-signed or external certificate is not trusted merely because it parses.
+- **Device credential:** requires a signature over `challenge + "\n" + attestation` verified with the enrolled device key. Attestations of type `none`, missing quotes, and missing verification keys are treated as untrusted.
+- **Device trust:** verification requires a server-issued, single-use, 60-second challenge plus a fresh signature over that challenge from the enrolled device key. The challenge is consumed on every attempt, including failures, so an enrollment quote cannot be replayed as a session proof.
+- **Evidence and policy:** cognitive governance denies when no policy applies, evaluates a restricted expression DSL without `eval`, verifies evidence signatures only against registered trusted keys, enforces classification clearance, requires signatures for confidential/restricted evidence, verifies every provenance link, and fails a quality gate with no checks.
+- **Sandbox:** refuses execution with `SANDBOX_BACKEND_UNAVAILABLE` when no isolation backend is configured.
+
+**Residual limits:** identity, device, and trust-anchor registries are in memory; there is no durable replay cache across process restarts. Challenge freshness for WebAuthn, certificate, and device *credentials* is the caller's responsibility — the identity provider checks the challenge it receives but does not issue or persist a nonce store for those factors. Certificate chains, revocation (CRL/OCSP), WebAuthn attestation trust chains, hardware-backed key custody, and distributed rate limiting are not implemented. These controls are test evidence, not a compliance certification.
+
+## Speech is never authority
+
+The native TTS surface plans prosody and delivers sentence-level text events; it does not synthesize provider audio, authorize actions, or execute anything. Barge-in marks are scoped to an actor, single-use, and expire. The chat UI treats every spoken fragment as untrusted text.
+
 ## Security boundaries (conceptual)
 
 - An identifier in a request is not authentication.

@@ -14,11 +14,18 @@ state: engine-generated · Confidencial TAMV Online Network: este documento desc
 | Memory Voice Core | `src/tts/memory.ts` | Pronunciaciones por sesión (`/pronuncia Kubernetes = Kúbernetes`), acotada, borrable; solo por instrucción explícita |
 | Gobernanza | `src/tts/governance.ts` | Nonce anti-replay con TTL, actor obligatorio opcional (`TTS_STRICT_GOVERNANCE=1`), topes de tamaño |
 | Evidencia | `src/tts/governance.ts` | Sello SHA3-512 sobre el digest del texto COMPLETO (no un prefijo) + evento BookPI |
-| Backends | `src/tts/engine.ts` | (1) servicio neuronal del operador, (2) TTS por clave (`GROQ_*`), (3) voz del navegador guiada por el plan |
-| HTTP | `src/routes/tts.ts` | `GET /api/v1/tts/status`, `POST /plan`, `POST /synthesize`, `POST|DELETE /memory` |
+| Segmentación incremental | `src/tts/streaming.ts` | `SentenceChunker` corta deltas de LLM en oraciones completas, elimina bloques de razonamiento (incluso con la etiqueta partida entre deltas), acota el búfer y divide frases gigantes; `BargeInRegistry` implementa la interrupción por actor con TTL y consumo único |
+| Backends | `src/tts/engine.ts` | (1) servicio neuronal del operador, (2) TTS por clave (`GROQ_*`), (3) voz del navegador guiada por el plan. `planStream()` entrega los mismos planes por oración |
+| HTTP | `src/routes/tts.ts` | `GET /api/v1/tts/status`, `POST /plan`, `POST /stream` (SSE), `POST /interrupt`, `POST /synthesize`, `POST|DELETE /memory` |
 | UI | `src/ui/app.js` | `speak()` pide el plan al servidor y habla por frases con su prosodia; reproduce audio real si un backend lo entrega; cae al modo local si falla |
 
 Si ningún backend entrega bytes de audio, `synthesize` devuelve `status: "client-plan"` (nunca un audio falso).
+
+### Entrega progresiva y barge-in
+
+`POST /api/v1/tts/stream` abre `text/event-stream` y emite `meta`, uno o más `chunk` (texto + plan + pausa + duración estimada), y `done`. Si el actor llamó antes a `POST /api/v1/tts/interrupt`, el flujo termina con `interrupted` y no entrega más chunks. Ambos endpoints son cómputo puro: devuelven `authorizationPerformed: false` y `executionPerformed: false`.
+
+El streaming es de **planes de prosodia**, no de audio: no existe PCM incremental del proveedor. Un chunk no es evidencia ni autorización, y la interrupción no cancela trabajo privilegiado porque este endpoint no lo inicia.
 
 ## Solo especificación (NO implementado aquí)
 

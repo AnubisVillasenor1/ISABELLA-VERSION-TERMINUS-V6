@@ -1,5 +1,5 @@
-import * as crypto from "node:crypto";
-import { secrets } from "./secrets";
+import * as crypto from 'node:crypto';
+import { secrets } from './secrets';
 
 /**
  * SERVICIO CRIPTOGRÁFICO DE API KEYS Y HARDENING (7-Capas)
@@ -15,33 +15,33 @@ import { secrets } from "./secrets";
 export class ApiKeyCrypto {
   private static readonly ITERATIONS = 100000;
   private static readonly KEYLEN = 64;
-  private static readonly DIGEST = "sha512";
-  private static readonly FORMAT_VERSION = "v7"; // 7-Layer Format
+  private static readonly DIGEST = 'sha512';
+  private static readonly FORMAT_VERSION = 'v7'; // 7-Layer Format
 
   /**
    * Genera un prefijo corto para búsquedas e identificación de llave.
    */
   public static generatePrefix(): string {
-    return crypto.randomBytes(6).toString("hex");
+    return crypto.randomBytes(6).toString('hex');
   }
 
   /**
    * Genera un secreto aleatorio de alta entropía.
    */
   public static generateSecret(): string {
-    return crypto.randomBytes(48).toString("base64url");
+    return crypto.randomBytes(48).toString('base64url');
   }
 
   /**
    * Calcula un hash criptográfico de 7 capas sobre un secreto en claro.
    */
   public static hashSecret(secret: string): string {
-    const salt = crypto.randomBytes(16).toString("hex");
+    const salt = crypto.randomBytes(16).toString('hex');
     const masterKey = secrets.apiKeyHashSecret();
-    const boundSecret = crypto.createHmac("sha512", masterKey).update(secret).digest("hex");
+    const boundSecret = crypto.createHmac('sha512', masterKey).update(secret).digest('hex');
     const derivedKey = crypto
       .pbkdf2Sync(boundSecret, salt, this.ITERATIONS, this.KEYLEN, this.DIGEST)
-      .toString("hex");
+      .toString('hex');
     return `${this.FORMAT_VERSION}.${salt}.${derivedKey}`;
   }
 
@@ -49,7 +49,7 @@ export class ApiKeyCrypto {
    * Verifica usando Constant-Time Verification reconstruyendo la pirámide criptográfica.
    */
   public static verifySecret(secret: string, storedHash: string): boolean {
-    const parts = storedHash.split(".");
+    const parts = storedHash.split('.');
     if (parts.length !== 3) {
       return false; // Legacy o formato inválido
     }
@@ -58,13 +58,13 @@ export class ApiKeyCrypto {
       return false;
     }
     const masterKey = secrets.apiKeyHashSecret();
-    const boundSecret = crypto.createHmac("sha512", masterKey).update(secret).digest("hex");
+    const boundSecret = crypto.createHmac('sha512', masterKey).update(secret).digest('hex');
     const computedDerivedKey = crypto
       .pbkdf2Sync(boundSecret, salt, this.ITERATIONS, this.KEYLEN, this.DIGEST)
-      .toString("hex");
+      .toString('hex');
 
-    const computedBuf = Buffer.from(computedDerivedKey, "hex");
-    const storedBuf = Buffer.from(storedDerivedKey, "hex");
+    const computedBuf = Buffer.from(computedDerivedKey, 'hex');
+    const storedBuf = Buffer.from(storedDerivedKey, 'hex');
     if (computedBuf.length !== storedBuf.length) {
       return false;
     }

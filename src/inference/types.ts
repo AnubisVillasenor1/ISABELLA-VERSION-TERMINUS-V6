@@ -1,4 +1,4 @@
-export type InferenceCapability = "chat" | "embedding" | "rerank" | "vision";
+export type InferenceCapability = 'chat' | 'embedding' | 'rerank' | 'vision';
 
 export interface ModelDescriptor {
   id: string;
@@ -7,7 +7,7 @@ export interface ModelDescriptor {
   capabilities: readonly InferenceCapability[];
   contextWindow: number;
   maxOutputTokens: number;
-  latencyClass: "FAST" | "BALANCED" | "DEEP";
+  latencyClass: 'FAST' | 'BALANCED' | 'DEEP';
 }
 
 export interface GenerationRequest {
@@ -24,7 +24,7 @@ export interface GenerationResult {
   inputTokens: number;
   outputTokens: number;
   latencyMs: number;
-  finishReason: "stop" | "length" | "error";
+  finishReason: 'stop' | 'length' | 'error';
 }
 
 export interface InferenceAdapter {

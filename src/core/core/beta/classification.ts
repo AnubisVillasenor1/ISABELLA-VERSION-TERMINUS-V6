@@ -4,7 +4,7 @@
  * Clasifica datos según sensibilidad y políticas de gobernanza.
  */
 
-import type { DataClassification } from "../contracts";
+import type { DataClassification } from '../contracts';
 
 export interface ClassificationResult {
   classification: DataClassification;
@@ -15,17 +15,17 @@ export interface ClassificationResult {
 export class ClassificationEngine {
   classify(intent: string, options?: { intentCategory?: string }): ClassificationResult {
     const text = intent.toLowerCase();
-    let classification: DataClassification = "internal";
+    let classification: DataClassification = 'internal';
 
     if (
-      options?.intentCategory === "monetization" ||
+      options?.intentCategory === 'monetization' ||
       /payout|tarjeta|pago|stripe|secret|token/i.test(text)
     ) {
-      classification = "critical";
+      classification = 'critical';
     } else if (/privad|confidencial|identidad|personal/i.test(text)) {
-      classification = "restricted";
-    } else if (options?.intentCategory === "chat" || options?.intentCategory === "general") {
-      classification = "public";
+      classification = 'restricted';
+    } else if (options?.intentCategory === 'chat' || options?.intentCategory === 'general') {
+      classification = 'public';
     }
 
     return {

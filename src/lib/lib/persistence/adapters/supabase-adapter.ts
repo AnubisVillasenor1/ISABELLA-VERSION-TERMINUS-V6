@@ -1,19 +1,19 @@
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import type { IRepository, AuditEntry, RepositoryError, WriteOptions } from "../repository";
-import { config } from "../../config";
-import { getRequestIdentity } from "../../identity-context";
-import { SecuritySystem } from "../../security";
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import type { IRepository, AuditEntry, RepositoryError, WriteOptions } from '../repository';
+import { config } from '../../config';
+import { getRequestIdentity } from '../../identity-context';
+import { SecuritySystem } from '../../security';
 
 const TABLE_MAP: Record<string, string> = {
-  tenant: "tenants",
-  session: "sessions",
-  apiKey: "api_keys",
-  audit: "audit_events",
+  tenant: 'tenants',
+  session: 'sessions',
+  apiKey: 'api_keys',
+  audit: 'audit_events',
 };
 
 function toRepositoryError(message: string, statusCode = 500, tenantId?: string): RepositoryError {
   const err = new Error(message) as RepositoryError;
-  err.code = "REPOSITORY_ERROR";
+  err.code = 'REPOSITORY_ERROR';
   err.statusCode = statusCode;
   if (tenantId !== undefined) err.tenantId = tenantId;
   err.retryable = statusCode >= 500;
@@ -41,7 +41,7 @@ async function getSupabase(): Promise<SupabaseClient | null> {
   const jwt = SecuritySystem.generateSupabaseRlsToken(
     identity.userId,
     identity.tenantId,
-    identity.scope,
+    identity.scope
   );
   return toSupabaseClient(url, jwt);
 }
@@ -50,9 +50,9 @@ async function requireSupabase(tenantId?: string): Promise<SupabaseClient> {
   const client = await getSupabase();
   if (!client) {
     throw toRepositoryError(
-      "Supabase require identidad de request (tenant-scoped) para operaciones RLS — sin principal autenticado; service_role prohibido (P0-13)",
+      'Supabase require identidad de request (tenant-scoped) para operaciones RLS — sin principal autenticado; service_role prohibido (P0-13)',
       500,
-      tenantId,
+      tenantId
     );
   }
   return client;
@@ -68,7 +68,7 @@ export class SupabaseRepository<T extends { id: string }> implements IRepository
   }
 
   async create(tenantId: string, data: Partial<T>, options?: WriteOptions): Promise<T> {
-    if (!tenantId) throw toRepositoryError("tenantId required for create", 400);
+    if (!tenantId) throw toRepositoryError('tenantId required for create', 400);
     const supabase = await requireSupabase(tenantId);
     const payload = {
       ...data,
@@ -87,13 +87,13 @@ export class SupabaseRepository<T extends { id: string }> implements IRepository
   }
 
   async read(tenantId: string, id: string): Promise<T | null> {
-    if (!tenantId) throw toRepositoryError("tenantId required for read", 400);
+    if (!tenantId) throw toRepositoryError('tenantId required for read', 400);
     const supabase = await requireSupabase(tenantId);
     const { data, error } = await supabase
       .from(this.table)
-      .select("*")
-      .eq("id", id)
-      .eq("tenant_id", tenantId)
+      .select('*')
+      .eq('id', id)
+      .eq('tenant_id', tenantId)
       .maybeSingle();
     if (error) throw toRepositoryError(`Supabase read failed: ${error.message}`, 500, tenantId);
     return data ? toCamel<T>(data) : null;
@@ -103,11 +103,11 @@ export class SupabaseRepository<T extends { id: string }> implements IRepository
     tenantId: string,
     filters?: Record<string, unknown>,
     limit?: number,
-    offset?: number,
+    offset?: number
   ): Promise<{ items: T[]; total: number }> {
-    if (!tenantId) throw toRepositoryError("tenantId required for list", 400);
+    if (!tenantId) throw toRepositoryError('tenantId required for list', 400);
     const supabase = await requireSupabase(tenantId);
-    let query = supabase.from(this.table).select("*", { count: "exact" }).eq("tenant_id", tenantId);
+    let query = supabase.from(this.table).select('*', { count: 'exact' }).eq('tenant_id', tenantId);
     if (filters) {
       for (const [k, v] of Object.entries(filters)) {
         const col = toSnakeKey(k);
@@ -123,14 +123,14 @@ export class SupabaseRepository<T extends { id: string }> implements IRepository
   }
 
   async update(tenantId: string, id: string, data: Partial<T>): Promise<T> {
-    if (!tenantId) throw toRepositoryError("tenantId required for update", 400);
+    if (!tenantId) throw toRepositoryError('tenantId required for update', 400);
     const supabase = await requireSupabase(tenantId);
     const row = toSnake(data as Record<string, unknown>);
     const { data: updated, error } = await supabase
       .from(this.table)
       .update(row)
-      .eq("id", id)
-      .eq("tenant_id", tenantId)
+      .eq('id', id)
+      .eq('tenant_id', tenantId)
       .select()
       .single();
     if (error) throw toRepositoryError(`Supabase update failed: ${error.message}`, 500, tenantId);
@@ -139,13 +139,13 @@ export class SupabaseRepository<T extends { id: string }> implements IRepository
   }
 
   async delete(tenantId: string, id: string): Promise<boolean> {
-    if (!tenantId) throw toRepositoryError("tenantId required for delete", 400);
+    if (!tenantId) throw toRepositoryError('tenantId required for delete', 400);
     const supabase = await requireSupabase(tenantId);
     const { error, count } = await supabase
       .from(this.table)
-      .delete({ count: "exact" })
-      .eq("id", id)
-      .eq("tenant_id", tenantId);
+      .delete({ count: 'exact' })
+      .eq('id', id)
+      .eq('tenant_id', tenantId);
     if (error) throw toRepositoryError(`Supabase delete failed: ${error.message}`, 500, tenantId);
     return (count ?? 0) > 0;
   }
@@ -154,25 +154,25 @@ export class SupabaseRepository<T extends { id: string }> implements IRepository
     const supabase = await requireSupabase(entry.tenantId);
     // P0-06: la columna canónica es `event` (no `action`), y la auditoría
     // transaccional exige verification_hash + previous_log_hash (hash chaining).
-    const { createHash, randomUUID } = await import("node:crypto");
+    const { createHash, randomUUID } = await import('node:crypto');
     const { data: lastRow } = await supabase
-      .from("audit_events")
-      .select("verification_hash")
-      .eq("tenant_id", entry.tenantId)
-      .order("timestamp", { ascending: false })
+      .from('audit_events')
+      .select('verification_hash')
+      .eq('tenant_id', entry.tenantId)
+      .order('timestamp', { ascending: false })
       .limit(1)
       .maybeSingle();
-    const previousLogHash = (lastRow?.verification_hash as string) ?? "0".repeat(64);
+    const previousLogHash = (lastRow?.verification_hash as string) ?? '0'.repeat(64);
     const timestamp = entry.timestamp ?? new Date().toISOString();
     const details = JSON.stringify(entry.details ?? {});
     const payload = `${entry.id}|${timestamp}|${entry.traceId}|${entry.action}|${entry.resource}|${entry.actor}|${entry.result}|${details}|${entry.severity}|${entry.tenantId}|${previousLogHash}`;
-    const verificationHash = createHash("sha256").update(payload).digest("hex");
-    const { error } = await supabase.from("audit_events").insert({
+    const verificationHash = createHash('sha256').update(payload).digest('hex');
+    const { error } = await supabase.from('audit_events').insert({
       id: entry.id ?? `audit_${randomUUID().slice(0, 8)}`,
       tenant_id: entry.tenantId,
       trace_id: entry.traceId,
       correlation_id: entry.traceId,
-      actor_ip: "",
+      actor_ip: '',
       event: entry.action,
       severity: entry.severity,
       details,
@@ -189,7 +189,7 @@ export class SupabaseRepository<T extends { id: string }> implements IRepository
     try {
       const supabase = await getSupabase();
       if (!supabase) return { ok: false, latencyMs: performance.now() - start };
-      const { error } = await supabase.from(this.table).select("id").limit(1);
+      const { error } = await supabase.from(this.table).select('id').limit(1);
       return { ok: !error, latencyMs: performance.now() - start };
     } catch {
       return { ok: false, latencyMs: performance.now() - start };
@@ -202,8 +202,8 @@ export class SupabaseRepository<T extends { id: string }> implements IRepository
     const supabase = (await getSupabase()) ?? (await requireSupabase());
     const { data, error } = await supabase
       .from(this.table)
-      .select("*")
-      .eq("prefix", prefix)
+      .select('*')
+      .eq('prefix', prefix)
       .maybeSingle();
     if (error) throw toRepositoryError(`Supabase findByPrefix failed: ${error.message}`, 500);
     return data ? toCamel<T>(data) : null;

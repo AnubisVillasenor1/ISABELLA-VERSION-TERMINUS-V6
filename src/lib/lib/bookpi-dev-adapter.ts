@@ -6,7 +6,7 @@
  *
  * Para producción y entornos distribuidos, la única fuente autoritativa
  * y duradera de persistencia es `createBookpiPostgresRepository()`
- * (src/lib/repositories/bookpi-postgres-repository.ts).
+ * (src/lib/lib/repositories/bookpi-postgres-repository.ts).
  *
  * Este adaptador se mantiene estrictamente para pruebas unitarias, benchmarks
  * locales y entornos de desarrollo desacoplados de PostgreSQL.
@@ -15,8 +15,8 @@
 import {
   createBookpiDevRepository,
   type BookpiDevRepository,
-} from "./repositories/bookpi-dev-repository";
-import type { BlockPIBlock, LedgerCategory } from "./bookpi/types";
+} from './repositories/bookpi-dev-repository';
+import type { BlockPIBlock, LedgerCategory } from './bookpi/types';
 
 export interface BookpiWriteRequest {
   tenantId: string;
@@ -36,7 +36,7 @@ export interface BookpiRefundRequest {
  * Crea el motor BookPI para desarrollo / testing con un repositorio inyectable.
  */
 export function createBookpiDevEngine(
-  repository: BookpiDevRepository = createBookpiDevRepository(),
+  repository: BookpiDevRepository = createBookpiDevRepository()
 ) {
   return {
     list(tenantId: string): BlockPIBlock[] {
@@ -48,9 +48,9 @@ export function createBookpiDevEngine(
       error?: string;
       block?: BlockPIBlock;
     } {
-      if (!request.tenantId) return { success: false, error: "Tenant requerido." };
-      if (!request.userId) return { success: false, error: "Usuario requerido." };
-      if (request.cost < 0) return { success: false, error: "Costo negativo no admitido." };
+      if (!request.tenantId) return { success: false, error: 'Tenant requerido.' };
+      if (!request.userId) return { success: false, error: 'Usuario requerido.' };
+      if (request.cost < 0) return { success: false, error: 'Costo negativo no admitido.' };
       const write = repository.append({
         tenantId: request.tenantId,
         userId: request.userId,
@@ -70,9 +70,9 @@ export function createBookpiDevEngine(
     } {
       if (requests.length === 0) return { success: true, blocks: [] };
       for (const req of requests) {
-        if (!req.tenantId) return { success: false, error: "Tenant requerido en batch." };
-        if (!req.userId) return { success: false, error: "Usuario requerido en batch." };
-        if (req.cost < 0) return { success: false, error: "Costo negativo no admitido." };
+        if (!req.tenantId) return { success: false, error: 'Tenant requerido en batch.' };
+        if (!req.userId) return { success: false, error: 'Usuario requerido en batch.' };
+        if (req.cost < 0) return { success: false, error: 'Costo negativo no admitido.' };
       }
       const blocks: BlockPIBlock[] = [];
       for (const req of requests) {
@@ -135,10 +135,10 @@ export function createBookpiDevEngine(
         totalTokens += b.tokensConsumed;
         userSet.add(b.userId);
 
-        if (b.status === "settled") settledCount++;
-        else if (b.status === "refunded") refundedCount++;
-        else if (b.status === "pending") pendingCount++;
-        else if (b.status === "pruned") prunedCount++;
+        if (b.status === 'settled') settledCount++;
+        else if (b.status === 'refunded') refundedCount++;
+        else if (b.status === 'pending') pendingCount++;
+        else if (b.status === 'pruned') prunedCount++;
 
         const op = b.operation;
         if (!operations[op]) operations[op] = { count: 0, costUsd: 0, tokens: 0 };
@@ -171,15 +171,15 @@ export function createBookpiDevEngine(
       prunedTenants?: string[];
       error?: string;
     } {
-      if (inactiveDays <= 0) return { success: false, error: "inactiveDays must be > 0" };
+      if (inactiveDays <= 0) return { success: false, error: 'inactiveDays must be > 0' };
       return {
         success: false,
-        error: "pruneInactive not supported by dev adapter repository",
+        error: 'pruneInactive not supported by dev adapter repository',
       };
     },
 
     refund(request: BookpiRefundRequest): { success: boolean; error?: string } {
-      return repository.refund(request.tenantId, request.index, "Solicitud de reembolso dev");
+      return repository.refund(request.tenantId, request.index, 'Solicitud de reembolso dev');
     },
 
     verifyIntegrity(): {
@@ -187,7 +187,7 @@ export function createBookpiDevEngine(
       error?: string;
       corruptedIndex?: number;
     } {
-      return repository.verifyIntegrity("");
+      return repository.verifyIntegrity('');
     },
   };
 }

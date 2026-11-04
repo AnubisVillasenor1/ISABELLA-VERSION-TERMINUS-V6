@@ -1,7 +1,7 @@
-import React, { ReactNode, ErrorInfo } from "react";
-import { ErrorBoundary as ReactErrorBoundary, FallbackProps } from "react-error-boundary";
-import { EmergencyModeView } from "./EmergencyModeView";
-import { toOTelLog } from "@/lib/telemetry/otel-neutral";
+import React, { ReactNode, ErrorInfo } from 'react';
+import { ErrorBoundary as ReactErrorBoundary, FallbackProps } from 'react-error-boundary';
+import { EmergencyModeView } from './EmergencyModeView';
+import { toOTelLog } from '@/lib/telemetry/otel-neutral';
 
 export interface IsabellaErrorBoundaryProps {
   children?: ReactNode;
@@ -14,14 +14,14 @@ export interface IsabellaErrorBoundaryProps {
  * Fallback Component rendered by react-error-boundary when an unhandled runtime error occurs.
  */
 export function EmergencyFallback({ error, resetErrorBoundary }: FallbackProps) {
-  const err = error instanceof Error ? error : new Error(String(error ?? "Fallo no controlado"));
+  const err = error instanceof Error ? error : new Error(String(error ?? 'Fallo no controlado'));
 
   return (
     <EmergencyModeView
       mode="critical_error"
       errorDetails={{
-        code: err.name || "CROWN-CLIENT-CRASH",
-        message: err.message || "Fallo crítico no controlado en la aplicación.",
+        code: err.name || 'CROWN-CLIENT-CRASH',
+        message: err.message || 'Fallo crítico no controlado en la aplicación.',
         traceId: `err-boundary-${Date.now().toString(16)}`,
         timestamp: new Date().toISOString(),
       }}
@@ -43,22 +43,22 @@ export function IsabellaErrorBoundary({
   FallbackComponent,
 }: IsabellaErrorBoundaryProps) {
   const handleError = (error: unknown, info: ErrorInfo) => {
-    const err = error instanceof Error ? error : new Error(String(error ?? "Unknown client error"));
+    const err = error instanceof Error ? error : new Error(String(error ?? 'Unknown client error'));
     console.error(
-      "[Isabella AI] Uncaught Runtime Exception caught by react-error-boundary:",
+      '[Isabella AI] Uncaught Runtime Exception caught by react-error-boundary:',
       err,
-      info,
+      info
     );
 
     toOTelLog({
       traceId: `client-error-${Date.now().toString(16)}`,
-      kind: "error",
-      name: "frontend.critical.error",
-      status: "error",
+      kind: 'error',
+      name: 'frontend.critical.error',
+      status: 'error',
       attributes: {
-        error_code: err.name || "CROWN-CLIENT-CRASH",
-        error_message: err.message || "Unknown client error",
-        component_stack: info?.componentStack || "",
+        error_code: err.name || 'CROWN-CLIENT-CRASH',
+        error_message: err.message || 'Unknown client error',
+        component_stack: info?.componentStack || '',
       },
       timestamp: new Date().toISOString(),
     });

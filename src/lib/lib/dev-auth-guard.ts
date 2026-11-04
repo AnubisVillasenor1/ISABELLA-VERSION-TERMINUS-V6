@@ -8,16 +8,16 @@
  * doble gate clásico (NODE_ENV + AUTH_DEV_SESSION_ENABLED).
  */
 
-import { config } from "./config";
-import { isProductionLike, resolveRuntimeMode } from "./runtime-mode";
-import { SecuritySystem } from "./security";
+import { config } from './config';
+import { isProductionLike, resolveRuntimeMode } from './runtime-mode';
+import { SecuritySystem } from './security';
 
 export const DEV_AUTH_ACTIONS = [
-  "oauth-url",
-  "oauth-provider",
-  "oauth-callback",
-  "oauth-authorize-action",
-  "dev-session",
+  'oauth-url',
+  'oauth-provider',
+  'oauth-callback',
+  'oauth-authorize-action',
+  'dev-session',
 ] as const;
 
 export type DevAuthAction = (typeof DEV_AUTH_ACTIONS)[number];
@@ -39,9 +39,9 @@ export function devSurfaceNotFound(): Response | null {
   }
   if (!productionLike) return null;
   const headers = SecuritySystem.injectSecureHeaders(
-    new Headers({ "content-type": "application/json" }),
+    new Headers({ 'content-type': 'application/json' })
   );
-  return new Response(JSON.stringify({ error: "Recurso no encontrado." }), {
+  return new Response(JSON.stringify({ error: 'Recurso no encontrado.' }), {
     status: 404,
     headers,
   });

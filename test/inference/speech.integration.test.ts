@@ -53,17 +53,26 @@ beforeEach(() => {
 });
 
 describe("speech over a real HTTP loopback", () => {
-  it("synthesizes speech and returns a playable data URL", async () => {
+  it("synthesizes speech with the canonical female voice and returns a playable data URL", async () => {
     handler = () => ({ status: 200, raw: Buffer.from("RIFFwav-armstoffen"), contentType: "audio/wav" });
     const env = { GROQ_API_KEY: "k", GROQ_BASE_URL: baseUrl, GROQ_TTS_MODEL: "test-tts-model", GROQ_TTS_VOICE: "troy" };
     const result = await synthesizeSpeech(env, { text: "hola mundo", format: "wav", timeoutMs: 5_000 });
-    expect(result).toMatchObject({ provider: "groq", mimeType: "audio/wav" });
+    expect(result).toMatchObject({ provider: "groq", mimeType: "audio/wav", voice: "Celeste-PlayAI" });
     expect(result?.dataUrl.startsWith("data:audio/wav;base64,")).toBe(true);
     expect(result?.bytes).toBeGreaterThan(0);
     expect(lastRequest?.url).toBe("/v1/audio/speech");
     expect(lastRequest?.auth).toBe("Bearer k");
     const sent = JSON.parse(lastRequest?.body ?? "{}") as { model?: string; input?: string; voice?: string };
-    expect(sent).toMatchObject({ input: "hola mundo", voice: "troy" });
+    expect(sent).toMatchObject({ input: "hola mundo", voice: "Celeste-PlayAI" });
+  });
+
+  it("honors an explicitly configured female provider voice", async () => {
+    handler = () => ({ status: 200, raw: Buffer.from("RIFFwav-armstoffen"), contentType: "audio/wav" });
+    const env = { GROQ_API_KEY: "k", GROQ_BASE_URL: baseUrl, GROQ_TTS_MODEL: "test-tts-model", GROQ_TTS_VOICE: "Nyla-PlayAI" };
+    const result = await synthesizeSpeech(env, { text: "hola con voz femenina", format: "wav", timeoutMs: 5_000 });
+    expect(result?.voice).toBe("Nyla-PlayAI");
+    const sent = JSON.parse(lastRequest?.body ?? "{}") as { voice?: string };
+    expect(sent.voice).toBe("Nyla-PlayAI");
   });
 
   it("fails closed when the provider rejects synthesis", async () => {

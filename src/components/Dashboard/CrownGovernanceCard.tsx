@@ -1,6 +1,6 @@
-import React from "react";
-import { ShieldCheck, Lock, Activity, CheckCircle } from "lucide-react";
-import { useCrown } from "../../context/CrownContext";
+import React from 'react';
+import { ShieldCheck, Lock, Activity, CheckCircle } from 'lucide-react';
+import { useCrown } from '../../context/CrownContext';
 
 export const CrownGovernanceCard: React.FC = () => {
   const { state } = useCrown();
@@ -14,7 +14,9 @@ export const CrownGovernanceCard: React.FC = () => {
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
             Gobernanza C.R.O.W.N.
           </h4>
-          <p className="text-[10px] text-slate-500 font-mono mt-1">Supervisión Zero-Trust & ARGUS Sentinel</p>
+          <p className="text-[10px] text-slate-500 font-mono mt-1">
+            Supervisión Zero-Trust & ARGUS Sentinel
+          </p>
         </div>
         <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold">
           L4 Active
@@ -41,7 +43,7 @@ export const CrownGovernanceCard: React.FC = () => {
             <span className="text-slate-500 block">Modo Inferencia</span>
             <span className="text-slate-200 font-bold flex items-center gap-1 mt-0.5">
               <Lock className="w-3 h-3 text-amber-400" />
-              {inferenceMode === "local_sovereign" ? "Nodo Cero" : "Cloud Fed."}
+              {inferenceMode === 'local_sovereign' ? 'Nodo Cero' : 'Cloud Fed.'}
             </span>
           </div>
 

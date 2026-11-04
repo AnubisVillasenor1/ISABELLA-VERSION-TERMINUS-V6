@@ -1,6 +1,6 @@
 /**
  * MOTOR NATIVO DE DETECCIÓN Y MITIGACIÓN DE SESGOS, DEBILIDADES E INCONSISTENCIAS
- * (src/lib/native-ml/bias-weakness-mitigation.ts)
+ * (src/lib/lib/native-ml/bias-weakness-mitigation.ts)
  * ============================================================================
  * Ecosistema TAMV / RDM Digital Hub / Isabella Villaseñor AI v4.2.0
  *
@@ -15,18 +15,18 @@
  * ============================================================================
  */
 
-import { createHash } from "node:crypto";
-import { type KnowledgeObservation, type ConvergenceResult } from "./convergence-engine";
+import { createHash } from 'node:crypto';
+import { type KnowledgeObservation, type ConvergenceResult } from './convergence-engine';
 
 export interface BiasScanResult {
   detectedBiases: {
     biasType:
-      | "sycophancy"
-      | "foreign_territorial_drift"
-      | "hallucination_spike"
-      | "false_certainty"
-      | "condescension";
-    severity: "low" | "medium" | "high";
+      | 'sycophancy'
+      | 'foreign_territorial_drift'
+      | 'hallucination_spike'
+      | 'false_certainty'
+      | 'condescension';
+    severity: 'low' | 'medium' | 'high';
     score: number; // 0 a 1
     evidence: string;
     mitigationApplied: string;
@@ -62,20 +62,20 @@ export class NativeBiasMitigator {
   public static scanAndMitigate(
     text: string,
     observations: KnowledgeObservation[] = [],
-    convergence?: ConvergenceResult,
+    convergence?: ConvergenceResult
   ): BiasScanResult {
-    const detectedBiases: BiasScanResult["detectedBiases"] = [];
+    const detectedBiases: BiasScanResult['detectedBiases'] = [];
     let robustnessPenalty = 0;
 
     // 1. Escaneo de Sycophancy (Adulación no analítica)
     for (const pattern of this.SYCOPHANCY_TRIGGERS) {
       if (pattern.test(text)) {
         detectedBiases.push({
-          biasType: "sycophancy",
-          severity: "medium",
+          biasType: 'sycophancy',
+          severity: 'medium',
           score: 0.72,
-          evidence: "Uso de patrones de adulación o concordancia acrítica en la respuesta.",
-          mitigationApplied: "Inyección de contrapunto socrático y análisis dialéctico objetivo.",
+          evidence: 'Uso de patrones de adulación o concordancia acrítica en la respuesta.',
+          mitigationApplied: 'Inyección de contrapunto socrático y análisis dialéctico objetivo.',
         });
         robustnessPenalty += 15;
         break;
@@ -86,11 +86,11 @@ export class NativeBiasMitigator {
     for (const pattern of this.FALSE_CERTAINTY_TRIGGERS) {
       if (pattern.test(text)) {
         detectedBiases.push({
-          biasType: "false_certainty",
-          severity: "high",
+          biasType: 'false_certainty',
+          severity: 'high',
           score: 0.88,
           evidence:
-            "Declaración dogmática o aserción de infalibilidad sin citación de evidencia E3/E4.",
+            'Declaración dogmática o aserción de infalibilidad sin citación de evidencia E3/E4.',
           mitigationApplied:
             "Modulación de certeza epistémica ('La evidencia disponible sugiere...', 'Bajo las condiciones observadas...').",
         });
@@ -103,13 +103,13 @@ export class NativeBiasMitigator {
     for (const pattern of this.FOREIGN_TERRITORIAL_DRIFT_TRIGGERS) {
       if (pattern.test(text)) {
         detectedBiases.push({
-          biasType: "foreign_territorial_drift",
-          severity: "high",
+          biasType: 'foreign_territorial_drift',
+          severity: 'high',
           score: 0.81,
           evidence:
-            "Uso indebido de marcos jurisdiccionales extranjeros en contexto soberano de Hidalgo / México.",
+            'Uso indebido de marcos jurisdiccionales extranjeros en contexto soberano de Hidalgo / México.',
           mitigationApplied:
-            "Anclaje territorial a la normativa y realidad socio-territorial de Real del Monte y legislación mexicana.",
+            'Anclaje territorial a la normativa y realidad socio-territorial de Real del Monte y legislación mexicana.',
         });
         robustnessPenalty += 20;
         break;
@@ -130,12 +130,12 @@ export class NativeBiasMitigator {
       if (varianceScore > 0.35 || (convergence && convergence.disagreementScore > 0.4)) {
         isInconsistent = true;
         detectedBiases.push({
-          biasType: "hallucination_spike",
-          severity: "high",
+          biasType: 'hallucination_spike',
+          severity: 'high',
           score: varianceScore,
-          evidence: "Dispersión significativa entre los nodos cognitivos (SOPHIA vs ORION).",
+          evidence: 'Dispersión significativa entre los nodos cognitivos (SOPHIA vs ORION).',
           mitigationApplied:
-            "Aplicación de consenso ponderado de Dirichlet y mediación de C.R.O.W.N.",
+            'Aplicación de consenso ponderado de Dirichlet y mediación de C.R.O.W.N.',
         });
         robustnessPenalty += 30;
       }
@@ -145,13 +145,13 @@ export class NativeBiasMitigator {
     const baseRobustness = convergence ? convergence.consensusScore * 100 : 92;
     const epistemicRobustnessIndex = Math.max(
       15,
-      Math.min(100, Math.round(baseRobustness - robustnessPenalty)),
+      Math.min(100, Math.round(baseRobustness - robustnessPenalty))
     );
 
     // Confianza calibrada
     const rawConf = convergence ? convergence.confidenceScore : 0.85;
     const calibratedConfidence = Number(
-      Math.max(0.2, rawConf * (1.0 - robustnessPenalty / 100)).toFixed(3),
+      Math.max(0.2, rawConf * (1.0 - robustnessPenalty / 100)).toFixed(3)
     );
 
     let suggestedCorrection: string | null = null;
@@ -159,9 +159,9 @@ export class NativeBiasMitigator {
       suggestedCorrection = `Se detectaron ${detectedBiases.length} sesgo(s) epistémico(s). Se recomienda aplicar modulación contextual y explicitar el grado de incertidumbre.`;
     }
 
-    const scanHash = createHash("sha256")
+    const scanHash = createHash('sha256')
       .update(`${text.slice(0, 200)}:${epistemicRobustnessIndex}:${detectedBiases.length}`)
-      .digest("hex");
+      .digest('hex');
 
     return {
       detectedBiases,
@@ -183,17 +183,17 @@ export class NativeBiasMitigator {
     // Atenuar falsa certidumbre
     sanitized = sanitized.replace(
       /\bestá 100% demostrado científicamente sin excepción\b/gi,
-      "la evidencia empírica acumulada respalda predominantemente",
+      'la evidencia empírica acumulada respalda predominantemente'
     );
     sanitized = sanitized.replace(
       /\bes una verdad incuestionable e indiscutible\b/gi,
-      "constituye el consenso epistemológico más robusto actualmente",
+      'constituye el consenso epistemológico más robusto actualmente'
     );
 
     // Suavizar adulación
     sanitized = sanitized.replace(
       /\btienes toda la razón\b/gi,
-      "coincido con el planteamiento analítico",
+      'coincido con el planteamiento analítico'
     );
 
     return sanitized;

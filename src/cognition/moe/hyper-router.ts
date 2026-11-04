@@ -4,27 +4,27 @@
  * Part of ISABELLA-Q Ω Cognitive Architecture
  */
 
-import { EventEmitter } from "node:events";
+import { EventEmitter } from 'node:events';
 
-export type ExpertCapability = 
-  | "research"
-  | "scientific_evidence"
-  | "code"
-  | "security"
-  | "legal"
-  | "medicine"
-  | "finance"
-  | "strategy"
-  | "architecture"
-  | "education"
-  | "monetization"
-  | "governance"
-  | "creative_writing"
-  | "data_analysis"
-  | "translation"
-  | "summarization";
+export type ExpertCapability =
+  | 'research'
+  | 'scientific_evidence'
+  | 'code'
+  | 'security'
+  | 'legal'
+  | 'medicine'
+  | 'finance'
+  | 'strategy'
+  | 'architecture'
+  | 'education'
+  | 'monetization'
+  | 'governance'
+  | 'creative_writing'
+  | 'data_analysis'
+  | 'translation'
+  | 'summarization';
 
-export type ExpertTier = "local" | "specialized" | "premium" | "sovereign";
+export type ExpertTier = 'local' | 'specialized' | 'premium' | 'sovereign';
 
 export interface Expert {
   readonly name: string;
@@ -45,7 +45,7 @@ export interface RoutingContext {
   readonly requiredCapabilities: ReadonlyArray<ExpertCapability>;
   readonly maxLatencyMs?: number;
   readonly maxCost?: number;
-  readonly riskLevel: "low" | "medium" | "high" | "critical";
+  readonly riskLevel: 'low' | 'medium' | 'high' | 'critical';
   readonly userTier: ExpertTier;
   readonly contextSize: number;
   readonly preferredExpert?: string;
@@ -78,7 +78,7 @@ export interface MoEConfig {
   readonly minConfidenceThreshold: number;
   readonly enableFallback: boolean;
   readonly fallbackExpert: string;
-  readonly loadBalancingStrategy: "round_robin" | "least_loaded" | "weighted" | "adaptive";
+  readonly loadBalancingStrategy: 'round_robin' | 'least_loaded' | 'weighted' | 'adaptive';
   readonly circuitBreakerThreshold: number;
   readonly circuitBreakerTimeoutMs: number;
 }
@@ -89,8 +89,8 @@ const DEFAULT_CONFIG: MoEConfig = {
   healthCheckIntervalMs: 60000,
   minConfidenceThreshold: 0.6,
   enableFallback: true,
-  fallbackExpert: "general",
-  loadBalancingStrategy: "adaptive",
+  fallbackExpert: 'general',
+  loadBalancingStrategy: 'adaptive',
   circuitBreakerThreshold: 5,
   circuitBreakerTimeoutMs: 60000,
 };
@@ -101,8 +101,10 @@ const DEFAULT_CONFIG: MoEConfig = {
  */
 export class ExpertRegistry extends EventEmitter {
   private experts: Map<string, Expert> = new Map();
-  private healthStatus: Map<string, { healthy: boolean; lastCheck: number; failures: number }> = new Map();
-  private loadMetrics: Map<string, { requests: number; totalLatency: number; errors: number }> = new Map();
+  private healthStatus: Map<string, { healthy: boolean; lastCheck: number; failures: number }> =
+    new Map();
+  private loadMetrics: Map<string, { requests: number; totalLatency: number; errors: number }> =
+    new Map();
   private config: MoEConfig;
 
   constructor(config: Partial<MoEConfig> = {}) {
@@ -116,7 +118,7 @@ export class ExpertRegistry extends EventEmitter {
    */
   registerExpert(expert: Expert): void {
     if (this.experts.size >= this.config.maxExperts) {
-      throw new Error("MAX_EXPERTS_REACHED");
+      throw new Error('MAX_EXPERTS_REACHED');
     }
     if (this.experts.has(expert.name)) {
       throw new Error(`EXPERT_ALREADY_REGISTERED: ${expert.name}`);
@@ -124,7 +126,7 @@ export class ExpertRegistry extends EventEmitter {
     this.experts.set(expert.name, expert);
     this.healthStatus.set(expert.name, { healthy: true, lastCheck: Date.now(), failures: 0 });
     this.loadMetrics.set(expert.name, { requests: 0, totalLatency: 0, errors: 0 });
-    this.emit("expert:registered", expert);
+    this.emit('expert:registered', expert);
   }
 
   /**
@@ -135,7 +137,7 @@ export class ExpertRegistry extends EventEmitter {
     this.healthStatus.delete(name);
     this.loadMetrics.delete(name);
     if (result) {
-      this.emit("expert:unregistered", name);
+      this.emit('expert:unregistered', name);
     }
     return result;
   }
@@ -158,14 +160,14 @@ export class ExpertRegistry extends EventEmitter {
    * Get experts by capability
    */
   getExpertsByCapability(capability: ExpertCapability): Expert[] {
-    return Array.from(this.experts.values()).filter(e => e.capabilities.includes(capability));
+    return Array.from(this.experts.values()).filter((e) => e.capabilities.includes(capability));
   }
 
   /**
    * Get experts by tier
    */
   getExpertsByTier(tier: ExpertTier): Expert[] {
-    return Array.from(this.experts.values()).filter(e => e.tier === tier);
+    return Array.from(this.experts.values()).filter((e) => e.tier === tier);
   }
 
   /**
@@ -174,18 +176,18 @@ export class ExpertRegistry extends EventEmitter {
   updateHealth(name: string, healthy: boolean): void {
     const status = this.healthStatus.get(name);
     if (!status) return;
-    
+
     status.healthy = healthy;
     status.lastCheck = Date.now();
     if (!healthy) {
       status.failures++;
       if (status.failures >= this.config.circuitBreakerThreshold) {
-        this.emit("circuit:open", name);
+        this.emit('circuit:open', name);
       }
     } else {
       status.failures = 0;
     }
-    this.emit("health:changed", { name, healthy });
+    this.emit('health:changed', { name, healthy });
   }
 
   /**
@@ -194,13 +196,13 @@ export class ExpertRegistry extends EventEmitter {
   recordRequest(name: string, latencyMs: number, error: boolean): void {
     const metrics = this.loadMetrics.get(name);
     if (!metrics) return;
-    
+
     metrics.requests++;
     metrics.totalLatency += latencyMs;
     if (error) metrics.errors++;
-    
+
     // Emit metrics for monitoring
-    this.emit("metrics:updated", { name, metrics: { ...metrics } });
+    this.emit('metrics:updated', { name, metrics: { ...metrics } });
   }
 
   /**
@@ -209,14 +211,14 @@ export class ExpertRegistry extends EventEmitter {
   getLoadFactor(name: string): number {
     const metrics = this.loadMetrics.get(name);
     if (!metrics || metrics.requests === 0) return 0;
-    
+
     const avgLatency = metrics.totalLatency / metrics.requests;
     const errorRate = metrics.errors / metrics.requests;
-    
+
     // Normalize to 0-1 (lower is better)
     const latencyFactor = Math.min(avgLatency / 5000, 1); // 5s max
     const errorFactor = errorRate;
-    
+
     return (latencyFactor + errorFactor) / 2;
   }
 
@@ -247,7 +249,7 @@ export class ExpertRegistry extends EventEmitter {
     try {
       // In production, would ping expert endpoint
       // For now, simulate health check
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
       this.updateHealth(name, true);
       this.recordRequest(name, Date.now() - start, false);
     } catch {
@@ -266,24 +268,24 @@ export class ExpertRegistry extends EventEmitter {
     expertsByCapability: Record<ExpertCapability, number>;
   } {
     const experts = this.getAllExperts();
-    const healthy = experts.filter(e => this.isAvailable(e.name));
-    
+    const healthy = experts.filter((e) => this.isAvailable(e.name));
+
     const byTier: Record<ExpertTier, number> = {
       local: 0,
       specialized: 0,
       premium: 0,
       sovereign: 0,
     };
-    
-    const byCapability: Record<ExpertCapability, number> = {} as any;
-    
+
+    const byCapability: Record<ExpertCapability, number> = {} as Record<ExpertCapability, number>;
+
     for (const expert of experts) {
       byTier[expert.tier]++;
       for (const cap of expert.capabilities) {
         byCapability[cap] = (byCapability[cap] || 0) + 1;
       }
     }
-    
+
     return {
       totalExperts: experts.length,
       healthyExperts: healthy.length,
@@ -300,7 +302,11 @@ export class ExpertRegistry extends EventEmitter {
 export class HyperRouterMoE extends EventEmitter {
   private registry: ExpertRegistry;
   private config: MoEConfig;
-  private routingHistory: Array<{ context: RoutingContext; decision: RoutingDecision; timestamp: number }> = [];
+  private routingHistory: Array<{
+    context: RoutingContext;
+    decision: RoutingDecision;
+    timestamp: number;
+  }> = [];
   private maxHistorySize: number = 10000;
 
   constructor(registry: ExpertRegistry, config: Partial<MoEConfig> = {}) {
@@ -314,47 +320,52 @@ export class HyperRouterMoE extends EventEmitter {
    */
   async route(context: RoutingContext): Promise<RoutingDecision> {
     const startTime = Date.now();
-    
+
     // Filter eligible experts
     const candidates = this.filterCandidates(context);
-    
+
     if (candidates.length === 0) {
       if (this.config.enableFallback) {
         const fallback = this.registry.getExpert(this.config.fallbackExpert);
         if (fallback) {
-          return this.createDecision(fallback, context, 0.3, "No eligible experts, using fallback");
+          return this.createDecision(fallback, context, 0.3, 'No eligible experts, using fallback');
         }
       }
-      throw new Error("NO_ELIGIBLE_EXPERTS");
+      throw new Error('NO_ELIGIBLE_EXPERTS');
     }
 
     // Score all candidates
-    const scored = candidates.map(candidate => this.scoreExpert(candidate, context));
-    
+    const scored = candidates.map((candidate) => this.scoreExpert(candidate, context));
+
     // Sort by total score (descending)
     scored.sort((a, b) => b.totalScore - a.totalScore);
-    
+
     const best = scored[0];
-    if (!best) throw new Error("NO_SCORED_EXPERTS");
+    if (!best) throw new Error('NO_SCORED_EXPERTS');
     const confidence = this.calculateConfidence(best, scored[1]);
-    
+
     if (confidence < this.config.minConfidenceThreshold) {
       if (this.config.enableFallback) {
         const fallback = this.registry.getExpert(this.config.fallbackExpert);
         if (fallback) {
-          return this.createDecision(fallback, context, 0.4, "Low confidence, using fallback");
+          return this.createDecision(fallback, context, 0.4, 'Low confidence, using fallback');
         }
       }
     }
-    
-    const decision = this.createDecision(best.expert, context, confidence, this.generateReasoning(best, context));
-    
+
+    const decision = this.createDecision(
+      best.expert,
+      context,
+      confidence,
+      this.generateReasoning(best, context)
+    );
+
     // Record routing decision
     this.recordDecision(context, decision);
-    
+
     // Update load metrics
     this.registry.recordRequest(best.expert.name, Date.now() - startTime, false);
-    
+
     return decision;
   }
 
@@ -363,43 +374,43 @@ export class HyperRouterMoE extends EventEmitter {
    */
   private filterCandidates(context: RoutingContext): Expert[] {
     let candidates = this.registry.getAllExperts();
-    
+
     // Filter by health
-    candidates = candidates.filter(e => this.registry.isAvailable(e.name));
-    
+    candidates = candidates.filter((e) => this.registry.isAvailable(e.name));
+
     // Filter by required capabilities
     if (context.requiredCapabilities.length > 0) {
-      candidates = candidates.filter(e => 
-        context.requiredCapabilities.every(cap => e.capabilities.includes(cap))
+      candidates = candidates.filter((e) =>
+        context.requiredCapabilities.every((cap) => e.capabilities.includes(cap))
       );
     }
-    
+
     // Filter by user tier access
-    candidates = candidates.filter(e => this.canAccessTier(context.userTier, e.tier));
-    
+    candidates = candidates.filter((e) => this.canAccessTier(context.userTier, e.tier));
+
     // Filter by max latency
     const maxLatencyMs = context.maxLatencyMs;
     if (maxLatencyMs !== undefined) {
-      candidates = candidates.filter(e => e.latencyMs <= maxLatencyMs);
+      candidates = candidates.filter((e) => e.latencyMs <= maxLatencyMs);
     }
-    
+
     // Filter by max cost
     const maxCost = context.maxCost;
     if (maxCost !== undefined) {
-      candidates = candidates.filter(e => e.costPerToken <= maxCost);
+      candidates = candidates.filter((e) => e.costPerToken <= maxCost);
     }
-    
+
     // Exclude specific experts
     if (context.excludeExperts?.length) {
-      candidates = candidates.filter(e => !context.excludeExperts!.includes(e.name));
+      candidates = candidates.filter((e) => !context.excludeExperts!.includes(e.name));
     }
-    
+
     // Prefer specific expert if requested
     if (context.preferredExpert) {
-      const preferred = candidates.find(e => e.name === context.preferredExpert);
+      const preferred = candidates.find((e) => e.name === context.preferredExpert);
       if (preferred) return [preferred];
     }
-    
+
     return candidates;
   }
 
@@ -407,7 +418,7 @@ export class HyperRouterMoE extends EventEmitter {
    * Check if user tier can access expert tier
    */
   private canAccessTier(userTier: ExpertTier, expertTier: ExpertTier): boolean {
-    const tierOrder: ExpertTier[] = ["local", "specialized", "premium", "sovereign"];
+    const tierOrder: ExpertTier[] = ['local', 'specialized', 'premium', 'sovereign'];
     const userIndex = tierOrder.indexOf(userTier);
     const expertIndex = tierOrder.indexOf(expertTier);
     return userIndex >= expertIndex;
@@ -423,25 +434,25 @@ export class HyperRouterMoE extends EventEmitter {
     const reliabilityScore = expert.reliability;
     const riskScore = this.calculateRiskScore(expert, context);
     const loadScore = 1 - this.registry.getLoadFactor(expert.name);
-    
+
     // Weighted scoring
     const weights = {
       capabilityMatch: 0.35,
       latencyScore: 0.15,
       costScore: 0.15,
-      reliabilityScore: 0.20,
-      riskScore: 0.10,
-      loadScore: 0.10,
+      reliabilityScore: 0.2,
+      riskScore: 0.1,
+      loadScore: 0.1,
     };
-    
-    const totalScore = 
+
+    const totalScore =
       capabilityMatch * 0.35 +
       latencyScore * 0.15 +
       costScore * 0.15 +
-      reliabilityScore * 0.20 +
-      riskScore * 0.10 +
-      loadScore * 0.10;
-    
+      reliabilityScore * 0.2 +
+      riskScore * 0.1 +
+      loadScore * 0.1;
+
     return {
       expert,
       capabilityMatch,
@@ -455,17 +466,17 @@ export class HyperRouterMoE extends EventEmitter {
 
   private calculateCapabilityMatch(expert: Expert, context: RoutingContext): number {
     if (context.requiredCapabilities.length === 0) return 1;
-    
-    const matched = context.requiredCapabilities.filter(cap => 
+
+    const matched = context.requiredCapabilities.filter((cap) =>
       expert.capabilities.includes(cap)
     ).length;
-    
+
     return matched / context.requiredCapabilities.length;
   }
 
   private calculateLatencyScore(expert: Expert, context: RoutingContext): number {
     if (!context.maxLatencyMs) return 1;
-    
+
     const ratio = expert.latencyMs / context.maxLatencyMs;
     if (ratio <= 0.5) return 1;
     if (ratio <= 0.8) return 0.8;
@@ -475,7 +486,7 @@ export class HyperRouterMoE extends EventEmitter {
 
   private calculateCostScore(expert: Expert, context: RoutingContext): number {
     if (!context.maxCost) return 1;
-    
+
     const ratio = expert.costPerToken / context.maxCost;
     if (ratio <= 0.5) return 1;
     if (ratio <= 0.8) return 0.8;
@@ -491,9 +502,9 @@ export class HyperRouterMoE extends EventEmitter {
       premium: 0.8,
       sovereign: 1.0,
     };
-    
+
     const tierRiskScore = tierRisk[expert.tier] || 0.5;
-    
+
     // Adjust for risk level
     const riskMultiplier: Record<string, number> = {
       low: 1.0,
@@ -501,13 +512,13 @@ export class HyperRouterMoE extends EventEmitter {
       high: 0.5,
       critical: 0.2,
     };
-    
+
     return tierRiskScore * (riskMultiplier[context.riskLevel] || 0.5);
   }
 
   private calculateConfidence(best: ExpertScore, secondBest?: ExpertScore): number {
     if (!secondBest) return 1.0;
-    
+
     const diff = best.totalScore - secondBest.totalScore;
     // Sigmoid-like confidence
     return Math.min(1, 0.5 + diff * 2);
@@ -515,38 +526,39 @@ export class HyperRouterMoE extends EventEmitter {
 
   private generateReasoning(score: ExpertScore, context: RoutingContext): string {
     const reasons: string[] = [];
-    
+
     if (score.capabilityMatch === 1) {
-      reasons.push("Perfect capability match");
+      reasons.push('Perfect capability match');
     } else if (score.capabilityMatch > 0.5) {
-      reasons.push("Good capability match");
+      reasons.push('Good capability match');
     }
-    
-    if (score.latencyScore === 1) reasons.push("Optimal latency");
-    if (score.costScore === 1) reasons.push("Cost-effective");
-    if (score.reliabilityScore > 0.9) reasons.push("Highly reliable");
-    if (score.riskScore === 1) reasons.push("Low risk for task");
-    
-    return reasons.join("; ") || "Best overall match";
+
+    if (score.latencyScore === 1) reasons.push('Optimal latency');
+    if (score.costScore === 1) reasons.push('Cost-effective');
+    if (score.reliabilityScore > 0.9) reasons.push('Highly reliable');
+    if (score.riskScore === 1) reasons.push('Low risk for task');
+
+    return reasons.join('; ') || 'Best overall match';
   }
 
   private createDecision(
-    expert: Expert, 
-    context: RoutingContext, 
+    expert: Expert,
+    context: RoutingContext,
     confidence: number,
     reasoning: string
   ): RoutingDecision {
     // Get alternatives
-    const allScored = this.registry.getAllExperts()
-      .filter(e => this.registry.isAvailable(e.name))
-      .map(e => this.scoreExpert(e, context))
+    const allScored = this.registry
+      .getAllExperts()
+      .filter((e) => this.registry.isAvailable(e.name))
+      .map((e) => this.scoreExpert(e, context))
       .sort((a, b) => b.totalScore - a.totalScore);
-    
+
     const alternatives = allScored
-      .filter(s => s.expert.name !== context.preferredExpert)
+      .filter((s) => s.expert.name !== context.preferredExpert)
       .slice(1, 4)
-      .map(s => ({ expert: s.expert, score: s.totalScore }));
-    
+      .map((s) => ({ expert: s.expert, score: s.totalScore }));
+
     return {
       expert,
       confidence: Math.round(confidence * 100) / 100,
@@ -563,7 +575,7 @@ export class HyperRouterMoE extends EventEmitter {
       decision,
       timestamp: Date.now(),
     });
-    
+
     // Trim history
     if (this.routingHistory.length > this.maxHistorySize) {
       this.routingHistory = this.routingHistory.slice(-this.maxHistorySize);
@@ -589,12 +601,12 @@ export class HyperRouterMoE extends EventEmitter {
         avgCost: 0,
       };
     }
-    
+
     const expertUsage: Record<string, number> = {};
     let totalConfidence = 0;
     let totalLatency = 0;
     let totalCost = 0;
-    
+
     for (const record of this.routingHistory) {
       const expertName = record.decision.expert.name;
       expertUsage[expertName] = (expertUsage[expertName] || 0) + 1;
@@ -602,7 +614,7 @@ export class HyperRouterMoE extends EventEmitter {
       totalLatency += record.decision.estimatedLatencyMs;
       totalCost += record.decision.estimatedCost;
     }
-    
+
     return {
       totalRoutes: this.routingHistory.length,
       avgConfidence: totalConfidence / this.routingHistory.length,
@@ -615,7 +627,9 @@ export class HyperRouterMoE extends EventEmitter {
   /**
    * Get routing history
    */
-  getHistory(limit?: number): Array<{ context: RoutingContext; decision: RoutingDecision; timestamp: number }> {
+  getHistory(
+    limit?: number
+  ): Array<{ context: RoutingContext; decision: RoutingDecision; timestamp: number }> {
     return this.routingHistory.slice(-(limit || 100));
   }
 
@@ -624,7 +638,7 @@ export class HyperRouterMoE extends EventEmitter {
    */
   recordFeedback(expertName: string, positive: boolean, details?: string): void {
     // In production, would update expert weights based on feedback
-    this.emit("feedback", { expertName, positive, details, timestamp: Date.now() });
+    this.emit('feedback', { expertName, positive, details, timestamp: Date.now() });
   }
 }
 
@@ -635,112 +649,120 @@ export const hyperRouter = new HyperRouterMoE(expertRegistry);
 // Default expert configurations
 export const DEFAULT_EXPERTS: Expert[] = [
   {
-    name: "research",
-    capabilities: ["research", "scientific_evidence", "data_analysis"],
-    tier: "specialized",
-    modelId: "isabella-research-v1",
+    name: 'research',
+    capabilities: ['research', 'scientific_evidence', 'data_analysis'],
+    tier: 'specialized',
+    modelId: 'isabella-research-v1',
     maxTokens: 8192,
     costPerToken: 0.0001,
     latencyMs: 2000,
     reliability: 0.95,
-    version: "1.0.0",
-    metadata: { description: "Research and evidence synthesis specialist" },
+    version: '1.0.0',
+    metadata: { description: 'Research and evidence synthesis specialist' },
   },
   {
-    name: "code",
-    capabilities: ["code", "architecture", "security"],
-    tier: "specialized",
-    modelId: "isabella-code-v1",
+    name: 'code',
+    capabilities: ['code', 'architecture', 'security'],
+    tier: 'specialized',
+    modelId: 'isabella-code-v1',
     maxTokens: 8192,
     costPerToken: 0.0001,
     latencyMs: 1500,
     reliability: 0.97,
-    version: "1.0.0",
-    metadata: { description: "Code review and architecture specialist" },
+    version: '1.0.0',
+    metadata: { description: 'Code review and architecture specialist' },
   },
   {
-    name: "strategy",
-    capabilities: ["strategy", "finance", "monetization"],
-    tier: "premium",
-    modelId: "isabella-strategy-v1",
+    name: 'strategy',
+    capabilities: ['strategy', 'finance', 'monetization'],
+    tier: 'premium',
+    modelId: 'isabella-strategy-v1',
     maxTokens: 8192,
     costPerToken: 0.0002,
     latencyMs: 2500,
     reliability: 0.94,
-    version: "1.0.0",
-    metadata: { description: "Business strategy and finance specialist" },
+    version: '1.0.0',
+    metadata: { description: 'Business strategy and finance specialist' },
   },
   {
-    name: "legal",
-    capabilities: ["legal", "governance", "security"],
-    tier: "specialized",
-    modelId: "isabella-legal-v1",
+    name: 'legal',
+    capabilities: ['legal', 'governance', 'security'],
+    tier: 'specialized',
+    modelId: 'isabella-legal-v1',
     maxTokens: 8192,
     costPerToken: 0.0002,
     latencyMs: 2000,
     reliability: 0.96,
-    version: "1.0.0",
-    metadata: { description: "Legal and compliance specialist" },
+    version: '1.0.0',
+    metadata: { description: 'Legal and compliance specialist' },
   },
   {
-    name: "medicine",
-    capabilities: ["medicine", "data_analysis", "research"],
-    tier: "premium",
-    modelId: "isabella-medicine-v1",
+    name: 'medicine',
+    capabilities: ['medicine', 'data_analysis', 'research'],
+    tier: 'premium',
+    modelId: 'isabella-medicine-v1',
     maxTokens: 8192,
     costPerToken: 0.0003,
     latencyMs: 3000,
     reliability: 0.93,
-    version: "1.0.0",
-    metadata: { description: "Medical and health specialist" },
+    version: '1.0.0',
+    metadata: { description: 'Medical and health specialist' },
   },
   {
-    name: "education",
-    capabilities: ["education", "creative_writing", "translation"],
-    tier: "specialized",
-    modelId: "isabella-education-v1",
+    name: 'education',
+    capabilities: ['education', 'creative_writing', 'translation'],
+    tier: 'specialized',
+    modelId: 'isabella-education-v1',
     maxTokens: 8192,
     costPerToken: 0.0001,
     latencyMs: 1500,
     reliability: 0.95,
-    version: "1.0.0",
-    metadata: { description: "Education and content creation specialist" },
+    version: '1.0.0',
+    metadata: { description: 'Education and content creation specialist' },
   },
   {
-    name: "finance",
-    capabilities: ["finance", "data_analysis", "strategy"],
-    tier: "premium",
-    modelId: "isabella-finance-v1",
+    name: 'finance',
+    capabilities: ['finance', 'data_analysis', 'strategy'],
+    tier: 'premium',
+    modelId: 'isabella-finance-v1',
     maxTokens: 8192,
     costPerToken: 0.0002,
     latencyMs: 2000,
     reliability: 0.94,
-    version: "1.0.0",
-    metadata: { description: "Financial analysis specialist" },
+    version: '1.0.0',
+    metadata: { description: 'Financial analysis specialist' },
   },
   {
-    name: "security",
-    capabilities: ["security", "code", "architecture"],
-    tier: "specialized",
-    modelId: "isabella-security-v1",
+    name: 'security',
+    capabilities: ['security', 'code', 'architecture'],
+    tier: 'specialized',
+    modelId: 'isabella-security-v1',
     maxTokens: 8192,
     costPerToken: 0.0001,
     latencyMs: 1500,
     reliability: 0.98,
-    version: "1.0.0",
-    metadata: { description: "Security audit and threat analysis specialist" },
+    version: '1.0.0',
+    metadata: { description: 'Security audit and threat analysis specialist' },
   },
   {
-    name: "general",
-    capabilities: ["research", "code", "strategy", "education", "creative_writing", "summarization", "translation"],
-    tier: "local",
-    modelId: "isabella-general-v1",
+    name: 'general',
+    capabilities: [
+      'research',
+      'code',
+      'strategy',
+      'education',
+      'creative_writing',
+      'summarization',
+      'translation',
+    ],
+    tier: 'local',
+    modelId: 'isabella-general-v1',
     maxTokens: 4096,
     costPerToken: 0.00005,
     latencyMs: 1000,
     reliability: 0.9,
-    version: "1.0.0",
-    metadata: { description: "General purpose assistant" },
+    version: '1.0.0',
+    metadata: { description: 'General purpose assistant' },
   },
 ];
 

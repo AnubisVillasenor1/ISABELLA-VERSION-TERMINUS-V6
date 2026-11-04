@@ -6,14 +6,14 @@
  * Derivación espacial T-Free: vector hash disperso determinista por parche.
  */
 
-import * as crypto from "node:crypto";
+import * as crypto from 'node:crypto';
 
 export interface BytePatch {
   id: string;
   bytes: Uint8Array;
   rawText: string;
   entropy: number;
-  boundaryType: "LOW_ENTROPY" | "HIGH_ENTROPY_BOUNDARY" | "CONCEPT_SHIFT";
+  boundaryType: 'LOW_ENTROPY' | 'HIGH_ENTROPY_BOUNDARY' | 'CONCEPT_SHIFT';
   hashVector: number[];
 }
 
@@ -36,7 +36,7 @@ export function calculateByteEntropy(bytes: Uint8Array): number {
 }
 
 export function generateSparseHashVector(text: string, dimensions = 16): number[] {
-  const digest = crypto.createHash("sha256").update(text).digest();
+  const digest = crypto.createHash('sha256').update(text).digest();
   const vector: number[] = new Array(dimensions).fill(0);
   for (let i = 0; i < dimensions; i++) {
     const byteValue = digest[i % digest.length];
@@ -70,14 +70,14 @@ export class ByteEntropyPatcher {
 
   constructor(
     windowSizeOrOptions: number | ByteEntropyPatcherOptions = NCUA_WINDOW_BYTES,
-    entropyThreshold = NCUA_ENTROPY_THRESHOLD,
+    entropyThreshold = NCUA_ENTROPY_THRESHOLD
   ) {
     this.windowSize =
-      typeof windowSizeOrOptions === "number"
+      typeof windowSizeOrOptions === 'number'
         ? windowSizeOrOptions
         : (windowSizeOrOptions.windowSize ?? NCUA_WINDOW_BYTES);
     this.entropyThreshold =
-      typeof windowSizeOrOptions === "number"
+      typeof windowSizeOrOptions === 'number'
         ? entropyThreshold
         : (windowSizeOrOptions.entropyThreshold ?? NCUA_ENTROPY_THRESHOLD);
   }
@@ -92,7 +92,7 @@ export class ByteEntropyPatcher {
 
   public segmentIntoBytePatches(input: string): BytePatch[] {
     const encoder = new TextEncoder();
-    const decoder = new TextDecoder("utf-8");
+    const decoder = new TextDecoder('utf-8');
     const rawBytes = encoder.encode(input);
     const patches: BytePatch[] = [];
     let currentPatchBytes: number[] = [];
@@ -112,13 +112,13 @@ export class ByteEntropyPatcher {
       if (isBoundary || currentPatchBytes.length >= maxPatchLen) {
         const patchBytes = Uint8Array.from(currentPatchBytes);
         const patchText = decoder.decode(patchBytes);
-        const idSuffix = crypto.createHash("sha256").update(patchText).digest("hex").slice(0, 6);
+        const idSuffix = crypto.createHash('sha256').update(patchText).digest('hex').slice(0, 6);
         patches.push({
           id: `patch_${patches.length}_${idSuffix}`,
           bytes: patchBytes,
           rawText: patchText,
           entropy,
-          boundaryType: entropy >= this.entropyThreshold ? "HIGH_ENTROPY_BOUNDARY" : "LOW_ENTROPY",
+          boundaryType: entropy >= this.entropyThreshold ? 'HIGH_ENTROPY_BOUNDARY' : 'LOW_ENTROPY',
           hashVector: generateSparseHashVector(patchText),
         });
         currentPatchBytes = [];

@@ -8,14 +8,7 @@
 
 /** Categoría de activo cognitivo monetizable (Cognitive Asset Fabric). */
 export type CognitiveAssetKind =
-  | "reasoning"
-  | "agent"
-  | "dataset"
-  | "audit"
-  | "evaluation"
-  | "governance"
-  | "skill"
-  | "pipeline";
+  'reasoning' | 'agent' | 'dataset' | 'audit' | 'evaluation' | 'governance' | 'skill' | 'pipeline';
 
 /** Señales de entrada al motor de valuación (cada una en 0..100). */
 export interface ValuationSignals {
@@ -68,13 +61,7 @@ export interface PricingQuote {
 
 /** Rol económico en un reparto de regalías (Royalty Network). */
 export type RoyaltyRole =
-  | "creator"
-  | "affiliate"
-  | "dataset"
-  | "platform"
-  | "reserve"
-  | "federation"
-  | "distribution";
+  'creator' | 'affiliate' | 'dataset' | 'platform' | 'reserve' | 'federation' | 'distribution';
 
 /** Parte con derecho a una fracción de las regalías (basis points, 1/100 %). */
 export interface RoyaltyParty {
@@ -101,14 +88,18 @@ export interface RoyaltyPlan {
 
 /** Tipo de asiento en el libro económico append-only. */
 export type EconomicEventKind =
-  | "valuation"
-  | "pricing.quote"
-  | "royalty.plan"
-  | "settlement.computed"
-  | "treasury.credit"
-  | "treasury.debit"
-  | "affiliate.commission"
-  | "fraud.analysis";
+  | 'valuation'
+  | 'pricing.quote'
+  | 'royalty.plan'
+  | 'settlement.computed'
+  | 'settlement.matured'
+  | 'payout.requested'
+  | 'payout.released'
+  | 'reconciliation.run'
+  | 'treasury.credit'
+  | 'treasury.debit'
+  | 'affiliate.commission'
+  | 'fraud.analysis';
 
 /** Asiento del libro económico con encadenamiento por hash (BookPI-style). */
 export interface EconomicEvent {

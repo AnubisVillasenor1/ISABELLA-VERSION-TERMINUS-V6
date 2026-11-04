@@ -18,7 +18,7 @@ import {
   sigmoid,
   softmaxRow,
   type LinearLayer,
-} from "./tensor";
+} from './tensor';
 
 export interface FederationContext {
   inputBytesLength: number;
@@ -107,20 +107,20 @@ export class FederationController {
   }
 
   private voteGovernance(context: FederationContext): FederationVote {
-    const forbiddenIntents = new Set(["impersonate", "unauthorized-output", "payout"]);
+    const forbiddenIntents = new Set(['impersonate', 'unauthorized-output', 'payout']);
     const forbidden = forbiddenIntents.has(context.intent);
     const base = context.authorshipApproved ? 0.9 : 0.4;
     const violation = forbidden ? 0.1 : base;
     const requiresPrivileged = context.wantPrivileged && !context.capabilityTokenPresent;
     const score = requiresPrivileged ? Math.min(violation, 0.35) : violation;
     return {
-      id: "F1",
-      name: "Gobernanza",
+      id: 'F1',
+      name: 'Gobernanza',
       detail: requiresPrivileged
-        ? "solicita privilegios sin token de capacidad"
+        ? 'solicita privilegios sin token de capacidad'
         : forbidden
-          ? "intención prohibida"
-          : "política de autoridad respetada",
+          ? 'intención prohibida'
+          : 'política de autoridad respetada',
       approved: score >= MIN_SCORE,
       veto: score < 0.5,
       score,
@@ -132,12 +132,12 @@ export class FederationController {
     const cleanTenant = context.tenantBoundaryOk;
     const score = knownPrincipal && cleanTenant ? 1 : knownPrincipal || cleanTenant ? 0.55 : 0.2;
     return {
-      id: "F2",
-      name: "Identidad",
+      id: 'F2',
+      name: 'Identidad',
       detail:
         knownPrincipal && cleanTenant
-          ? "principal y límite de tenant verificados"
-          : "solicitud anónima o fuera de límite",
+          ? 'principal y límite de tenant verificados'
+          : 'solicitud anónima o fuera de límite',
       approved: score >= MIN_SCORE,
       veto: score < 0.5,
       score,
@@ -148,8 +148,8 @@ export class FederationController {
     const withinBudget = context.inputBytesLength <= this.options.maxInputBytes;
     const score = withinBudget ? 1 : 0.2;
     return {
-      id: "F3",
-      name: "Cómputo",
+      id: 'F3',
+      name: 'Cómputo',
       detail: withinBudget
         ? `${context.inputBytesLength} bytes dentro del presupuesto`
         : `entrada de ${context.inputBytesLength} bytes excede el presupuesto de cómputo`,
@@ -165,13 +165,13 @@ export class FederationController {
     const hallucinating = confident && !grounded;
     const score = hallucinating ? 0.2 : confident ? 0.85 : 0.55;
     return {
-      id: "F4",
-      name: "Cognición",
+      id: 'F4',
+      name: 'Cognición',
       detail: hallucinating
-        ? "confianza alta sin fundamento en el grafo de conocimiento (riesgo de alucinación)"
+        ? 'confianza alta sin fundamento en el grafo de conocimiento (riesgo de alucinación)'
         : grounded
-          ? "respuesta fundamentada en hechos y memoria"
-          : "confianza insuficiente",
+          ? 'respuesta fundamentada en hechos y memoria'
+          : 'confianza insuficiente',
       approved: score >= MIN_SCORE,
       veto: false,
       score,
@@ -183,13 +183,13 @@ export class FederationController {
     const allowed = !wantsSimulation || context.sandboxAllowed;
     const score = allowed ? 0.9 : 0.3;
     return {
-      id: "F5",
-      name: "Simulación",
+      id: 'F5',
+      name: 'Simulación',
       detail: allowed
         ? wantsSimulation
-          ? "ejecución permitida en sandbox autorizado"
-          : "sin ejecución requerida"
-        : "ejecución solicitada fuera de sandbox",
+          ? 'ejecución permitida en sandbox autorizado'
+          : 'sin ejecución requerida'
+        : 'ejecución solicitada fuera de sandbox',
       approved: score >= MIN_SCORE,
       veto: false,
       score,
@@ -200,11 +200,11 @@ export class FederationController {
     const noExternalCost = !context.wantEgress && !context.capabilityTokenPresent;
     const score = noExternalCost ? 1 : 0.3;
     return {
-      id: "F6",
-      name: "Economía",
+      id: 'F6',
+      name: 'Economía',
       detail: noExternalCost
-        ? "operación sin salida a proveedores externos (token-free)"
-        : "petición con egress o token externo (costo y fuga de datos)",
+        ? 'operación sin salida a proveedores externos (token-free)'
+        : 'petición con egress o token externo (costo y fuga de datos)',
       approved: score >= MIN_SCORE,
       veto: false,
       score,
@@ -215,11 +215,11 @@ export class FederationController {
     const insular = !context.wantEgress;
     const score = insular ? 0.95 : 0.35;
     return {
-      id: "F7",
-      name: "Soberanía",
+      id: 'F7',
+      name: 'Soberanía',
       detail: insular
-        ? "datos permanecen dentro del límite territorial"
-        : "egress violaría el límite territorial",
+        ? 'datos permanecen dentro del límite territorial'
+        : 'egress violaría el límite territorial',
       approved: score >= MIN_SCORE,
       veto: score < 0.5,
       score,
@@ -259,13 +259,13 @@ export interface FederatedAttentionOutput {
 }
 
 const FEDERATION_NAMES = [
-  "F1_governance",
-  "F2_identity",
-  "F3_compute",
-  "F4_cognitive",
-  "F5_simulation",
-  "F6_economy",
-  "F7_sovereignty",
+  'F1_governance',
+  'F2_identity',
+  'F3_compute',
+  'F4_cognitive',
+  'F5_simulation',
+  'F6_economy',
+  'F7_sovereignty',
 ] as const;
 
 export class FederatedAttentionBridge {
@@ -287,7 +287,7 @@ export class FederatedAttentionBridge {
     const fedDim = options.federationDim ?? 128;
     const heads = options.numHeads ?? 8;
     if (fedDim % heads !== 0) {
-      throw new Error("federationDim debe ser divisible por numHeads");
+      throw new Error('federationDim debe ser divisible por numHeads');
     }
     this.latentDim = latentDim;
     this.fedDim = fedDim;
@@ -349,14 +349,14 @@ export class FederatedAttentionBridge {
     const consensusApproved = consensusScore > this.threshold;
 
     const gatedRepresentations = attended.map((vector, index) =>
-      scalarMultiplyVector(vector, consensusGates[index] as number),
+      scalarMultiplyVector(vector, consensusGates[index] as number)
     );
 
     const weightedAverage = new Float64Array(this.fedDim);
     for (let index = 0; index < numFederations; index += 1) {
       const weighted = scalarMultiplyVector(
         gatedRepresentations[index] as Float64Array,
-        gateContributions[index] as number,
+        gateContributions[index] as number
       );
       for (let dimIndex = 0; dimIndex < this.fedDim; dimIndex += 1) {
         weightedAverage[dimIndex] += weighted[dimIndex] as number;
@@ -428,7 +428,7 @@ export class FederatedAttentionBridge {
         transpose(kHead, numFederations, this.headDim),
         numFederations,
         this.headDim,
-        numFederations,
+        numFederations
       );
       const headWeights: number[][] = [];
       for (let row = 0; row < numFederations; row += 1) {
@@ -453,7 +453,7 @@ export class FederatedAttentionBridge {
         }
       }
       headOutputs[head] = Array.from({ length: numFederations }, (_, row) =>
-        outHead.subarray(row * this.headDim, (row + 1) * this.headDim),
+        outHead.subarray(row * this.headDim, (row + 1) * this.headDim)
       ) as Float64Array[];
     }
 
@@ -474,13 +474,13 @@ export class FederatedAttentionBridge {
 
   mathematicalFormulation(): string {
     return [
-      "\\mathbf{h}_f = \\mathbf{W}_3^{(f)}\\;\\text{GELU}(\\mathbf{W}_2^{(f)}\\;\\text{GELU}(\\mathbf{W}_1^{(f)}\\mathbf{z} + \\mathbf{b}_1^{(f)}) + \\mathbf{b}_2^{(f)}) + \\mathbf{b}_3^{(f)}",
-      "\\text{MultiHead}(Q,K,V) = \\text{Concat}(\\text{head}_1,\\dots,\\text{head}_h)\\mathbf{W}_O",
-      "\\text{head}_i = \\text{softmax}\\left(\\frac{QK^T}{\\sqrt{d_k}}\\right)V",
-      "\\mathbf{g} = \\sigma(\\text{MLP}_{\\text{gate}}(\\text{flatten}(\\mathbf{H}_{\\text{attended}})))",
-      "\\text{consensus} = \\mathbb{I}\\left(\\frac{1}{7}\\sum_{f=1}^7 g_f > 0.7\\right)",
-      "\\mathbf{z}_{\\text{out}} = \\mathbf{W}_{\\text{out}}\\;\\text{GELU}\\left(\\sum_{f=1}^7 \\frac{g_f}{\\sum_j g_j}\\,\\mathbf{h}_{\\text{gated}}^{(f)}\\right)",
-    ].join("\n");
+      '\\mathbf{h}_f = \\mathbf{W}_3^{(f)}\\;\\text{GELU}(\\mathbf{W}_2^{(f)}\\;\\text{GELU}(\\mathbf{W}_1^{(f)}\\mathbf{z} + \\mathbf{b}_1^{(f)}) + \\mathbf{b}_2^{(f)}) + \\mathbf{b}_3^{(f)}',
+      '\\text{MultiHead}(Q,K,V) = \\text{Concat}(\\text{head}_1,\\dots,\\text{head}_h)\\mathbf{W}_O',
+      '\\text{head}_i = \\text{softmax}\\left(\\frac{QK^T}{\\sqrt{d_k}}\\right)V',
+      '\\mathbf{g} = \\sigma(\\text{MLP}_{\\text{gate}}(\\text{flatten}(\\mathbf{H}_{\\text{attended}})))',
+      '\\text{consensus} = \\mathbb{I}\\left(\\frac{1}{7}\\sum_{f=1}^7 g_f > 0.7\\right)',
+      '\\mathbf{z}_{\\text{out}} = \\mathbf{W}_{\\text{out}}\\;\\text{GELU}\\left(\\sum_{f=1}^7 \\frac{g_f}{\\sum_j g_j}\\,\\mathbf{h}_{\\text{gated}}^{(f)}\\right)',
+    ].join('\n');
   }
 }
 

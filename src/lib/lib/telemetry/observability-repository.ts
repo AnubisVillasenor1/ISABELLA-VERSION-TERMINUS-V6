@@ -1,4 +1,4 @@
-import { prisma } from "../db";
+import { prisma } from '../db';
 
 export interface PersistedObservabilityOverview {
   eventCount: number;
@@ -21,7 +21,7 @@ export async function recordObservabilityEvent(event: {
     INSERT INTO public.observability_events
       (trace_id, event_type, source, duration_ms, severity, payload)
     VALUES
-      (${event.traceId}, ${event.eventType}, ${event.source}, ${event.durationMs ?? 0}, ${event.severity ?? "info"}, ${JSON.stringify(event.payload ?? {})}::jsonb)
+      (${event.traceId}, ${event.eventType}, ${event.source}, ${event.durationMs ?? 0}, ${event.severity ?? 'info'}, ${JSON.stringify(event.payload ?? {})}::jsonb)
   `;
 }
 

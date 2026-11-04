@@ -25,9 +25,9 @@ import {
   compareTimes,
   timesEqual,
   ZERO,
-} from "./rational";
+} from './rational';
 
-export type TimecodeKind = "ndf" | "df";
+export type TimecodeKind = 'ndf' | 'df';
 
 export interface Timecode {
   hours: number;
@@ -55,13 +55,13 @@ export function supportsDropFrame(fps: RationalTime): boolean {
 function assertValidFps(fps: RationalTime): void {
   const n = normalizeRational(fps);
   if (n.numerator <= 0n) {
-    throw new Error("Temporal: fps debe ser positivo.");
+    throw new Error('Temporal: fps debe ser positivo.');
   }
   if (n.numerator % n.denominator !== 0n) {
     // fps racionales NO-entero solo se admiten en las timebases drop-frame.
     if (!supportsDropFrame(fps)) {
       throw new Error(
-        `Temporal: timebase ${n.numerator}/${n.denominator} no admitida; drop-frame solo en 30000/1001 y 60000/1001.`,
+        `Temporal: timebase ${n.numerator}/${n.denominator} no admitida; drop-frame solo en 30000/1001 y 60000/1001.`
       );
     }
   }
@@ -75,17 +75,17 @@ const ZERO_FPS_BOUNDARY: RationalTime = ZERO;
  */
 export function frameToTimecode(frameIndex: bigint, options: TimecodeOptions): Timecode {
   if (frameIndex < 0n) {
-    throw new Error("Temporal: frame negativo no tiene timecode.");
+    throw new Error('Temporal: frame negativo no tiene timecode.');
   }
   const fps = normalizeRational(options.fps);
   assertValidFps(fps);
-  const kind = options.kind ?? (supportsDropFrame(fps) ? "df" : "ndf");
+  const kind = options.kind ?? (supportsDropFrame(fps) ? 'df' : 'ndf');
 
-  if (kind === "ndf") {
+  if (kind === 'ndf') {
     return frameToNonDrop(frameIndex, fps);
   }
   if (!supportsDropFrame(fps)) {
-    throw new Error("Temporal: drop-frame requiere 30000/1001 o 60000/1001.");
+    throw new Error('Temporal: drop-frame requiere 30000/1001 o 60000/1001.');
   }
   return frameToDropFrame(frameIndex, fps);
 }
@@ -106,7 +106,7 @@ function frameToNonDrop(frameIndex: bigint, fps: RationalTime): Timecode {
   // frames dentro del segundo = remain * fps.numerator / fps.denominator (exacto)
   const remainScaled = (remain * fps.numerator) / fps.denominator;
   if (remainScaled >= perSecond) {
-    throw new Error("Temporal: inconsistencia interna en NDF (frames ≥ fps).");
+    throw new Error('Temporal: inconsistencia interna en NDF (frames ≥ fps).');
   }
   if (h >= 24n) {
     throw new Error(`Temporal: tiempo fuera de rango (${h} h) — sin wrap silencioso.`);
@@ -116,7 +116,7 @@ function frameToNonDrop(frameIndex: bigint, fps: RationalTime): Timecode {
     minutes: Number(m),
     seconds: Number(s),
     frames: Number(remainScaled),
-    kind: "ndf",
+    kind: 'ndf',
     fps,
   };
 }
@@ -153,7 +153,7 @@ function frameToDropFrame(frameIndex: bigint, fps: RationalTime): Timecode {
   const within = frameIndex - base;
 
   if (within < 0n) {
-    throw new Error("Temporal: drop-frame interno fuera de rango.");
+    throw new Error('Temporal: drop-frame interno fuera de rango.');
   }
 
   // el frame N se cuentan "virtuales": a un timecode se le restan los
@@ -178,7 +178,7 @@ function frameToDropFrame(frameIndex: bigint, fps: RationalTime): Timecode {
     minutes: Number(m),
     seconds: Number(s),
     frames: Number(f),
-    kind: "df",
+    kind: 'df',
     fps,
   };
 }
@@ -190,7 +190,7 @@ function frameToDropFrame(frameIndex: bigint, fps: RationalTime): Timecode {
 export function timecodeToFrame(timecode: Timecode): bigint {
   const fps = normalizeRational(timecode.fps);
   assertValidFps(fps);
-  if (timecode.kind === "ndf") {
+  if (timecode.kind === 'ndf') {
     const perSecond = framesPerSecond(fps) * fps.denominator;
     const totalSeconds =
       BigInt(timecode.hours) * 3600n + BigInt(timecode.minutes) * 60n + BigInt(timecode.seconds);

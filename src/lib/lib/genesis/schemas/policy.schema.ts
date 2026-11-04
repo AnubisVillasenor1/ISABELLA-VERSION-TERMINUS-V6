@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 export const PolicySchema = z.object({
   version: z.string(),
@@ -6,7 +6,7 @@ export const PolicySchema = z.object({
   description: z.string(),
   globals: z.object({
     failClosed: z.boolean().default(true),
-    trustLevel: z.enum(["zero", "minimal", "standard"]).default("zero"),
+    trustLevel: z.enum(['zero', 'minimal', 'standard']).default('zero'),
     evidenceTtlDays: z.number().int().positive().default(90),
     reauditFrequencyDays: z.number().int().positive().default(30),
   }),
@@ -20,7 +20,7 @@ export const PolicySchema = z.object({
       productionDays: z.number().int().positive().optional(),
       incidentFree: z.boolean().optional(),
       slaMet: z.boolean().optional(),
-    }),
+    })
   ),
   releaseThresholds: z.object({
     critical: z.object({
@@ -53,7 +53,7 @@ export const PolicySchema = z.object({
       title: z.string(),
       requiredStatus: z.string(),
       evidenceRequired: z.array(z.string()),
-    }),
+    })
   ),
   exceptions: z.object({
     allowException: z.object({

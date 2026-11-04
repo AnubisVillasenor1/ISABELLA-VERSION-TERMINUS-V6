@@ -18,10 +18,10 @@
  * El guard **transporta** un juicio epistémico; no concede verdad, ni autoridad,
  * ni producción. Cada reporte lleva un digest determinista para auditoría.
  */
-import { sha256 } from "../skills/canonical-json";
+import { sha256 } from '../skills/canonical-json';
 
-export const GROUNDING_METHOD = "LEXICAL_SUPPORT_HEURISTIC" as const;
-export const GROUNDING_VERSION = "1.0.0" as const;
+export const GROUNDING_METHOD = 'LEXICAL_SUPPORT_HEURISTIC' as const;
+export const GROUNDING_VERSION = '1.0.0' as const;
 
 export interface GroundingEvidence {
   readonly id: string;
@@ -39,8 +39,8 @@ export interface GroundingOptions {
   readonly stopwords?: readonly string[];
 }
 
-export type GroundingClaimVerdict = "SUPPORTED" | "PARTIAL" | "UNSUPPORTED";
-export type GroundingVerdict = "ACCEPTED" | "REVIEW" | "BLOCKED";
+export type GroundingClaimVerdict = 'SUPPORTED' | 'PARTIAL' | 'UNSUPPORTED';
+export type GroundingVerdict = 'ACCEPTED' | 'REVIEW' | 'BLOCKED';
 
 export interface GroundingClaimResult {
   readonly claim: string;
@@ -64,21 +64,166 @@ export interface GroundingReport {
 
 const DEFAULT_STOPWORDS: readonly string[] = [
   // Español
-  "de", "la", "que", "el", "en", "y", "a", "los", "del", "se", "las", "por", "un", "para",
-  "con", "una", "su", "al", "es", "lo", "como", "más", "mas", "pero", "sus", "le", "ya",
-  "o", "este", "sí", "si", "porque", "esta", "entre", "cuando", "muy", "sin", "sobre",
-  "también", "tambien", "me", "hasta", "hay", "donde", "quien", "desde", "todo", "nos",
-  "durante", "todos", "uno", "les", "ni", "contra", "otros", "ese", "eso", "ante", "ellos",
-  "e", "esto", "mí", "mi", "antes", "algunos", "qué", "que", "unos", "yo", "otro", "otras",
-  "otra", "él", "el", "tanto", "esa", "estos", "mucho", "quienes", "nada", "muchos", "cual",
-  "poco", "ella", "estar", "estas", "algunas", "algo", "nosotros", "mi", "mis", "tú", "te",
+  'de',
+  'la',
+  'que',
+  'el',
+  'en',
+  'y',
+  'a',
+  'los',
+  'del',
+  'se',
+  'las',
+  'por',
+  'un',
+  'para',
+  'con',
+  'una',
+  'su',
+  'al',
+  'es',
+  'lo',
+  'como',
+  'más',
+  'mas',
+  'pero',
+  'sus',
+  'le',
+  'ya',
+  'o',
+  'este',
+  'sí',
+  'si',
+  'porque',
+  'esta',
+  'entre',
+  'cuando',
+  'muy',
+  'sin',
+  'sobre',
+  'también',
+  'tambien',
+  'me',
+  'hasta',
+  'hay',
+  'donde',
+  'quien',
+  'desde',
+  'todo',
+  'nos',
+  'durante',
+  'todos',
+  'uno',
+  'les',
+  'ni',
+  'contra',
+  'otros',
+  'ese',
+  'eso',
+  'ante',
+  'ellos',
+  'e',
+  'esto',
+  'mí',
+  'mi',
+  'antes',
+  'algunos',
+  'qué',
+  'que',
+  'unos',
+  'yo',
+  'otro',
+  'otras',
+  'otra',
+  'él',
+  'el',
+  'tanto',
+  'esa',
+  'estos',
+  'mucho',
+  'quienes',
+  'nada',
+  'muchos',
+  'cual',
+  'poco',
+  'ella',
+  'estar',
+  'estas',
+  'algunas',
+  'algo',
+  'nosotros',
+  'mi',
+  'mis',
+  'tú',
+  'te',
   // English
-  "the", "of", "and", "to", "in", "a", "is", "that", "it", "for", "on", "as", "with",
-  "are", "be", "this", "by", "or", "an", "was", "were", "from", "at", "which", "but",
-  "not", "have", "has", "had", "will", "would", "there", "their", "they", "you", "we",
-  "i", "he", "she", "his", "her", "its", "our", "your", "them", "us", "me", "my", "than",
-  "then", "so", "if", "into", "about", "can", "could", "should", "may", "might", "do",
-  "does", "did", "doesn", "don", "no", "yes",
+  'the',
+  'of',
+  'and',
+  'to',
+  'in',
+  'a',
+  'is',
+  'that',
+  'it',
+  'for',
+  'on',
+  'as',
+  'with',
+  'are',
+  'be',
+  'this',
+  'by',
+  'or',
+  'an',
+  'was',
+  'were',
+  'from',
+  'at',
+  'which',
+  'but',
+  'not',
+  'have',
+  'has',
+  'had',
+  'will',
+  'would',
+  'there',
+  'their',
+  'they',
+  'you',
+  'we',
+  'i',
+  'he',
+  'she',
+  'his',
+  'her',
+  'its',
+  'our',
+  'your',
+  'them',
+  'us',
+  'me',
+  'my',
+  'than',
+  'then',
+  'so',
+  'if',
+  'into',
+  'about',
+  'can',
+  'could',
+  'should',
+  'may',
+  'might',
+  'do',
+  'does',
+  'did',
+  'doesn',
+  'don',
+  'no',
+  'yes',
 ];
 
 const MAX_CLAIM_TOKENS = 400;
@@ -86,10 +231,10 @@ const MAX_CLAIM_TOKENS = 400;
 /** NFKC + minúsculas + sin diacríticos, para comparación léxica determinista. */
 function normalize(text: string): string {
   return text
-    .normalize("NFKC")
+    .normalize('NFKC')
     .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
 }
 
 function tokenize(text: string, stopwords: ReadonlySet<string>): string[] {
@@ -111,16 +256,18 @@ function splitClaims(answer: string): string[] {
     .filter((part) => part.length > 0);
 }
 
-function validateOptions(options: GroundingOptions | undefined): Required<Pick<GroundingOptions, "minGroundedness" | "partialThreshold" | "supportedThreshold">> {
+function validateOptions(
+  options: GroundingOptions | undefined
+): Required<Pick<GroundingOptions, 'minGroundedness' | 'partialThreshold' | 'supportedThreshold'>> {
   const minGroundedness = options?.minGroundedness ?? 0.6;
   const partialThreshold = options?.partialThreshold ?? 0.35;
   const supportedThreshold = options?.supportedThreshold ?? 0.6;
   for (const value of [minGroundedness, partialThreshold, supportedThreshold]) {
-    if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || value > 1) {
-      throw new Error("GROUNDING_OPTIONS_INVALID");
+    if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 1) {
+      throw new Error('GROUNDING_OPTIONS_INVALID');
     }
   }
-  if (partialThreshold > supportedThreshold) throw new Error("GROUNDING_OPTIONS_INVALID");
+  if (partialThreshold > supportedThreshold) throw new Error('GROUNDING_OPTIONS_INVALID');
   return { minGroundedness, partialThreshold, supportedThreshold };
 }
 
@@ -131,20 +278,23 @@ function validateOptions(options: GroundingOptions | undefined): Required<Pick<G
 export function assessGrounding(
   answer: string,
   evidence: readonly GroundingEvidence[],
-  options?: GroundingOptions,
+  options?: GroundingOptions
 ): GroundingReport {
-  if (typeof answer !== "string" || answer.trim().length === 0) {
-    throw new Error("GROUNDING_ANSWER_REQUIRED");
+  if (typeof answer !== 'string' || answer.trim().length === 0) {
+    throw new Error('GROUNDING_ANSWER_REQUIRED');
   }
   const { minGroundedness, partialThreshold, supportedThreshold } = validateOptions(options);
 
-  const stopwords = new Set<string>([...DEFAULT_STOPWORDS, ...(options?.stopwords ?? []).map((word) => normalize(word.trim()))]);
+  const stopwords = new Set<string>([
+    ...DEFAULT_STOPWORDS,
+    ...(options?.stopwords ?? []).map((word) => normalize(word.trim())),
+  ]);
 
   const evidenceTokens = new Map<string, Set<string>>();
   const globalTokens = new Set<string>();
   for (const item of evidence) {
     const id = item.id.trim();
-    if (!id) throw new Error("GROUNDING_EVIDENCE_ID_REQUIRED");
+    if (!id) throw new Error('GROUNDING_EVIDENCE_ID_REQUIRED');
     const tokens = new Set(tokenize(item.text, stopwords));
     evidenceTokens.set(id, tokens);
     for (const token of tokens) globalTokens.add(token);
@@ -153,7 +303,8 @@ export function assessGrounding(
   const notes: string[] = [
     `${GROUNDING_METHOD}: coincidencia léxica de vocabulario, NO entailment semántico ni verificación de verdad.`,
   ];
-  if (evidence.length === 0) notes.push("Sin evidencia aportada: ninguna afirmación puede anclarse (fail-closed).");
+  if (evidence.length === 0)
+    notes.push('Sin evidencia aportada: ninguna afirmación puede anclarse (fail-closed).');
 
   const claims: GroundingClaimResult[] = [];
   for (const rawClaim of splitClaims(answer)) {
@@ -170,11 +321,12 @@ export function assessGrounding(
     }
     supportingEvidenceIds.sort();
 
-    const verdict: GroundingClaimVerdict = supportRatio < partialThreshold
-      ? "UNSUPPORTED"
-      : supportRatio < supportedThreshold
-        ? "PARTIAL"
-        : "SUPPORTED";
+    const verdict: GroundingClaimVerdict =
+      supportRatio < partialThreshold
+        ? 'UNSUPPORTED'
+        : supportRatio < supportedThreshold
+          ? 'PARTIAL'
+          : 'SUPPORTED';
 
     claims.push({
       claim: rawClaim,
@@ -186,21 +338,22 @@ export function assessGrounding(
   }
 
   const claimCount = claims.length;
-  const unsupportedClaimCount = claims.filter((claim) => claim.verdict === "UNSUPPORTED").length;
-  const groundedness = claimCount === 0
-    ? 0
-    : claims.reduce((sum, claim) => sum + claim.supportRatio, 0) / claimCount;
+  const unsupportedClaimCount = claims.filter((claim) => claim.verdict === 'UNSUPPORTED').length;
+  const groundedness =
+    claimCount === 0 ? 0 : claims.reduce((sum, claim) => sum + claim.supportRatio, 0) / claimCount;
 
   let verdict: GroundingVerdict;
   if (claimCount === 0) {
-    verdict = "REVIEW";
-    notes.push("NO_CONTENT_CLAIMS: la respuesta no contiene afirmaciones evaluables (solo vacías o palabras stop).");
+    verdict = 'REVIEW';
+    notes.push(
+      'NO_CONTENT_CLAIMS: la respuesta no contiene afirmaciones evaluables (solo vacías o palabras stop).'
+    );
   } else if (unsupportedClaimCount > 0) {
-    verdict = "BLOCKED";
+    verdict = 'BLOCKED';
   } else if (groundedness < minGroundedness) {
-    verdict = "REVIEW";
+    verdict = 'REVIEW';
   } else {
-    verdict = "ACCEPTED";
+    verdict = 'ACCEPTED';
   }
 
   const digest = sha256({

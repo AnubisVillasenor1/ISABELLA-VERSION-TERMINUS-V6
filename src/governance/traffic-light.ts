@@ -31,53 +31,53 @@
  * más restrictiva de su ruta. Omitir el ámbito federado desactiva la reutilización
  * de caché (no se puede violar el aislamiento entre inquilinos/federaciones).
  */
-import type { RiskTier } from "../authority/method-id";
-import { assessIntent, type IntentAssessment, type IntentCategory } from "../crown/intent";
-import type { HighImpactTrigger } from "../ingress/isa-api";
+import type { RiskTier } from '../authority/method-id';
+import { assessIntent, type IntentAssessment, type IntentCategory } from '../crown/intent';
+import type { HighImpactTrigger } from '../ingress/isa-api';
 import {
   planTurboRoute,
   type TurboCachePolicy,
   type TurboFilter,
   type TurboRoute,
-} from "../intelligence/turbo-planner";
-import { sha256 } from "../skills/canonical-json";
+} from '../intelligence/turbo-planner';
+import { sha256 } from '../skills/canonical-json';
 
-export const TRAFFIC_LIGHT_VERSION = "1.0.0" as const;
+export const TRAFFIC_LIGHT_VERSION = '1.0.0' as const;
 
 /** Identidad de método canónica (AGENTS.md §5). */
 export const TRAFFIC_LIGHT_METHOD_ID =
-  "A.TWINS.E00_TURBO.classify_flow.v1.0.0.LOW.AUTONOMOUS" as const;
+  'A.TWINS.E00_TURBO.classify_flow.v1.0.0.LOW.AUTONOMOUS' as const;
 
 export const TRAFFIC_LIGHT_DISCLAIMER =
-  "El semáforo clasifica el flujo y decide cuántos filtros gobernados corren; NO concede autoridad, NO ejecuta y NO amplía permisos. Verde ejecuta solo los filtros mínimos (AEGIS, CROWN, saneamiento) porque el riesgo es bajo; CROWN sigue autorizando, AEGIS sigue filtrando y BookPI sigue evidenciando en todas las bandas." as const;
+  'El semáforo clasifica el flujo y decide cuántos filtros gobernados corren; NO concede autoridad, NO ejecuta y NO amplía permisos. Verde ejecuta solo los filtros mínimos (AEGIS, CROWN, saneamiento) porque el riesgo es bajo; CROWN sigue autorizando, AEGIS sigue filtrando y BookPI sigue evidenciando en todas las bandas.' as const;
 
 /** Bandas de semáforo, de la vía más rápida (GREEN) a la más deliberativa (RED). */
-export const TRAFFIC_BANDS = ["GREEN", "YELLOW", "ORANGE", "RED"] as const;
+export const TRAFFIC_BANDS = ['GREEN', 'YELLOW', 'ORANGE', 'RED'] as const;
 export type TrafficBand = (typeof TRAFFIC_BANDS)[number];
 
 /** Nivel de fricción gobernada asociado a cada banda. */
-export const TRAFFIC_FRICTION_LEVELS = ["MINIMAL", "MODERATE", "ELEVATED", "MAXIMAL"] as const;
+export const TRAFFIC_FRICTION_LEVELS = ['MINIMAL', 'MODERATE', 'ELEVATED', 'MAXIMAL'] as const;
 export type TrafficFriction = (typeof TRAFFIC_FRICTION_LEVELS)[number];
 
 export const TRAFFIC_BAND_LABELS: Record<TrafficBand, string> = {
-  GREEN: "Verde — vía rápida gobernada",
-  YELLOW: "Amarillo — filtrado en curso",
-  ORANGE: "Naranja — gobierno reforzado",
-  RED: "Rojo — todos los filtros y revisión humana",
+  GREEN: 'Verde — vía rápida gobernada',
+  YELLOW: 'Amarillo — filtrado en curso',
+  ORANGE: 'Naranja — gobierno reforzado',
+  RED: 'Rojo — todos los filtros y revisión humana',
 };
 
 const ROUTE_TO_BAND: Record<TurboRoute, TrafficBand> = {
-  FAST: "GREEN",
-  GROUNDED: "YELLOW",
-  AGENT: "ORANGE",
-  HUMAN_REVIEW: "RED",
+  FAST: 'GREEN',
+  GROUNDED: 'YELLOW',
+  AGENT: 'ORANGE',
+  HUMAN_REVIEW: 'RED',
 };
 
 const BAND_TO_FRICTION: Record<TrafficBand, TrafficFriction> = {
-  GREEN: "MINIMAL",
-  YELLOW: "MODERATE",
-  ORANGE: "ELEVATED",
-  RED: "MAXIMAL",
+  GREEN: 'MINIMAL',
+  YELLOW: 'MODERATE',
+  ORANGE: 'ELEVATED',
+  RED: 'MAXIMAL',
 };
 
 export interface TrafficLightInput {
@@ -109,7 +109,7 @@ export interface TrafficLightVerdict {
   readonly cachePolicy: TurboCachePolicy;
   readonly humanReviewRequired: boolean;
   /** Invariante: la clasificación nunca eleva ni reduce la autoridad. */
-  readonly authorityPath: "FULL";
+  readonly authorityPath: 'FULL';
   readonly reasons: readonly string[];
   readonly digest: string;
   readonly methodId: typeof TRAFFIC_LIGHT_METHOD_ID;
@@ -122,14 +122,18 @@ export interface TrafficLightVerdict {
  * HIGH; acciones externas y gobernanza son MEDIUM; el resto es LOW.
  */
 export function riskTierForIntent(intent: IntentAssessment): RiskTier {
-  if (intent.isDestructive) return "CRITICAL";
-  if (intent.hasSecretRequest || intent.touchesPersonalData || intent.category === "security") {
-    return "HIGH";
+  if (intent.isDestructive) return 'CRITICAL';
+  if (intent.hasSecretRequest || intent.touchesPersonalData || intent.category === 'security') {
+    return 'HIGH';
   }
-  if (intent.isExternalAction || intent.category === "external_action" || intent.category === "governance") {
-    return "MEDIUM";
+  if (
+    intent.isExternalAction ||
+    intent.category === 'external_action' ||
+    intent.category === 'governance'
+  ) {
+    return 'MEDIUM';
   }
-  return "LOW";
+  return 'LOW';
 }
 
 /**
@@ -137,8 +141,8 @@ export function riskTierForIntent(intent: IntentAssessment): RiskTier {
  * gobernados que corresponde. No autoriza ni ejecuta: solo enruta el flujo.
  */
 export function classifyFlow(input: TrafficLightInput): TrafficLightVerdict {
-  const text = typeof input?.input === "string" ? input.input.trim() : "";
-  if (!text) throw new Error("TRAFFIC_INPUT_REQUIRED");
+  const text = typeof input?.input === 'string' ? input.input.trim() : '';
+  if (!text) throw new Error('TRAFFIC_INPUT_REQUIRED');
 
   const intent = assessIntent(text);
   const riskTier = riskTierForIntent(intent);
@@ -148,7 +152,7 @@ export function classifyFlow(input: TrafficLightInput): TrafficLightVerdict {
     inputTokens: input.inputTokens ?? Math.max(1, Math.ceil(text.length / 4)),
     expectedOutputTokens: input.expectedOutputTokens ?? 256,
     riskTier,
-    principalId: input.principalId?.trim() || "human:anonymous",
+    principalId: input.principalId?.trim() || 'human:anonymous',
     requiresTools: input.requiresTools === true,
     requiresMemory: input.requiresMemory === true,
     highImpactTriggers: input.highImpactTriggers ?? [],
@@ -157,7 +161,7 @@ export function classifyFlow(input: TrafficLightInput): TrafficLightVerdict {
   });
 
   const band = ROUTE_TO_BAND[plan.route];
-  const fastLane = band === "GREEN";
+  const fastLane = band === 'GREEN';
 
   const reasons = [
     `intent:${intent.category}`,
@@ -194,7 +198,7 @@ export function classifyFlow(input: TrafficLightInput): TrafficLightVerdict {
     skippedFilters: plan.skippedFilters,
     cachePolicy: plan.cachePolicy,
     humanReviewRequired: plan.humanReviewRequired,
-    authorityPath: "FULL",
+    authorityPath: 'FULL',
     reasons: Object.freeze(reasons),
     digest,
     methodId: TRAFFIC_LIGHT_METHOD_ID,
@@ -204,5 +208,5 @@ export function classifyFlow(input: TrafficLightInput): TrafficLightVerdict {
 
 /** ¿La clasificación habilita la vía rápida gobernada, sin degradar la autoridad? */
 export function isFastLane(verdict: TrafficLightVerdict): boolean {
-  return verdict.fastLane && verdict.band === "GREEN" && verdict.authorityPath === "FULL";
+  return verdict.fastLane && verdict.band === 'GREEN' && verdict.authorityPath === 'FULL';
 }

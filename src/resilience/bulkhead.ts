@@ -6,9 +6,9 @@
  * Las métricas son locales al proceso.
  */
 export class BulkheadRejectedError extends Error {
-  constructor(readonly reason: "QUEUE_FULL" | "QUEUE_TIMEOUT" | "CLOSED") {
+  constructor(readonly reason: 'QUEUE_FULL' | 'QUEUE_TIMEOUT' | 'CLOSED') {
     super(`BULKHEAD: rejected (${reason})`);
-    this.name = "BulkheadRejectedError";
+    this.name = 'BulkheadRejectedError';
   }
 }
 
@@ -39,27 +39,34 @@ export class Bulkhead {
   private readonly queue: Waiter[] = [];
 
   constructor(private readonly opts: BulkheadOptions) {
-    if (!Number.isInteger(opts.maxConcurrent) || opts.maxConcurrent < 1) throw new RangeError("BULKHEAD: maxConcurrent must be >= 1");
-    if (!Number.isInteger(opts.maxQueue) || opts.maxQueue < 0) throw new RangeError("BULKHEAD: maxQueue must be >= 0");
-    if (!(opts.queueTimeoutMs > 0)) throw new RangeError("BULKHEAD: queueTimeoutMs must be > 0");
+    if (!Number.isInteger(opts.maxConcurrent) || opts.maxConcurrent < 1)
+      throw new RangeError('BULKHEAD: maxConcurrent must be >= 1');
+    if (!Number.isInteger(opts.maxQueue) || opts.maxQueue < 0)
+      throw new RangeError('BULKHEAD: maxQueue must be >= 0');
+    if (!(opts.queueTimeoutMs > 0)) throw new RangeError('BULKHEAD: queueTimeoutMs must be > 0');
   }
 
   stats(): BulkheadStats {
-    return { active: this.active, queued: this.queue.length, completed: this.completed, rejected: this.rejected };
+    return {
+      active: this.active,
+      queued: this.queue.length,
+      completed: this.completed,
+      rejected: this.rejected,
+    };
   }
 
-  private reject(reason: "QUEUE_FULL" | "QUEUE_TIMEOUT" | "CLOSED"): BulkheadRejectedError {
+  private reject(reason: 'QUEUE_FULL' | 'QUEUE_TIMEOUT' | 'CLOSED'): BulkheadRejectedError {
     this.rejected += 1;
     return new BulkheadRejectedError(reason);
   }
 
   private acquire(): Promise<void> {
-    if (this.closed) return Promise.reject(this.reject("CLOSED"));
+    if (this.closed) return Promise.reject(this.reject('CLOSED'));
     if (this.active < this.opts.maxConcurrent) {
       this.active += 1;
       return Promise.resolve();
     }
-    if (this.queue.length >= this.opts.maxQueue) return Promise.reject(this.reject("QUEUE_FULL"));
+    if (this.queue.length >= this.opts.maxQueue) return Promise.reject(this.reject('QUEUE_FULL'));
     return new Promise<void>((resolve, reject) => {
       const waiter: Waiter = {
         resolve,
@@ -67,7 +74,7 @@ export class Bulkhead {
         timer: setTimeout(() => {
           const i = this.queue.indexOf(waiter);
           if (i >= 0) this.queue.splice(i, 1);
-          reject(this.reject("QUEUE_TIMEOUT"));
+          reject(this.reject('QUEUE_TIMEOUT'));
         }, this.opts.queueTimeoutMs),
       };
       this.queue.push(waiter);
@@ -99,7 +106,7 @@ export class Bulkhead {
     this.closed = true;
     for (const w of this.queue.splice(0)) {
       clearTimeout(w.timer);
-      w.reject(this.reject("CLOSED"));
+      w.reject(this.reject('CLOSED'));
     }
   }
 }

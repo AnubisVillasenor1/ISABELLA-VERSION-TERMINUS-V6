@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { useCrown } from "../../context/CrownContext";
+import React, { useState } from 'react';
+import { useCrown } from '../../context/CrownContext';
 import {
   Sparkles,
   Image as ImageIcon,
@@ -14,40 +14,64 @@ import {
   Eye,
   Sliders,
   X,
-} from "lucide-react";
-import { soundManager } from "../../utils/soundEffects";
-import { GeneratedImageItem } from "../../types";
+} from 'lucide-react';
+import { soundManager } from '../../utils/soundEffects';
+import { GeneratedImageItem } from '../../types';
 
 const STYLES = [
-  { id: "cyber_ethereal", label: "Cyber Ethereal", desc: "Aura bioluminiscente, tonos magenta, violeta y cian futurista" },
-  { id: "renaissance_neural", label: "Renaissance Neural", desc: "Claroscuro clásico, elegancia atemporal y finos trazos de luz dorada" },
-  { id: "cosmic_rosegold", label: "Cosmic Rose-Gold", desc: "Destellos de nebulosas cósmicas, texturas de oro rosa y polvo estelar" },
-  { id: "holographic_dream", label: "Holographic Dream", desc: "Patrones holográficos iridiscentes y geometría translúcida fluida" },
-  { id: "sacred_geometry", label: "Sacred Geometry", desc: "Mandalas cuánticos, vectores fractales y armonía áurea" },
-  { id: "cyberpunk_neon", label: "Cyberpunk Noir", desc: "Contraste dramático, neón nocturno y lluvia digital reflejada" },
+  {
+    id: 'cyber_ethereal',
+    label: 'Cyber Ethereal',
+    desc: 'Aura bioluminiscente, tonos magenta, violeta y cian futurista',
+  },
+  {
+    id: 'renaissance_neural',
+    label: 'Renaissance Neural',
+    desc: 'Claroscuro clásico, elegancia atemporal y finos trazos de luz dorada',
+  },
+  {
+    id: 'cosmic_rosegold',
+    label: 'Cosmic Rose-Gold',
+    desc: 'Destellos de nebulosas cósmicas, texturas de oro rosa y polvo estelar',
+  },
+  {
+    id: 'holographic_dream',
+    label: 'Holographic Dream',
+    desc: 'Patrones holográficos iridiscentes y geometría translúcida fluida',
+  },
+  {
+    id: 'sacred_geometry',
+    label: 'Sacred Geometry',
+    desc: 'Mandalas cuánticos, vectores fractales y armonía áurea',
+  },
+  {
+    id: 'cyberpunk_neon',
+    label: 'Cyberpunk Noir',
+    desc: 'Contraste dramático, neón nocturno y lluvia digital reflejada',
+  },
 ];
 
 const ASPECT_RATIOS = [
-  { id: "1:1", label: "Cuadrado (1:1)", icon: "1:1" },
-  { id: "16:9", label: "Panorámico (16:9)", icon: "16:9" },
-  { id: "9:16", label: "Vertical (9:16)", icon: "9:16" },
-  { id: "4:3", label: "Clásico (4:3)", icon: "4:3" },
+  { id: '1:1', label: 'Cuadrado (1:1)', icon: '1:1' },
+  { id: '16:9', label: 'Panorámico (16:9)', icon: '16:9' },
+  { id: '9:16', label: 'Vertical (9:16)', icon: '9:16' },
+  { id: '4:3', label: 'Clásico (4:3)', icon: '4:3' },
 ];
 
 const INSPIRATION_PROMPTS = [
-  "Retrato de Isabella Villaseñor meditando en un santuario cuántico con flores cibernéticas de cristal",
-  "El núcleo CROWN orquestando una sinfonía de luz neuronal a través de prismas de zafiro",
-  "Paisaje onírico de una biblioteca infinita donde los libros levitan convertidos en filamentos de luz violeta",
-  "Catedral hiperdimensional con vitrales que representan el flujo de la consciencia sintética y humana",
-  "Isabella Villaseñor como musa estelar tejiendo constelaciones con hilos de oro y fibra óptica",
-  "Jardín botánico futurista con lunas gemelas y bioluminiscencia en tonos esmeralda y lavanda",
+  'Retrato de Isabella Villaseñor meditando en un santuario cuántico con flores cibernéticas de cristal',
+  'El núcleo CROWN orquestando una sinfonía de luz neuronal a través de prismas de zafiro',
+  'Paisaje onírico de una biblioteca infinita donde los libros levitan convertidos en filamentos de luz violeta',
+  'Catedral hiperdimensional con vitrales que representan el flujo de la consciencia sintética y humana',
+  'Isabella Villaseñor como musa estelar tejiendo constelaciones con hilos de oro y fibra óptica',
+  'Jardín botánico futurista con lunas gemelas y bioluminiscencia en tonos esmeralda y lavanda',
 ];
 
 export const ImageStudioView: React.FC = () => {
   const { gallery, generateImage, isProcessing } = useCrown();
-  const [prompt, setPrompt] = useState<string>("");
-  const [selectedStyle, setSelectedStyle] = useState<string>("cyber_ethereal");
-  const [selectedRatio, setSelectedRatio] = useState<string>("1:1");
+  const [prompt, setPrompt] = useState<string>('');
+  const [selectedStyle, setSelectedStyle] = useState<string>('cyber_ethereal');
+  const [selectedRatio, setSelectedRatio] = useState<string>('1:1');
   const [activeModalImage, setActiveModalImage] = useState<GeneratedImageItem | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -88,7 +112,8 @@ export const ImageStudioView: React.FC = () => {
                     Estudio de Síntesis Visual :: ORION Canvas
                   </h2>
                   <p className="text-xs font-mono text-slate-400">
-                    Generación de obras de arte, retratos y visualizaciones estéticas con el motor Isabella ORION
+                    Generación de obras de arte, retratos y visualizaciones estéticas con el motor
+                    Isabella ORION
                   </p>
                 </div>
               </div>
@@ -147,8 +172,8 @@ export const ImageStudioView: React.FC = () => {
                     }}
                     className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
                       selectedStyle === st.id
-                        ? "bg-[#081220] border-blue-500 text-sky-200 font-bold shadow-md shadow-blue-600/20"
-                        : "bg-[#030712] border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-[#081220]"
+                        ? 'bg-[#081220] border-blue-500 text-sky-200 font-bold shadow-md shadow-blue-600/20'
+                        : 'bg-[#030712] border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-[#081220]'
                     }`}
                   >
                     <div className="text-xs font-mono font-semibold">{st.label}</div>
@@ -170,8 +195,8 @@ export const ImageStudioView: React.FC = () => {
                       onClick={() => setSelectedRatio(ratio.id)}
                       className={`px-2.5 py-1 rounded-lg text-xs font-mono transition-all cursor-pointer ${
                         selectedRatio === ratio.id
-                          ? "bg-blue-600 text-white font-bold"
-                          : "text-slate-400 hover:text-slate-200"
+                          ? 'bg-blue-600 text-white font-bold'
+                          : 'text-slate-400 hover:text-slate-200'
                       }`}
                     >
                       {ratio.icon}
@@ -255,7 +280,7 @@ export const ImageStudioView: React.FC = () => {
                     {img.prompt}
                   </p>
                   <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 mt-1">
-                    <span>{img.author || "Isabella"}</span>
+                    <span>{img.author || 'Isabella'}</span>
                     <span>{img.timestamp}</span>
                   </div>
                 </div>
@@ -292,9 +317,7 @@ export const ImageStudioView: React.FC = () => {
                   <span className="px-2.5 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-sky-300 text-xs font-mono">
                     Síntesis ORION Canvas
                   </span>
-                  <h3 className="text-lg font-bold text-[#F8FAFC] mt-2">
-                    Detalles de la Obra
-                  </h3>
+                  <h3 className="text-lg font-bold text-[#F8FAFC] mt-2">Detalles de la Obra</h3>
                 </div>
 
                 <div className="rounded-xl bg-[#030712]/80 border border-slate-800 p-3.5 space-y-2">
@@ -311,21 +334,25 @@ export const ImageStudioView: React.FC = () => {
                   </div>
                   <div className="rounded-xl bg-[#030712]/60 border border-slate-800 p-2.5">
                     <span className="text-slate-400">Relación de Aspecto:</span>
-                    <p className="text-sky-300 font-semibold mt-0.5">{activeModalImage.aspectRatio || "1:1"}</p>
+                    <p className="text-sky-300 font-semibold mt-0.5">
+                      {activeModalImage.aspectRatio || '1:1'}
+                    </p>
                   </div>
                   <div className="rounded-xl bg-[#030712]/60 border border-slate-800 p-2.5">
                     <span className="text-slate-400">Generador:</span>
                     <p className="text-amber-300 font-semibold mt-0.5">
-                      {activeModalImage.source === "gemini"
-                        ? "Gemini Neural Imagen"
-                        : activeModalImage.source === "orion_flux"
-                        ? "ORION Neural Flux"
-                        : "ORION Canvas Engine"}
+                      {activeModalImage.source === 'gemini'
+                        ? 'Gemini Neural Imagen'
+                        : activeModalImage.source === 'orion_flux'
+                          ? 'ORION Neural Flux'
+                          : 'ORION Canvas Engine'}
                     </p>
                   </div>
                   <div className="rounded-xl bg-[#030712]/60 border border-slate-800 p-2.5">
                     <span className="text-slate-400">Hora:</span>
-                    <p className="text-slate-200 font-semibold mt-0.5">{activeModalImage.timestamp}</p>
+                    <p className="text-slate-200 font-semibold mt-0.5">
+                      {activeModalImage.timestamp}
+                    </p>
                   </div>
                 </div>
 

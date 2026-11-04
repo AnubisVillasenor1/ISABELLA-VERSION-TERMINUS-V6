@@ -1,5 +1,5 @@
 /**
- * REPOSITORIO DE MEMORIA (src/lib/repositories/memory-repository.ts)
+ * REPOSITORIO DE MEMORIA (src/lib/lib/repositories/memory-repository.ts)
  * -----------------------------------------------------------------
  * Persistencia e integridad de la memoria jerárquica soberana.
  * Real, sin mockdata:
@@ -8,15 +8,15 @@
  *  - En producción/Vercel no se permite el fallback JSON no durable.
  */
 
-import * as fs from "node:fs";
-import * as path from "node:path";
-import * as crypto from "node:crypto";
-import { config } from "@/lib/config";
-import { isProductionLike, resolveRuntimeMode } from "@/lib/runtime-mode";
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import * as crypto from 'node:crypto';
+import { config } from '@/lib/config';
+import { isProductionLike, resolveRuntimeMode } from '@/lib/runtime-mode';
 
-export type MemoryScope = "turn" | "session" | "project" | "territorial" | "historical";
-export type MemorySource = "user" | "system" | "tool" | "document";
-export type MemorySensitivity = "public" | "internal" | "personal" | "restricted";
+export type MemoryScope = 'turn' | 'session' | 'project' | 'territorial' | 'historical';
+export type MemorySource = 'user' | 'system' | 'tool' | 'document';
+export type MemorySensitivity = 'public' | 'internal' | 'personal' | 'restricted';
 
 export interface MemoryRecord {
   id: string;
@@ -43,8 +43,8 @@ export interface MemoryStoreFile {
   genesisChainHash: string;
 }
 
-const GENESIS_CHAIN_HASH = "0000000000000000000000000000000000000000000000000000000000000000";
-const STORE_PATH = path.join(process.cwd(), "isabella_memory_store.json");
+const GENESIS_CHAIN_HASH = '0000000000000000000000000000000000000000000000000000000000000000';
+const STORE_PATH = path.join(process.cwd(), 'isabella_memory_store.json');
 
 const storeLocks = new Map<string, Promise<unknown>>();
 function withStoreLock<T>(storePath: string, task: () => T | Promise<T>): Promise<T> {
@@ -52,13 +52,13 @@ function withStoreLock<T>(storePath: string, task: () => T | Promise<T>): Promis
   const next = previous.catch(() => undefined).then(task);
   storeLocks.set(
     storePath,
-    next.catch(() => undefined),
+    next.catch(() => undefined)
   );
   return next;
 }
 
 function sha256(input: string): string {
-  return crypto.createHash("sha256").update(input).digest("hex");
+  return crypto.createHash('sha256').update(input).digest('hex');
 }
 
 function assertFilePersistenceAllowed(storePath: string): void {
@@ -68,7 +68,7 @@ function assertFilePersistenceAllowed(storePath: string): void {
   const defaultStore = path.resolve(storePath) === path.resolve(STORE_PATH);
   if (defaultStore && (production || vercel) && !config().DURABLE_JSON_ALLOWED) {
     throw new Error(
-      "memory_persistence_unavailable: durable PostgreSQL/Supabase memory repository required",
+      'memory_persistence_unavailable: durable PostgreSQL/Supabase memory repository required'
     );
   }
 }
@@ -80,11 +80,11 @@ export function createMemoryRepository(storePath: string = STORE_PATH) {
   function loadStore(): MemoryStoreFile {
     if (!fs.existsSync(storePath)) return { records: [], genesisChainHash: GENESIS_CHAIN_HASH };
     try {
-      const raw = fs.readFileSync(storePath, "utf-8");
+      const raw = fs.readFileSync(storePath, 'utf-8');
       const parsed = JSON.parse(raw) as Partial<MemoryStoreFile>;
       const records = Array.isArray(parsed.records) ? (parsed.records as MemoryRecord[]) : [];
       const genesisChainHash =
-        typeof parsed.genesisChainHash === "string" && parsed.genesisChainHash.length === 64
+        typeof parsed.genesisChainHash === 'string' && parsed.genesisChainHash.length === 64
           ? parsed.genesisChainHash
           : GENESIS_CHAIN_HASH;
       return { records, genesisChainHash };
@@ -95,7 +95,7 @@ export function createMemoryRepository(storePath: string = STORE_PATH) {
 
   function saveStore(store: MemoryStoreFile): void {
     fs.mkdirSync(path.dirname(storePath), { recursive: true });
-    fs.writeFileSync(storePath, JSON.stringify(store, null, 2), "utf-8");
+    fs.writeFileSync(storePath, JSON.stringify(store, null, 2), 'utf-8');
   }
 
   function lastChainHash(records: readonly MemoryRecord[]): string {
@@ -119,7 +119,7 @@ export function createMemoryRepository(storePath: string = STORE_PATH) {
             corruptedId: record.id,
           };
         const contentHash = sha256(
-          `${record.id}|${record.tenantId}|${record.content}|${record.source}|${record.scope}|${record.sensitivity}`,
+          `${record.id}|${record.tenantId}|${record.content}|${record.source}|${record.scope}|${record.sensitivity}`
         );
         if (record.contentHash !== contentHash)
           return {
@@ -153,24 +153,24 @@ export function createMemoryRepository(storePath: string = STORE_PATH) {
       provenance?: readonly string[];
     }): Promise<{ success: true; record: MemoryRecord } | { success: false; error: string }> {
       if (!input.content || input.content.length === 0)
-        return { success: false, error: "Contenido de memoria vacío." };
+        return { success: false, error: 'Contenido de memoria vacío.' };
       if (input.consentRequired && !input.consentGranted)
         return {
           success: false,
-          error: "Consentimiento requerido no otorgado.",
+          error: 'Consentimiento requerido no otorgado.',
         };
       if (
-        (input.sensitivity === "personal" || input.sensitivity === "restricted") &&
+        (input.sensitivity === 'personal' || input.sensitivity === 'restricted') &&
         !input.ownerId
       )
-        return { success: false, error: "Dato sensible requiere propietario." };
+        return { success: false, error: 'Dato sensible requiere propietario.' };
 
       return withStoreLock(storePath, () => {
         const store = loadStore();
         const id = `mem_${crypto.randomUUID()}`;
         const createdAt = new Date().toISOString();
         const contentHash = sha256(
-          `${id}|${input.tenantId}|${input.content}|${input.source}|${input.scope}|${input.sensitivity}`,
+          `${id}|${input.tenantId}|${input.content}|${input.source}|${input.scope}|${input.sensitivity}`
         );
         const previousChainHash = lastChainHash(store.records);
         const chainHash = sha256(`${previousChainHash}|${contentHash}`);
@@ -213,7 +213,7 @@ export function createMemoryRepository(storePath: string = STORE_PATH) {
       const store = loadStore();
       const before = store.records.length;
       store.records = store.records.filter(
-        (r) => !(r.deletable && r.expiresAt && new Date(r.expiresAt).getTime() < now),
+        (r) => !(r.deletable && r.expiresAt && new Date(r.expiresAt).getTime() < now)
       );
       saveStore(store);
       return { removed: before - store.records.length };

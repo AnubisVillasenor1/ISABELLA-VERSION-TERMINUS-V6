@@ -5,15 +5,15 @@
  * (default equal), not learned. When energy is zero CEE is reported as 0 to
  * avoid a division artifact; it is not a measured scientific quantity.
  */
-import type { CeeComponents, CeeInput, CeeResult } from "./types";
+import type { CeeComponents, CeeInput, CeeResult } from './types';
 
 export const CEE_COMPONENT_KEYS: readonly (keyof CeeComponents)[] = [
-  "taskSuccess",
-  "evidenceQuality",
-  "decisionAccuracy",
-  "userValue",
-  "reuseValue",
-  "riskReduction",
+  'taskSuccess',
+  'evidenceQuality',
+  'decisionAccuracy',
+  'userValue',
+  'reuseValue',
+  'riskReduction',
 ];
 
 export const DEFAULT_CEE_WEIGHTS: readonly number[] = [1, 1, 1, 1, 1, 1];
@@ -22,7 +22,10 @@ function clamp01(value: number): number {
   return Math.max(0, Math.min(1, value));
 }
 
-export function computeCee(input: CeeInput, weights: readonly number[] = DEFAULT_CEE_WEIGHTS): CeeResult {
+export function computeCee(
+  input: CeeInput,
+  weights: readonly number[] = DEFAULT_CEE_WEIGHTS
+): CeeResult {
   const components: CeeComponents = Object.freeze({
     taskSuccess: clamp01(input.taskSuccess),
     evidenceQuality: clamp01(input.evidenceQuality),

@@ -37,7 +37,7 @@ export class ResearchEngine {
       {
         content: `Síntesis analítica: ${query.query}`,
         confidence: 0.9,
-        source: "epistemic_graph",
+        source: 'epistemic_graph',
         retrievedAt: new Date().toISOString(),
       },
     ];
@@ -50,7 +50,7 @@ export class ResearchEngine {
           claimId: crypto.randomUUID(),
           statement: query.query,
           confidence: 0.9,
-          supportingEvidence: ["epistemic_graph"],
+          supportingEvidence: ['epistemic_graph'],
         },
       ],
     };

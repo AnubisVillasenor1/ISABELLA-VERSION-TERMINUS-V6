@@ -22,38 +22,40 @@ export interface LifecyclePolicy {
 /** Fuente única de verdad para etiquetas, timeouts y mensajes. */
 export const LIFECYCLE: readonly LifecyclePolicy[] = Object.freeze([
   {
-    label: "invalid",
+    label: 'invalid',
     days: 3,
     reason: "this doesn't appear to be about the project",
-    nudge: "This doesn't appear to be about the project. For general support, see the documentation.",
+    nudge:
+      "This doesn't appear to be about the project. For general support, see the documentation.",
   },
   {
-    label: "needs-repro",
+    label: 'needs-repro',
     days: 7,
-    reason: "we still need reproduction steps to investigate",
+    reason: 'we still need reproduction steps to investigate',
     nudge: "We weren't able to reproduce this. Could you provide steps to trigger the issue?",
   },
   {
-    label: "needs-info",
+    label: 'needs-info',
     days: 7,
-    reason: "we still need a bit more information to move forward",
-    nudge: "We need more information to continue investigating. Please include version, OS and logs.",
+    reason: 'we still need a bit more information to move forward',
+    nudge:
+      'We need more information to continue investigating. Please include version, OS and logs.',
   },
   {
-    label: "stale",
+    label: 'stale',
     days: 14,
-    reason: "inactive for too long",
-    nudge: "This issue has been automatically marked as stale due to inactivity.",
+    reason: 'inactive for too long',
+    nudge: 'This issue has been automatically marked as stale due to inactivity.',
   },
   {
-    label: "autoclose",
+    label: 'autoclose',
     days: 14,
-    reason: "inactive for too long",
-    nudge: "This issue has been marked for automatic closure.",
+    reason: 'inactive for too long',
+    nudge: 'This issue has been marked for automatic closure.',
   },
 ] as const);
 
-export type LifecycleLabel = (typeof LIFECYCLE)[number]["label"];
+export type LifecycleLabel = (typeof LIFECYCLE)[number]['label'];
 
 export const STALE_UPVOTE_THRESHOLD = 15;
 
@@ -98,13 +100,15 @@ export interface StaleDecision {
 
 /** Detecta si un issue debe marcarse `stale` (14 días sin actividad, no protegido). */
 export function evaluateStale(issue: LifecycleIssue, now = new Date()): StaleDecision {
-  const stalePolicy = policyFor("stale");
-  if (!stalePolicy) return { markStale: false, reason: "no policy" };
-  if (issue.labels.includes("stale") || issue.labels.includes("autoclose")) {
-    return { markStale: false, reason: "already labelled" };
+  const stalePolicy = policyFor('stale');
+  if (!stalePolicy) return { markStale: false, reason: 'no policy' };
+  if (issue.labels.includes('stale') || issue.labels.includes('autoclose')) {
+    return { markStale: false, reason: 'already labelled' };
   }
-  if (protectedFromAutomation(issue)) return { markStale: false, reason: "protected (locked/assigned/upvoted)" };
-  if (ageDays(issue.updatedAt, now) < stalePolicy.days) return { markStale: false, reason: "recently updated" };
+  if (protectedFromAutomation(issue))
+    return { markStale: false, reason: 'protected (locked/assigned/upvoted)' };
+  if (ageDays(issue.updatedAt, now) < stalePolicy.days)
+    return { markStale: false, reason: 'recently updated' };
   return { markStale: true, reason: `inactive ${Math.floor(ageDays(issue.updatedAt, now))}d` };
 }
 
@@ -122,15 +126,19 @@ export function evaluateClosure(
   issue: LifecycleIssue,
   label: string,
   labelledAt: string,
-  now = new Date(),
+  now = new Date()
 ): ClosureDecision {
   const policy = policyFor(label);
-  if (!policy) return { close: false, reason: "unknown label" };
-  if (!issue.labels.includes(label)) return { close: false, reason: "label not present" };
-  if (protectedFromAutomation(issue)) return { close: false, reason: "protected (locked/assigned/upvoted)" };
-  if (ageDays(labelledAt, now) < policy.days) return { close: false, reason: "timeout not reached" };
-  const humanActivity = (issue.humanComments ?? []).some((c) => new Date(c.at).getTime() > new Date(labelledAt).getTime());
-  if (humanActivity) return { close: false, reason: "human activity after label" };
+  if (!policy) return { close: false, reason: 'unknown label' };
+  if (!issue.labels.includes(label)) return { close: false, reason: 'label not present' };
+  if (protectedFromAutomation(issue))
+    return { close: false, reason: 'protected (locked/assigned/upvoted)' };
+  if (ageDays(labelledAt, now) < policy.days)
+    return { close: false, reason: 'timeout not reached' };
+  const humanActivity = (issue.humanComments ?? []).some(
+    (c) => new Date(c.at).getTime() > new Date(labelledAt).getTime()
+  );
+  if (humanActivity) return { close: false, reason: 'human activity after label' };
   return {
     close: true,
     reason: policy.reason,
@@ -167,22 +175,25 @@ export function evaluateTriage(input: TriageInput, now = new Date()): TriageDeci
   const hasRepro = /\b(?:steps to reproduce|reproduction|repro)\b/.test(text);
   const hasInfo = /\b(?:version|os|logs|error)\b/.test(text);
   const looksInvalid = /\b(?:not about|unrelated|spam|advertisement)\b/.test(text);
-  const controversial = /\b(?:security|vulnerability|legal|gdpr|breach|privacy|personal data|credential|secret|ransomware|seguridad|vulnerabilidad|privacidad|datos personales|filtraci[oó]n|credenciales)\b/.test(text);
+  const controversial =
+    /\b(?:security|vulnerability|legal|gdpr|breach|privacy|personal data|credential|secret|ransomware|seguridad|vulnerabilidad|privacidad|datos personales|filtraci[oó]n|credenciales)\b/.test(
+      text
+    );
 
   if (looksInvalid) {
-    if (!existing.has("invalid")) add.push("invalid");
-    reasons.push("content appears off-topic");
+    if (!existing.has('invalid')) add.push('invalid');
+    reasons.push('content appears off-topic');
   } else {
-    if (!hasRepro && !existing.has("needs-repro")) add.push("needs-repro");
-    if (!hasInfo && !existing.has("needs-info")) add.push("needs-info");
+    if (!hasRepro && !existing.has('needs-repro')) add.push('needs-repro');
+    if (!hasInfo && !existing.has('needs-info')) add.push('needs-info');
   }
 
   if (controversial) {
     requiresHumanGate = true;
-    reasons.push("controversial/sensitive content requires human gate");
+    reasons.push('controversial/sensitive content requires human gate');
   }
 
-  for (const label of ["stale", "autoclose", "invalid"]) {
+  for (const label of ['stale', 'autoclose', 'invalid']) {
     if (existing.has(label) && add.length > 0) remove.push(label);
   }
 
@@ -203,7 +214,7 @@ export interface AdjudicationInput {
 }
 
 export interface AdjudicationDecision {
-  action: "CLOSE_DUPLICATE" | "HOLD" | "ESCALATE";
+  action: 'CLOSE_DUPLICATE' | 'HOLD' | 'ESCALATE';
   reason: string;
 }
 
@@ -212,11 +223,14 @@ export interface AdjudicationDecision {
  * autor ni actividad posterior; en caso contrario mantiene o escala a humano.
  */
 export function adjudicateDuplicate(input: AdjudicationInput): AdjudicationDecision {
-  if (input.confidence < 0.8) return { action: "HOLD", reason: "insufficient duplicate confidence" };
-  if (input.authorDisagreed) return { action: "ESCALATE", reason: "author disagreed with duplicate detection" };
-  if (input.hasActivityAfterDetection) return { action: "HOLD", reason: "activity after duplicate detection" };
-  if (input.duplicateOf === undefined) return { action: "HOLD", reason: "no duplicate target" };
-  return { action: "CLOSE_DUPLICATE", reason: `duplicate of #${input.duplicateOf}` };
+  if (input.confidence < 0.8)
+    return { action: 'HOLD', reason: 'insufficient duplicate confidence' };
+  if (input.authorDisagreed)
+    return { action: 'ESCALATE', reason: 'author disagreed with duplicate detection' };
+  if (input.hasActivityAfterDetection)
+    return { action: 'HOLD', reason: 'activity after duplicate detection' };
+  if (input.duplicateOf === undefined) return { action: 'HOLD', reason: 'no duplicate target' };
+  return { action: 'CLOSE_DUPLICATE', reason: `duplicate of #${input.duplicateOf}` };
 }
 
 export interface LifecycleRunInput {
@@ -242,7 +256,10 @@ export function planLifecycleRun(input: LifecycleRunInput): LifecycleRunPlan {
   const humanGate: number[] = [];
 
   for (const issue of input.issues) {
-    const triage = evaluateTriage({ title: issue.title ?? "", body: issue.body ?? "", labels: issue.labels }, now);
+    const triage = evaluateTriage(
+      { title: issue.title ?? '', body: issue.body ?? '', labels: issue.labels },
+      now
+    );
     const requiresHumanGate = issue.sensitive === true || triage.requiresHumanGate;
     if (requiresHumanGate) humanGate.push(issue.number);
     if (evaluateStale(issue, now).markStale && !requiresHumanGate) markStale.push(issue.number);

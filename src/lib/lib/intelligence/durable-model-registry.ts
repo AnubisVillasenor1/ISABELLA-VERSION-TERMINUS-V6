@@ -1,6 +1,6 @@
-import { neon } from "@neondatabase/serverless";
-import { config } from "@/lib/config";
-import type { ModelStatus } from "./model-registry";
+import { neon } from '@neondatabase/serverless';
+import { config } from '@/lib/config';
+import type { ModelStatus } from './model-registry';
 
 export interface DurableModelRecord {
   tenantId: string;
@@ -29,7 +29,7 @@ let cachedSqlUrl: string | undefined;
 
 function sql() {
   const url = config().DATABASE_URL;
-  if (!url) throw new Error("durable_model_registry_unavailable: DATABASE_URL is required");
+  if (!url) throw new Error('durable_model_registry_unavailable: DATABASE_URL is required');
   if (!cachedSql || cachedSqlUrl !== url) {
     cachedSql = makeSql(url);
     cachedSqlUrl = url;
@@ -40,7 +40,7 @@ function sql() {
 export async function getDurableModel(
   tenantId: string,
   modelId: string,
-  version?: string,
+  version?: string
 ): Promise<DurableModelRecord | null> {
   const rows = version
     ? await sql()`
@@ -106,7 +106,7 @@ export async function setDurableModelStatus(
   tenantId: string,
   modelId: string,
   version: string,
-  status: ModelStatus,
+  status: ModelStatus
 ): Promise<void> {
   const result = await sql()`
     UPDATE fgais_model_registry
@@ -116,22 +116,22 @@ export async function setDurableModelStatus(
         updated_at = now()
     WHERE tenant_id = ${tenantId} AND model_id = ${modelId} AND version = ${version}
   `;
-  if (result.length === 0) throw new Error("durable_model_not_found");
+  if (result.length === 0) throw new Error('durable_model_not_found');
 }
 
 export async function assertProductionModel(
   tenantId: string,
   modelId: string,
-  version?: string,
+  version?: string
 ): Promise<DurableModelRecord> {
   const model = await getDurableModel(tenantId, modelId, version);
   if (
     !model ||
     !model.enabled ||
     !model.productionApproved ||
-    !["APPROVED", "DEPLOYED"].includes(model.status)
+    !['APPROVED', 'DEPLOYED'].includes(model.status)
   ) {
-    throw new Error("production_model_not_approved");
+    throw new Error('production_model_not_approved');
   }
   return model;
 }

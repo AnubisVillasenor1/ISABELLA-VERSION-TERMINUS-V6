@@ -38,7 +38,7 @@ const INVENTORY: MarketplaceInventory = {
   capabilities: 0,
 };
 
-function harness(options: { denyAdmin?: boolean; denyRate?: boolean } = {}) {
+function harness(options: { denyAdmin?: boolean; denyRate?: boolean; omitAdmin?: boolean } = {}) {
   const handlers = new Map<string, Handler>();
   const app = {
     get: (path: string, handler: Handler) => handlers.set(`GET ${path}`, handler),
@@ -62,7 +62,7 @@ function harness(options: { denyAdmin?: boolean; denyRate?: boolean } = {}) {
     },
     enforceRateLimit: () => !options.denyRate,
     rateLimiter: {} as FixedWindowRateLimiter,
-    ...(options.denyAdmin ? { authorizeAdmin: () => false } : {}),
+    ...(!options.omitAdmin ? { authorizeAdmin: () => !options.denyAdmin } : {}),
   });
   return handlers;
 }
@@ -155,6 +155,14 @@ describe("Marketplace routes", () => {
     const { res, captured } = makeRes();
     handlers.get("POST /api/v1/marketplace/plan")!({ body: { packId: KIT } } as unknown as Request, res);
     expect(captured.body).toBeUndefined();
+  });
+
+  it("falla cerrado si no existe el admin gate", () => {
+    const handlers = harness({ omitAdmin: true });
+    const { res, captured } = makeRes();
+    handlers.get("POST /api/v1/marketplace/plan")!({ body: { packId: KIT } } as unknown as Request, res);
+    expect(captured.status).toBe(503);
+    expect((captured.body as { error: string }).error).toBe("MARKETPLACE_ADMIN_GATE_UNAVAILABLE");
   });
 
   it("respeta el rate limit", () => {

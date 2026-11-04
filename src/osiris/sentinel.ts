@@ -6,10 +6,10 @@
  * response, and does not certify. `recommendation` is advisory; the human
  * authority decides and executes. state: draft | engine-generated.
  */
-import { randomUUID } from "node:crypto";
-import { bookPiLedger } from "../bookpi/ledger";
-import { detect, type DetectionRule } from "./detection";
-import { assessDefensePosture, type PostureInputs } from "./posture";
+import { randomUUID } from 'node:crypto';
+import { bookPiLedger } from '../bookpi/ledger';
+import { detect, type DetectionRule } from './detection';
+import { assessDefensePosture, type PostureInputs } from './posture';
 import {
   OSIRIS_METHOD_IDS,
   OSIRIS_MODULE,
@@ -19,7 +19,7 @@ import {
   type OsirisSnapshot,
   type SecuritySignal,
   type ThreatSeverity,
-} from "./types";
+} from './types';
 
 /** Minimal append-only audit contract satisfied by the in-memory BookPI ledger. */
 export interface OsirisAuditLedger {
@@ -57,16 +57,16 @@ export interface OsirisSentinel {
 
 const HISTORY_LIMIT_DEFAULT = 500;
 const DISCLAIMER =
-  "OSIRIS observes and records; it does not block, execute responses, certify, or run a trained ML model. " +
-  "Confidence values are hand-declared heuristic weights, not measured accuracy. Advisory only.";
+  'OSIRIS observes and records; it does not block, execute responses, certify, or run a trained ML model. ' +
+  'Confidence values are hand-declared heuristic weights, not measured accuracy. Advisory only.';
 
-const SEVERITY_TO_RISK: Record<ThreatSeverity | "none", string> = {
-  none: "LOW",
-  info: "LOW",
-  low: "LOW",
-  medium: "MEDIUM",
-  high: "HIGH",
-  critical: "CRITICAL",
+const SEVERITY_TO_RISK: Record<ThreatSeverity | 'none', string> = {
+  none: 'LOW',
+  info: 'LOW',
+  low: 'LOW',
+  medium: 'MEDIUM',
+  high: 'HIGH',
+  critical: 'CRITICAL',
 };
 
 function emptySeverityCounts(): Record<ThreatSeverity, number> {
@@ -74,28 +74,30 @@ function emptySeverityCounts(): Record<ThreatSeverity, number> {
 }
 
 function requireText(value: unknown, field: string, maxLength = 200): string {
-  if (typeof value !== "string") throw new TypeError(`${field} must be a string`);
+  if (typeof value !== 'string') throw new TypeError(`${field} must be a string`);
   const normalized = value.trim();
   if (!normalized) throw new TypeError(`${field} must not be empty`);
-  if (normalized.length > maxLength) throw new RangeError(`${field} exceeds ${maxLength} characters`);
-  if (/[\u0000-\u001f\u007f]/.test(normalized)) throw new TypeError(`${field} contains control characters`);
+  if (normalized.length > maxLength)
+    throw new RangeError(`${field} exceeds ${maxLength} characters`);
+  if (/[\u0000-\u001f\u007f]/.test(normalized))
+    throw new TypeError(`${field} contains control characters`);
   return normalized;
 }
 
 function normalizeSignal(signal: SecuritySignal): SecuritySignal {
-  const timestampText = requireText(signal.timestamp, "timestamp", 40);
+  const timestampText = requireText(signal.timestamp, 'timestamp', 40);
   const parsed = Date.parse(timestampText);
   if (!Number.isFinite(parsed) || !/^\d{4}-\d{2}-\d{2}T.*Z$/.test(timestampText)) {
-    throw new TypeError("timestamp must be an ISO-8601 UTC timestamp ending in Z");
+    throw new TypeError('timestamp must be an ISO-8601 UTC timestamp ending in Z');
   }
-  if (!signal.features || typeof signal.features !== "object" || Array.isArray(signal.features)) {
-    throw new TypeError("features must be an object");
+  if (!signal.features || typeof signal.features !== 'object' || Array.isArray(signal.features)) {
+    throw new TypeError('features must be an object');
   }
   return {
-    id: requireText(signal.id, "id"),
+    id: requireText(signal.id, 'id'),
     timestamp: new Date(parsed).toISOString(),
-    source: requireText(signal.source, "source"),
-    actorId: signal.actorId === undefined ? undefined : requireText(signal.actorId, "actorId"),
+    source: requireText(signal.source, 'source'),
+    actorId: signal.actorId === undefined ? undefined : requireText(signal.actorId, 'actorId'),
     features: signal.features,
   };
 }
@@ -129,11 +131,14 @@ export function createOsirisSentinel(options: OsirisSentinelOptions = {}): Osiri
     ledger.append({
       id: `osiris-${randomUUID()}`,
       timestamp: signal.timestamp,
-      type: "osiris.detection",
+      type: 'osiris.detection',
       methodId: OSIRIS_METHOD_IDS.inspect,
-      principal: signal.actorId ?? "osiris:sentinel",
+      principal: signal.actorId ?? 'osiris:sentinel',
       riskTier: SEVERITY_TO_RISK[result.maxSeverity],
-      status: result.recommendation === "BLOCK_RECOMMENDED" ? "REVIEW_RECOMMENDED" : `${result.recommendation}_ADVISORY`,
+      status:
+        result.recommendation === 'BLOCK_RECOMMENDED'
+          ? 'REVIEW_RECOMMENDED'
+          : `${result.recommendation}_ADVISORY`,
     });
 
     return result;

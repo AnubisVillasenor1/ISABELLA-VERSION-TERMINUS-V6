@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { randomUUID } from 'node:crypto';
 import type {
   Account,
   JournalEntry,
@@ -8,7 +8,7 @@ import type {
   BalanceSheet,
   AccountType,
   TransactionStatus,
-} from "./types";
+} from './types';
 
 export interface CreateAccountDTO {
   tenantId: string;
@@ -46,13 +46,13 @@ export interface AccountingRepository {
   updateJournalEntryStatus(
     id: string,
     status: TransactionStatus,
-    tx?: unknown,
+    tx?: unknown
   ): Promise<JournalEntry>;
 
   // Ledger Lines
   createLedgerLines(
-    lines: Omit<LedgerLine, "id" | "createdAt">[],
-    tx?: unknown,
+    lines: Omit<LedgerLine, 'id' | 'createdAt'>[],
+    tx?: unknown
   ): Promise<LedgerLine[]>;
   getLedgerLinesByEntry(entryId: string, tx?: unknown): Promise<LedgerLine[]>;
   getLedgerLinesByAccount(accountId: string, tx?: unknown): Promise<LedgerLine[]>;
@@ -62,13 +62,13 @@ export interface AccountingRepository {
     accountId: string,
     periodStart: Date,
     periodEnd: Date,
-    tx?: unknown,
+    tx?: unknown
   ): Promise<AccountBalance>;
   generateTrialBalance(
     tenantId: string,
     periodStart: Date,
     periodEnd: Date,
-    tx?: unknown,
+    tx?: unknown
   ): Promise<TrialBalance>;
   generateBalanceSheet(tenantId: string, asOfDate: Date, tx?: unknown): Promise<BalanceSheet>;
 
@@ -103,7 +103,7 @@ export class InMemoryAccountingRepository implements AccountingRepository {
       name: dto.name,
       type: dto.type,
       parentId: dto.parentId,
-      currency: dto.currency || "USD",
+      currency: dto.currency || 'USD',
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -134,7 +134,7 @@ export class InMemoryAccountingRepository implements AccountingRepository {
       tenantId: dto.tenantId,
       entryNumber,
       description: dto.description,
-      status: "pending",
+      status: 'pending',
       createdAt: new Date(),
       createdBy: dto.createdBy,
       metadata: dto.metadata,
@@ -154,22 +154,22 @@ export class InMemoryAccountingRepository implements AccountingRepository {
   async updateJournalEntryStatus(
     id: string,
     status: TransactionStatus,
-    _tx?: unknown,
+    _tx?: unknown
   ): Promise<JournalEntry> {
     const entry = this.journalEntries.get(id);
     if (!entry) throw new Error(`Journal entry ${id} not found`);
     const updated = {
       ...entry,
       status,
-      postedAt: status === "posted" ? new Date() : entry.postedAt,
+      postedAt: status === 'posted' ? new Date() : entry.postedAt,
     };
     this.journalEntries.set(id, updated);
     return updated;
   }
 
   async createLedgerLines(
-    lines: Omit<LedgerLine, "id" | "createdAt">[],
-    _tx?: unknown,
+    lines: Omit<LedgerLine, 'id' | 'createdAt'>[],
+    _tx?: unknown
   ): Promise<LedgerLine[]> {
     const created = lines.map((line) => ({
       ...line,
@@ -192,7 +192,7 @@ export class InMemoryAccountingRepository implements AccountingRepository {
     accountId: string,
     periodStart: Date,
     periodEnd: Date,
-    _tx?: unknown,
+    _tx?: unknown
   ): Promise<AccountBalance> {
     const account = await this.getAccountById(accountId);
     if (!account) throw new Error(`Account ${accountId} not found`);
@@ -200,7 +200,7 @@ export class InMemoryAccountingRepository implements AccountingRepository {
     const lines = await this.getLedgerLinesByAccount(accountId);
     const filteredLines = lines.filter((l) => {
       const entry = this.journalEntries.get(l.entryId);
-      if (!entry || entry.status !== "posted") return false;
+      if (!entry || entry.status !== 'posted') return false;
       const entryDate = entry.createdAt;
       return entryDate >= periodStart && entryDate <= periodEnd;
     });
@@ -228,11 +228,11 @@ export class InMemoryAccountingRepository implements AccountingRepository {
     tenantId: string,
     periodStart: Date,
     periodEnd: Date,
-    _tx?: unknown,
+    _tx?: unknown
   ): Promise<TrialBalance> {
     const accounts = await this.getAccountsByTenant(tenantId);
     const accountBalances = await Promise.all(
-      accounts.map((acc) => this.calculateAccountBalance(acc.id, periodStart, periodEnd)),
+      accounts.map((acc) => this.calculateAccountBalance(acc.id, periodStart, periodEnd))
     );
 
     const accountsWithBalances = accountBalances.map((balance, idx) => {
@@ -266,17 +266,17 @@ export class InMemoryAccountingRepository implements AccountingRepository {
   async generateBalanceSheet(
     tenantId: string,
     asOfDate: Date,
-    _tx?: unknown,
+    _tx?: unknown
   ): Promise<BalanceSheet> {
     const accounts = await this.getAccountsByTenant(tenantId);
     const periodStart = new Date(asOfDate.getFullYear(), 0, 1);
 
     const balances = await Promise.all(
-      accounts.map((acc) => this.calculateAccountBalance(acc.id, periodStart, asOfDate)),
+      accounts.map((acc) => this.calculateAccountBalance(acc.id, periodStart, asOfDate))
     );
 
     const assets = balances
-      .filter((_, idx) => accounts[idx].type === "asset")
+      .filter((_, idx) => accounts[idx].type === 'asset')
       .map((balance) => {
         const account = accounts.find((a) => a.id === balance.accountId)!;
         return {
@@ -287,7 +287,7 @@ export class InMemoryAccountingRepository implements AccountingRepository {
       });
 
     const liabilities = balances
-      .filter((_, idx) => accounts[idx].type === "liability")
+      .filter((_, idx) => accounts[idx].type === 'liability')
       .map((balance) => {
         const account = accounts.find((a) => a.id === balance.accountId)!;
         return {
@@ -298,7 +298,7 @@ export class InMemoryAccountingRepository implements AccountingRepository {
       });
 
     const equity = balances
-      .filter((_, idx) => accounts[idx].type === "equity")
+      .filter((_, idx) => accounts[idx].type === 'equity')
       .map((balance) => {
         const account = accounts.find((a) => a.id === balance.accountId)!;
         return {
@@ -334,14 +334,14 @@ export class InMemoryAccountingRepository implements AccountingRepository {
 
   async commitTransaction(tx: unknown): Promise<void> {
     if (!this.activeTransactions.has(tx)) {
-      throw new Error("Transaction not found or already committed");
+      throw new Error('Transaction not found or already committed');
     }
     this.activeTransactions.delete(tx);
   }
 
   async rollbackTransaction(tx: unknown): Promise<void> {
     if (!this.activeTransactions.has(tx)) {
-      throw new Error("Transaction not found or already committed");
+      throw new Error('Transaction not found or already committed');
     }
     this.activeTransactions.delete(tx);
   }

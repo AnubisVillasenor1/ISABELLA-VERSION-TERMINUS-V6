@@ -28,10 +28,9 @@ export class PostgresMultimodelAdapter {
   private initialized: boolean = false;
 
   constructor(config: PoolConfig | string) {
-    const poolConfig: PoolConfig = typeof config === 'string' 
-      ? { connectionString: config } 
-      : config;
-    
+    const poolConfig: PoolConfig =
+      typeof config === 'string' ? { connectionString: config } : config;
+
     this.pool = new Pool({
       ...poolConfig,
       max: 20,
@@ -46,19 +45,19 @@ export class PostgresMultimodelAdapter {
 
   async initialize(): Promise<void> {
     if (this.initialized) return;
-    
+
     const client = await this.pool.connect();
     try {
       // Cargar extensión AGE y crear grafo
       await client.query("LOAD 'age';");
       await client.query('SET search_path = ag_catalog, "$user", public;');
       await client.query("SELECT create_graph('isabella_knowledge_graph');");
-      
+
       // Inicializar colas pgmq
       await client.query("SELECT pgmq.create('isabella_jobs');").catch(() => {});
       await client.query("SELECT pgmq.create('isabella_notifications');").catch(() => {});
       await client.query("SELECT pgmq.create('isabella_routing');").catch(() => {});
-      
+
       this.initialized = true;
       console.log('[PostgresMultimodelAdapter] Initialized successfully');
     } finally {
@@ -75,7 +74,7 @@ export class PostgresMultimodelAdapter {
     threshold = 0.95
   ): Promise<{ hit: boolean; response?: any; similarity?: number }> {
     if (!this.initialized) await this.initialize();
-    
+
     const vectorStr = `[${embedding.join(',')}]`;
     const sql = `
       SELECT id, response, 1 - (prompt_embedding <=> $1::vector) AS similarity
@@ -89,19 +88,31 @@ export class PostgresMultimodelAdapter {
     if (res.rows.length > 0) {
       const hitRow = res.rows[0];
       // Incrementar contador de hits asíncronamente
-      this.pool.query('UPDATE semantic_cache SET hit_count = hit_count + 1 WHERE id = $1', [hitRow.id]).catch(() => {});
+      this.pool
+        .query('UPDATE semantic_cache SET hit_count = hit_count + 1 WHERE id = $1', [hitRow.id])
+        .catch(() => {});
       return { hit: true, response: hitRow.response, similarity: parseFloat(hitRow.similarity) };
     }
     return { hit: false };
   }
 
-  async storeSemanticCache(promptRaw: string, embedding: number[], response: any, ttlSeconds = 86400): Promise<void> {
+  async storeSemanticCache(
+    promptRaw: string,
+    embedding: number[],
+    response: any,
+    ttlSeconds = 86400
+  ): Promise<void> {
     const sql = `
       INSERT INTO semantic_cache (prompt_raw, prompt_embedding, response, expires_at)
       VALUES ($1, $2::vector, $3, NOW() + ($4 || ' seconds')::INTERVAL)
       ON CONFLICT DO NOTHING;
     `;
-    await this.pool.query(sql, [promptRaw, JSON.stringify(embedding), JSON.stringify(response), ttlSeconds]);
+    await this.pool.query(sql, [
+      promptRaw,
+      JSON.stringify(embedding),
+      JSON.stringify(response),
+      ttlSeconds,
+    ]);
   }
 
   // ============================================================================
@@ -110,7 +121,7 @@ export class PostgresMultimodelAdapter {
 
   async queryGraph<T = any>(cypher: string): Promise<GraphQueryResult[]> {
     if (!this.initialized) await this.initialize();
-    
+
     const client: PoolClient = await this.pool.connect();
     try {
       await client.query("LOAD 'age';");
@@ -121,7 +132,7 @@ export class PostgresMultimodelAdapter {
         $$) AS (a agtype, r agtype, b agtype);
       `;
       const res = await client.query(sql);
-      return res.rows.map(row => ({ a: row.a, r: row.r, b: row.b }));
+      return res.rows.map((row) => ({ a: row.a, r: row.r, b: row.b }));
     } finally {
       client.release();
     }
@@ -134,10 +145,16 @@ export class PostgresMultimodelAdapter {
     return res[0]?.a?.id ?? res[0]?.a ?? '';
   }
 
-  async addGraphEdge(sourceId: string, targetId: string, relationType: string, properties: Record<string, any> = {}): Promise<void> {
-    const propsStr = Object.keys(properties).length > 0 
-      ? ' ' + JSON.stringify(properties).replace(/"/g, '\\"')
-      : '';
+  async addGraphEdge(
+    sourceId: string,
+    targetId: string,
+    relationType: string,
+    properties: Record<string, any> = {}
+  ): Promise<void> {
+    const propsStr =
+      Object.keys(properties).length > 0
+        ? ' ' + JSON.stringify(properties).replace(/"/g, '\\"')
+        : '';
     const cypher = `MATCH (a), (b) WHERE id(a) = ${sourceId} AND id(b) = ${targetId} CREATE (a)-[r:${relationType}${propsStr}]->(b)`;
     await this.queryGraph(cypher);
   }
@@ -183,7 +200,7 @@ export class PostgresMultimodelAdapter {
 
   async searchVectorMemory(embedding: number[], limit = 10): Promise<VectorSearchResult[]> {
     if (!this.initialized) await this.initialize();
-    
+
     const sql = `
       SELECT m.id, m.content, m.metadata, 1 - (e.embedding <=> $1::vector) AS similarity
       FROM memory_objects m
@@ -192,30 +209,35 @@ export class PostgresMultimodelAdapter {
       LIMIT $2;
     `;
     const res = await this.pool.query(sql, [JSON.stringify(embedding), limit]);
-    return res.rows.map(row => ({
+    return res.rows.map((row) => ({
       id: row.id,
       content: row.content,
       metadata: row.metadata,
-      similarity: parseFloat(row.similarity)
+      similarity: parseFloat(row.similarity),
     }));
   }
 
-  async addMemoryObject(namespace: string, content: string, metadata: Record<string, any>, embedding: number[]): Promise<string> {
+  async addMemoryObject(
+    namespace: string,
+    content: string,
+    metadata: Record<string, any>,
+    embedding: number[]
+  ): Promise<string> {
     const client = await this.pool.connect();
     try {
       await client.query('BEGIN');
-      
+
       const objRes = await client.query(
         `INSERT INTO memory_objects (namespace, content, metadata) VALUES ($1, $2, $3) RETURNING id`,
         [namespace, content, JSON.stringify(metadata)]
       );
       const memoryId = objRes.rows[0].id;
-      
-      await client.query(
-        `INSERT INTO embeddings (memory_id, embedding) VALUES ($1, $2::vector)`,
-        [memoryId, JSON.stringify(embedding)]
-      );
-      
+
+      await client.query(`INSERT INTO embeddings (memory_id, embedding) VALUES ($1, $2::vector)`, [
+        memoryId,
+        JSON.stringify(embedding),
+      ]);
+
       await client.query('COMMIT');
       return memoryId;
     } catch (e) {
@@ -231,7 +253,10 @@ export class PostgresMultimodelAdapter {
   // ============================================================================
 
   async enqueueJob(queueName: string, payload: any): Promise<{ msg_id: number }> {
-    const res = await this.pool.query('SELECT * FROM pgmq.send($1, $2)', [queueName, JSON.stringify(payload)]);
+    const res = await this.pool.query('SELECT * FROM pgmq.send($1, $2)', [
+      queueName,
+      JSON.stringify(payload),
+    ]);
     return { msg_id: res.rows[0].msg_id };
   }
 
@@ -270,7 +295,12 @@ export class PostgresMultimodelAdapter {
     return res.rows[0].id;
   }
 
-  async recordVote(policyId: string, governorId: string, vote: string, signature: string): Promise<void> {
+  async recordVote(
+    policyId: string,
+    governorId: string,
+    vote: string,
+    signature: string
+  ): Promise<void> {
     await this.pool.query(
       `INSERT INTO governance_votes (policy_id, governor_id, vote, signature) VALUES ($1, $2, $3, $4)`,
       [policyId, governorId, vote, signature]
@@ -281,26 +311,26 @@ export class PostgresMultimodelAdapter {
     const client = await this.pool.connect();
     try {
       await client.query('BEGIN');
-      
+
       const prevHashRes = await client.query(
         `SELECT hash FROM audit_hash_chain ORDER BY id DESC LIMIT 1`
       );
       const prevHash = prevHashRes.rows[0]?.hash || '';
-      
+
       const eventRes = await client.query(
         `INSERT INTO audit_events (actor, action, payload) VALUES ($1, $2, $3) RETURNING id`,
         ['system', eventType, JSON.stringify(details)]
       );
       const eventId = eventRes.rows[0].id;
-      
+
       const hashInput = `${prevHash}${eventId}${JSON.stringify(details)}`;
       const hash = require('crypto').createHash('sha256').update(hashInput).digest('hex');
-      
+
       await client.query(
         `INSERT INTO audit_hash_chain (event_id, prev_hash, hash) VALUES ($1, $2, $3)`,
         [eventId, prevHash, hash]
       );
-      
+
       await client.query('COMMIT');
     } catch (e) {
       await client.query('ROLLBACK');
@@ -331,7 +361,11 @@ export class PostgresMultimodelAdapter {
     return res.rows[0]?.id || '';
   }
 
-  async recordRevenue(transactionId: string, revenueStream: string, netAmount: number): Promise<void> {
+  async recordRevenue(
+    transactionId: string,
+    revenueStream: string,
+    netAmount: number
+  ): Promise<void> {
     await this.pool.query(
       `INSERT INTO revenues (transaction_id, revenue_stream, net_amount) VALUES ($1, $2, $3)`,
       [transactionId, revenueStream, netAmount]
@@ -380,10 +414,10 @@ export class PostgresMultimodelAdapter {
   }
 
   async addMemoryTag(memoryId: string, tag: string): Promise<void> {
-    await this.pool.query(
-      `INSERT INTO memory_tags (memory_id, tag) VALUES ($1, $2)`,
-      [memoryId, tag]
-    );
+    await this.pool.query(`INSERT INTO memory_tags (memory_id, tag) VALUES ($1, $2)`, [
+      memoryId,
+      tag,
+    ]);
   }
 
   async addMemoryVersion(memoryId: string, version: number, contentDelta: string): Promise<void> {
@@ -410,8 +444,13 @@ export class PostgresMultimodelAdapter {
     );
   }
 
-  async updateRoutingMetrics(modelName: string, success: boolean, latencyMs: number): Promise<void> {
-    await this.pool.query(`
+  async updateRoutingMetrics(
+    modelName: string,
+    success: boolean,
+    latencyMs: number
+  ): Promise<void> {
+    await this.pool.query(
+      `
       INSERT INTO routing_metrics (model_name, success_count, failure_count, avg_latency_ms)
       VALUES ($1, $2, $3, $4)
       ON CONFLICT (model_name) DO UPDATE SET
@@ -419,10 +458,16 @@ export class PostgresMultimodelAdapter {
         failure_count = routing_metrics.failure_count + EXCLUDED.failure_count,
         avg_latency_ms = (routing_metrics.avg_latency_ms * routing_metrics.success_count + EXCLUDED.avg_latency_ms * EXCLUDED.success_count) 
                           / (routing_metrics.success_count + EXCLUDED.success_count)
-    `, [modelName, success ? 1 : 0, success ? 0 : 1, latencyMs]);
+    `,
+      [modelName, success ? 1 : 0, success ? 0 : 1, latencyMs]
+    );
   }
 
-  async registerModel(modelName: string, provider: string, maxContextLength: number): Promise<void> {
+  async registerModel(
+    modelName: string,
+    provider: string,
+    maxContextLength: number
+  ): Promise<void> {
     await this.pool.query(
       `INSERT INTO model_registry (model_name, provider, max_context_length) VALUES ($1, $2, $3)
        ON CONFLICT (model_name) DO UPDATE SET provider = EXCLUDED.provider, max_context_length = EXCLUDED.max_context_length`,
@@ -442,7 +487,11 @@ export class PostgresMultimodelAdapter {
     return res.rows[0].id;
   }
 
-  async addArtifactVersion(artifactId: string, versionNumber: number, filePath: string): Promise<void> {
+  async addArtifactVersion(
+    artifactId: string,
+    versionNumber: number,
+    filePath: string
+  ): Promise<void> {
     await this.pool.query(
       `INSERT INTO artifact_versions (artifact_id, version_number, file_path) VALUES ($1, $2, $3)`,
       [artifactId, versionNumber, filePath]
@@ -465,13 +514,13 @@ export class PostgresMultimodelAdapter {
       const client = await this.pool.connect();
       const res = await client.query('SELECT 1 as ok');
       client.release();
-      
+
       const poolStats = {
         totalCount: this.pool.totalCount,
         idleCount: this.pool.idleCount,
-        waitingCount: this.pool.waitingCount
+        waitingCount: this.pool.waitingCount,
       };
-      
+
       return { healthy: res.rows[0].ok === 1, details: { pool: poolStats } };
     } catch (e) {
       return { healthy: false, details: { error: String(e) } };
@@ -487,7 +536,9 @@ export class PostgresMultimodelAdapter {
 // Singleton para uso en toda la aplicación
 let adapterInstance: PostgresMultimodelAdapter | null = null;
 
-export function getPostgresMultimodelAdapter(config?: PoolConfig | string): PostgresMultimodelAdapter {
+export function getPostgresMultimodelAdapter(
+  config?: PoolConfig | string
+): PostgresMultimodelAdapter {
   if (!adapterInstance && config) {
     adapterInstance = new PostgresMultimodelAdapter(config);
   }
@@ -497,7 +548,9 @@ export function getPostgresMultimodelAdapter(config?: PoolConfig | string): Post
   return adapterInstance;
 }
 
-export async function initializePostgresAdapter(config: PoolConfig | string): Promise<PostgresMultimodelAdapter> {
+export async function initializePostgresAdapter(
+  config: PoolConfig | string
+): Promise<PostgresMultimodelAdapter> {
   adapterInstance = new PostgresMultimodelAdapter(config);
   await adapterInstance.initialize();
   return adapterInstance;

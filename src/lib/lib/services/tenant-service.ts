@@ -1,9 +1,9 @@
-import { repositoryFactory } from "../persistence/repository-factory";
-import type { AuditEntry, IRepository, Tenant } from "../persistence/repository";
-import { mapTenantRowToDomain, type TenantDomain } from "../domains/tenant";
+import { repositoryFactory } from '../persistence/repository-factory';
+import type { AuditEntry, IRepository, Tenant } from '../persistence/repository';
+import { mapTenantRowToDomain, type TenantDomain } from '../domains/tenant';
 
 // ============================================================================
-// TENANT SERVICE (src/lib/services/tenant-service.ts)
+// TENANT SERVICE (src/lib/lib/services/tenant-service.ts)
 // ----------------------------------------------------------------------------
 // Capa de aplicación del dominio de tenants contra repositorios.
 // Encapsula creación, lectura y auditoría transaccional (FASE 5).
@@ -27,7 +27,7 @@ export class TenantService {
 
   constructor(
     tenantRepo: IRepository<Tenant> = repositoryFactory.getTenantRepository(),
-    auditRepo: IRepository<AuditEntry> = repositoryFactory.getAuditRepository(),
+    auditRepo: IRepository<AuditEntry> = repositoryFactory.getAuditRepository()
   ) {
     this.tenantRepo = tenantRepo;
     this.auditRepo = auditRepo;
@@ -35,11 +35,11 @@ export class TenantService {
 
   async createTenant(command: CreateTenantCommand): Promise<TenantDomain> {
     if (!command.id || !command.name || !command.slug) {
-      throw new Error("invalid_tenant_request");
+      throw new Error('invalid_tenant_request');
     }
     const existing = await this.tenantRepo.read(command.id, command.id);
     if (existing) {
-      throw new Error("tenant_already_exists");
+      throw new Error('tenant_already_exists');
     }
 
     const tier = normalizeProvisionTier(command.tier);
@@ -61,11 +61,11 @@ export class TenantService {
       tenantId: command.id,
       traceId: `trace_tenant_${crypto.randomUUID().slice(0, 8)}`,
       timestamp: new Date().toISOString(),
-      action: "tenant.created",
+      action: 'tenant.created',
       resource: `tenant:${command.slug}`,
-      severity: "S3",
+      severity: 'S3',
       actor: command.createdBy,
-      result: "success",
+      result: 'success',
       details: {
         tenantId: command.id,
         slug: command.slug,
@@ -95,7 +95,7 @@ export class TenantService {
       id: record.id,
       slug: record.slug,
       name: record.id,
-      region: "",
+      region: '',
       tier: mapTier(record.tier),
       quota_balance: record.quotaBalance,
       quota_tier_limit: record.quotaTierLimit,
@@ -107,40 +107,40 @@ export class TenantService {
   }
 }
 
-function normalizeProvisionTier(tier: string): Tenant["tier"] {
+function normalizeProvisionTier(tier: string): Tenant['tier'] {
   switch (tier) {
-    case "Free":
-    case "free":
-      return "free";
-    case "Enterprise":
-    case "enterprise":
-      return "enterprise";
-    case "Sovereign":
-    case "sovereign":
-      return "sovereign";
+    case 'Free':
+    case 'free':
+      return 'free';
+    case 'Enterprise':
+    case 'enterprise':
+      return 'enterprise';
+    case 'Sovereign':
+    case 'sovereign':
+      return 'sovereign';
     default:
-      return "enterprise";
+      return 'enterprise';
   }
 }
 
-function mapTier(tier: Tenant["tier"]): TenantDomain["tier"] {
+function mapTier(tier: Tenant['tier']): TenantDomain['tier'] {
   switch (tier) {
-    case "free":
-      return "Free";
-    case "enterprise":
-      return "Enterprise";
-    case "sovereign":
-      return "Sovereign";
+    case 'free':
+      return 'Free';
+    case 'enterprise':
+      return 'Enterprise';
+    case 'sovereign':
+      return 'Sovereign';
     default:
-      return "Free";
+      return 'Free';
   }
 }
 
-function defaultLimit(tier: Tenant["tier"]): number {
+function defaultLimit(tier: Tenant['tier']): number {
   switch (tier) {
-    case "free":
+    case 'free':
       return 100;
-    case "enterprise":
+    case 'enterprise':
       return 10_000;
     default:
       return 1_000_000;

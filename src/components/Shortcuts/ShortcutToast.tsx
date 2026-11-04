@@ -1,5 +1,5 @@
-import React, { useEffect } from "react";
-import { Sparkles, Command } from "lucide-react";
+import React, { useEffect } from 'react';
+import { Sparkles, Command } from 'lucide-react';
 
 interface Props {
   message: string | null;

@@ -18,8 +18,7 @@ info:
     url: https://tamv.network
     email: ecastillotrejo1983@gmail.com
   license:
-    name: Apache License 2.0 (Code) / CC BY 4.0 (Docs) / ISCL-1.0
-    url: https://www.apache.org/licenses/LICENSE-2.0
+    name: "Propietaria — Todos los derechos reservados (TAMV ONLINE ENTERPRISE). Ver el archivo LICENSE en la raiz del repositorio."
 
 servers:
   - url: https://ais-dev-55cyeky5ipqlihjrmfbpqw-223897458933.us-east1.run.app
@@ -1101,6 +1100,30 @@ paths:
         "413":
           description: texto demasiado largo
 
+  /api/v1/tts/stream:
+    post:
+      summary: Entrega progresiva por SSE de planes de prosodia, una oración completa por evento. No es audio ni streaming PCM del proveedor.
+      description: Eventos meta, chunk, interrupted y done. Cada chunk incluye texto, plan y pausa; la respuesta no autoriza ni ejecuta efectos externos.
+      operationId: streamTtsPlan
+      security: []
+      responses:
+        "200":
+          description: Flujo SSE (text/event-stream)
+        "400":
+          description: text requerido
+        "413":
+          description: texto demasiado largo
+
+  /api/v1/tts/interrupt:
+    post:
+      summary: Marca una interrupción (barge-in) de una sola vez para la sesión del solicitante
+      description: El latch es por actor, caduca y no concede autoridad. La siguiente entrega de /tts/stream para ese actor termina con un evento interrupted.
+      operationId: interruptTts
+      security: []
+      responses:
+        "200":
+          description: OK
+
   /api/v1/tts/synthesize:
     post:
       summary: Síntesis con anti-replay y sello de evidencia; audio solo si un backend real lo entrega, si no un plan para la voz del navegador
@@ -1124,6 +1147,93 @@ paths:
       summary: Borra la memoria de pronunciación de la sesión
       operationId: forgetTtsPronunciation
       security: []
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/native/engines:
+    get:
+      summary: Inventario de los motores nativos en proceso (LLM local determinista, router MoE, voz, memoizador Turbo)
+      operationId: getNativeEngines
+      security: []
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/native/llm/status:
+    get:
+      summary: Estado del LLM nativo y distribución de intenciones servidas en este proceso
+      operationId: getNativeLlmStatus
+      security: []
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/native/llm/generate:
+    post:
+      summary: Generación por el LLM nativo determinista con traza de intención. No autoriza ni ejecuta efectos.
+      description: Requiere el token de administración. Coincidencia determinista de intenciones; no es un modelo neuronal entrenado.
+      operationId: postNativeLlmGenerate
+      security:
+        - AdminBearer: []
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: prompt requerido
+        "401":
+          description: No autorizado
+        "413":
+          description: prompt demasiado largo
+
+  /api/v1/native/moe/diagnostics:
+    post:
+      summary: Diagnóstico real de balance del router MoE (entropía, Gini, carga por experto) sobre un lote
+      description: Requiere el token de administración. Reporta el router inicial (no entrenado) como línea base honesta; aprobación PENDING_REVIEW.
+      operationId: postNativeMoeDiagnostics
+      security:
+        - AdminBearer: []
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: entradas inválidas
+        "401":
+          description: No autorizado
+        "413":
+          description: demasiadas filas
+
+  /api/v3/economy/streams:
+    get:
+      summary: Catálogo de flujos nativos de monetización por unidades reales (tokens, rutas MoE, caracteres TTS, sellos de evidencia)
+      operationId: getEconomyStreams
+      security: []
+      responses:
+        "200":
+          description: OK
+
+  /api/v3/economy/quote:
+    post:
+      summary: Cotiza un flujo de monetización nativo con reparto exacto en puntos base. No cobra, no debita, no transfiere.
+      description: Aritmética entera determinista sobre unidades menores. Respuesta con fundsMoved=false y authorizationPerformed=false.
+      operationId: postEconomyQuote
+      security: []
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: cuerpo o parámetros inválidos
+        "404":
+          description: flujo no encontrado
+
+  /api/v1/hf/references:
+    get:
+      summary: Referencias verificadas del Hub por dominio nativo (descubrimiento, no ejecución)
+      description: Cada repo se comprobó que existe en huggingface.co; Isabella no carga ni ejecuta esos pesos. Licencias transcritas de la tarjeta del Hub.
+      operationId: getHfReferences
+      security: []
+      parameters:
+        - { name: domain, in: query, required: false, schema: { type: string, enum: [llm, moe, tts, asr] } }
       responses:
         "200":
           description: OK
@@ -1517,3 +1627,117 @@ paths:
           description: No autorizado
         "503":
           description: FAIL (errores bloqueantes) o token de administración no configurado
+  /api/skills/catalog:
+    get:
+      summary: Catálogo de skills registradas
+      description: Introspección de sólo lectura del registro ISABELLA_SKILLS agrupado por carpeta, con el estado de capacidad declarado y si pasa el portón del registro. Declarar capacidad no otorga autoridad ni ejecuta efectos.
+      operationId: listSkillCatalog
+      responses:
+        "200":
+          description: Resumen, estados de capacidad y grupos de skills
+  /api/skills/catalog/{id}:
+    get:
+      summary: Vista de una skill por identificador
+      description: Devuelve la capacidad declarada y el estado del portón para una skill. 400 si el id viola el esquema SkillId, 404 si no está registrada; sin eco de la entrada.
+      operationId: getSkillCatalogEntry
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Vista de la skill solicitada
+        "400":
+          description: SKILL_ID_INVALID
+        "404":
+          description: SKILL_NOT_FOUND
+  /api/v1/tamv/status:
+    get:
+      summary: Estado del motor TAMV Kaos Audio System
+      description: Declara versión, contenedores soportados, límites y qué capacidades NO están activas (reproducción en tiempo real, háptico, GPU). Público y honesto sobre su alcance.
+      operationId: getTamvStatus
+      responses:
+        "200":
+          description: Estado del runtime; audioRendered y executionPerformed siempre false
+  /api/v1/tamv/presets:
+    get:
+      summary: Catálogo de presets acústicos de fábrica
+      description: Once presets declarativos con su matriz (entorno, contenido, emoción, espacialidad, háptico) y cadena de etapas DSP. Son parámetros, no audio renderizado.
+      operationId: listTamvPresets
+      responses:
+        "200":
+          description: Lista de presets de fábrica
+  /api/v1/tamv/presets/{presetId}:
+    get:
+      summary: Detalle de un preset de fábrica
+      description: Devuelve la cadena DSP completa y la geometría espacial declarada del preset. 404 si el identificador no existe.
+      operationId: getTamvPreset
+      parameters:
+        - name: presetId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Preset encontrado
+        "404":
+          description: TAMV_PRESET_NOT_FOUND
+  /api/v1/tamv/analyze:
+    post:
+      summary: Análisis espectral de un WAV (DSP nativo)
+      description: Decodifica WAV (PCM 8/16/24/32 o float 32), calcula FFT radix-2 con ventana de Hann, centroide, flatness, bandas, flujo espectral, transitorios, rango dinámico y correlación M/S. No reproduce ni sintetiza. 400 si el contenedor o la duración son inválidos.
+      operationId: postTamvAnalyze
+      security:
+        - AdminBearer: []
+      responses:
+        "200":
+          description: Features, predicción de contenido y monitor; authorizationPerformed y executionPerformed false
+        "400":
+          description: TAMV_PAYLOAD_INVALID o código de fallo del decodificador
+        "401":
+          description: No autorizado
+        "429":
+          description: Límite de CPU por cliente alcanzado
+        "503":
+          description: Token de administración no configurado
+  /api/v1/tamv/adaptive-preset:
+    post:
+      summary: Preset adaptativo derivado del audio enviado
+      description: "Reglas deterministas sobre las mediciones reales: ganancia hacia -16 dBFS RMS, ancho según complejidad espacial, techo según headroom y patrón háptico según densidad de transitorios. Mismo audio produce mismo presetId."
+      operationId: postTamvAdaptivePreset
+      security:
+        - AdminBearer: []
+      responses:
+        "200":
+          description: Preset adaptativo y preset de fábrica más cercano
+        "400":
+          description: Payload inválido o no decodificable
+        "401":
+          description: No autorizado
+        "429":
+          description: Límite de CPU por cliente alcanzado
+        "503":
+          description: Token de administración no configurado
+  /api/v1/tamv/redefine-plan:
+    post:
+      summary: Plan de redefinición reversible (8 etapas declaradas)
+      description: "Genera el plan con acción compensadora por etapa y seis puertas de validación, firmado con digest SHA-256 sobre JSON canónico. Ninguna etapa ejecuta DSP: stagesExecuted es 0 y audioRendered false."
+      operationId: postTamvRedefinePlan
+      security:
+        - AdminBearer: []
+      responses:
+        "200":
+          description: Plan declarado con resumen de puertas
+        "400":
+          description: Payload inválido o no decodificable
+        "401":
+          description: No autorizado
+        "404":
+          description: TAMV_PRESET_NOT_FOUND si presetId no existe
+        "429":
+          description: Límite de CPU por cliente alcanzado
+        "503":
+          description: Token de administración no configurado

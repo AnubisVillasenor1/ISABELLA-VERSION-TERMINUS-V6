@@ -1,5 +1,5 @@
 /**
- * IGDS — Manifiesto (src/lib/igds/manifest.ts)
+ * IGDS — Manifiesto (src/lib/lib/igds/manifest.ts)
  * -----------------------------------------------------------------
  * Construye y valida el manifiesto conceptual C2PA de Isabella. El orden de
  * sellado es estricto:
@@ -9,11 +9,11 @@
  *   4. digest final → firma
  * El digest final es el que se registra en Genesis.
  */
-import { z } from "zod";
-import { digestHex } from "./digests";
-import type { ContentDigest, DigestAlgorithm } from "./digests";
-import { canonicalize } from "./canonical";
-import type { SealProfile } from "./profiles";
+import { z } from 'zod';
+import { digestHex } from './digests';
+import type { ContentDigest, DigestAlgorithm } from './digests';
+import { canonicalize } from './canonical';
+import type { SealProfile } from './profiles';
 import {
   IGDS_MANIFEST_FORMAT,
   IGDS_MANIFEST_ID_PREFIX,
@@ -24,25 +24,25 @@ import {
   type IgdsSource,
   type IgdsSoftBindingAssertion,
   type TimestampToken,
-} from "./types";
+} from './types';
 
-export const IGDS_CLAIM_GENERATOR = "Isabella Document Seal/1.0.0" as const;
+export const IGDS_CLAIM_GENERATOR = 'Isabella Document Seal/1.0.0' as const;
 
 export const IGDS_ASSERTION_LABELS = {
-  document: "org.isabella.document",
-  generation: "org.isabella.generation",
-  actions: "org.isabella.actions",
-  sources: "org.isabella.sources",
-  softBinding: "org.isabella.soft_binding",
+  document: 'org.isabella.document',
+  generation: 'org.isabella.generation',
+  actions: 'org.isabella.actions',
+  sources: 'org.isabella.sources',
+  softBinding: 'org.isabella.soft_binding',
 } as const;
 
 const digestSchema = z.object({
-  algorithm: z.enum(["sha256", "sha3-256"]),
+  algorithm: z.enum(['sha256', 'sha3-256']),
   value: z.string().regex(/^[0-9a-f]+$/i),
 });
 
 const signatureSchema = z.object({
-  algorithm: z.enum(["Ed25519", "ML-DSA-65"]),
+  algorithm: z.enum(['Ed25519', 'ML-DSA-65']),
   key_id: z.string().min(1),
   public_key: z.string().min(1),
   value: z.string().min(1),
@@ -50,8 +50,8 @@ const signatureSchema = z.object({
 });
 
 const timestampSchema = z.object({
-  protocol: z.literal("RFC3161"),
-  status: z.literal("granted"),
+  protocol: z.literal('RFC3161'),
+  status: z.literal('granted'),
   policy: z.string(),
   gen_time: z.string().datetime(),
   serial_number: z.string(),
@@ -63,14 +63,14 @@ const timestampSchema = z.object({
 export const IgdsManifestSchema = z.object({
   manifest_id: z.string().startsWith(IGDS_MANIFEST_ID_PREFIX),
   format: z.literal(IGDS_MANIFEST_FORMAT),
-  profile: z.enum(["internal", "public-verifiable", "long-term", "restricted"]),
+  profile: z.enum(['internal', 'public-verifiable', 'long-term', 'restricted']),
   claim: z.object({
     claim_generator: z.string().min(1),
     instance_id: z.string().min(1),
     created: z.string().datetime(),
     assertion_references: z.array(z.string()),
     content_binding: z.object({
-      algorithm: z.enum(["sha256", "sha3-256"]),
+      algorithm: z.enum(['sha256', 'sha3-256']),
       asset_hash: z.string().min(1),
     }),
   }),
@@ -96,12 +96,12 @@ export interface BuildManifestInput {
 }
 
 export function buildManifest(input: BuildManifestInput): IgdsManifest {
-  if (!input.documentId.trim()) throw new Error("IGDS manifest: documentId es obligatorio.");
+  if (!input.documentId.trim()) throw new Error('IGDS manifest: documentId es obligatorio.');
   if (input.actions.length === 0) {
-    throw new Error("IGDS manifest: se requiere al menos una acción de procedencia.");
+    throw new Error('IGDS manifest: se requiere al menos una acción de procedencia.');
   }
   const createdAt = input.createdAt ?? new Date().toISOString();
-  const assertions: IgdsManifest["assertions"] = [
+  const assertions: IgdsManifest['assertions'] = [
     { label: IGDS_ASSERTION_LABELS.document, data: input.document },
     { label: IGDS_ASSERTION_LABELS.generation, data: input.generation },
     { label: IGDS_ASSERTION_LABELS.actions, data: input.actions },
@@ -153,14 +153,14 @@ export function manifestFinalView(manifest: IgdsManifest): Record<string, unknow
 
 export function manifestClaimDigest(
   manifest: IgdsManifest,
-  algorithm: DigestAlgorithm = "sha256",
+  algorithm: DigestAlgorithm = 'sha256'
 ): string {
   return digestHex(algorithm, canonicalize(manifestClaimView(manifest)));
 }
 
 export function manifestFinalDigest(
   manifest: IgdsManifest,
-  algorithm: DigestAlgorithm = "sha256",
+  algorithm: DigestAlgorithm = 'sha256'
 ): string {
   return digestHex(algorithm, canonicalize(manifestFinalView(manifest)));
 }
@@ -171,7 +171,7 @@ export function withTimestamp(manifest: IgdsManifest, token: TimestampToken | nu
 
 export function attachSignatures(
   manifest: IgdsManifest,
-  signatures: IgdsManifest["signatures"],
+  signatures: IgdsManifest['signatures']
 ): IgdsManifest {
   return { ...manifest, signatures };
 }

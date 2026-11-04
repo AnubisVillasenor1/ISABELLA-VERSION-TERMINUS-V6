@@ -66,7 +66,7 @@ export async function verifyProduction(entrypoint = resolveEntrypoint(), port = 
       const detail = spawnFailed ?? stderr.join("").trim().slice(0, 600) ?? "";
       throw new Error(`production entrypoint did not become healthy at ${baseUrl}. ${detail}`);
     }
-    const smoke = await verifyDeployment(baseUrl);
+    const smoke = await verifyDeployment(baseUrl, fetch, { requireReadiness: true });
     return { ok: smoke.ok, exitCode: smoke.ok ? 0 : 1, baseUrl, smoke };
   } finally {
     child.kill("SIGTERM");

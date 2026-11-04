@@ -1,5 +1,5 @@
 /**
- * ECONOMIC AUTHORITY (src/lib/monetization/economic-authority.ts)
+ * ECONOMIC AUTHORITY (src/lib/lib/monetization/economic-authority.ts)
  * -----------------------------------------------------------------
  * Contrato económico único para rutas de monetización:
  *  - validateMonetizationAmount: importe entero > 0, límite duro, currency explícita.
@@ -14,25 +14,25 @@
  * ni importes arbitrarios; la capability no certificada bloquea el runtime.
  */
 
-import { z } from "zod";
-import { config } from "../config";
-import { getCapability } from "../platform-capabilities";
-import { resolveRuntimeMode, isProductionLike, type RuntimeMode } from "../runtime-mode";
-import { MAX_MONETIZATION_AMOUNT_CENTS, type SubscriptionStatus } from "./x402-connector";
+import { z } from 'zod';
+import { config } from '../config';
+import { getCapability } from '../platform-capabilities';
+import { resolveRuntimeMode, isProductionLike, type RuntimeMode } from '../runtime-mode';
+import { MAX_MONETIZATION_AMOUNT_CENTS, type SubscriptionStatus } from './x402-connector';
 
 export { MAX_MONETIZATION_AMOUNT_CENTS };
 
 export const monetizationAmountSchema = z
   .number({
-    required_error: "amountCents es obligatorio",
-    invalid_type_error: "amountCents debe ser numérico",
+    required_error: 'amountCents es obligatorio',
+    invalid_type_error: 'amountCents debe ser numérico',
   })
-  .int("amountCents debe ser un entero (centavos)")
-  .positive("amountCents debe ser positivo")
+  .int('amountCents debe ser un entero (centavos)')
+  .positive('amountCents debe ser positivo')
   .max(MAX_MONETIZATION_AMOUNT_CENTS, `amountCents excede el máximo permitido`);
 
-export const monetizationCurrencySchema = z.literal("USDC", {
-  errorMap: () => ({ message: "currency debe ser USDC" }),
+export const monetizationCurrencySchema = z.literal('USDC', {
+  errorMap: () => ({ message: 'currency debe ser USDC' }),
 });
 
 export type MonetizationAmountValidation =
@@ -42,26 +42,26 @@ export type MonetizationAmountValidation =
 export function validateMonetizationAmount(amountCents: unknown): MonetizationAmountValidation {
   const parsed = monetizationAmountSchema.safeParse(amountCents);
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "INVALID_AMOUNT" };
+    return { ok: false, error: parsed.error.issues[0]?.message ?? 'INVALID_AMOUNT' };
   }
   return { ok: true, amountCents: parsed.data };
 }
 
 export type CapabilityGateResult =
   | { blocked: false }
-  | { blocked: true; error: "CAPABILITY_NOT_CERTIFIED"; capability: string; notes: string };
+  | { blocked: true; error: 'CAPABILITY_NOT_CERTIFIED'; capability: string; notes: string };
 
 /**
  * Enforce runtime de capabilities no certificadas (registry ⇒ runtime).
  * Una capability con productionSafe=false no puede ejecutarse en
  * staging/production sin importar lo que afirme la documentación.
  */
-export function economyCapabilityGate(capabilityId = "economy.ledger"): CapabilityGateResult {
+export function economyCapabilityGate(capabilityId = 'economy.ledger'): CapabilityGateResult {
   let mode: RuntimeMode;
   try {
     mode = resolveRuntimeMode(config().ISABELLA_RUNTIME_MODE);
   } catch {
-    mode = "development";
+    mode = 'development';
   }
   if (!isProductionLike(mode)) return { blocked: false };
 
@@ -69,10 +69,10 @@ export function economyCapabilityGate(capabilityId = "economy.ledger"): Capabili
   if (!capability || !capability.productionSafe) {
     return {
       blocked: true,
-      error: "CAPABILITY_NOT_CERTIFIED",
+      error: 'CAPABILITY_NOT_CERTIFIED',
       capability: capabilityId,
       notes:
-        "Capability no certificada para producción. La liquidación económica permanece deshabilitada hasta que EconomicAuthority pase certificación (auditoría P0-04/Fase 0).",
+        'Capability no certificada para producción. La liquidación económica permanece deshabilitada hasta que EconomicAuthority pase certificación (auditoría P0-04/Fase 0).',
     };
   }
   return { blocked: false };
@@ -80,7 +80,7 @@ export function economyCapabilityGate(capabilityId = "economy.ledger"): Capabili
 
 export interface DurableSubscriptionResolution {
   status: SubscriptionStatus;
-  source: "durable" | "development-default" | "unavailable-fail-closed";
+  source: 'durable' | 'development-default' | 'unavailable-fail-closed';
 }
 
 /**
@@ -90,19 +90,19 @@ export interface DurableSubscriptionResolution {
  */
 export function resolveSubscriptionStatus(
   _tenantId: string,
-  _actorId: string,
+  _actorId: string
 ): DurableSubscriptionResolution {
   let mode: RuntimeMode;
   try {
     mode = resolveRuntimeMode(config().ISABELLA_RUNTIME_MODE);
   } catch {
-    mode = "development";
+    mode = 'development';
   }
 
   if (isProductionLike(mode)) {
     // PENDIENTE(Fase 1 EconomicAuthority): lookup en billing/subscriptions (Postgres).
     // Mientras no exista, la suscripción NUNCA puede derivarse del request.
-    return { status: "INACTIVE", source: "unavailable-fail-closed" };
+    return { status: 'INACTIVE', source: 'unavailable-fail-closed' };
   }
-  return { status: "ACTIVE", source: "development-default" };
+  return { status: 'ACTIVE', source: 'development-default' };
 }

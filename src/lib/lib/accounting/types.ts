@@ -3,9 +3,9 @@
  * Tipos fundamentales para transacciones contables
  */
 
-export type AccountType = "asset" | "liability" | "equity" | "revenue" | "expense";
+export type AccountType = 'asset' | 'liability' | 'equity' | 'revenue' | 'expense';
 
-export type TransactionStatus = "pending" | "posted" | "reversed" | "failed";
+export type TransactionStatus = 'pending' | 'posted' | 'reversed' | 'failed';
 
 export interface Account {
   id: string;

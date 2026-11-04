@@ -5,8 +5,8 @@
 // behaviour change; the route inventory is locked by test/deployment/route-inventory
 // .test.ts. Every mutating route is admin-gated and rate-limited; the skill engine
 // still ESCALATES high-risk executions and seals each run into BookPI.
-import { randomUUID } from "node:crypto";
-import type { Application, Request, Response } from "express";
+import { randomUUID } from 'node:crypto';
+import type { Application, Request, Response } from 'express';
 import {
   HYPERCORE_DISCLAIMER,
   HYPERCORE_ID,
@@ -17,22 +17,32 @@ import {
   type HyperCoreTask,
   type HyperPredictSession,
   type RiskClass,
-} from "../hypercore";
-import { HYPERCORE_OMEGA_PHASES, HyperCoreEngine, SkillMcpServer, type SkillRegistry } from "../skills";
-import type { BookPiLedgerPort } from "../bookpi/ledger";
-import type { FixedWindowRateLimiter } from "../security/rate-limit";
-import { buildIsabellaCapabilityManifest } from "../isabella/recognition";
+} from '../hypercore';
+import {
+  HYPERCORE_OMEGA_PHASES,
+  HyperCoreEngine,
+  SkillMcpServer,
+  type SkillRegistry,
+} from '../skills';
+import type { BookPiLedgerPort } from '../bookpi/ledger';
+import type { FixedWindowRateLimiter } from '../security/rate-limit';
+import { buildIsabellaCapabilityManifest } from '../isabella/recognition';
 
 export interface HyperCoreRoutesDeps {
   readonly app: Application;
   /** Skill registry the engine and MCP server operate on. */
   readonly skills: SkillRegistry;
   /** Append-only BookPI sink for execution seals. */
-  readonly ledger: Pick<BookPiLedgerPort, "append">;
+  readonly ledger: Pick<BookPiLedgerPort, 'append'>;
   /** Bearer-token gate reused from the server (`authorizeApiToken`). */
   readonly authorizeApiToken: (req: Request, res: Response, envName: string) => boolean;
   /** Fixed-window limiter guard reused from the server (`enforceRateLimit`). */
-  readonly enforceRateLimit: (req: Request, res: Response, limiter: FixedWindowRateLimiter, bucket: string) => boolean;
+  readonly enforceRateLimit: (
+    req: Request,
+    res: Response,
+    limiter: FixedWindowRateLimiter,
+    bucket: string
+  ) => boolean;
   /** Shared limiter instance for the HyperCore/MCP buckets. */
   readonly rateLimiter: FixedWindowRateLimiter;
   /** String-field extractor reused from the server (`commerceStringField`). */
@@ -42,21 +52,31 @@ export interface HyperCoreRoutesDeps {
 }
 
 export function registerHyperCoreRoutes(deps: HyperCoreRoutesDeps): void {
-  const { app, skills, ledger, authorizeApiToken, enforceRateLimit, rateLimiter, commerceStringField } = deps;
-  const HYPERCORE_ADMIN_PRINCIPAL = "genesis-admin";
-  const HYPERCORE_RISK_CLASSES: readonly RiskClass[] = ["low", "medium", "high", "critical"];
+  const {
+    app,
+    skills,
+    ledger,
+    authorizeApiToken,
+    enforceRateLimit,
+    rateLimiter,
+    commerceStringField,
+  } = deps;
+  const HYPERCORE_ADMIN_PRINCIPAL = 'genesis-admin';
+  const HYPERCORE_RISK_CLASSES: readonly RiskClass[] = ['low', 'medium', 'high', 'critical'];
 
   function parseHyperCoreRisk(body: Record<string, unknown>): RiskClass {
-    const raw = (commerceStringField(body, "risk") ?? "low").toLowerCase();
-    return HYPERCORE_RISK_CLASSES.includes(raw as RiskClass) ? (raw as RiskClass) : "low";
+    const raw = (commerceStringField(body, 'risk') ?? 'low').toLowerCase();
+    return HYPERCORE_RISK_CLASSES.includes(raw as RiskClass) ? (raw as RiskClass) : 'low';
   }
 
   function stringArrayField(body: Record<string, unknown>, key: string): string[] {
     const value = body[key];
-    return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+    return Array.isArray(value)
+      ? value.filter((item): item is string => typeof item === 'string')
+      : [];
   }
 
-  app.get("/api/v1/hypercore/modes", (_req, res) => {
+  app.get('/api/v1/hypercore/modes', (_req, res) => {
     res.json({
       success: true,
       id: HYPERCORE_ID,
@@ -67,50 +87,55 @@ export function registerHyperCoreRoutes(deps: HyperCoreRoutesDeps): void {
     });
   });
 
-  app.post("/api/v1/hypercore/run", async (req, res) => {
-    if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  app.post('/api/v1/hypercore/run', async (req, res) => {
+    if (!authorizeApiToken(req, res, 'GENESIS_ADMIN_API_TOKEN')) return;
     try {
       const body = (req.body ?? {}) as Record<string, unknown>;
-      const intent = commerceStringField(body, "intent");
-      const domain = commerceStringField(body, "domain");
-      const prompt = commerceStringField(body, "prompt");
+      const intent = commerceStringField(body, 'intent');
+      const domain = commerceStringField(body, 'domain');
+      const prompt = commerceStringField(body, 'prompt');
       if (!intent || !domain || !prompt) {
-        res.status(400).json({ success: false, error: "intent, domain y prompt son requeridos" });
+        res.status(400).json({ success: false, error: 'intent, domain y prompt son requeridos' });
         return;
       }
       const task: HyperCoreTask = {
-        taskId: commerceStringField(body, "taskId") ?? `task-${Date.now()}`,
+        taskId: commerceStringField(body, 'taskId') ?? `task-${Date.now()}`,
         intent,
         domain,
         risk: parseHyperCoreRisk(body),
         prompt,
-        contextTokens: typeof body.contextTokens === "number" ? body.contextTokens : 0,
-        userScope: commerceStringField(body, "userScope"),
-        territoryScope: commerceStringField(body, "territoryScope"),
+        contextTokens: typeof body.contextTokens === 'number' ? body.contextTokens : 0,
+        userScope: commerceStringField(body, 'userScope'),
+        territoryScope: commerceStringField(body, 'territoryScope'),
         requiresAuthorization: body.requiresAuthorization === true,
       };
-      const result = await hyperCore.run(task, { authenticatedPrincipal: HYPERCORE_ADMIN_PRINCIPAL });
-      const delivered = result.status === "COMPLETED" || result.status === "CACHE_HIT";
-      const status = delivered ? 200 : result.status === "ESCALATED" ? 202 : 403;
+      const result = await hyperCore.run(task, {
+        authenticatedPrincipal: HYPERCORE_ADMIN_PRINCIPAL,
+      });
+      const delivered = result.status === 'COMPLETED' || result.status === 'CACHE_HIT';
+      const status = delivered ? 200 : result.status === 'ESCALATED' ? 202 : 403;
       res.status(status).json({ success: delivered, ...result });
     } catch (error) {
-      res.status(400).json({ success: false, error: error instanceof Error ? error.message : "HYPERCORE_RUN_FAILED" });
+      res.status(400).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'HYPERCORE_RUN_FAILED',
+      });
     }
   });
 
-  app.post("/api/v1/hypercore/predict", (req, res) => {
-    if (!authorizeApiToken(req, res, "GENESIS_ADMIN_API_TOKEN")) return;
+  app.post('/api/v1/hypercore/predict', (req, res) => {
+    if (!authorizeApiToken(req, res, 'GENESIS_ADMIN_API_TOKEN')) return;
     try {
       const body = (req.body ?? {}) as Record<string, unknown>;
       const session: HyperPredictSession = {
-        subject: commerceStringField(body, "subject") ?? HYPERCORE_ADMIN_PRINCIPAL,
-        role: commerceStringField(body, "role") ?? "guardian",
+        subject: commerceStringField(body, 'subject') ?? HYPERCORE_ADMIN_PRINCIPAL,
+        role: commerceStringField(body, 'role') ?? 'guardian',
         deviceTrusted: body.deviceTrusted === true,
-        openArtifacts: stringArrayField(body, "openArtifacts"),
-        currentIntent: commerceStringField(body, "currentIntent") ?? "",
-        recentIntents: stringArrayField(body, "recentIntents"),
+        openArtifacts: stringArrayField(body, 'openArtifacts'),
+        currentIntent: commerceStringField(body, 'currentIntent') ?? '',
+        recentIntents: stringArrayField(body, 'recentIntents'),
         risk: parseHyperCoreRisk(body),
-        territory: commerceStringField(body, "territory") ?? "global",
+        territory: commerceStringField(body, 'territory') ?? 'global',
       };
       const predictions = hyperPredict.predict(session);
       res.json({
@@ -120,7 +145,10 @@ export function registerHyperCoreRoutes(deps: HyperCoreRoutesDeps): void {
         disclaimer: HYPERCORE_DISCLAIMER,
       });
     } catch (error) {
-      res.status(400).json({ success: false, error: error instanceof Error ? error.message : "HYPERCORE_PREDICT_FAILED" });
+      res.status(400).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'HYPERCORE_PREDICT_FAILED',
+      });
     }
   });
 
@@ -139,14 +167,19 @@ export function registerHyperCoreRoutes(deps: HyperCoreRoutesDeps): void {
   const skillMcpServer = new SkillMcpServer({
     registry: skills,
     engine: hyperCoreOmegaEngine,
-    identity: { actorId: "service:mcp", tenantId: "tamv", federationId: "federation-1", policyVersion: "CROWN-v20" },
+    identity: {
+      actorId: 'service:mcp',
+      tenantId: 'tamv',
+      federationId: 'federation-1',
+      policyVersion: 'CROWN-v20',
+    },
     resolveScopes: (skillId) => skills.get(skillId).contract?.authority.requiredScopes ?? [],
   });
 
-  app.get("/api/v1/hypercore/skills", (_req, res) => {
+  app.get('/api/v1/hypercore/skills', (_req, res) => {
     res.json({
       success: true,
-      contract: "isabella.hypercore.skills.v2",
+      contract: 'isabella.hypercore.skills.v2',
       phases: HYPERCORE_OMEGA_PHASES,
       catalogManifest: skills.manifest(),
       skills: skills.list().map((skill) => ({
@@ -160,61 +193,83 @@ export function registerHyperCoreRoutes(deps: HyperCoreRoutesDeps): void {
     });
   });
 
-  app.post("/api/v1/hypercore/skills/execute", async (req, res) => {
-    if (!authorizeApiToken(req, res, "HYPERCORE_API_TOKEN")) return;
-    if (!enforceRateLimit(req, res, rateLimiter, "hypercore-skill-execute")) return;
+  app.post('/api/v1/hypercore/skills/execute', async (req, res) => {
+    if (!authorizeApiToken(req, res, 'HYPERCORE_API_TOKEN')) return;
+    if (!enforceRateLimit(req, res, rateLimiter, 'hypercore-skill-execute')) return;
     try {
       const body = (req.body ?? {}) as Record<string, unknown>;
-      const skillId = typeof body.skillId === "string" ? body.skillId.trim() : "";
+      const skillId = typeof body.skillId === 'string' ? body.skillId.trim() : '';
       if (!skillId) {
-        res.status(400).json({ success: false, error: "SKILL_ID_REQUIRED" });
+        res.status(400).json({ success: false, error: 'SKILL_ID_REQUIRED' });
         return;
       }
-      const signals = Array.isArray(body.signals) ? body.signals.filter((value): value is string => typeof value === "string") : [];
-      const budgetRaw = typeof body.budget === "object" && body.budget !== null ? (body.budget as Record<string, unknown>) : {};
+      const signals = Array.isArray(body.signals)
+        ? body.signals.filter((value): value is string => typeof value === 'string')
+        : [];
+      const budgetRaw =
+        typeof body.budget === 'object' && body.budget !== null
+          ? (body.budget as Record<string, unknown>)
+          : {};
       const budget = {
-        ...(typeof budgetRaw.maxLatencyMs === "number" ? { maxLatencyMs: budgetRaw.maxLatencyMs } : {}),
-        ...(typeof budgetRaw.maxCalls === "number" ? { maxCalls: budgetRaw.maxCalls } : {}),
-        ...(typeof budgetRaw.maxEnergyUnits === "number" ? { maxEnergyUnits: budgetRaw.maxEnergyUnits } : {}),
+        ...(typeof budgetRaw.maxLatencyMs === 'number'
+          ? { maxLatencyMs: budgetRaw.maxLatencyMs }
+          : {}),
+        ...(typeof budgetRaw.maxCalls === 'number' ? { maxCalls: budgetRaw.maxCalls } : {}),
+        ...(typeof budgetRaw.maxEnergyUnits === 'number'
+          ? { maxEnergyUnits: budgetRaw.maxEnergyUnits }
+          : {}),
       };
-      const requestId = typeof body.requestId === "string" ? body.requestId : randomUUID();
-      const grantedScopes = skills.has(skillId) ? (skills.get(skillId).contract?.authority.requiredScopes ?? []) : [];
+      const requestId = typeof body.requestId === 'string' ? body.requestId : randomUUID();
+      const grantedScopes = skills.has(skillId)
+        ? (skills.get(skillId).contract?.authority.requiredScopes ?? [])
+        : [];
       const result = await hyperCoreOmegaEngine.execute({
         skillId,
-        actorId: "service:hypercore-api",
-        tenantId: typeof body.tenantId === "string" ? body.tenantId : "tamv",
-        federationId: typeof body.federationId === "string" ? body.federationId : "federation-1",
-        traceId: typeof body.traceId === "string" ? body.traceId : requestId,
-        policyVersion: typeof body.policyVersion === "string" ? body.policyVersion : "CROWN-v20",
+        actorId: 'service:hypercore-api',
+        tenantId: typeof body.tenantId === 'string' ? body.tenantId : 'tamv',
+        federationId: typeof body.federationId === 'string' ? body.federationId : 'federation-1',
+        traceId: typeof body.traceId === 'string' ? body.traceId : requestId,
+        policyVersion: typeof body.policyVersion === 'string' ? body.policyVersion : 'CROWN-v20',
         input: body.input ?? {},
         signals,
         grantedScopes,
         approvalProvided: body.approvalProvided === true,
         budget,
       });
-      const status = result.status === "COMPLETED" ? 200 : result.status === "BLOCKED" ? 403 : 500;
-      res.status(status).json({ success: result.status === "COMPLETED", result });
+      const status = result.status === 'COMPLETED' ? 200 : result.status === 'BLOCKED' ? 403 : 500;
+      res.status(status).json({ success: result.status === 'COMPLETED', result });
     } catch (error) {
-      res.status(500).json({ success: false, error: error instanceof Error ? error.message : "HYPERCORE_SKILL_EXECUTE_FAILED" });
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'HYPERCORE_SKILL_EXECUTE_FAILED',
+      });
     }
   });
 
   // MCP — Model Context Protocol over JSON-RPC 2.0 (initialize, tools/list, tools/call).
-  app.post("/api/v1/mcp", async (req, res) => {
-    if (!authorizeApiToken(req, res, "HYPERCORE_API_TOKEN")) return;
-    if (!enforceRateLimit(req, res, rateLimiter, "mcp-jsonrpc")) return;
+  app.post('/api/v1/mcp', async (req, res) => {
+    if (!authorizeApiToken(req, res, 'HYPERCORE_API_TOKEN')) return;
+    if (!enforceRateLimit(req, res, rateLimiter, 'mcp-jsonrpc')) return;
     try {
       const rpc = (req.body ?? {}) as Record<string, unknown>;
-      const id = typeof rpc.id === "string" || typeof rpc.id === "number" || rpc.id === null ? rpc.id : null;
+      const id =
+        typeof rpc.id === 'string' || typeof rpc.id === 'number' || rpc.id === null ? rpc.id : null;
       const response = await skillMcpServer.handle({
-        jsonrpc: typeof rpc.jsonrpc === "string" ? rpc.jsonrpc : "2.0",
+        jsonrpc: typeof rpc.jsonrpc === 'string' ? rpc.jsonrpc : '2.0',
         id,
-        method: typeof rpc.method === "string" ? rpc.method : "",
+        method: typeof rpc.method === 'string' ? rpc.method : '',
         params: rpc.params,
       });
       res.json(response);
     } catch (error) {
-      res.status(500).json({ jsonrpc: "2.0", id: null, error: { code: -32603, message: error instanceof Error ? error.message : "MCP_INTERNAL_ERROR" } });
+      res.status(500).json({
+        jsonrpc: '2.0',
+        id: null,
+        error: {
+          code: -32603,
+          message: error instanceof Error ? error.message : 'MCP_INTERNAL_ERROR',
+        },
+      });
     }
   });
 }

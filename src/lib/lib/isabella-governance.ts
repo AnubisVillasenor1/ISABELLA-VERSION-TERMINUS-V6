@@ -1,5 +1,5 @@
-import { runIsabellaSkill } from "./skills/run-skill";
-import { SovereignAudit } from "./sovereign-audit";
+import { runIsabellaSkill } from './skills/run-skill';
+import { SovereignAudit } from './sovereign-audit';
 
 export interface GovernanceValidationRequest {
   jobId: string;
@@ -18,13 +18,13 @@ export interface AtlasData {
   approved?: boolean;
   data?: {
     territorialImpact?: number;
-    interpretation?: "POSITIVE" | "NEUTRAL" | "NEGATIVE";
+    interpretation?: 'POSITIVE' | 'NEUTRAL' | 'NEGATIVE';
   };
 }
 
 export interface ThemisData {
   expedienteId?: string;
-  data?: { auditability?: "SUFFICIENT" | "PARTIAL" | "INSUFFICIENT" };
+  data?: { auditability?: 'SUFFICIENT' | 'PARTIAL' | 'INSUFFICIENT' };
   summary?: string;
 }
 
@@ -57,17 +57,17 @@ export class IsabellaGovernance {
    * Validates a Quantum Job against sovereign and territorial constraints.
    */
   public static async validateQuantumJob(
-    req: GovernanceValidationRequest,
+    req: GovernanceValidationRequest
   ): Promise<GovernanceValidationResult> {
     try {
       // 1. ATLAS: Territorial & Scenario Impact
       const atlasRes = await runIsabellaSkill(
-        "ATLAS",
+        'ATLAS',
         {
           scenario: `Evaluación de impacto de corrida cuántica '${req.datasetName}' en Nodo de Cómputo Territorial '${req.territory}'.`,
           variables: [
-            { name: "backend", value: req.backend },
-            { name: "fidelity", value: req.fidelityTarget },
+            { name: 'backend', value: req.backend },
+            { name: 'fidelity', value: req.fidelityTarget },
           ],
         },
         {
@@ -75,21 +75,21 @@ export class IsabellaGovernance {
           tenantId: req.tenantId,
           role: req.role,
           authenticated: req.authenticated,
-          federation: "TAMV",
+          federation: 'TAMV',
           requestId: req.jobId,
-          locale: "es",
-          intent: "QUANTUM_GOVERNANCE_CHECK",
-        },
+          locale: 'es',
+          intent: 'QUANTUM_GOVERNANCE_CHECK',
+        }
       );
       const atlasData = atlasRes.data as unknown as AtlasData;
 
-      if (atlasData?.impactLevel === "CRITICAL" && !atlasData?.approved) {
-        throw new Error("ATLAS rejected the scenario due to critical territorial impact.");
+      if (atlasData?.impactLevel === 'CRITICAL' && !atlasData?.approved) {
+        throw new Error('ATLAS rejected the scenario due to critical territorial impact.');
       }
 
       // 2. VIGIA: Ethical Multi-Lock Verification
       const vigiaRes = await runIsabellaSkill(
-        "VIGIA",
+        'VIGIA',
         {
           text: `quantum:execute:${req.backend} risk:HIGH user:${req.userId} territory:${req.territory}`,
         },
@@ -98,16 +98,16 @@ export class IsabellaGovernance {
           tenantId: req.tenantId,
           role: req.role,
           authenticated: req.authenticated,
-          federation: "TAMV",
+          federation: 'TAMV',
           requestId: req.jobId,
-          locale: "es",
-          intent: "QUANTUM_GOVERNANCE_CHECK",
-        },
+          locale: 'es',
+          intent: 'QUANTUM_GOVERNANCE_CHECK',
+        }
       );
       const vigiaData = vigiaRes.data as unknown as VigiaData;
 
-      if (vigiaData?.lockStatus === "LOCKED") {
-        throw new Error("VIGIA Ethical Multi-Lock prevented execution.");
+      if (vigiaData?.lockStatus === 'LOCKED') {
+        throw new Error('VIGIA Ethical Multi-Lock prevented execution.');
       }
 
       // 3. ANUBIS: Integrity and Merkle Tree Generation
@@ -120,7 +120,7 @@ export class IsabellaGovernance {
       const merkleTree = SovereignAudit.buildMerkleTree([leaf1, leaf2, leaf3, leaf4]);
 
       const anubisRes = await runIsabellaSkill(
-        "ANUBIS",
+        'ANUBIS',
         {
           artifactId: `qup_job_merkle_${merkleTree.root.slice(0, 12)}`,
           content: JSON.stringify({
@@ -133,17 +133,17 @@ export class IsabellaGovernance {
           tenantId: req.tenantId,
           role: req.role,
           authenticated: req.authenticated,
-          federation: "TAMV",
+          federation: 'TAMV',
           requestId: req.jobId,
-          locale: "es",
-          intent: "QUANTUM_GOVERNANCE_CHECK",
-        },
+          locale: 'es',
+          intent: 'QUANTUM_GOVERNANCE_CHECK',
+        }
       );
       const anubisData = anubisRes.data as unknown as { integrityHash?: string };
 
       // 4. THEMIS: Legal Explanable Expediente
       const themisRes = await runIsabellaSkill(
-        "THEMIS",
+        'THEMIS',
         {
           decisionId: `dec_qup_${req.jobId.slice(0, 8)}`,
           decision: `Aprobación de ejecución cuántica QUP v3.0 en ${req.territory} con backend ${req.backend}`,
@@ -154,11 +154,11 @@ export class IsabellaGovernance {
           tenantId: req.tenantId,
           role: req.role,
           authenticated: req.authenticated,
-          federation: "TAMV",
+          federation: 'TAMV',
           requestId: req.jobId,
-          locale: "es",
-          intent: "QUANTUM_GOVERNANCE_CHECK",
-        },
+          locale: 'es',
+          intent: 'QUANTUM_GOVERNANCE_CHECK',
+        }
       );
       const themisData = themisRes.data as unknown as ThemisData;
 
@@ -166,7 +166,7 @@ export class IsabellaGovernance {
       const payloadToSign = JSON.stringify({
         jobId: req.jobId,
         merkleRoot: merkleTree.root,
-        themisId: themisData?.expedienteId || "unknown",
+        themisId: themisData?.expedienteId || 'unknown',
       });
       const payloadHash = SovereignAudit.hashData(payloadToSign);
       const signature = await SovereignAudit.signAuditSeal(payloadHash);
@@ -183,18 +183,18 @@ export class IsabellaGovernance {
         auditSeal: signature,
       };
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Unknown governance failure";
+      const message = error instanceof Error ? error.message : 'Unknown governance failure';
       return {
         approved: false,
         rejectionReason: message,
         auditTrail: {
           atlasDecision: null,
-          anubisHash: "",
+          anubisHash: '',
           themisExpediente: null,
           vigiaLock: null,
         },
-        merkleRoot: "",
-        auditSeal: "",
+        merkleRoot: '',
+        auditSeal: '',
       };
     }
   }

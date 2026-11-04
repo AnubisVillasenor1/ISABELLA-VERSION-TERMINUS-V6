@@ -7,16 +7,16 @@
  * evitan duplicar lógica entre los módulos de `src/gifts/`. Ninguna concede
  * autoridad ni ejecuta efectos: son funciones puras.
  */
-import { sha256 } from "../skills/canonical-json";
+import { sha256 } from '../skills/canonical-json';
 
 /** Normaliza texto: NFKC, minúsculas, sin anchos invisibles ni signos. */
 export function normalizeText(input: string): string {
   return input
-    .normalize("NFKC")
-    .toLocaleLowerCase("es-MX")
-    .replace(/[\u200B-\u200D\uFEFF]/g, " ")
-    .replace(/[^\p{L}\p{N}\s]/gu, " ")
-    .replace(/\s+/g, " ")
+    .normalize('NFKC')
+    .toLocaleLowerCase('es-MX')
+    .replace(/[\u200B-\u200D\uFEFF]/g, ' ')
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .replace(/\s+/g, ' ')
     .trim();
 }
 
@@ -24,7 +24,7 @@ export function normalizeText(input: string): string {
 export function tokenize(input: string): string[] {
   const normalized = normalizeText(input);
   if (!normalized) return [];
-  return normalized.split(" ").filter((token) => token.length > 1);
+  return normalized.split(' ').filter((token) => token.length > 1);
 }
 
 /** Similitud de Jaccard entre dos conjuntos de tokens. */

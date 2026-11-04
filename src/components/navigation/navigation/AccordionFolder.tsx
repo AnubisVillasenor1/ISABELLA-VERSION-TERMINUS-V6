@@ -6,9 +6,9 @@
  * en proceso, completada, requiere revisión.
  */
 
-import { useState, useRef, useEffect } from "react";
-import type { NavigationNode, NavigationBadge } from "./types";
-import { useNavigation } from "./NavigationStateProvider";
+import { useState, useRef, useEffect } from 'react';
+import type { NavigationNode, NavigationBadge } from './types';
+import { useNavigation } from './NavigationStateProvider';
 
 // ============================================================================
 // BADGE COMPONENT
@@ -16,17 +16,13 @@ import { useNavigation } from "./NavigationStateProvider";
 
 function Badge({ badge }: { badge: NavigationBadge }) {
   const toneClasses: Record<string, string> = {
-    info: "badge-info",
-    success: "badge-success",
-    warning: "badge-warning",
-    danger: "badge-danger",
+    info: 'badge-info',
+    success: 'badge-success',
+    warning: 'badge-warning',
+    danger: 'badge-danger',
   };
 
-  return (
-    <span className={`nav-badge ${toneClasses[badge.tone] ?? ""}`}>
-      {badge.value}
-    </span>
-  );
+  return <span className={`nav-badge ${toneClasses[badge.tone] ?? ''}`}>{badge.value}</span>;
 }
 
 // ============================================================================
@@ -39,11 +35,7 @@ interface AccordionFolderProps {
   onAction?: (node: NavigationNode) => void;
 }
 
-export function AccordionFolder({
-  node,
-  level = 0,
-  onAction,
-}: AccordionFolderProps) {
+export function AccordionFolder({ node, level = 0, onAction }: AccordionFolderProps) {
   const { toggleFolder, isFolderExpanded, state, dispatch } = useNavigation();
   const isExpanded = isFolderExpanded(node.id);
   const isActive = state.activeNode === node.id;
@@ -59,36 +51,36 @@ export function AccordionFolder({
   const handleClick = () => {
     if (node.disabled) return;
     toggleFolder(node.id);
-    dispatch({ type: "SET_ACTIVE_NODE", nodeId: node.id });
+    dispatch({ type: 'SET_ACTIVE_NODE', nodeId: node.id });
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" || e.key === " ") {
+    if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       handleClick();
     }
-    if (e.key === "Escape") {
-      dispatch({ type: "CLOSE_NAVBAR" });
+    if (e.key === 'Escape') {
+      dispatch({ type: 'CLOSE_NAVBAR' });
     }
   };
 
   const handleChildAction = (child: NavigationNode) => {
     if (child.requiresConfirmation) {
       // TODO: Show confirmation dialog
-      console.log("Confirmación requerida:", child.label);
+      console.log('Confirmación requerida:', child.label);
     }
     onAction?.(child);
-    dispatch({ type: "SET_ACTIVE_NODE", nodeId: child.id });
+    dispatch({ type: 'SET_ACTIVE_NODE', nodeId: child.id });
   };
 
   const chevronStyle = {
-    transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
-    transition: "transform 180ms ease-out",
+    transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
+    transition: 'transform 180ms ease-out',
   };
 
   return (
     <div
-      className={`accordion-folder ${isActive ? "active" : ""} ${node.disabled ? "disabled" : ""}`}
+      className={`accordion-folder ${isActive ? 'active' : ''} ${node.disabled ? 'disabled' : ''}`}
       data-level={level}
     >
       <button
@@ -97,11 +89,11 @@ export function AccordionFolder({
         onKeyDown={handleKeyDown}
         aria-expanded={isExpanded}
         aria-controls={`folder-content-${node.id}`}
-        aria-label={`${isExpanded ? "Cerrar" : "Abrir"} ${node.label}`}
+        aria-label={`${isExpanded ? 'Cerrar' : 'Abrir'} ${node.label}`}
         disabled={node.disabled}
         style={{ paddingLeft: `${12 + level * 16}px` }}
       >
-        {node.type === "folder" && (
+        {node.type === 'folder' && (
           <span className="accordion-chevron" style={chevronStyle}>
             ▸
           </span>
@@ -113,9 +105,7 @@ export function AccordionFolder({
 
         {node.badge && <Badge badge={node.badge} />}
 
-        {node.description && (
-          <span className="accordion-description">{node.description}</span>
-        )}
+        {node.description && <span className="accordion-description">{node.description}</span>}
       </button>
 
       <div
@@ -125,9 +115,9 @@ export function AccordionFolder({
         role="region"
         aria-label={`Contenido de ${node.label}`}
         style={{
-          height: isExpanded ? `${contentHeight}px` : "0px",
+          height: isExpanded ? `${contentHeight}px` : '0px',
           opacity: isExpanded ? 1 : 0,
-          overflow: "hidden",
+          overflow: 'hidden',
         }}
       >
         <div className="accordion-inner">

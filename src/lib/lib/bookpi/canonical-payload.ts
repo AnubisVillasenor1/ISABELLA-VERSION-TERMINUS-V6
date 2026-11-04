@@ -11,24 +11,24 @@
  *    calcula SOBRE el hash (flujo: payload → SHA-256 → blockHash → firma).
  *  - El `timestamp` incluido es EXACTAMENTE el que se persiste en la fila.
  */
-import type { BlockPIBlock } from "./types";
+import type { BlockPIBlock } from './types';
 
 const canonicalFieldOrder = [
-  "index",
-  "timestamp",
-  "tenantId",
-  "userId",
-  "operation",
-  "category",
-  "costDecimal",
-  "tokensConsumed",
-  "previousHash",
-  "status",
-  "nonce",
+  'index',
+  'timestamp',
+  'tenantId',
+  'userId',
+  'operation',
+  'category',
+  'costDecimal',
+  'tokensConsumed',
+  'previousHash',
+  'status',
+  'nonce',
 ] as const;
 
 /** Campos que NUNCA entran al hash (mutables/derivados tras el hash). */
-const EXCLUDED_FIELDS = new Set(["blockHash", "pqcSignature", "signatureAlgorithm"]);
+const EXCLUDED_FIELDS = new Set(['blockHash', 'pqcSignature', 'signatureAlgorithm']);
 
 /**
  * Serializa un bloque al payload canónico determinista. Acepta el bloque
@@ -40,7 +40,7 @@ export function canonicalBookPiPayload(block: Partial<BlockPIBlock>): string {
   for (const field of canonicalFieldOrder) {
     if (EXCLUDED_FIELDS.has(field)) continue;
     const value = block[field];
-    parts.push(value === undefined || value === null ? "" : String(value));
+    parts.push(value === undefined || value === null ? '' : String(value));
   }
-  return parts.join("|");
+  return parts.join('|');
 }

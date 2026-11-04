@@ -1,7 +1,7 @@
 export interface GenesisModuleDescriptor {
   id: string;
   version: string;
-  domain: "cognition" | "memory" | "trust" | "quantum" | "territory" | "infrastructure";
+  domain: 'cognition' | 'memory' | 'trust' | 'quantum' | 'territory' | 'infrastructure';
   capabilities: readonly string[];
 }
 
@@ -10,7 +10,10 @@ export class GenesisModuleRegistry {
 
   register(module: GenesisModuleDescriptor): void {
     if (this.modules.has(module.id)) throw new Error(`MODULES: duplicate module ${module.id}`);
-    this.modules.set(module.id, Object.freeze({ ...module, capabilities: Object.freeze([...module.capabilities]) }));
+    this.modules.set(
+      module.id,
+      Object.freeze({ ...module, capabilities: Object.freeze([...module.capabilities]) })
+    );
   }
 
   get(id: string): GenesisModuleDescriptor {
@@ -19,5 +22,7 @@ export class GenesisModuleRegistry {
     return module;
   }
 
-  list(): readonly GenesisModuleDescriptor[] { return [...this.modules.values()]; }
+  list(): readonly GenesisModuleDescriptor[] {
+    return [...this.modules.values()];
+  }
 }

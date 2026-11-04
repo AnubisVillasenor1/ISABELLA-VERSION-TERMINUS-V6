@@ -1,6 +1,6 @@
 /** Tenant/territory-scoped hybrid memory with provenance. No silent cross-tenant retrieval. */
-import { createHash, randomUUID } from "node:crypto";
-export type MemoryKind = "EPISODIC" | "SEMANTIC" | "PROCEDURAL" | "GOVERNANCE" | "LEARNING";
+import { createHash, randomUUID } from 'node:crypto';
+export type MemoryKind = 'EPISODIC' | 'SEMANTIC' | 'PROCEDURAL' | 'GOVERNANCE' | 'LEARNING';
 export interface MemoryItem {
   id: string;
   tenantId: string;
@@ -18,7 +18,7 @@ export interface MemoryStore {
   list(
     tenantId: string,
     territoryId: string,
-    kind?: MemoryKind,
+    kind?: MemoryKind
   ): Promise<MemoryItem[]> | MemoryItem[];
 }
 export class InMemoryHybridMemory implements MemoryStore {
@@ -34,18 +34,18 @@ export class InMemoryHybridMemory implements MemoryStore {
           x.tenantId === tenantId &&
           x.territoryId === territoryId &&
           (!kind || x.kind === kind) &&
-          (!x.expiresAt || new Date(x.expiresAt).getTime() > now),
+          (!x.expiresAt || new Date(x.expiresAt).getTime() > now)
       )
       .map((x) => ({ ...x, metadata: { ...x.metadata } }));
   }
 }
 export function createMemory(
-  input: Omit<MemoryItem, "id" | "contentHash" | "createdAt">,
+  input: Omit<MemoryItem, 'id' | 'contentHash' | 'createdAt'>
 ): MemoryItem {
   return {
     ...input,
     id: randomUUID(),
-    contentHash: createHash("sha256").update(input.content).digest("hex"),
+    contentHash: createHash('sha256').update(input.content).digest('hex'),
     createdAt: new Date().toISOString(),
   };
 }

@@ -1,9 +1,9 @@
-import { z } from "zod";
-import * as crypto from "node:crypto";
-import { config } from "./config";
-import { isProductionLike, resolveRuntimeMode } from "./runtime-mode";
-import { JWT_VERIFIER } from "./jwt-verifier";
-import { AuthVerificationLayer } from "./auth-verification-layer";
+import { z } from 'zod';
+import * as crypto from 'node:crypto';
+import { config } from './config';
+import { isProductionLike, resolveRuntimeMode } from './runtime-mode';
+import { JWT_VERIFIER } from './jwt-verifier';
+import { AuthVerificationLayer } from './auth-verification-layer';
 
 // ============================================================================
 // CANONICAL SEVEN LAYERS OF SECURITY HARDENING SYSTEM - ISABELLA v4.2.0
@@ -13,7 +13,7 @@ function securitySecret(): string {
   const value = config().AUTH_JWT_SECRET;
   if (!value) {
     throw new Error(
-      "securitySecret: AUTH_JWT_SECRET no configurado. No se pueden firmar tokens soberanos.",
+      'securitySecret: AUTH_JWT_SECRET no configurado. No se pueden firmar tokens soberanos.'
     );
   }
   return value;
@@ -30,17 +30,17 @@ function isValidIpAddress(value: string): boolean {
   const candidate = value.trim();
   if (!candidate) return false;
 
-  if (candidate.includes(":")) {
-    const hextets = candidate.split("::");
+  if (candidate.includes(':')) {
+    const hextets = candidate.split('::');
     if (hextets.length > 2) return false;
-    const left = hextets[0] ? hextets[0].split(":") : [];
-    const right = hextets.length === 2 && hextets[1] ? hextets[1].split(":") : [];
+    const left = hextets[0] ? hextets[0].split(':') : [];
+    const right = hextets.length === 2 && hextets[1] ? hextets[1].split(':') : [];
     const groups = [...left, ...right];
     if (groups.some((group) => !/^[0-9a-f]{1,4}$/i.test(group))) return false;
     return hextets.length === 2 ? groups.length < 8 : groups.length === 8;
   }
 
-  const octets = candidate.split(".");
+  const octets = candidate.split('.');
   return (
     octets.length === 4 &&
     octets.every((octet) => /^(0|[1-9]\\d{0,2})$/.test(octet) && Number(octet) <= 255)
@@ -65,7 +65,7 @@ async function getRedis(): Promise<typeof redisClient> {
   const url = config().REDIS_URL || config().KV_URL;
   if (!url) return null;
   try {
-    const mod = (await import("@upstash/redis").catch(() => null)) as unknown as {
+    const mod = (await import('@upstash/redis').catch(() => null)) as unknown as {
       Redis?: new (opts: { url: string; token?: string }) => unknown;
     } | null;
     if (!mod?.Redis) return null;
@@ -85,7 +85,7 @@ export interface SecurityTelemetry {
   correlationId: string;
   sanitized: boolean;
   rateLimitRemaining: number;
-  policyStatus: "allowed" | "denied" | "flagged";
+  policyStatus: 'allowed' | 'denied' | 'flagged';
   checkedLayers: string[];
 }
 
@@ -101,9 +101,9 @@ export interface TokenClaims {
 }
 
 const UPSTREAM_ALLOWLIST: readonly string[] = [
-  "generativelanguage.googleapis.com",
-  "api.groq.com",
-  "api.x.ai",
+  'generativelanguage.googleapis.com',
+  'api.groq.com',
+  'api.x.ai',
 ];
 
 /**
@@ -113,9 +113,9 @@ const UPSTREAM_ALLOWLIST: readonly string[] = [
  * asi que se rechaza explicitamente (ISA-184/ISA-187).
  */
 function isLiteralIpHost(hostname: string): boolean {
-  const host = hostname.replace(/^\[|\]$/g, "").toLowerCase();
-  if (host.includes(":")) return true; // IPv6 (con o sin corchetes)
-  const octets = host.split(".");
+  const host = hostname.replace(/^\[|\]$/g, '').toLowerCase();
+  if (host.includes(':')) return true; // IPv6 (con o sin corchetes)
+  const octets = host.split('.');
   const isOctet = (part: string) => part.length > 0 && part.length <= 3 && /^\d+$/.test(part);
   if (octets.length === 4 && octets.every(isOctet)) return true; // IPv4
   if (/^0x[0-9a-f]+$/.test(host) || /^\d+$/.test(host)) return true; // hex/decimal residual
@@ -130,13 +130,13 @@ function isUpstreamAllowed(url: string): boolean {
     return false;
   }
   // ISA-184: canonicalizacion estricta del destino.
-  if (parsed.protocol !== "https:") return false;
-  if (parsed.username !== "" || parsed.password !== "") return false;
+  if (parsed.protocol !== 'https:') return false;
+  if (parsed.username !== '' || parsed.password !== '') return false;
   // ISA-185: solo el puerto https por defecto (443 implicito o explicito).
-  if (parsed.port !== "" && parsed.port !== "443") return false;
+  if (parsed.port !== '' && parsed.port !== '443') return false;
   // Coincidencia exacta: sin trailing dot, sin literales IP.
   const host = parsed.hostname.toLowerCase();
-  if (host === "" || isLiteralIpHost(host)) return false;
+  if (host === '' || isLiteralIpHost(host)) return false;
   if (UPSTREAM_ALLOWLIST.includes(host)) return true;
   try {
     const voice = config().VOICE_API_URL;
@@ -152,37 +152,37 @@ export const SecuritySystem = {
   // Only explicit proxy contracts are trusted. The legacy boolean mode and
   // arbitrary X-Forwarded-For are fail-closed.
   resolveClientIp(request: Request): string {
-    let mode = "";
+    let mode = '';
     try {
-      mode = String(config().TRUSTED_PROXY_MODE ?? "")
+      mode = String(config().TRUSTED_PROXY_MODE ?? '')
         .trim()
         .toLowerCase();
     } catch {
-      return "unknown";
+      return 'unknown';
     }
 
     const candidate =
-      mode === "vercel"
-        ? request.headers.get("x-vercel-forwarded-for")?.split(",")[0]?.trim()
-        : mode === "cloudflare"
-          ? request.headers.get("cf-connecting-ip")?.trim()
-          : mode === "generic"
-            ? request.headers.get("x-real-ip")?.trim()
+      mode === 'vercel'
+        ? request.headers.get('x-vercel-forwarded-for')?.split(',')[0]?.trim()
+        : mode === 'cloudflare'
+          ? request.headers.get('cf-connecting-ip')?.trim()
+          : mode === 'generic'
+            ? request.headers.get('x-real-ip')?.trim()
             : undefined;
 
-    return candidate && isValidIpAddress(candidate) ? candidate : "unknown";
+    return candidate && isValidIpAddress(candidate) ? candidate : 'unknown';
   },
 
   validateInput<T>(
     schema: z.Schema<T>,
-    payload: unknown,
+    payload: unknown
   ): { success: true; data: T } | { success: false; error: string } {
     const result = schema.safeParse(payload);
     if (!result.success) {
       return {
         success: false,
         error:
-          "Fallo de Integridad de Datos: El esquema ingresado no cumple los contratos de Isabella.",
+          'Fallo de Integridad de Datos: El esquema ingresado no cumple los contratos de Isabella.',
       };
     }
     return { success: true, data: result.data };
@@ -202,7 +202,7 @@ export const SecuritySystem = {
 
   async checkRateLimitDistributed(
     ip: string,
-    limit: number = 30,
+    limit: number = 30
   ): Promise<{
     allowed: boolean;
     remaining: number;
@@ -216,7 +216,7 @@ export const SecuritySystem = {
           allowed: false,
           remaining: 0,
           degraded: true,
-          reason: "rate-limit-infrastructure-unavailable",
+          reason: 'rate-limit-infrastructure-unavailable',
         };
       }
       return this.checkRateLimit(ip, limit);
@@ -233,7 +233,7 @@ export const SecuritySystem = {
           allowed: false,
           remaining: 0,
           degraded: true,
-          reason: "rate-limit-infrastructure-unavailable",
+          reason: 'rate-limit-infrastructure-unavailable',
         };
       }
       return this.checkRateLimit(ip, limit);
@@ -246,14 +246,14 @@ export const SecuritySystem = {
   // Fail-closed: tenantId vacío/inválido se deniega.
   checkRateLimitByTenant(
     tenantId: string,
-    limit: number = 60,
+    limit: number = 60
   ): { allowed: boolean; remaining: number; reason?: string } {
-    const tid = typeof tenantId === "string" ? tenantId.trim() : "";
+    const tid = typeof tenantId === 'string' ? tenantId.trim() : '';
     if (!tid || tid.length === 0 || tid.length > 128) {
-      return { allowed: false, remaining: 0, reason: "tenant-required" };
+      return { allowed: false, remaining: 0, reason: 'tenant-required' };
     }
     if (!/^[a-zA-Z0-9_\-:]+$/.test(tid)) {
-      return { allowed: false, remaining: 0, reason: "tenant-invalid-format" };
+      return { allowed: false, remaining: 0, reason: 'tenant-invalid-format' };
     }
     const now = Date.now();
     const entry = tenantRateLimitCache.get(tid);
@@ -262,26 +262,26 @@ export const SecuritySystem = {
       return { allowed: true, remaining: limit - 1 };
     }
     if (entry.count >= limit)
-      return { allowed: false, remaining: 0, reason: "tenant-rate-limit-exceeded" };
+      return { allowed: false, remaining: 0, reason: 'tenant-rate-limit-exceeded' };
     entry.count += 1;
     return { allowed: true, remaining: limit - entry.count };
   },
 
   async checkRateLimitByTenantDistributed(
     tenantId: string,
-    limit: number = 60,
+    limit: number = 60
   ): Promise<{
     allowed: boolean;
     remaining: number;
     degraded?: boolean;
     reason?: string;
   }> {
-    const tid = typeof tenantId === "string" ? tenantId.trim() : "";
+    const tid = typeof tenantId === 'string' ? tenantId.trim() : '';
     if (!tid || tid.length === 0 || tid.length > 128) {
-      return { allowed: false, remaining: 0, reason: "tenant-required" };
+      return { allowed: false, remaining: 0, reason: 'tenant-required' };
     }
     if (!/^[a-zA-Z0-9_\-:]+$/.test(tid)) {
-      return { allowed: false, remaining: 0, reason: "tenant-invalid-format" };
+      return { allowed: false, remaining: 0, reason: 'tenant-invalid-format' };
     }
     const redis = await getRedis();
     if (!redis) {
@@ -290,7 +290,7 @@ export const SecuritySystem = {
           allowed: false,
           remaining: 0,
           degraded: true,
-          reason: "rate-limit-infrastructure-unavailable",
+          reason: 'rate-limit-infrastructure-unavailable',
         };
       }
       return this.checkRateLimitByTenant(tid, limit);
@@ -301,7 +301,7 @@ export const SecuritySystem = {
       if (count === 1) await redis.expire(key, 60);
       const remaining = Math.max(0, limit - count);
       if (count > limit)
-        return { allowed: false, remaining: 0, reason: "tenant-rate-limit-exceeded" };
+        return { allowed: false, remaining: 0, reason: 'tenant-rate-limit-exceeded' };
       return { allowed: true, remaining };
     } catch {
       if (isProductionLikeRuntime()) {
@@ -309,7 +309,7 @@ export const SecuritySystem = {
           allowed: false,
           remaining: 0,
           degraded: true,
-          reason: "rate-limit-infrastructure-unavailable",
+          reason: 'rate-limit-infrastructure-unavailable',
         };
       }
       return this.checkRateLimitByTenant(tid, limit);
@@ -321,9 +321,9 @@ export const SecuritySystem = {
   // Fail-closed: tenant vacío denegado. No consume si excede.
   checkTenantQuota(
     tenantId: string,
-    quotaLimit: number = 50_000,
+    quotaLimit: number = 50_000
   ): { allowed: boolean; remaining: number; consumed: number; resetAt: number } {
-    const tid = typeof tenantId === "string" ? tenantId.trim() : "";
+    const tid = typeof tenantId === 'string' ? tenantId.trim() : '';
     if (!tid || tid.length === 0) {
       return {
         allowed: false,
@@ -354,14 +354,14 @@ export const SecuritySystem = {
   consumeTenantQuota(
     tenantId: string,
     cost: number,
-    quotaLimit: number = 50_000,
+    quotaLimit: number = 50_000
   ): { allowed: boolean; remaining: number; consumed: number; reason?: string } {
-    const tid = typeof tenantId === "string" ? tenantId.trim() : "";
+    const tid = typeof tenantId === 'string' ? tenantId.trim() : '';
     if (!tid || tid.length === 0) {
-      return { allowed: false, remaining: 0, consumed: 0, reason: "tenant-required" };
+      return { allowed: false, remaining: 0, consumed: 0, reason: 'tenant-required' };
     }
     if (!Number.isFinite(cost) || cost <= 0) {
-      return { allowed: false, remaining: 0, consumed: 0, reason: "invalid-cost" };
+      return { allowed: false, remaining: 0, consumed: 0, reason: 'invalid-cost' };
     }
     const now = Date.now();
     let entry = tenantQuotaCache.get(tid);
@@ -374,7 +374,7 @@ export const SecuritySystem = {
         allowed: false,
         remaining: Math.max(0, quotaLimit - entry.consumed),
         consumed: entry.consumed,
-        reason: "quota-exceeded",
+        reason: 'quota-exceeded',
       };
     }
     entry.consumed += cost;
@@ -382,9 +382,9 @@ export const SecuritySystem = {
   },
 
   getTenantQuotaStatus(
-    tenantId: string,
+    tenantId: string
   ): { consumed: number; windowStart: number; resetAt: number } | null {
-    const tid = typeof tenantId === "string" ? tenantId.trim() : "";
+    const tid = typeof tenantId === 'string' ? tenantId.trim() : '';
     if (!tid) return null;
     const entry = tenantQuotaCache.get(tid);
     if (!entry) return null;
@@ -397,7 +397,7 @@ export const SecuritySystem = {
   },
 
   resetTenantQuota(tenantId: string): void {
-    const tid = typeof tenantId === "string" ? tenantId.trim() : "";
+    const tid = typeof tenantId === 'string' ? tenantId.trim() : '';
     if (!tid) return;
     tenantQuotaCache.delete(tid);
   },
@@ -415,12 +415,12 @@ export const SecuritySystem = {
     userId: string,
     role: string,
     tenantId: string,
-    scope: string,
+    scope: string
   ): Promise<string> {
     const payload = {
-      iss: "TAMV Online Network Security Hub",
+      iss: 'TAMV Online Network Security Hub',
       sub: userId,
-      aud: "Isabella S0 Gateway",
+      aud: 'Isabella S0 Gateway',
       exp: Math.floor(Date.now() / 1000) + 3600,
       jti: crypto.randomUUID(),
       tenantId,
@@ -441,20 +441,20 @@ export const SecuritySystem = {
     const legacy = config().SUPABASE_JWT_SECRET;
     if (!legacy) {
       throw new Error(
-        "securitySecret: SUPABASE_JWT_SECRET (Legacy JWT Secret de Supabase) no configurado. " +
-          "PostgREST no puede validar tokens soberanos para RLS tenant-scoped (P0-13).",
+        'securitySecret: SUPABASE_JWT_SECRET (Legacy JWT Secret de Supabase) no configurado. ' +
+          'PostgREST no puede validar tokens soberanos para RLS tenant-scoped (P0-13).'
       );
     }
     const now = Math.floor(Date.now() / 1000);
     const payload = {
-      iss: "TAMV Online Network Security Hub",
+      iss: 'TAMV Online Network Security Hub',
       sub: userId,
-      aud: "Isabella S0 Gateway",
+      aud: 'Isabella S0 Gateway',
       iat: now,
       exp: now + 3300, // 55 min — algo menor a la hora de sesión
       jti: crypto.randomUUID(),
       // Claims que consumen las políticas RLS (request.jwt.claims):
-      role: "authenticated", // rol Postgres real que PostgREST usa al ejecutar
+      role: 'authenticated', // rol Postgres real que PostgREST usa al ejecutar
       tenantId, // auth.current_tenant_id() (init_schema.sql)
       tenant_id: tenantId, // aislamiento api_keys (request.jwt.claims.tenant_id)
       scope,
@@ -475,7 +475,7 @@ export const SecuritySystem = {
       correlationId?: string;
       requiredScope?: string;
       expectedAudience?: string;
-    },
+    }
   ): Promise<{
     success: boolean;
     claims?: TokenClaims;
@@ -486,7 +486,7 @@ export const SecuritySystem = {
     try {
       const outcome = await AuthVerificationLayer.verifyToken(token, ctx);
       if (outcome.success) {
-        return { success: true, claims: outcome.claims, provider: "auth-verification-layer" };
+        return { success: true, claims: outcome.claims, provider: 'auth-verification-layer' };
       }
     } catch {
       // Continuar con fallback legacy si AuthVerificationLayer falla
@@ -494,10 +494,10 @@ export const SecuritySystem = {
 
     // Fallback legacy: verificación directa con AUTH_JWT_SECRET
     if (!token) {
-      return { success: false, error: "Credencial nula: No se proporcionó clave de API." };
+      return { success: false, error: 'Credencial nula: No se proporcionó clave de API.' };
     }
 
-    if (token.startsWith("isa_live_")) {
+    if (token.startsWith('isa_live_')) {
       return {
         success: false,
         error:
@@ -508,35 +508,35 @@ export const SecuritySystem = {
     try {
       const res = JWT_VERIFIER.verify(token, {
         key: securitySecret(),
-        algorithm: "HS256",
-        issuer: "TAMV Online Network Security Hub",
-        audiences: ["Isabella S0 Gateway"],
+        algorithm: 'HS256',
+        issuer: 'TAMV Online Network Security Hub',
+        audiences: ['Isabella S0 Gateway'],
       });
 
       if (!res.ok) {
         return {
           success: false,
           error:
-            res.reason ?? "Firma digital no válida: Manipulación detectada (Integrity violation).",
+            res.reason ?? 'Firma digital no válida: Manipulación detectada (Integrity violation).',
         };
       }
 
       return { success: true, claims: res.payload as unknown as TokenClaims };
     } catch {
-      return { success: false, error: "No se pudo descifrar la credencial soberana." };
+      return { success: false, error: 'No se pudo descifrar la credencial soberana.' };
     }
   },
 
   async verifyApiScope(
     token: string | null,
-    requiredScope: string,
+    requiredScope: string
   ): Promise<{ allowed: boolean; reason?: string; claims?: TokenClaims }> {
     const verification = await this.verifyToken(token);
     if (!verification.success) {
-      return { allowed: false, reason: verification.error ?? "Credencial no válida." };
+      return { allowed: false, reason: verification.error ?? 'Credencial no válida.' };
     }
     const claims = verification.claims!;
-    const scopesList = claims.scope.split(" ");
+    const scopesList = claims.scope.split(' ');
     if (!scopesList.includes(requiredScope)) {
       return {
         allowed: false,
@@ -549,13 +549,13 @@ export const SecuritySystem = {
   // --- LAYER 4: Hardened OWASP Secure Headers (CSP nonces + HSTS preload) ---
   /** Genera nonce criptográfico por-request para CSP (16 bytes → base64). Plan nonces: ver docs/operations/CSP-NONCES.md */
   generateCspNonce(): string {
-    return crypto.randomBytes(16).toString("base64");
+    return crypto.randomBytes(16).toString('base64');
   },
 
   /** Construye CSP estricto; si nonce se provee usa 'nonce-<value>' y elimina unsafe-inline en prod. */
   buildCspHeader(nonce?: string): string {
     const production = isProductionLikeRuntime();
-    const hasNonce = typeof nonce === "string" && nonce.length >= 16;
+    const hasNonce = typeof nonce === 'string' && nonce.length >= 16;
     // En producción con nonce: script-src 'self' 'nonce-<value>' (sin unsafe-inline). Fallback dev: permite unsafe-inline solo si no hay nonce.
     const scriptSource = hasNonce
       ? `'self' 'nonce-${nonce}'`
@@ -575,38 +575,38 @@ export const SecuritySystem = {
       "style-src 'self' 'unsafe-inline'",
       `script-src ${scriptSource}`,
       "worker-src 'self' blob:",
-      "upgrade-insecure-requests",
-    ].join("; ");
+      'upgrade-insecure-requests',
+    ].join('; ');
   },
 
   /** HSTS con preload (RFC 6797) — vercel.json + server.ts deben coincidir. Valor canónico: 63072000 (2 años) + includeSubDomains + preload */
   getHstsHeader(): string {
-    return "max-age=63072000; includeSubDomains; preload";
+    return 'max-age=63072000; includeSubDomains; preload';
   },
 
   injectSecureHeaders(
     headers: Headers = new Headers(),
-    opts?: { nonce?: string; cspNonce?: string },
+    opts?: { nonce?: string; cspNonce?: string }
   ): Headers {
     const nonce = opts?.nonce ?? opts?.cspNonce;
-    if (!headers.has("Content-Security-Policy")) {
-      headers.set("Content-Security-Policy", this.buildCspHeader(nonce));
-      if (nonce) headers.set("X-CSP-Nonce", nonce);
-    } else if (nonce && !headers.get("Content-Security-Policy")?.includes("nonce-")) {
+    if (!headers.has('Content-Security-Policy')) {
+      headers.set('Content-Security-Policy', this.buildCspHeader(nonce));
+      if (nonce) headers.set('X-CSP-Nonce', nonce);
+    } else if (nonce && !headers.get('Content-Security-Policy')?.includes('nonce-')) {
       // Si caller pasó nonce pero CSP ya existía sin nonce, expone nonce por header auxiliar para auditoría.
-      headers.set("X-CSP-Nonce", nonce);
+      headers.set('X-CSP-Nonce', nonce);
     }
-    headers.set("X-Content-Type-Options", "nosniff");
-    headers.set("X-Frame-Options", "DENY");
-    headers.set("X-XSS-Protection", "0");
-    headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
-    headers.set("Strict-Transport-Security", this.getHstsHeader());
-    headers.set("X-Permitted-Cross-Domain-Policies", "none");
-    headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
-    headers.set("Cross-Origin-Opener-Policy", "same-origin");
-    headers.set("Cross-Origin-Resource-Policy", "same-origin");
+    headers.set('X-Content-Type-Options', 'nosniff');
+    headers.set('X-Frame-Options', 'DENY');
+    headers.set('X-XSS-Protection', '0');
+    headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+    headers.set('Strict-Transport-Security', this.getHstsHeader());
+    headers.set('X-Permitted-Cross-Domain-Policies', 'none');
+    headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    headers.set('Cross-Origin-Opener-Policy', 'same-origin');
+    headers.set('Cross-Origin-Resource-Policy', 'same-origin');
     // Never advertise a literal nonce placeholder as if it were a real CSP nonce.
-    headers.delete("Content-Security-Policy-Report-Only");
+    headers.delete('Content-Security-Policy-Report-Only');
     return headers;
   },
 
@@ -615,7 +615,7 @@ export const SecuritySystem = {
     // Fallback inline para evitar ciclo ESM; src/lib/secret-redactor.ts es canónico para logs.
     return input.replace(
       /(\b(?:api[_-]?key|secret|token|password|bearer)\b\s*[:=]\s*["']?)([^\s"']{8,})/gi,
-      "$1[REDACTED]",
+      '$1[REDACTED]'
     );
   },
 
@@ -630,7 +630,7 @@ export const SecuritySystem = {
     // llevar el request a un host fuera de la allowlist.
     const response = await globalCircuitBreaker.execute(url, {
       ...options,
-      redirect: "error",
+      redirect: 'error',
     });
     // Defensa en profundidad: con redirect:"error" un 3xx no deberia
     // llegar nunca; si llega, el cuerpo se descarta en lugar de propagarse
@@ -638,8 +638,8 @@ export const SecuritySystem = {
     if (response.status >= 300 && response.status < 400) {
       throw new Error(
         `[SovereignEgress] Redireccionamiento inesperado (${response.status}) hacia: ${
-          response.headers.get("location") ?? "unknown"
-        }.`,
+          response.headers.get('location') ?? 'unknown'
+        }.`
       );
     }
     if (response.url && !isUpstreamAllowed(response.url)) {
@@ -648,9 +648,9 @@ export const SecuritySystem = {
     return response;
   },
 
-  generateTelemetry(ip: string, policy: "allowed" | "denied" | "flagged"): SecurityTelemetry {
-    const traceId = "tr_" + this.simpleHash(crypto.randomUUID()).toUpperCase();
-    const correlationId = "corr_" + this.simpleHash(crypto.randomUUID() + "corr").toUpperCase();
+  generateTelemetry(ip: string, policy: 'allowed' | 'denied' | 'flagged'): SecurityTelemetry {
+    const traceId = 'tr_' + this.simpleHash(crypto.randomUUID()).toUpperCase();
+    const correlationId = 'corr_' + this.simpleHash(crypto.randomUUID() + 'corr').toUpperCase();
     const entry = rateLimitCache.get(ip);
     const maxLimit = 120;
     const rateLimitRemaining = entry ? Math.max(0, maxLimit - entry.count) : maxLimit;
@@ -661,13 +661,13 @@ export const SecuritySystem = {
       rateLimitRemaining,
       policyStatus: policy,
       checkedLayers: [
-        "L1_Integrity",
-        "L2_RateLimiter",
-        "L3_ScopeGate",
-        "L4_OwaspHeaders",
-        "L5_CircuitBreaker",
-        "L6_TraceTelemetry",
-        "L7_ContentFilter",
+        'L1_Integrity',
+        'L2_RateLimiter',
+        'L3_ScopeGate',
+        'L4_OwaspHeaders',
+        'L5_CircuitBreaker',
+        'L6_TraceTelemetry',
+        'L7_ContentFilter',
       ],
     };
   },
@@ -675,30 +675,30 @@ export const SecuritySystem = {
   sanitizePayload(text: string): { clean: string; flagged: boolean; reason?: string } {
     const lowercase = text.toLowerCase();
     const hostilePatterns = [
-      "<script",
-      "javascript:",
-      "onload=",
-      "onerror=",
-      "ignore all previous instructions",
-      "ignore previous guidelines",
-      "forget your instructions",
-      "forget all instructions",
-      "reveal your system prompt",
-      "system override",
-      "drop table",
-      "select * from",
-      "../",
-      "..\\",
-      "[system override]",
-      "<system>",
-      "markdown-injection-bypass",
-      "\\u003cscript",
-      "\\u002e\\u002e\\u002f",
+      '<script',
+      'javascript:',
+      'onload=',
+      'onerror=',
+      'ignore all previous instructions',
+      'ignore previous guidelines',
+      'forget your instructions',
+      'forget all instructions',
+      'reveal your system prompt',
+      'system override',
+      'drop table',
+      'select * from',
+      '../',
+      '..\\',
+      '[system override]',
+      '<system>',
+      'markdown-injection-bypass',
+      '\\u003cscript',
+      '\\u002e\\u002e\\u002f',
     ];
     for (const pattern of hostilePatterns) {
       if (lowercase.includes(pattern)) {
         return {
-          clean: text.replace(/<script[^>]*>([\s\S]*?)<\/script>/gi, "[CONTIENE_SCRIPT_VETADO]"),
+          clean: text.replace(/<script[^>]*>([\s\S]*?)<\/script>/gi, '[CONTIENE_SCRIPT_VETADO]'),
           flagged: true,
           reason: `Se detectó patrón hostil catalogado: "${pattern}"`,
         };
@@ -708,23 +708,23 @@ export const SecuritySystem = {
   },
 
   hmacSha256(message: string, key: string): string {
-    return crypto.createHmac("sha256", key).update(message).digest("hex");
+    return crypto.createHmac('sha256', key).update(message).digest('hex');
   },
 
   simpleHash(input: string): string {
-    return crypto.createHash("sha256").update(input).digest("hex").slice(0, 12);
+    return crypto.createHash('sha256').update(input).digest('hex').slice(0, 12);
   },
 };
 
 export class UpstreamCircuitBreaker {
-  private state: "CLOSED" | "OPEN" | "HALF_OPEN" = "CLOSED";
+  private state: 'CLOSED' | 'OPEN' | 'HALF_OPEN' = 'CLOSED';
   private failureCount = 0;
   private lastFailureTime: number | null = null;
   private readonly failureThreshold = 3;
   private readonly recoveryTimeoutMs = 15000;
   private readonly timeoutMs = 8500;
 
-  public getState(): "CLOSED" | "OPEN" | "HALF_OPEN" {
+  public getState(): 'CLOSED' | 'OPEN' | 'HALF_OPEN' {
     this.updateState();
     return this.state;
   }
@@ -732,24 +732,24 @@ export class UpstreamCircuitBreaker {
   private updateState() {
     const now = Date.now();
     if (
-      this.state === "OPEN" &&
+      this.state === 'OPEN' &&
       this.lastFailureTime &&
       now - this.lastFailureTime > this.recoveryTimeoutMs
     ) {
-      this.state = "HALF_OPEN";
-      console.log("[CircuitBreaker] Cooldown elapsed. Transitioning to HALF_OPEN.");
+      this.state = 'HALF_OPEN';
+      console.log('[CircuitBreaker] Cooldown elapsed. Transitioning to HALF_OPEN.');
     }
   }
 
   public async execute(url: string, options: RequestInit): Promise<Response> {
     this.updateState();
-    if (this.state === "OPEN") {
+    if (this.state === 'OPEN') {
       return new Response(
         JSON.stringify({
           error:
-            "Servicio temporalmente deshabilitado: Disyuntor activo (Circuit Breaker OPEN). El núcleo de inferencia está experimentando fallos consecutivos.",
+            'Servicio temporalmente deshabilitado: Disyuntor activo (Circuit Breaker OPEN). El núcleo de inferencia está experimentando fallos consecutivos.',
         }),
-        { status: 503, headers: { "content-type": "application/json" } },
+        { status: 503, headers: { 'content-type': 'application/json' } }
       );
     }
     const controller = new AbortController();
@@ -763,13 +763,13 @@ export class UpstreamCircuitBreaker {
     } catch (err) {
       clearTimeout(timeoutId);
       this.onFailure();
-      if (err instanceof Error && err.name === "AbortError") {
+      if (err instanceof Error && err.name === 'AbortError') {
         return new Response(
           JSON.stringify({
             error:
-              "Límite de tiempo excedido al comunicarse con el núcleo de inferencia (Timeout protection).",
+              'Límite de tiempo excedido al comunicarse con el núcleo de inferencia (Timeout protection).',
           }),
-          { status: 504, headers: { "content-type": "application/json" } },
+          { status: 504, headers: { 'content-type': 'application/json' } }
         );
       }
       throw err;
@@ -777,10 +777,10 @@ export class UpstreamCircuitBreaker {
   }
 
   private onSuccess() {
-    if (this.state === "HALF_OPEN") {
-      console.log("[CircuitBreaker] Success in HALF_OPEN. Resetting state to CLOSED.");
+    if (this.state === 'HALF_OPEN') {
+      console.log('[CircuitBreaker] Success in HALF_OPEN. Resetting state to CLOSED.');
     }
-    this.state = "CLOSED";
+    this.state = 'CLOSED';
     this.failureCount = 0;
     this.lastFailureTime = null;
   }
@@ -789,12 +789,12 @@ export class UpstreamCircuitBreaker {
     this.failureCount++;
     this.lastFailureTime = Date.now();
     console.warn(`[CircuitBreaker] Failure detected. Count: ${this.failureCount}/3.`);
-    if (this.state === "CLOSED" && this.failureCount >= this.failureThreshold) {
-      this.state = "OPEN";
-      console.error("[CircuitBreaker] Failure threshold exceeded. Breaker tripped to OPEN.");
-    } else if (this.state === "HALF_OPEN") {
-      this.state = "OPEN";
-      console.error("[CircuitBreaker] Failure detected in HALF_OPEN. Breaker reverted to OPEN.");
+    if (this.state === 'CLOSED' && this.failureCount >= this.failureThreshold) {
+      this.state = 'OPEN';
+      console.error('[CircuitBreaker] Failure threshold exceeded. Breaker tripped to OPEN.');
+    } else if (this.state === 'HALF_OPEN') {
+      this.state = 'OPEN';
+      console.error('[CircuitBreaker] Failure detected in HALF_OPEN. Breaker reverted to OPEN.');
     }
   }
 }

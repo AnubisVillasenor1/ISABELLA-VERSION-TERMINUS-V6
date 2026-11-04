@@ -12,14 +12,14 @@
  * obligatorios exceden el plazo, se marca degradado y se reporta el exceso, sin
  * sacrificar la garantía. `authorityPath` permanece `FULL`.
  */
-import { TURBO_FILTERS, type TurboFilter, type TurboPlan } from "../intelligence/turbo-planner";
-import { digest, round } from "./util";
+import { TURBO_FILTERS, type TurboFilter, type TurboPlan } from '../intelligence/turbo-planner';
+import { digest, round } from './util';
 
-export const LATENCY_BUDGET_VERSION = "1.0.0" as const;
+export const LATENCY_BUDGET_VERSION = '1.0.0' as const;
 export const LATENCY_BUDGET_METHOD_ID =
-  "A.TWINS.LEGACY.latency_budget.plan.v1.0.0.LOW.AUTONOMOUS" as const;
+  'A.TWINS.LEGACY.latency_budget.plan.v1.0.0.LOW.AUTONOMOUS' as const;
 export const LATENCY_BUDGET_DISCLAIMER =
-  "El presupuesto de latencia decide qué filtros opcionales diferir; los obligatorios nunca se saltan y no concede autoridad.";
+  'El presupuesto de latencia decide qué filtros opcionales diferir; los obligatorios nunca se saltan y no concede autoridad.';
 
 export const DEFAULT_FILTER_COST_MS: Readonly<Record<TurboFilter, number>> = Object.freeze({
   AEGIS: 2,
@@ -42,7 +42,7 @@ export interface LatencyBudgetInput {
 
 export interface LatencyBudgetPlan {
   readonly version: typeof LATENCY_BUDGET_VERSION;
-  readonly route: TurboPlan["route"];
+  readonly route: TurboPlan['route'];
   readonly budgetMs: number;
   readonly mandatoryFilters: readonly TurboFilter[];
   readonly runFilters: readonly TurboFilter[];
@@ -52,7 +52,7 @@ export interface LatencyBudgetPlan {
   readonly withinBudget: boolean;
   readonly degraded: boolean;
   readonly overrunMs: number;
-  readonly authorityPath: "FULL";
+  readonly authorityPath: 'FULL';
   readonly reasons: readonly string[];
   readonly digest: string;
   readonly methodId: typeof LATENCY_BUDGET_METHOD_ID;
@@ -61,7 +61,7 @@ export interface LatencyBudgetPlan {
 
 function costOf(
   filter: TurboFilter,
-  costs: Partial<Record<TurboFilter, number>> | undefined,
+  costs: Partial<Record<TurboFilter, number>> | undefined
 ): number {
   const provided = costs?.[filter];
   if (provided !== undefined && Number.isFinite(provided) && provided >= 0) return provided;
@@ -70,10 +70,10 @@ function costOf(
 
 export function planLatencyBudget(input: LatencyBudgetInput): LatencyBudgetPlan {
   if (!input || !input.plan || !Array.isArray(input.plan.requiredFilters)) {
-    throw new Error("LATENCY_PLAN_REQUIRED");
+    throw new Error('LATENCY_PLAN_REQUIRED');
   }
   if (!Number.isFinite(input.budgetMs) || input.budgetMs <= 0) {
-    throw new Error("LATENCY_BUDGET_INVALID");
+    throw new Error('LATENCY_BUDGET_INVALID');
   }
 
   const reasons: string[] = [];
@@ -88,9 +88,9 @@ export function planLatencyBudget(input: LatencyBudgetInput): LatencyBudgetPlan 
   const overrunMs = degraded ? round(estimatedMandatoryMs - input.budgetMs, 3) : 0;
 
   if (degraded) {
-    reasons.push("MANDATORY_FILTERS_ALWAYS_RUN", "BUDGET_EXCEEDED_BY_MANDATORY_FILTERS");
+    reasons.push('MANDATORY_FILTERS_ALWAYS_RUN', 'BUDGET_EXCEEDED_BY_MANDATORY_FILTERS');
   } else {
-    reasons.push("MANDATORY_FILTERS_WITHIN_BUDGET");
+    reasons.push('MANDATORY_FILTERS_WITHIN_BUDGET');
   }
 
   const requested = (input.optionalFilters ?? []).filter((filter) => !mandatorySet.has(filter));
@@ -120,7 +120,7 @@ export function planLatencyBudget(input: LatencyBudgetInput): LatencyBudgetPlan 
 
   const estimatedTotalMs = round(
     runFilters.reduce((sum, filter) => sum + costOf(filter, input.estimatedCosts), 0),
-    3,
+    3
   );
 
   return {
@@ -135,7 +135,7 @@ export function planLatencyBudget(input: LatencyBudgetInput): LatencyBudgetPlan 
     withinBudget,
     degraded,
     overrunMs,
-    authorityPath: "FULL",
+    authorityPath: 'FULL',
     reasons: Object.freeze(reasons),
     digest: digest({
       route: input.plan.route,

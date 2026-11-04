@@ -3,7 +3,7 @@ import type {
   IntelligenceRequest,
   IntelligenceResponse,
   Modality,
-} from "./contracts";
+} from './contracts';
 
 export interface HttpProviderOptions {
   providerId: string;
@@ -16,8 +16,8 @@ export interface HttpProviderOptions {
 
 function assertHttps(url: string): void {
   const parsed = new URL(url);
-  if (parsed.protocol !== "https:" && parsed.hostname !== "localhost")
-    throw new Error("Intelligence upstream must use HTTPS");
+  if (parsed.protocol !== 'https:' && parsed.hostname !== 'localhost')
+    throw new Error('Intelligence upstream must use HTTPS');
 }
 
 export class OpenAICompatibleProvider implements IntelligenceProvider {
@@ -36,7 +36,7 @@ export class OpenAICompatibleProvider implements IntelligenceProvider {
     this.endpoint = options.endpoint;
     this.apiKey = options.apiKey;
     this.timeoutMs = options.timeoutMs ?? 8500;
-    this.capabilities = new Set(options.modalities ?? ["text"]);
+    this.capabilities = new Set(options.modalities ?? ['text']);
   }
 
   async health(): Promise<boolean> {
@@ -49,10 +49,10 @@ export class OpenAICompatibleProvider implements IntelligenceProvider {
     const started = performance.now();
     try {
       const response = await fetch(this.endpoint, {
-        method: "POST",
+        method: 'POST',
         signal: controller.signal,
         headers: {
-          "content-type": "application/json",
+          'content-type': 'application/json',
           authorization: `Bearer ${this.apiKey}`,
         },
         body: JSON.stringify({
@@ -76,7 +76,7 @@ export class OpenAICompatibleProvider implements IntelligenceProvider {
         text,
         latencyMs: performance.now() - started,
         degraded: false,
-        risk: "LOW",
+        risk: 'LOW',
         usage: {
           inputTokens: payload.usage?.prompt_tokens,
           outputTokens: payload.usage?.completion_tokens,

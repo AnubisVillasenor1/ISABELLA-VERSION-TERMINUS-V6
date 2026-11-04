@@ -2,7 +2,7 @@
  * Isabella Cinematic Intro — Barrel Exports
  */
 
-export { CinematicIntro } from "./CinematicIntro";
+export { CinematicIntro } from './CinematicIntro';
 export {
   type IntroPhase,
   type IntroState,
@@ -16,5 +16,5 @@ export {
   detectPerformanceProfile,
   getPerformanceLimits,
   CAMERA_SHOTS,
-} from "./timeline";
-export { COLORS, COLORS_THREE, STAR_LAYERS, COMET_COLORS } from "./colors";
+} from './timeline';
+export { COLORS, COLORS_THREE, STAR_LAYERS, COMET_COLORS } from './colors';

@@ -10,13 +10,13 @@
  * Invariante (AGENTS.md): es evidencia computacional, no facultad. No autoriza ni
  * ejecuta; solo agrupa texto por similitud determinista (Jaccard).
  */
-import { jaccard, tokenize, digest, round } from "./util";
+import { jaccard, tokenize, digest, round } from './util';
 
-export const SELF_CONSISTENCY_VERSION = "1.0.0" as const;
+export const SELF_CONSISTENCY_VERSION = '1.0.0' as const;
 export const SELF_CONSISTENCY_METHOD_ID =
-  "A.TWINS.LEGACY.self_consistency.verify.v1.0.0.LOW.AUTONOMOUS" as const;
+  'A.TWINS.LEGACY.self_consistency.verify.v1.0.0.LOW.AUTONOMOUS' as const;
 export const SELF_CONSISTENCY_DISCLAIMER =
-  "La auto-consistencia es evidencia computacional de acuerdo entre muestras; no es facultad ni autoridad verificada.";
+  'La auto-consistencia es evidencia computacional de acuerdo entre muestras; no es facultad ni autoridad verificada.';
 
 export interface ConsistencySample {
   readonly id?: string;
@@ -54,15 +54,15 @@ export interface ConsistencyResult {
 
 export function verifySelfConsistency(
   samples: readonly ConsistencySample[],
-  options: ConsistencyOptions = {},
+  options: ConsistencyOptions = {}
 ): ConsistencyResult {
-  if (!Array.isArray(samples)) throw new Error("SELF_CONSISTENCY_SAMPLES_REQUIRED");
-  const clean = samples.filter((s) => typeof s?.text === "string" && s.text.trim().length > 0);
+  if (!Array.isArray(samples)) throw new Error('SELF_CONSISTENCY_SAMPLES_REQUIRED');
+  const clean = samples.filter((s) => typeof s?.text === 'string' && s.text.trim().length > 0);
   const threshold = options.threshold ?? 0.67;
   const clusterThreshold = options.clusterThreshold ?? 0.6;
   const minSamples = options.minSamples ?? 2;
 
-  if (clean.length === 0) throw new Error("SELF_CONSISTENCY_SAMPLES_EMPTY");
+  if (clean.length === 0) throw new Error('SELF_CONSISTENCY_SAMPLES_EMPTY');
 
   const groups: { representative: string; centroid: string[]; members: string[] }[] = [];
   for (const sample of clean) {
@@ -75,7 +75,8 @@ export function verifySelfConsistency(
         break;
       }
     }
-    if (!placed) groups.push({ representative: sample.text, centroid: tokens, members: [sample.text] });
+    if (!placed)
+      groups.push({ representative: sample.text, centroid: tokens, members: [sample.text] });
   }
 
   groups.sort((a, b) => b.members.length - a.members.length);
@@ -99,7 +100,12 @@ export function verifySelfConsistency(
     consistent,
     threshold,
     minSamples,
-    digest: digest({ sampleCount: total, agreement, consistent, clusters: clusters.map((c) => c.members.length) }),
+    digest: digest({
+      sampleCount: total,
+      agreement,
+      consistent,
+      clusters: clusters.map((c) => c.members.length),
+    }),
     methodId: SELF_CONSISTENCY_METHOD_ID,
     disclaimer: SELF_CONSISTENCY_DISCLAIMER,
   };

@@ -10,28 +10,28 @@
  * VERIFIED ≠ DEPLOYED ≠ CERTIFIED.
  */
 
-export const GAMEOVER_MODULE = "GAMEOVER" as const;
-export const UAGP_PROTOCOL = "UAGP-1" as const;
-export const GAMEOVER_VERSION = "0.1.0" as const;
+export const GAMEOVER_MODULE = 'GAMEOVER' as const;
+export const UAGP_PROTOCOL = 'UAGP-1' as const;
+export const GAMEOVER_VERSION = '0.1.0' as const;
 
 /** Canonical method id: [TINA].[YUN].[MODULO].[FUNCION].[VERSION].[RISK].[GOV]. */
 export const GAMEOVER_METHOD_IDS = {
-  govern: "TINA.YUN.GAMEOVER.govern_agent_action.v0.1.0.HIGH.HUMAN_IN_THE_LOOP",
-  validate: "TINA.YUN.GAMEOVER.validate_request.v0.1.0.MEDIUM.INSTITUTIONAL",
-  issuePassport: "TINA.YUN.GAMEOVER.issue_passport.v0.1.0.MEDIUM.HUMAN_IN_THE_LOOP",
-  revokePassport: "TINA.YUN.GAMEOVER.revoke_passport.v0.1.0.HIGH.HUMAN_IN_THE_LOOP",
-  audit: "TINA.YUN.GAMEOVER.record_decision.v0.1.0.LOW.INSTITUTIONAL",
+  govern: 'TINA.YUN.GAMEOVER.govern_agent_action.v0.1.0.HIGH.HUMAN_IN_THE_LOOP',
+  validate: 'TINA.YUN.GAMEOVER.validate_request.v0.1.0.MEDIUM.INSTITUTIONAL',
+  issuePassport: 'TINA.YUN.GAMEOVER.issue_passport.v0.1.0.MEDIUM.HUMAN_IN_THE_LOOP',
+  revokePassport: 'TINA.YUN.GAMEOVER.revoke_passport.v0.1.0.HIGH.HUMAN_IN_THE_LOOP',
+  audit: 'TINA.YUN.GAMEOVER.record_decision.v0.1.0.LOW.INSTITUTIONAL',
 } as const;
 
 export const GAMEOVER_DISCLAIMER =
-  "UAGP-1 decides, scores and records; it does not execute the governed action or certify outcomes. " +
-  "An ACCEPT outcome is an authorization recommendation subject to human authority. " +
-  "Trust and risk figures are declared heuristic weights, not measured accuracy.";
+  'UAGP-1 decides, scores and records; it does not execute the governed action or certify outcomes. ' +
+  'An ACCEPT outcome is an authorization recommendation subject to human authority. ' +
+  'Trust and risk figures are declared heuristic weights, not measured accuracy.';
 
-export type RiskLevel = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
-export type DecisionOutcome = "ACCEPT" | "REJECT" | "ESCALATE";
-export type CertificationState = "CERTIFIED" | "PROVISIONAL" | "REVOKED" | "UNKNOWN";
-export type TrustLevel = "UNTRUSTED" | "LOW" | "MODERATE" | "HIGH" | "EXEMPLARY";
+export type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+export type DecisionOutcome = 'ACCEPT' | 'REJECT' | 'ESCALATE';
+export type CertificationState = 'CERTIFIED' | 'PROVISIONAL' | 'REVOKED' | 'UNKNOWN';
+export type TrustLevel = 'UNTRUSTED' | 'LOW' | 'MODERATE' | 'HIGH' | 'EXEMPLARY';
 
 export interface AgentIdentity {
   readonly id: string;
@@ -42,7 +42,8 @@ export interface AgentIdentity {
   readonly createdAt: string;
 }
 
-export type EvidenceKind = "BOOKPI_EVENT" | "EXTERNAL_ATTESTATION" | "HUMAN_APPROVAL" | "TEST_RUN" | "SPEC_REFERENCE";
+export type EvidenceKind =
+  'BOOKPI_EVENT' | 'EXTERNAL_ATTESTATION' | 'HUMAN_APPROVAL' | 'TEST_RUN' | 'SPEC_REFERENCE';
 
 export interface EvidenceReference {
   readonly id: string;

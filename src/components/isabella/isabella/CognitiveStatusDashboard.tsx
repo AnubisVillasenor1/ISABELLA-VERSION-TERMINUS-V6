@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type KeyboardEvent } from "react";
+import { useState, useEffect, useRef, type KeyboardEvent } from 'react';
 import {
   Activity,
   Terminal,
@@ -12,15 +12,15 @@ import {
   Sparkles,
   Download,
   Filter,
-} from "lucide-react";
-import { toast } from "sonner";
-import { QuantumBridgeMonitor } from "@/components/quantum/QuantumBridgeMonitor";
-import metadata from "@/../metadata.json";
+} from 'lucide-react';
+import { toast } from 'sonner';
+import { QuantumBridgeMonitor } from '@/components/quantum/QuantumBridgeMonitor';
+import metadata from '@/../metadata.json';
 
 interface CognitiveModule {
   id: string;
   name: string;
-  status: "active" | "standby" | "maintenance";
+  status: 'active' | 'standby' | 'maintenance';
   latency: number | null;
   cpu: number | null;
   memory: number | null;
@@ -30,12 +30,12 @@ interface CognitiveModule {
 
 interface TerminalLine {
   text: string;
-  type: "input" | "output" | "system" | "error" | "success" | "header" | "json";
+  type: 'input' | 'output' | 'system' | 'error' | 'success' | 'header' | 'json';
 }
 
 export function CognitiveStatusDashboard() {
-  const [activeTab, setActiveTab] = useState<"modules" | "metadata">("modules");
-  const [commandInput, setCommandInput] = useState("");
+  const [activeTab, setActiveTab] = useState<'modules' | 'metadata'>('modules');
+  const [commandInput, setCommandInput] = useState('');
   const [history, setHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [isBoosting, _setIsBoosting] = useState(false);
@@ -50,83 +50,83 @@ export function CognitiveStatusDashboard() {
     Record<string, { timestamp: string; latency: number }[]>
   >({});
   const [selectedLogModule, setSelectedLogModule] = useState<string | null>(null);
-  const [logFilterQuery, setLogFilterQuery] = useState("");
+  const [logFilterQuery, setLogFilterQuery] = useState('');
 
   // Live status states for cognitive modules
   const [modules, _setModules] = useState<CognitiveModule[]>([
     {
-      id: "crown",
-      name: "CROWN Gateway",
-      status: "standby",
+      id: 'crown',
+      name: 'CROWN Gateway',
+      status: 'standby',
       latency: null,
       cpu: null,
       memory: null,
-      description: "Orquestación, ruteo cognitivo de intenciones y arbitraje de estado.",
-      styleClass: "crystal-3d-crown",
+      description: 'Orquestación, ruteo cognitivo de intenciones y arbitraje de estado.',
+      styleClass: 'crystal-3d-crown',
     },
     {
-      id: "isa",
-      name: "ISA Core",
-      status: "standby",
+      id: 'isa',
+      name: 'ISA Core',
+      status: 'standby',
       latency: null,
       cpu: null,
       memory: null,
-      description: "Interacción empática, tono de voz de México y modulación expresiva.",
-      styleClass: "crystal-3d-electric",
+      description: 'Interacción empática, tono de voz de México y modulación expresiva.',
+      styleClass: 'crystal-3d-electric',
     },
     {
-      id: "sophia",
-      name: "SOPHIA Engine",
-      status: "standby",
+      id: 'sophia',
+      name: 'SOPHIA Engine',
+      status: 'standby',
       latency: null,
       cpu: null,
       memory: null,
-      description: "Análisis lógico-epistemológico, razonamiento profundo y síntesis territorial.",
-      styleClass: "crystal-3d-emerald",
+      description: 'Análisis lógico-epistemológico, razonamiento profundo y síntesis territorial.',
+      styleClass: 'crystal-3d-emerald',
     },
     {
-      id: "orion",
-      name: "ORION Engine",
-      status: "standby",
+      id: 'orion',
+      name: 'ORION Engine',
+      status: 'standby',
       latency: null,
       cpu: null,
       memory: null,
-      description: "Ejecución técnica, transpilaciones cuánticas y soporte de herramientas.",
-      styleClass: "crystal-3d-iris",
+      description: 'Ejecución técnica, transpilaciones cuánticas y soporte de herramientas.',
+      styleClass: 'crystal-3d-iris',
     },
     {
-      id: "argus",
-      name: "ARGUS Sentinel",
-      status: "standby",
+      id: 'argus',
+      name: 'ARGUS Sentinel',
+      status: 'standby',
       latency: null,
       cpu: null,
       memory: null,
       description:
-        "Gobernanza constitucional estricta, filtrado de amenazas y veto en tiempo real.",
-      styleClass: "crystal-3d-argus",
+        'Gobernanza constitucional estricta, filtrado de amenazas y veto en tiempo real.',
+      styleClass: 'crystal-3d-argus',
     },
   ]);
 
   const [lines, setLines] = useState<TerminalLine[]>([
     {
-      text: "ISABELLA ARCHITECTURE TERMINAL v" + metadata.operational.version,
-      type: "header",
+      text: 'ISABELLA ARCHITECTURE TERMINAL v' + metadata.operational.version,
+      type: 'header',
     },
     {
-      text: "Licencia: Creative Commons Attribution 4.0 International",
-      type: "system",
+      text: 'Licencia: Creative Commons Attribution 4.0 International',
+      type: 'system',
     },
     {
-      text: "Conexión encriptada con Nodo Cero — Real del Monte, Hidalgo.",
-      type: "success",
+      text: 'Conexión encriptada con Nodo Cero — Real del Monte, Hidalgo.',
+      type: 'success',
     },
     {
       text: 'Ingresa "help" para ver la lista de comandos cognitivos disponibles.',
-      type: "system",
+      type: 'system',
     },
     {
-      text: "----------------------------------------------------------------",
-      type: "system",
+      text: '----------------------------------------------------------------',
+      type: 'system',
     },
   ]);
 
@@ -135,11 +135,11 @@ export function CognitiveStatusDashboard() {
 
   // Auto-scroll logs
   useEffect(() => {
-    bufferEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    bufferEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [lines]);
 
   // Runtime metrics are evidence-only. No synthetic oscillation is generated in the UI.
-  const addLine = (text: string, type: TerminalLine["type"]) => {
+  const addLine = (text: string, type: TerminalLine['type']) => {
     setLines((prev) => [...prev, { text, type }]);
   };
 
@@ -165,96 +165,96 @@ export function CognitiveStatusDashboard() {
 
     setHistory((prev) => [trimmed, ...prev]);
     setHistoryIndex(-1);
-    addLine(`operator@isabella-node-zero:~$ ${trimmed}`, "input");
-    setCommandInput("");
+    addLine(`operator@isabella-node-zero:~$ ${trimmed}`, 'input');
+    setCommandInput('');
 
-    const args = trimmed.toLowerCase().split(" ");
+    const args = trimmed.toLowerCase().split(' ');
     const command = args[0];
 
     switch (command) {
-      case "help":
-        addLine("Comandos de la Arquitectura Cognitiva:", "success");
-        addLine("  help      - Muestra la ayuda de comandos de la consola.", "output");
+      case 'help':
+        addLine('Comandos de la Arquitectura Cognitiva:', 'success');
+        addLine('  help      - Muestra la ayuda de comandos de la consola.', 'output');
         addLine(
-          "  status    - Realiza un barrido en vivo de las métricas de hardware de los módulos.",
-          "output",
+          '  status    - Realiza un barrido en vivo de las métricas de hardware de los módulos.',
+          'output'
         );
         addLine(
-          "  metadata  - Despliega el contenido estructurado del archivo metadata.json.",
-          "output",
+          '  metadata  - Despliega el contenido estructurado del archivo metadata.json.',
+          'output'
         );
         addLine(
-          "  logs      - Recupera las trazas operacionales recientes del ledger de control.",
-          "output",
+          '  logs      - Recupera las trazas operacionales recientes del ledger de control.',
+          'output'
         );
         addLine(
-          "  boost     - Inicia un proceso de hiper-aceleración de núcleos cognitivos.",
-          "output",
+          '  boost     - Inicia un proceso de hiper-aceleración de núcleos cognitivos.',
+          'output'
         );
-        addLine("  clear     - Limpia el búfer de comandos de la pantalla.", "output");
+        addLine('  clear     - Limpia el búfer de comandos de la pantalla.', 'output');
         break;
 
-      case "clear":
+      case 'clear':
         setLines([]);
         break;
 
-      case "status":
-        addLine("Iniciando barrido de salud de módulos...", "system");
+      case 'status':
+        addLine('Iniciando barrido de salud de módulos...', 'system');
         setTimeout(() => {
           modules.forEach((mod) => {
-            addLine(`  [—] ${mod.name} -> métricas runtime: NO DISPONIBLES`, "output");
+            addLine(`  [—] ${mod.name} -> métricas runtime: NO DISPONIBLES`, 'output');
           });
-          addLine("Diagnóstico del canal: sin evidencia runtime; estado no verificado.", "system");
+          addLine('Diagnóstico del canal: sin evidencia runtime; estado no verificado.', 'system');
         }, 400);
         break;
 
-      case "metadata":
-        addLine("Lectura de metadatos del sistema (metadata.json):", "success");
-        addLine(JSON.stringify(metadata, null, 2), "json");
+      case 'metadata':
+        addLine('Lectura de metadatos del sistema (metadata.json):', 'success');
+        addLine(JSON.stringify(metadata, null, 2), 'json');
         break;
 
-      case "logs":
+      case 'logs':
         addLine(
-          "No se muestran logs sintéticos. Usa el visor de auditoría respaldado por backend.",
-          "system",
+          'No se muestran logs sintéticos. Usa el visor de auditoría respaldado por backend.',
+          'system'
         );
         break;
 
-      case "boost":
+      case 'boost':
         addLine(
-          "Boost no está conectado a un backend de capacidad. No se simula aceleración.",
-          "system",
+          'Boost no está conectado a un backend de capacidad. No se simula aceleración.',
+          'system'
         );
         break;
 
       default:
         addLine(
           `Comando no reconocido: "${command}". Escribe "help" para ver comandos permitidos.`,
-          "error",
+          'error'
         );
         break;
     }
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
+    if (e.key === 'Enter') {
       handleCommand(commandInput);
-    } else if (e.key === "ArrowUp") {
+    } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       if (history.length > 0 && historyIndex < history.length - 1) {
         const nextIdx = historyIndex + 1;
         setHistoryIndex(nextIdx);
-        setCommandInput(history[nextIdx] || "");
+        setCommandInput(history[nextIdx] || '');
       }
-    } else if (e.key === "ArrowDown") {
+    } else if (e.key === 'ArrowDown') {
       e.preventDefault();
       if (historyIndex > 0) {
         const nextIdx = historyIndex - 1;
         setHistoryIndex(nextIdx);
-        setCommandInput(history[nextIdx] || "");
+        setCommandInput(history[nextIdx] || '');
       } else if (historyIndex === 0) {
         setHistoryIndex(-1);
-        setCommandInput("");
+        setCommandInput('');
       }
     }
   };
@@ -263,26 +263,26 @@ export function CognitiveStatusDashboard() {
     if (!selectedLogModule || !moduleLogs[selectedLogModule]) return;
     const logs = moduleLogs[selectedLogModule];
     const blob = new Blob([JSON.stringify({ module: selectedLogModule, logs }, null, 2)], {
-      type: "application/json",
+      type: 'application/json',
     });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
+    const link = document.createElement('a');
     link.href = url;
     link.download = `isabella-logs-${selectedLogModule}-${Date.now()}.json`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    toast.success("Logs exportados satisfactoriamente");
+    toast.success('Logs exportados satisfactoriamente');
   };
 
   const filteredLogs = selectedLogModule
     ? moduleLogs[selectedLogModule]?.filter((log) =>
-        log.toLowerCase().includes(logFilterQuery.toLowerCase()),
+        log.toLowerCase().includes(logFilterQuery.toLowerCase())
       )
     : [];
 
-  const systemIntegrity = "NO VERIFICADA";
+  const systemIntegrity = 'NO VERIFICADA';
 
   return (
     <div
@@ -310,21 +310,21 @@ export function CognitiveStatusDashboard() {
         {/* Tab Controls */}
         <div className="flex bg-secondary/30 p-1 rounded-xl border border-border/40 shrink-0">
           <button
-            onClick={() => setActiveTab("modules")}
+            onClick={() => setActiveTab('modules')}
             className={`px-4 py-2 rounded-lg text-xs font-semibold tracking-wider uppercase transition-all duration-300 ${
-              activeTab === "modules"
-                ? "bg-electric text-background shadow-glow"
-                : "text-muted-foreground hover:text-pearl"
+              activeTab === 'modules'
+                ? 'bg-electric text-background shadow-glow'
+                : 'text-muted-foreground hover:text-pearl'
             }`}
           >
             Módulos Cognitivos
           </button>
           <button
-            onClick={() => setActiveTab("metadata")}
+            onClick={() => setActiveTab('metadata')}
             className={`px-4 py-2 rounded-lg text-xs font-semibold tracking-wider uppercase transition-all duration-300 ${
-              activeTab === "metadata"
-                ? "bg-electric text-background shadow-glow"
-                : "text-muted-foreground hover:text-pearl"
+              activeTab === 'metadata'
+                ? 'bg-electric text-background shadow-glow'
+                : 'text-muted-foreground hover:text-pearl'
             }`}
           >
             Metadatos (.json)
@@ -336,7 +336,7 @@ export function CognitiveStatusDashboard() {
         <QuantumBridgeMonitor />
       </div>
 
-      {activeTab === "modules" ? (
+      {activeTab === 'modules' ? (
         /* Modules Status Panel using the required crystal-3d styles */
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
@@ -344,19 +344,19 @@ export function CognitiveStatusDashboard() {
               <div
                 key={mod.id}
                 className={`crystal-3d ${mod.styleClass} rounded-2xl p-5 cursor-default transition-all duration-500 ${
-                  mod.status === "active" ? "animate-breathe" : ""
+                  mod.status === 'active' ? 'animate-breathe' : ''
                 }`}
               >
                 {/* Badge & Icon Header */}
                 <div className="flex items-center justify-between mb-3.5">
                   <div className="flex items-center gap-2">
-                    {mod.id === "crown" && <Activity className="size-5 text-crown animate-pulse" />}
-                    {mod.id === "isa" && <Sparkles className="size-5 text-isa" />}
-                    {mod.id === "sophia" && <Compass className="size-5 text-sophia" />}
-                    {mod.id === "orion" && <FileCode className="size-5 text-orion" />}
-                    {mod.id === "argus" && <ShieldAlert className="size-5 text-argus" />}
+                    {mod.id === 'crown' && <Activity className="size-5 text-crown animate-pulse" />}
+                    {mod.id === 'isa' && <Sparkles className="size-5 text-isa" />}
+                    {mod.id === 'sophia' && <Compass className="size-5 text-sophia" />}
+                    {mod.id === 'orion' && <FileCode className="size-5 text-orion" />}
+                    {mod.id === 'argus' && <ShieldAlert className="size-5 text-argus" />}
                     <h3 className="font-mono text-[12px] font-bold tracking-wider text-pearl uppercase">
-                      {mod.name.split(" ")[0]}
+                      {mod.name.split(' ')[0]}
                     </h3>
                   </div>
 
@@ -366,13 +366,13 @@ export function CognitiveStatusDashboard() {
                       e.stopPropagation();
                       setSelectedLogModule(selectedLogModule === mod.id ? null : mod.id);
                     }}
-                    className={`flex items-center gap-1 text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded border cursor-pointer transition-all select-none ${mod.status === "active" ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/15 hover:bg-emerald-500/20 hover:border-emerald-500/40" : "text-amber-300 bg-amber-500/10 border-amber-500/15 hover:bg-amber-500/20 hover:border-amber-500/40"}`}
+                    className={`flex items-center gap-1 text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded border cursor-pointer transition-all select-none ${mod.status === 'active' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/15 hover:bg-emerald-500/20 hover:border-emerald-500/40' : 'text-amber-300 bg-amber-500/10 border-amber-500/15 hover:bg-amber-500/20 hover:border-amber-500/40'}`}
                     title="Click para ver registros de operación"
                   >
                     <span
-                      className={`size-1.5 rounded-full ${mod.status === "active" ? "bg-emerald-400 animate-pulse" : "bg-amber-300"}`}
+                      className={`size-1.5 rounded-full ${mod.status === 'active' ? 'bg-emerald-400 animate-pulse' : 'bg-amber-300'}`}
                     />
-                    {mod.status === "standby" ? "NO VERIFICADO" : mod.status}
+                    {mod.status === 'standby' ? 'NO VERIFICADO' : mod.status}
                   </span>
                 </div>
 
@@ -388,7 +388,7 @@ export function CognitiveStatusDashboard() {
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground">LATENCIA:</span>
                     <span className="text-pearl font-bold">
-                      {mod.latency === null ? "No disponible" : `${mod.latency} ms`}
+                      {mod.latency === null ? 'No disponible' : `${mod.latency} ms`}
                     </span>
                   </div>
 
@@ -397,7 +397,7 @@ export function CognitiveStatusDashboard() {
                     <div className="flex justify-between text-muted-foreground mb-1">
                       <span>CPU:</span>
                       <span className="text-pearl font-bold">
-                        {mod.cpu === null ? "No disponible" : `${mod.cpu}%`}
+                        {mod.cpu === null ? 'No disponible' : `${mod.cpu}%`}
                       </span>
                     </div>
                     <div className="w-full bg-background/50 h-1.5 rounded-full overflow-hidden border border-border/10">
@@ -413,7 +413,7 @@ export function CognitiveStatusDashboard() {
                     <div className="flex justify-between text-muted-foreground mb-1">
                       <span>MEMORIA:</span>
                       <span className="text-pearl font-bold">
-                        {mod.memory === null ? "No disponible" : `${mod.memory}%`}
+                        {mod.memory === null ? 'No disponible' : `${mod.memory}%`}
                       </span>
                     </div>
                     <div className="w-full bg-background/50 h-1.5 rounded-full overflow-hidden border border-border/10">
@@ -435,7 +435,7 @@ export function CognitiveStatusDashboard() {
                     disabled={isDiagnosing[mod.id]}
                     className="w-full bg-secondary/25 hover:bg-secondary/45 text-[10px] text-pearl py-1.5 px-3 rounded-lg border border-border/20 hover:border-electric/40 transition-all font-mono font-bold uppercase tracking-wider flex items-center justify-center gap-1 select-none cursor-pointer"
                   >
-                    {isDiagnosing[mod.id] ? "Analizando..." : "Iniciar Diagnóstico"}
+                    {isDiagnosing[mod.id] ? 'Analizando...' : 'Iniciar Diagnóstico'}
                   </button>
 
                   {(isDiagnosing[mod.id] || diagnosticProgress[mod.id] !== undefined) && (
@@ -452,7 +452,7 @@ export function CognitiveStatusDashboard() {
                       </div>
                       {diagnosticLatency[mod.id] !== undefined && !isDiagnosing[mod.id] && (
                         <div className="text-[9.5px] text-emerald-400 font-mono mt-1">
-                          Test Latency:{" "}
+                          Test Latency:{' '}
                           <span className="font-bold">{diagnosticLatency[mod.id]} ms</span>
                         </div>
                       )}
@@ -527,7 +527,7 @@ export function CognitiveStatusDashboard() {
                   <button
                     onClick={() => {
                       setSelectedLogModule(null);
-                      setLogFilterQuery("");
+                      setLogFilterQuery('');
                     }}
                     className="text-muted-foreground hover:text-pearl text-[10px] font-mono uppercase border border-border/20 px-2.5 py-1.5 rounded-md hover:bg-secondary/20 transition-all cursor-pointer"
                   >
@@ -589,7 +589,7 @@ export function CognitiveStatusDashboard() {
                   Permisos Activos
                 </span>
                 <span className="text-xs font-bold text-pearl font-mono">
-                  {metadata.requestFramePermissions.join(", ").toUpperCase()}
+                  {metadata.requestFramePermissions.join(', ').toUpperCase()}
                 </span>
               </div>
             </div>
@@ -652,7 +652,7 @@ export function CognitiveStatusDashboard() {
           <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mr-1">
             Comandos Rápidos:
           </span>
-          {["help", "status", "logs", "metadata", "boost"].map((cmd) => (
+          {['help', 'status', 'logs', 'metadata', 'boost'].map((cmd) => (
             <button
               key={cmd}
               onClick={() => {
@@ -671,18 +671,18 @@ export function CognitiveStatusDashboard() {
         {/* Output Stream */}
         <div className="flex-1 overflow-y-auto p-5 space-y-2 select-text selection:bg-electric/20 scrollbar">
           {lines.map((l, index) => {
-            let colorClass = "text-platinum/80";
-            if (l.type === "header")
-              colorClass = "text-iridescent text-[13px] font-bold tracking-wide";
-            if (l.type === "system") colorClass = "text-muted-foreground";
-            if (l.type === "error") colorClass = "text-rose-400 font-semibold";
-            if (l.type === "success") colorClass = "text-emerald-400 font-semibold";
-            if (l.type === "input") colorClass = "text-electric font-semibold";
-            if (l.type === "json") colorClass = "text-emerald-500/90";
+            let colorClass = 'text-platinum/80';
+            if (l.type === 'header')
+              colorClass = 'text-iridescent text-[13px] font-bold tracking-wide';
+            if (l.type === 'system') colorClass = 'text-muted-foreground';
+            if (l.type === 'error') colorClass = 'text-rose-400 font-semibold';
+            if (l.type === 'success') colorClass = 'text-emerald-400 font-semibold';
+            if (l.type === 'input') colorClass = 'text-electric font-semibold';
+            if (l.type === 'json') colorClass = 'text-emerald-500/90';
 
             return (
               <div key={index} className="whitespace-pre-wrap break-all">
-                {l.type === "input" ? (
+                {l.type === 'input' ? (
                   <span>{l.text}</span>
                 ) : (
                   <span className={colorClass}>{l.text}</span>

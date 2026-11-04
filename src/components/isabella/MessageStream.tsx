@@ -1,28 +1,28 @@
-import { useEffect, useRef, useState } from "react";
-import { MODULES } from "@/lib/crown-ui";
-import { speakIsabella, stopVoice } from "@/lib/voice";
-import type { TerminalMessage } from "@/lib/useIsabella";
+import { useEffect, useRef, useState } from 'react';
+import { MODULES } from '@/lib/crown-ui';
+import { speakIsabella, stopVoice } from '@/lib/voice';
+import type { TerminalMessage } from '@/lib/useIsabella';
 
 function VoiceButton({ text }: { text: string }) {
-  const [state, setState] = useState<"idle" | "playing" | "error">("idle");
+  const [state, setState] = useState<'idle' | 'playing' | 'error'>('idle');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => () => stopVoice(), []);
 
   const toggle = async () => {
-    if (state === "playing") {
+    if (state === 'playing') {
       stopVoice();
-      setState("idle");
+      setState('idle');
       return;
     }
-    setState("playing");
+    setState('playing');
     setError(null);
     try {
       await speakIsabella(text);
-      setState("idle");
+      setState('idle');
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Fallo de síntesis vocal.");
-      setState("error");
+      setError(err instanceof Error ? err.message : 'Fallo de síntesis vocal.');
+      setState('error');
     }
   };
 
@@ -31,10 +31,10 @@ function VoiceButton({ text }: { text: string }) {
       <button
         type="button"
         onClick={() => void toggle()}
-        aria-label={state === "playing" ? "Detener voz de Isabella" : "Escuchar voz de Isabella"}
+        aria-label={state === 'playing' ? 'Detener voz de Isabella' : 'Escuchar voz de Isabella'}
         className="rounded-lg border border-border px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-platinum"
       >
-        {state === "playing" ? "◼ Silenciar voz" : "▶ Voz de Isabella"}
+        {state === 'playing' ? '◼ Silenciar voz' : '▶ Voz de Isabella'}
       </button>
       {error && (
         <span role="status" className="font-mono text-[10px] text-destructive">
@@ -64,13 +64,13 @@ export function MessageStream({
   const endRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [messages]);
 
   return (
     <div className="flex flex-col gap-6 px-5 py-7 sm:px-9">
       {messages.map((m) => {
-        if (m.role === "system") {
+        if (m.role === 'system') {
           return (
             <div key={m.id} className="animate-rise flex justify-center">
               <p className="max-w-2xl text-center font-mono text-[10px] uppercase leading-relaxed tracking-[0.24em] text-muted-foreground">
@@ -80,7 +80,7 @@ export function MessageStream({
           );
         }
 
-        if (m.role === "user") {
+        if (m.role === 'user') {
           return (
             <div key={m.id} className="animate-rise flex justify-end">
               <div className="glass max-w-[86%] rounded-2xl rounded-br-sm px-5 py-4 sm:max-w-[70%]">
@@ -102,14 +102,14 @@ export function MessageStream({
             <div
               className="glass-strong w-full max-w-[94%] rounded-2xl rounded-bl-sm px-5 py-5 sm:px-7 sm:py-6"
               style={{
-                borderColor: m.error ? "var(--destructive)" : mod.color,
-                boxShadow: `0 0 60px -30px ${m.error ? "var(--destructive)" : mod.color}`,
+                borderColor: m.error ? 'var(--destructive)' : mod.color,
+                boxShadow: `0 0 60px -30px ${m.error ? 'var(--destructive)' : mod.color}`,
               }}
             >
               <div className="mb-3 flex flex-wrap items-center gap-x-5 gap-y-1.5 border-b border-border/50 pb-3">
                 <span
                   className="font-mono text-[11px] tracking-[0.3em]"
-                  style={{ color: m.error ? "var(--destructive)" : mod.color }}
+                  style={{ color: m.error ? 'var(--destructive)' : mod.color }}
                 >
                   ISABELLA · {mod.acronym}
                 </span>
@@ -123,7 +123,7 @@ export function MessageStream({
                 )}
                 {m.degraded === true && (
                   <span className="rounded border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em] text-amber-400">
-                    Degradado · {m.provider ?? "origen alterno"} (no es inferencia LLM)
+                    Degradado · {m.provider ?? 'origen alterno'} (no es inferencia LLM)
                   </span>
                 )}
                 <span className="ml-auto font-mono text-[10px] text-muted-foreground">
@@ -133,7 +133,7 @@ export function MessageStream({
 
               <p
                 className="whitespace-pre-wrap text-[15.5px] leading-[1.75] text-foreground/95"
-                aria-live={m.streaming ? "polite" : undefined}
+                aria-live={m.streaming ? 'polite' : undefined}
                 aria-busy={m.streaming}
               >
                 {m.content}

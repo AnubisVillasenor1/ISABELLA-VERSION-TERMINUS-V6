@@ -6,8 +6,8 @@
  * Ecosistema: TAMV ONLINE NETWORK / Nodo Cero (Real del Monte, Hidalgo, México)
  */
 
-import { Redis } from "@upstash/redis";
-import { config } from "../config";
+import { Redis } from '@upstash/redis';
+import { config } from '../config';
 
 export interface CacheEntry<T> {
   value: T;
@@ -17,7 +17,7 @@ export interface CacheEntry<T> {
 
 export interface CachePingResult {
   ok: boolean;
-  provider: "redis" | "memory";
+  provider: 'redis' | 'memory';
   latencyMs: number;
   error?: string;
 }
@@ -29,7 +29,7 @@ export interface CacheMetrics {
   deletes: number;
   errors: number;
   lastLatencyMs: number;
-  provider: "redis" | "memory";
+  provider: 'redis' | 'memory';
 }
 
 class InMemoryFallbackStore {
@@ -99,7 +99,7 @@ export class RedisCacheService {
   private memoryFallback = new InMemoryFallbackStore();
   private isRedisConfigured = false;
   private initPromise: Promise<void> | null = null;
-  private prefix = "isabella";
+  private prefix = 'isabella';
 
   private metrics: CacheMetrics = {
     hits: 0,
@@ -108,7 +108,7 @@ export class RedisCacheService {
     deletes: 0,
     errors: 0,
     lastLatencyMs: 0,
-    provider: "memory",
+    provider: 'memory',
   };
 
   private constructor() {
@@ -130,7 +130,7 @@ export class RedisCacheService {
         const cfg = config();
         const redisUrl = cfg.REDIS_URL || cfg.KV_URL;
         const redisToken = cfg.REDIS_TOKEN || cfg.KV_REST_API_TOKEN || cfg.UPSTASH_REDIS_TOKEN;
-        this.prefix = cfg.REDIS_PREFIX || "isabella";
+        this.prefix = cfg.REDIS_PREFIX || 'isabella';
 
         if (redisUrl && redisToken) {
           this.redisClient = new Redis({
@@ -142,17 +142,17 @@ export class RedisCacheService {
             },
           } as unknown as ConstructorParameters<typeof Redis>[0]);
           this.isRedisConfigured = true;
-          this.metrics.provider = "redis";
+          this.metrics.provider = 'redis';
         } else {
           this.isRedisConfigured = false;
-          this.metrics.provider = "memory";
+          this.metrics.provider = 'memory';
         }
       } catch (err) {
         this.isRedisConfigured = false;
-        this.metrics.provider = "memory";
+        this.metrics.provider = 'memory';
         console.warn(
-          "[RedisCacheService] Redis no configurado o inválido; operando en memoria local resiliente:",
-          err,
+          '[RedisCacheService] Redis no configurado o inválido; operando en memoria local resiliente:',
+          err
         );
       }
     })();
@@ -162,13 +162,13 @@ export class RedisCacheService {
     return `${this.prefix}:${key}`;
   }
 
-  private recordMetric(kind: "hit" | "miss" | "set" | "del" | "error", latencyMs: number) {
+  private recordMetric(kind: 'hit' | 'miss' | 'set' | 'del' | 'error', latencyMs: number) {
     this.metrics.lastLatencyMs = Number(latencyMs.toFixed(2));
-    if (kind === "hit") this.metrics.hits++;
-    else if (kind === "miss") this.metrics.misses++;
-    else if (kind === "set") this.metrics.sets++;
-    else if (kind === "del") this.metrics.deletes++;
-    else if (kind === "error") this.metrics.errors++;
+    if (kind === 'hit') this.metrics.hits++;
+    else if (kind === 'miss') this.metrics.misses++;
+    else if (kind === 'set') this.metrics.sets++;
+    else if (kind === 'del') this.metrics.deletes++;
+    else if (kind === 'error') this.metrics.errors++;
   }
 
   /**
@@ -184,16 +184,16 @@ export class RedisCacheService {
         const value = await this.redisClient.get<T>(fullKey);
         const elapsed = performance.now() - started;
         if (value !== null && value !== undefined) {
-          this.recordMetric("hit", elapsed);
+          this.recordMetric('hit', elapsed);
           return value;
         }
-        this.recordMetric("miss", elapsed);
+        this.recordMetric('miss', elapsed);
         return null;
       } catch (error) {
-        this.recordMetric("error", performance.now() - started);
+        this.recordMetric('error', performance.now() - started);
         console.warn(
           `[RedisCacheService] Error leyendo clave ${key} de Redis, recurriendo a memoria:`,
-          error,
+          error
         );
         return this.memoryFallback.get<T>(fullKey);
       }
@@ -201,7 +201,7 @@ export class RedisCacheService {
 
     const value = this.memoryFallback.get<T>(fullKey);
     const elapsed = performance.now() - started;
-    this.recordMetric(value !== null ? "hit" : "miss", elapsed);
+    this.recordMetric(value !== null ? 'hit' : 'miss', elapsed);
     return value;
   }
 
@@ -220,20 +220,20 @@ export class RedisCacheService {
         } else {
           await this.redisClient.set(fullKey, value);
         }
-        this.recordMetric("set", performance.now() - started);
+        this.recordMetric('set', performance.now() - started);
         return true;
       } catch (error) {
-        this.recordMetric("error", performance.now() - started);
+        this.recordMetric('error', performance.now() - started);
         console.warn(
           `[RedisCacheService] Error escribiendo clave ${key} en Redis, respaldando en memoria:`,
-          error,
+          error
         );
         return this.memoryFallback.set(fullKey, value, ttlSeconds);
       }
     }
 
     const result = this.memoryFallback.set(fullKey, value, ttlSeconds);
-    this.recordMetric("set", performance.now() - started);
+    this.recordMetric('set', performance.now() - started);
     return result;
   }
 
@@ -249,10 +249,10 @@ export class RedisCacheService {
     if (this.isRedisConfigured && this.redisClient) {
       try {
         const count = await this.redisClient.del(...fullKeys);
-        this.recordMetric("del", performance.now() - started);
+        this.recordMetric('del', performance.now() - started);
         return count;
       } catch (error) {
-        this.recordMetric("error", performance.now() - started);
+        this.recordMetric('error', performance.now() - started);
         console.warn(`[RedisCacheService] Error eliminando claves en Redis:`, error);
       }
     }
@@ -261,7 +261,7 @@ export class RedisCacheService {
     for (const k of fullKeys) {
       if (this.memoryFallback.del(k)) count++;
     }
-    this.recordMetric("del", performance.now() - started);
+    this.recordMetric('del', performance.now() - started);
     return count;
   }
 
@@ -332,7 +332,7 @@ export class RedisCacheService {
       try {
         await this.redisClient.flushdb();
       } catch (err) {
-        console.warn("[RedisCacheService] Error en flushdb Redis:", err);
+        console.warn('[RedisCacheService] Error en flushdb Redis:', err);
       }
     }
     return this.memoryFallback.flush(prefixOnly ? this.prefix : undefined);
@@ -350,15 +350,15 @@ export class RedisCacheService {
         const response = await this.redisClient.ping();
         const latencyMs = Number((performance.now() - started).toFixed(2));
         return {
-          ok: response === "PONG" || Boolean(response),
-          provider: "redis",
+          ok: response === 'PONG' || Boolean(response),
+          provider: 'redis',
           latencyMs,
         };
       } catch (error) {
         const latencyMs = Number((performance.now() - started).toFixed(2));
         return {
           ok: false,
-          provider: "redis",
+          provider: 'redis',
           latencyMs,
           error: error instanceof Error ? error.message : String(error),
         };
@@ -368,7 +368,7 @@ export class RedisCacheService {
     const latencyMs = Number((performance.now() - started).toFixed(2));
     return {
       ok: true,
-      provider: "memory",
+      provider: 'memory',
       latencyMs,
     };
   }

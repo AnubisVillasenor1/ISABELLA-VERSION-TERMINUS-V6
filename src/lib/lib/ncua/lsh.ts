@@ -5,8 +5,8 @@
  * sub-lineal en el tamaño del corpus, determinista, sin dependencias.
  */
 
-import { embedBytes, simHash, hammingDistance, cosine, SimHashSignature } from "./embed";
-import { encodeUtf8 } from "./bytes";
+import { embedBytes, simHash, hammingDistance, cosine, SimHashSignature } from './embed';
+import { encodeUtf8 } from './bytes';
 
 export interface LshDocument {
   id: string;
@@ -23,7 +23,7 @@ const MAX_INDEXED_CHARS = 100_000;
  * envenenada no ocupe el índice ni sobreviva byte a byte hasta la respuesta.
  */
 function sanitizeCorpusText(raw: string): string {
-  let out = "";
+  let out = '';
   for (let i = 0; i < raw.length; i += 1) {
     const code = raw.charCodeAt(i);
     const isControl =
@@ -112,7 +112,7 @@ export class SimHashLshIndex {
 
   search(
     text: string,
-    options: { topK?: number; maxHamming?: number; minScore?: number } = {},
+    options: { topK?: number; maxHamming?: number; minScore?: number } = {}
   ): LshSearchHit[] {
     const topK = options.topK ?? 4;
     const maxHamming = options.maxHamming ?? 3;
@@ -165,7 +165,7 @@ export class SimHashLshIndex {
 
 export function buildIndex(
   documents: { id: string; text?: string }[],
-  options: { dim?: number } = {},
+  options: { dim?: number } = {}
 ): SimHashLshIndex {
   const index = new SimHashLshIndex(options);
   for (const doc of documents) {

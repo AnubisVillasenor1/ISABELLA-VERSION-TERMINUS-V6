@@ -1,7 +1,7 @@
-import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
-import { fingerprintEnvSource, passthroughEnv } from "./config";
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { fingerprintEnvSource, passthroughEnv } from './config';
 
 /**
  * MANIFIESTO DE BUILD (src/lib/build-manifest.ts)
@@ -19,27 +19,27 @@ export interface BuildManifest {
   sourceHash: string;
   envFingerprint: string;
   commit?: string;
-  runtime: "server" | "browser";
+  runtime: 'server' | 'browser';
   depsHash: string;
 }
 
 const FINGERPRINT_FILES = [
-  "package.json",
-  "tsconfig.json",
-  "vite.config.ts",
-  "eslint.config.js",
-  "metadata.json",
+  'package.json',
+  'tsconfig.json',
+  'vite.config.ts',
+  'eslint.config.js',
+  'metadata.json',
 ];
 
 function hashText(input: string): string {
-  return createHash("sha256").update(input).digest("hex");
+  return createHash('sha256').update(input).digest('hex');
 }
 
 export function computeSourceHash(root: string): string {
-  let acc = "";
+  let acc = '';
   for (const file of FINGERPRINT_FILES) {
     try {
-      acc += `${file}:${readFileSync(resolve(root, file), "utf8")}\n`;
+      acc += `${file}:${readFileSync(resolve(root, file), 'utf8')}\n`;
     } catch {
       acc += `${file}:<missing>\n`;
     }
@@ -49,25 +49,25 @@ export function computeSourceHash(root: string): string {
 
 export function computeEnvFingerprint(env: NodeJS.ProcessEnv = fingerprintEnvSource()): string {
   const parts = [
-    env.NODE_ENV ?? "development",
-    env.PUBLIC_URL ?? "",
-    env.LLM_DEFAULT_MODEL ?? "",
-    env.CROWN_CONSTITUTION_VERSION ?? "",
-    env.BOOKPI_SIGNATURE_ALGORITHM ?? "UNSIGNED_DEV",
+    env.NODE_ENV ?? 'development',
+    env.PUBLIC_URL ?? '',
+    env.LLM_DEFAULT_MODEL ?? '',
+    env.CROWN_CONSTITUTION_VERSION ?? '',
+    env.BOOKPI_SIGNATURE_ALGORITHM ?? 'UNSIGNED_DEV',
   ];
-  return hashText(parts.join("|"));
+  return hashText(parts.join('|'));
 }
 
 export function buildManifest(
-  runtime: "server" | "browser" = "server",
-  root = process.cwd(),
+  runtime: 'server' | 'browser' = 'server',
+  root = process.cwd()
 ): BuildManifest {
-  let version = "0.0.0";
+  let version = '0.0.0';
   try {
-    const pkg = JSON.parse(readFileSync(resolve(root, "package.json"), "utf8")) as {
+    const pkg = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8')) as {
       version?: string;
     };
-    version = pkg.version ?? "0.0.0";
+    version = pkg.version ?? '0.0.0';
   } catch {
     // versión por defecto
   }
@@ -80,7 +80,7 @@ export function buildManifest(
     runtime,
     depsHash: hashText(process.version + version),
   };
-  const commit = passthroughEnv("COMMIT_SHA");
+  const commit = passthroughEnv('COMMIT_SHA');
   if (commit) manifest.commit = commit;
   return manifest;
 }

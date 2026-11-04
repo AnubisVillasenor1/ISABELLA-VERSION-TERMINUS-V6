@@ -1,26 +1,26 @@
 /**
- * IGDS — Verificación offline (src/lib/igds/verify.ts)
+ * IGDS — Verificación offline (src/lib/lib/igds/verify.ts)
  * -----------------------------------------------------------------
  * Verifica un `IgdsSealPackage` sin acceso al escritor: firma(s), digest final,
  * inclusión Merkle, checkpoint y estado de revocación. Nunca confía en la clave
  * pública embebida si se aporta un registro de claves de confianza.
  */
-import { digestHex } from "./digests";
-import type { ContentDigest } from "./digests";
-import { manifestClaimDigest, manifestFinalDigest } from "./manifest";
-import { verifySignatureEnvelope, type SignatureEnvelope } from "./keys";
-import { computeEntryHash, verifyCheckpoint, GENESIS_PREVIOUS_HASH } from "./registry";
-import { verifyInclusionProof, type InclusionProof } from "./merkle";
-import { evaluateTrust } from "./revocation";
-import type { TsaVerifier } from "./tsa";
-import { getSealProfileSpec, type SealProfile } from "./profiles";
+import { digestHex } from './digests';
+import type { ContentDigest } from './digests';
+import { manifestClaimDigest, manifestFinalDigest } from './manifest';
+import { verifySignatureEnvelope, type SignatureEnvelope } from './keys';
+import { computeEntryHash, verifyCheckpoint, GENESIS_PREVIOUS_HASH } from './registry';
+import { verifyInclusionProof, type InclusionProof } from './merkle';
+import { evaluateTrust } from './revocation';
+import type { TsaVerifier } from './tsa';
+import { getSealProfileSpec, type SealProfile } from './profiles';
 import type {
   GenesisCheckpoint,
   IgdsSealPackage,
   IgdsVerificationReport,
   RevocationScope,
-} from "./types";
-import { normalizeContent } from "./seal";
+} from './types';
+import { normalizeContent } from './seal';
 
 export interface VerifyOptions {
   /** Contenido original para recomputar el digest (si se dispone de él). */
@@ -37,29 +37,29 @@ export interface VerifyOptions {
 
 function envelopeWithTrust(
   envelope: SignatureEnvelope,
-  trusted?: Record<string, string>,
+  trusted?: Record<string, string>
 ): SignatureEnvelope {
   if (!trusted) return envelope;
   const publicKey = trusted[envelope.key_id];
-  if (!publicKey) return { ...envelope, public_key: "" };
+  if (!publicKey) return { ...envelope, public_key: '' };
   return { ...envelope, public_key: publicKey };
 }
 
 export async function verifySealPackage(
   pkg: IgdsSealPackage,
-  options: VerifyOptions = {},
+  options: VerifyOptions = {}
 ): Promise<IgdsVerificationReport> {
   const { manifest, entry, seal } = pkg;
   const profile = (manifest.profile ?? seal.profile) as SealProfile;
   const spec = getSealProfileSpec(profile);
 
-  const hashAlgorithm = spec.hashAlgorithms.includes("sha256") ? "sha256" : spec.hashAlgorithms[0]!;
+  const hashAlgorithm = spec.hashAlgorithms.includes('sha256') ? 'sha256' : spec.hashAlgorithms[0]!;
   const finalDigest = manifestFinalDigest(manifest, hashAlgorithm);
 
   const signatures = (manifest.signatures ?? []).map((envelope) => {
     const valid = verifySignatureEnvelope(
       envelopeWithTrust(envelope, options.trustedPublicKeys),
-      finalDigest,
+      finalDigest
     );
     return {
       algorithm: envelope.algorithm,
@@ -82,7 +82,7 @@ export async function verifySealPackage(
   const timestamp = manifest.timestamp ?? null;
   const claimDigest = manifestClaimDigest(manifest, hashAlgorithm);
   let timestampTrusted = timestamp === null && !spec.requireTimestamp;
-  let timestampReport: IgdsVerificationReport["timestamp"] = null;
+  let timestampReport: IgdsVerificationReport['timestamp'] = null;
   if (timestamp) {
     const imprintMatches =
       timestamp.message_imprint.algorithm === hashAlgorithm &&
@@ -92,11 +92,11 @@ export async function verifySealPackage(
       : false;
     timestampTrusted = imprintMatches && tsaSignatureValid;
     timestampReport = {
-      protocol: "RFC3161",
+      protocol: 'RFC3161',
       message_imprint_matches: imprintMatches,
       tsa_signature_valid: tsaSignatureValid,
       generation_time: timestamp.gen_time,
-      tsa_certificate_status: tsaSignatureValid ? "valid_at_timestamp" : "untrusted",
+      tsa_certificate_status: tsaSignatureValid ? 'valid_at_timestamp' : 'untrusted',
     };
   } else if (spec.requireTimestamp) {
     timestampTrusted = false;
@@ -137,15 +137,15 @@ export async function verifySealPackage(
 
 function buildInterpretation(base: string, entryHashValid: boolean, bound: boolean): string {
   if (entryHashValid && bound) return base;
-  if (!entryHashValid) return "La entrada Genesis fue alterada: el sello no es íntegro.";
-  return "La entrada Genesis no está vinculada al manifiesto final.";
+  if (!entryHashValid) return 'La entrada Genesis fue alterada: el sello no es íntegro.';
+  return 'La entrada Genesis no está vinculada al manifiesto final.';
 }
 
 /** Verifica la cadena completa entre la entrada y el checkpoint (si existe). */
 export function verifyEntryInclusion(
   entryHash: string,
   proof: InclusionProof,
-  checkpoint?: GenesisCheckpoint,
+  checkpoint?: GenesisCheckpoint
 ): boolean {
   if (!verifyInclusionProof(proof)) return false;
   if (proof.leaf_hash !== entryHash) return false;

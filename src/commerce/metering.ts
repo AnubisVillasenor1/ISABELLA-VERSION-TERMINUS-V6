@@ -6,7 +6,7 @@
  * entitlement checks consult; a durable metering backend can implement the same
  * `UsageMeterPort` later.
  */
-import type { QuotaKey } from "./types";
+import type { QuotaKey } from './types';
 
 export interface UsageMeterOptions {
   readonly now?: () => Date;
@@ -28,7 +28,7 @@ export class UsageMeter {
   }
 
   increment(workspaceId: string, quotaKey: QuotaKey, amount = 1, at: Date = this.now()): number {
-    if (amount <= 0) throw new Error("METER_AMOUNT_INVALID");
+    if (amount <= 0) throw new Error('METER_AMOUNT_INVALID');
     const k = this.key(workspaceId, quotaKey, at.toISOString().slice(0, 10));
     const next = (this.buckets.get(k) ?? 0) + amount;
     this.buckets.set(k, next);
@@ -44,7 +44,7 @@ export class UsageMeter {
     const day = at.toISOString().slice(0, 10);
     const out: Partial<Record<QuotaKey, number>> = {};
     for (const [k, value] of this.buckets) {
-      const [wsId, quotaKey, bucketDay] = k.split("\u0000");
+      const [wsId, quotaKey, bucketDay] = k.split('\u0000');
       if (wsId === workspaceId && bucketDay === day) out[quotaKey as QuotaKey] = value;
     }
     return out;
@@ -53,8 +53,9 @@ export class UsageMeter {
   reset(workspaceId?: string, at: Date = this.now()): void {
     const day = at.toISOString().slice(0, 10);
     for (const k of [...this.buckets.keys()]) {
-      const [wsId, , bucketDay] = k.split("\u0000");
-      if (bucketDay === day && (workspaceId === undefined || wsId === workspaceId)) this.buckets.delete(k);
+      const [wsId, , bucketDay] = k.split('\u0000');
+      if (bucketDay === day && (workspaceId === undefined || wsId === workspaceId))
+        this.buckets.delete(k);
     }
   }
 

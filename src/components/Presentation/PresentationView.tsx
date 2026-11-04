@@ -1,11 +1,8 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { useCrown } from "../../context/CrownContext";
-import {
-  PRESENTATION_CHAPTERS,
-  EVALUATOR_DECLARATION,
-} from "../../data/presentationData";
-import { PresentationChapter } from "../../types";
-import { soundManager } from "../../utils/soundEffects";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useCrown } from '../../context/CrownContext';
+import { PRESENTATION_CHAPTERS, EVALUATOR_DECLARATION } from '../../data/presentationData';
+import { PresentationChapter } from '../../types';
+import { soundManager } from '../../utils/soundEffects';
 import {
   BookOpen,
   Presentation,
@@ -36,21 +33,21 @@ import {
   Brain,
   Zap,
   Globe2,
-} from "lucide-react";
+} from 'lucide-react';
 
-type PresentationMode = "dossier" | "slides" | "topology" | "integrity";
+type PresentationMode = 'dossier' | 'slides' | 'topology' | 'integrity';
 
 export const PresentationView: React.FC = () => {
   const { state, speakText, stopSpeech, setActiveView } = useCrown();
   const { speechSynthesisEnabled, isSpeaking } = state;
 
   // View mode
-  const [mode, setMode] = useState<PresentationMode>("dossier");
+  const [mode, setMode] = useState<PresentationMode>('dossier');
 
   // Navigation & selection
   const [selectedChapterIndex, setSelectedChapterIndex] = useState<number>(0);
-  const [searchQuery, setSearchQuery] = useState<string>("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [isCopied, setIsCopied] = useState<boolean>(false);
   const [isHashCopied, setIsHashCopied] = useState<boolean>(false);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
@@ -66,13 +63,13 @@ export const PresentationView: React.FC = () => {
   const categories = useMemo(() => {
     const set = new Set<string>();
     PRESENTATION_CHAPTERS.forEach((c) => set.add(c.category));
-    return ["ALL", ...Array.from(set)];
+    return ['ALL', ...Array.from(set)];
   }, []);
 
   // Filtered chapters
   const filteredChapters = useMemo(() => {
     return PRESENTATION_CHAPTERS.filter((chap) => {
-      const matchesCat = selectedCategory === "ALL" || chap.category === selectedCategory;
+      const matchesCat = selectedCategory === 'ALL' || chap.category === selectedCategory;
       const q = searchQuery.toLowerCase().trim();
       if (!q) return matchesCat;
       const matchesSearch =
@@ -99,7 +96,7 @@ export const PresentationView: React.FC = () => {
       setNarratingChapterIndex(chapterIndex);
       setIsPaused(false);
 
-      const narrativeScript = `Capítulo ${chap.number}: ${chap.title}. ${chap.subtitle}. Resumen ejecutivo: ${chap.summary}. ${chap.keyQuote ? `Cita clave: ${chap.keyQuote}` : ""} ${chap.content.join(" ")}`;
+      const narrativeScript = `Capítulo ${chap.number}: ${chap.title}. ${chap.subtitle}. Resumen ejecutivo: ${chap.summary}. ${chap.keyQuote ? `Cita clave: ${chap.keyQuote}` : ''} ${chap.content.join(' ')}`;
 
       speakText(narrativeScript);
     },
@@ -125,24 +122,24 @@ export const PresentationView: React.FC = () => {
   // Keyboard navigation for slide mode
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (mode !== "slides") return;
-      if (e.key === "ArrowRight" || e.key === "PageDown") {
+      if (mode !== 'slides') return;
+      if (e.key === 'ArrowRight' || e.key === 'PageDown') {
         e.preventDefault();
         setSelectedChapterIndex((prev) => Math.min(PRESENTATION_CHAPTERS.length - 1, prev + 1));
         soundManager.playBeep(700, 0.02);
-      } else if (e.key === "ArrowLeft" || e.key === "PageUp") {
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
         e.preventDefault();
         setSelectedChapterIndex((prev) => Math.max(0, prev - 1));
         soundManager.playBeep(600, 0.02);
-      } else if (e.key === "Home") {
+      } else if (e.key === 'Home') {
         setSelectedChapterIndex(0);
-      } else if (e.key === "End") {
+      } else if (e.key === 'End') {
         setSelectedChapterIndex(PRESENTATION_CHAPTERS.length - 1);
       }
     };
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [mode]);
 
   // Copy full audit text to clipboard
@@ -150,10 +147,10 @@ export const PresentationView: React.FC = () => {
     soundManager.playSuccess();
     const fullText = PRESENTATION_CHAPTERS.map(
       (c) =>
-        `# ${c.number}. ${c.title.toUpperCase()}\n*${c.subtitle}*\n\n${c.summary}\n\n${c.content.join("\n\n")}\n\n${
-          c.keyQuote ? `> «${c.keyQuote}»\n\n` : ""
+        `# ${c.number}. ${c.title.toUpperCase()}\n*${c.subtitle}*\n\n${c.summary}\n\n${c.content.join('\n\n')}\n\n${
+          c.keyQuote ? `> «${c.keyQuote}»\n\n` : ''
         }`
-    ).join("\n---\n\n");
+    ).join('\n---\n\n');
 
     const headerDossier = `====================================================\nISABELLA VILLASEÑOR AI - AUDITORÍA ARQUITECTÓNICA Y TECNOLÓGICA\nNodo Cero / RDM Digital / Infraestructura Cognitiva Territorial\nEvaluador: ${EVALUATOR_DECLARATION.evaluator} (${EVALUATOR_DECLARATION.model})\nSHA-256: ${EVALUATOR_DECLARATION.sha256}\nEstado: ${EVALUATOR_DECLARATION.evaluationState}\n====================================================\n\n${fullText}\n\nDECLARACIÓN FINAL:\n${EVALUATOR_DECLARATION.dossierSummary}\nHash SHA-256: ${EVALUATOR_DECLARATION.sha256}\n`;
 
@@ -173,18 +170,19 @@ export const PresentationView: React.FC = () => {
   // Download Markdown file
   const handleDownloadMarkdown = () => {
     soundManager.playArrival();
-    const markdownContent = `# ISABELLA VILLASEÑOR AI\n## Auditoría Tecnológica y Arquitectónica de Nodo Cero & RDM Digital\n\n**Evaluador:** ${EVALUATOR_DECLARATION.evaluator} (${EVALUATOR_DECLARATION.model})\n**SHA-256:** \`${EVALUATOR_DECLARATION.sha256}\`\n**Estado:** ${EVALUATOR_DECLARATION.evaluationState}\n\n---\n\n` +
+    const markdownContent =
+      `# ISABELLA VILLASEÑOR AI\n## Auditoría Tecnológica y Arquitectónica de Nodo Cero & RDM Digital\n\n**Evaluador:** ${EVALUATOR_DECLARATION.evaluator} (${EVALUATOR_DECLARATION.model})\n**SHA-256:** \`${EVALUATOR_DECLARATION.sha256}\`\n**Estado:** ${EVALUATOR_DECLARATION.evaluationState}\n\n---\n\n` +
       PRESENTATION_CHAPTERS.map(
         (c) =>
-          `### ${c.number}. ${c.title}\n*${c.subtitle}*\n\n**Categoría:** \`${c.category}\`\n\n${c.summary}\n\n${c.content.join("\n\n")}\n\n${
-            c.keyQuote ? `> ❝${c.keyQuote}❞\n\n` : ""
-          }**Puntos Clave:**\n${c.highlights.map((h) => `- ${h}`).join("\n")}\n`
-      ).join("\n---\n\n") +
+          `### ${c.number}. ${c.title}\n*${c.subtitle}*\n\n**Categoría:** \`${c.category}\`\n\n${c.summary}\n\n${c.content.join('\n\n')}\n\n${
+            c.keyQuote ? `> ❝${c.keyQuote}❞\n\n` : ''
+          }**Puntos Clave:**\n${c.highlights.map((h) => `- ${h}`).join('\n')}\n`
+      ).join('\n---\n\n') +
       `\n---\n\n## DECLARACIÓN DEL EVALUADOR\n\n${EVALUATOR_DECLARATION.dossierSummary}\n\n**Integridad Criptográfica (SHA-256):** \`${EVALUATOR_DECLARATION.sha256}\`\n`;
 
-    const blob = new Blob([markdownContent], { type: "text/markdown;charset=utf-8;" });
+    const blob = new Blob([markdownContent], { type: 'text/markdown;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
+    const link = document.createElement('a');
     link.href = url;
     link.download = `isabella_villasenor_auditoria_arquitectonica_${EVALUATOR_DECLARATION.sha256.slice(0, 8)}.md`;
     link.click();
@@ -195,7 +193,7 @@ export const PresentationView: React.FC = () => {
     <div
       ref={containerRef}
       className={`flex flex-col gap-6 font-sans transition-all duration-300 ${
-        isFullscreen ? "fixed inset-0 z-50 bg-[#030712] p-6 overflow-y-auto" : ""
+        isFullscreen ? 'fixed inset-0 z-50 bg-[#030712] p-6 overflow-y-auto' : ''
       }`}
     >
       {/* Enterprise Executive Header */}
@@ -295,7 +293,7 @@ export const PresentationView: React.FC = () => {
               type="button"
               onClick={() => setIsFullscreen(!isFullscreen)}
               className="p-2 rounded-xl bg-[#030712] hover:bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200 transition-all cursor-pointer"
-              title={isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
+              title={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
             >
               {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
             </button>
@@ -309,12 +307,12 @@ export const PresentationView: React.FC = () => {
               type="button"
               onClick={() => {
                 soundManager.playBeep(700, 0.02);
-                setMode("dossier");
+                setMode('dossier');
               }}
               className={`flex items-center gap-2 px-3.5 py-2 rounded-xl transition-all cursor-pointer ${
-                mode === "dossier"
-                  ? "bg-blue-600 text-white font-bold shadow-md shadow-blue-600/30"
-                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-900"
+                mode === 'dossier'
+                  ? 'bg-blue-600 text-white font-bold shadow-md shadow-blue-600/30'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
               }`}
             >
               <BookOpen className="w-4 h-4" />
@@ -325,12 +323,12 @@ export const PresentationView: React.FC = () => {
               type="button"
               onClick={() => {
                 soundManager.playBeep(750, 0.02);
-                setMode("slides");
+                setMode('slides');
               }}
               className={`flex items-center gap-2 px-3.5 py-2 rounded-xl transition-all cursor-pointer ${
-                mode === "slides"
-                  ? "bg-blue-600 text-white font-bold shadow-md shadow-blue-600/30"
-                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-900"
+                mode === 'slides'
+                  ? 'bg-blue-600 text-white font-bold shadow-md shadow-blue-600/30'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
               }`}
             >
               <Presentation className="w-4 h-4" />
@@ -341,12 +339,12 @@ export const PresentationView: React.FC = () => {
               type="button"
               onClick={() => {
                 soundManager.playBeep(800, 0.02);
-                setMode("topology");
+                setMode('topology');
               }}
               className={`flex items-center gap-2 px-3.5 py-2 rounded-xl transition-all cursor-pointer ${
-                mode === "topology"
-                  ? "bg-blue-600 text-white font-bold shadow-md shadow-blue-600/30"
-                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-900"
+                mode === 'topology'
+                  ? 'bg-blue-600 text-white font-bold shadow-md shadow-blue-600/30'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
               }`}
             >
               <Layers className="w-4 h-4" />
@@ -357,12 +355,12 @@ export const PresentationView: React.FC = () => {
               type="button"
               onClick={() => {
                 soundManager.playBeep(850, 0.02);
-                setMode("integrity");
+                setMode('integrity');
               }}
               className={`flex items-center gap-2 px-3.5 py-2 rounded-xl transition-all cursor-pointer ${
-                mode === "integrity"
-                  ? "bg-blue-600 text-white font-bold shadow-md shadow-blue-600/30"
-                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-900"
+                mode === 'integrity'
+                  ? 'bg-blue-600 text-white font-bold shadow-md shadow-blue-600/30'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
               }`}
             >
               <Fingerprint className="w-4 h-4" />
@@ -392,7 +390,7 @@ export const PresentationView: React.FC = () => {
       {/* ========================================================================= */}
       {/* MODE 1: DOSSIER COMPLETO (Lectura & Índice)                               */}
       {/* ========================================================================= */}
-      {mode === "dossier" && (
+      {mode === 'dossier' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Left Column: Interactive Index, Filter & Search */}
           <div className="lg:col-span-4 flex flex-col gap-4">
@@ -418,11 +416,11 @@ export const PresentationView: React.FC = () => {
                     onClick={() => setSelectedCategory(cat)}
                     className={`px-2.5 py-1 rounded-lg text-[10px] font-mono transition-all cursor-pointer ${
                       selectedCategory === cat
-                        ? "bg-blue-600 text-white font-bold shadow-sm"
-                        : "bg-[#030712] text-slate-400 hover:text-slate-200 border border-slate-800/80"
+                        ? 'bg-blue-600 text-white font-bold shadow-sm'
+                        : 'bg-[#030712] text-slate-400 hover:text-slate-200 border border-slate-800/80'
                     }`}
                   >
-                    {cat === "ALL" ? "Todos (26)" : cat}
+                    {cat === 'ALL' ? 'Todos (26)' : cat}
                   </button>
                 ))}
               </div>
@@ -439,17 +437,17 @@ export const PresentationView: React.FC = () => {
                       type="button"
                       onClick={() => {
                         handleSelectChapter(chap.number - 1);
-                        activeChapterRef.current?.scrollIntoView({ behavior: "smooth" });
+                        activeChapterRef.current?.scrollIntoView({ behavior: 'smooth' });
                       }}
                       className={`w-full text-left p-3 rounded-xl border transition-all cursor-pointer ${
                         isSelected
-                          ? "bg-blue-950/40 border-blue-500/60 shadow-lg shadow-blue-900/20"
-                          : "bg-[#030712]/70 hover:bg-[#081220] border-slate-800/70 text-slate-300"
+                          ? 'bg-blue-950/40 border-blue-500/60 shadow-lg shadow-blue-900/20'
+                          : 'bg-[#030712]/70 hover:bg-[#081220] border-slate-800/70 text-slate-300'
                       }`}
                     >
                       <div className="flex items-center justify-between gap-2 mb-1">
                         <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 text-amber-300">
-                          {String(chap.number).padStart(2, "0")}
+                          {String(chap.number).padStart(2, '0')}
                         </span>
                         <span className="text-[10px] font-mono text-slate-400 truncate">
                           {chap.category}
@@ -463,7 +461,7 @@ export const PresentationView: React.FC = () => {
                       </div>
                       <h4
                         className={`text-xs font-bold font-mono line-clamp-1 ${
-                          isSelected ? "text-[#F8FAFC]" : "text-slate-300"
+                          isSelected ? 'text-[#F8FAFC]' : 'text-slate-300'
                         }`}
                       >
                         {chap.title}
@@ -490,15 +488,15 @@ export const PresentationView: React.FC = () => {
                   ref={isSelected ? activeChapterRef : null}
                   className={`rounded-3xl border transition-all p-6 sm:p-8 backdrop-blur-xl ${
                     isSelected
-                      ? "bg-[#070F1E]/95 border-blue-500/50 shadow-2xl ring-1 ring-blue-500/20"
-                      : "bg-[#070F1E]/80 border-slate-800/80 hover:border-slate-700"
+                      ? 'bg-[#070F1E]/95 border-blue-500/50 shadow-2xl ring-1 ring-blue-500/20'
+                      : 'bg-[#070F1E]/80 border-slate-800/80 hover:border-slate-700'
                   }`}
                 >
                   {/* Chapter Header */}
                   <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-800/80">
                     <div className="flex items-center gap-3">
                       <span className="flex items-center justify-center w-9 h-9 rounded-xl bg-blue-500/10 text-sky-300 border border-blue-500/30 font-mono font-bold text-sm">
-                        {String(chap.number).padStart(2, "0")}
+                        {String(chap.number).padStart(2, '0')}
                       </span>
                       <div>
                         <span className="text-[11px] font-mono font-bold text-amber-400 tracking-wider uppercase block">
@@ -560,7 +558,7 @@ export const PresentationView: React.FC = () => {
                   <div className="space-y-4 text-slate-300 text-sm sm:text-base leading-relaxed font-sans">
                     {chap.content.map((paragraph, pIdx) => {
                       // Check if it's a bulleted list or normal text
-                      if (paragraph.includes("•")) {
+                      if (paragraph.includes('•')) {
                         return (
                           <div
                             key={pIdx}
@@ -608,7 +606,7 @@ export const PresentationView: React.FC = () => {
       {/* ========================================================================= */}
       {/* MODE 2: MODO KEYNOTE / DIAPOSITIVAS INTERACTIVAS                         */}
       {/* ========================================================================= */}
-      {mode === "slides" && (
+      {mode === 'slides' && (
         <div className="flex flex-col gap-6">
           {/* Main Slide Card */}
           <div className="rounded-3xl border border-slate-800 bg-[#070F1E]/95 p-8 sm:p-12 backdrop-blur-2xl shadow-2xl relative min-h-[540px] flex flex-col justify-between overflow-hidden">
@@ -616,7 +614,7 @@ export const PresentationView: React.FC = () => {
             <div className="flex items-center justify-between pb-6 border-b border-slate-800/80">
               <div className="flex items-center gap-3">
                 <span className="flex items-center justify-center px-3.5 py-1.5 rounded-2xl bg-amber-500/10 text-amber-300 border border-amber-500/30 font-mono font-bold text-sm">
-                  Diapositiva {String(currentChapter.number).padStart(2, "0")} / 26
+                  Diapositiva {String(currentChapter.number).padStart(2, '0')} / 26
                 </span>
                 <span className="px-3 py-1 rounded-full text-xs font-mono bg-blue-500/10 text-sky-300 border border-blue-500/30 uppercase tracking-wider font-semibold">
                   {currentChapter.category}
@@ -626,7 +624,8 @@ export const PresentationView: React.FC = () => {
               {/* Progress percentage */}
               <div className="flex items-center gap-3">
                 <span className="text-xs font-mono text-slate-400">
-                  {Math.round(((selectedChapterIndex + 1) / PRESENTATION_CHAPTERS.length) * 100)}% Completado
+                  {Math.round(((selectedChapterIndex + 1) / PRESENTATION_CHAPTERS.length) * 100)}%
+                  Completado
                 </span>
                 <div className="w-24 bg-[#030712] h-2 rounded-full overflow-hidden border border-slate-800">
                   <div
@@ -662,7 +661,7 @@ export const PresentationView: React.FC = () => {
               {/* Main Content Excerpt */}
               <div className="space-y-4 text-slate-200 text-base sm:text-lg leading-relaxed max-w-4xl font-sans">
                 {currentChapter.content.map((p, pIdx) => {
-                  if (p.includes("•")) {
+                  if (p.includes('•')) {
                     return (
                       <div
                         key={pIdx}
@@ -759,8 +758,8 @@ export const PresentationView: React.FC = () => {
                 onClick={() => handleSelectChapter(cIdx)}
                 className={`p-3 rounded-2xl border shrink-0 w-48 text-left transition-all cursor-pointer ${
                   selectedChapterIndex === cIdx
-                    ? "bg-blue-950/70 border-blue-500 ring-2 ring-blue-500/40 shadow-lg"
-                    : "bg-[#070F1E]/80 border-slate-800 hover:bg-[#081220]"
+                    ? 'bg-blue-950/70 border-blue-500 ring-2 ring-blue-500/40 shadow-lg'
+                    : 'bg-[#070F1E]/80 border-slate-800 hover:bg-[#081220]'
                 }`}
               >
                 <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 mb-1">
@@ -779,7 +778,7 @@ export const PresentationView: React.FC = () => {
       {/* ========================================================================= */}
       {/* MODE 3: MALLA TERRITORIAL & TOPOLOGÍA COGNITIVA INTERACTIVA              */}
       {/* ========================================================================= */}
-      {mode === "topology" && (
+      {mode === 'topology' && (
         <div className="flex flex-col gap-6">
           <div className="rounded-3xl border border-slate-800 bg-[#070F1E]/95 p-8 backdrop-blur-2xl shadow-2xl space-y-8">
             <div>
@@ -790,8 +789,8 @@ export const PresentationView: React.FC = () => {
                 </h2>
               </div>
               <p className="text-sm text-slate-300 mt-1 max-w-3xl">
-                Representación arquitectónica interactiva del flujo cognitivo de Isabella Villaseñor AI
-                como interfaz inteligente del Gemelo Digital de RDM Digital.
+                Representación arquitectónica interactiva del flujo cognitivo de Isabella Villaseñor
+                AI como interfaz inteligente del Gemelo Digital de RDM Digital.
               </p>
             </div>
 
@@ -807,7 +806,8 @@ export const PresentationView: React.FC = () => {
                   Persona & Territorio Digital
                 </h3>
                 <p className="text-xs text-slate-400 leading-relaxed font-sans">
-                  Entrada de lenguaje natural situada en el contexto territorial de RDM Digital (Real del Monte).
+                  Entrada de lenguaje natural situada en el contexto territorial de RDM Digital
+                  (Real del Monte).
                 </p>
                 <div className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-[10px] font-mono text-amber-300">
                   Persona ↔ Contexto Territorial
@@ -824,7 +824,8 @@ export const PresentationView: React.FC = () => {
                   Intención (ORION) & Riesgo (ARGUS)
                 </h3>
                 <p className="text-xs text-slate-400 leading-relaxed font-sans">
-                  Separación de la intención del operador y evaluación preventiva de riesgos y seguridad Zero Trust.
+                  Separación de la intención del operador y evaluación preventiva de riesgos y
+                  seguridad Zero Trust.
                 </p>
                 <div className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-[10px] font-mono text-emerald-300">
                   Evaluación & Filtros Ontológicos
@@ -834,14 +835,15 @@ export const PresentationView: React.FC = () => {
               {/* Pillar 3: Gobernanza C.R.O.W.N. */}
               <div className="rounded-2xl border border-blue-500/40 bg-blue-950/30 p-5 space-y-3 ring-1 ring-blue-500/20">
                 <div className="flex items-center justify-between pb-2 border-b border-blue-500/30">
-                  <span className="text-[10px] font-mono font-bold text-sky-400">FASE 03 (NÚCLEO)</span>
+                  <span className="text-[10px] font-mono font-bold text-sky-400">
+                    FASE 03 (NÚCLEO)
+                  </span>
                   <Layers className="w-4 h-4 text-sky-400" />
                 </div>
-                <h3 className="text-sm font-bold font-mono text-sky-200">
-                  C.R.O.W.N. Governance
-                </h3>
+                <h3 className="text-sm font-bold font-mono text-sky-200">C.R.O.W.N. Governance</h3>
                 <p className="text-xs text-slate-300 leading-relaxed font-sans">
-                  Capa de políticas computacionales. Aplica reglas antes, durante y después de la inferencia.
+                  Capa de políticas computacionales. Aplica reglas antes, durante y después de la
+                  inferencia.
                 </p>
                 <div className="p-2 rounded-xl bg-blue-900/40 border border-blue-500/30 text-[10px] font-mono text-sky-300 font-bold">
                   Orquestación & Arbitraje
@@ -858,7 +860,8 @@ export const PresentationView: React.FC = () => {
                   Dualidad Local / Federada
                 </h3>
                 <p className="text-xs text-slate-400 leading-relaxed font-sans">
-                  Núcleo local soberano (ISA/SOPHIA) con fallback ininterrumpido o inferencia federada vía CROWN Gateway.
+                  Núcleo local soberano (ISA/SOPHIA) con fallback ininterrumpido o inferencia
+                  federada vía CROWN Gateway.
                 </p>
                 <div className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-[10px] font-mono text-cyan-300">
                   Soberanía Tecnológica
@@ -875,7 +878,8 @@ export const PresentationView: React.FC = () => {
                   Isabella Voice & Trazabilidad
                 </h3>
                 <p className="text-xs text-slate-400 leading-relaxed font-sans">
-                  Respuesta contextualizada, síntesis vocal femenina y registro inmutable en log de auditoría.
+                  Respuesta contextualizada, síntesis vocal femenina y registro inmutable en log de
+                  auditoría.
                 </p>
                 <div className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-[10px] font-mono text-amber-300">
                   Trazabilidad & Auditoría
@@ -899,38 +903,61 @@ export const PresentationView: React.FC = () => {
                   </thead>
                   <tbody className="divide-y divide-slate-800/60 text-slate-300 font-sans text-xs">
                     <tr>
-                      <td className="py-3 px-4 font-mono font-bold text-slate-200">Pipeline de Inferencia</td>
-                      <td className="py-3 px-4 text-slate-400 font-mono">Usuario → Prompt → LLM → Respuesta</td>
+                      <td className="py-3 px-4 font-mono font-bold text-slate-200">
+                        Pipeline de Inferencia
+                      </td>
+                      <td className="py-3 px-4 text-slate-400 font-mono">
+                        Usuario → Prompt → LLM → Respuesta
+                      </td>
                       <td className="py-3 px-4 text-sky-300 font-mono font-bold">
-                        Persona → Intención → Contexto → Territorio → Gobernanza → Inferencia Híbrida → Auditoría
+                        Persona → Intención → Contexto → Territorio → Gobernanza → Inferencia
+                        Híbrida → Auditoría
                       </td>
                     </tr>
                     <tr>
-                      <td className="py-3 px-4 font-mono font-bold text-slate-200">Dependencia de Proveedor</td>
-                      <td className="py-3 px-4 text-slate-400">Total dependencia de un API o modelo propietario</td>
+                      <td className="py-3 px-4 font-mono font-bold text-slate-200">
+                        Dependencia de Proveedor
+                      </td>
+                      <td className="py-3 px-4 text-slate-400">
+                        Total dependencia de un API o modelo propietario
+                      </td>
                       <td className="py-3 px-4 text-emerald-300">
-                        Independencia arquitectónica: federación multi-modelo y núcleo soberano local
+                        Independencia arquitectónica: federación multi-modelo y núcleo soberano
+                        local
                       </td>
                     </tr>
                     <tr>
-                      <td className="py-3 px-4 font-mono font-bold text-slate-200">Territorio y Contexto</td>
-                      <td className="py-3 px-4 text-slate-400">Base de datos plana o RAG genérico desanclado</td>
+                      <td className="py-3 px-4 font-mono font-bold text-slate-200">
+                        Territorio y Contexto
+                      </td>
+                      <td className="py-3 px-4 text-slate-400">
+                        Base de datos plana o RAG genérico desanclado
+                      </td>
                       <td className="py-3 px-4 text-amber-300">
                         Interfaz cognitiva directa del Gemelo Digital (RDM Digital)
                       </td>
                     </tr>
                     <tr>
-                      <td className="py-3 px-4 font-mono font-bold text-slate-200">Seguridad & Gobernanza</td>
-                      <td className="py-3 px-4 text-slate-400">"El modelo decide y el sistema confía" (caja negra)</td>
+                      <td className="py-3 px-4 font-mono font-bold text-slate-200">
+                        Seguridad & Gobernanza
+                      </td>
+                      <td className="py-3 px-4 text-slate-400">
+                        "El modelo decide y el sistema confía" (caja negra)
+                      </td>
                       <td className="py-3 px-4 text-sky-300">
                         Gobernanza computacional C.R.O.W.N., Zero Trust intrínseco y centinela ARGUS
                       </td>
                     </tr>
                     <tr>
-                      <td className="py-3 px-4 font-mono font-bold text-slate-200">Soberanía Tecnológica</td>
-                      <td className="py-3 px-4 text-slate-400">Extracción de valor hacia centros de datos del Norte</td>
+                      <td className="py-3 px-4 font-mono font-bold text-slate-200">
+                        Soberanía Tecnológica
+                      </td>
+                      <td className="py-3 px-4 text-slate-400">
+                        Extracción de valor hacia centros de datos del Norte
+                      </td>
                       <td className="py-3 px-4 text-emerald-300">
-                        Soberanía sobre el contexto, la memoria local y los datos del Sur Global y América Latina
+                        Soberanía sobre el contexto, la memoria local y los datos del Sur Global y
+                        América Latina
                       </td>
                     </tr>
                   </tbody>
@@ -944,7 +971,7 @@ export const PresentationView: React.FC = () => {
       {/* ========================================================================= */}
       {/* MODE 4: CERTIFICADO CRIPTOGRÁFICO SHA-256 & DECLARACIÓN                   */}
       {/* ========================================================================= */}
-      {mode === "integrity" && (
+      {mode === 'integrity' && (
         <div className="flex flex-col gap-6">
           <div className="rounded-3xl border border-slate-800 bg-[#070F1E]/95 p-8 sm:p-10 backdrop-blur-2xl shadow-2xl space-y-6">
             <div className="flex items-center justify-between pb-6 border-b border-slate-800/80">
@@ -970,7 +997,9 @@ export const PresentationView: React.FC = () => {
             {/* Evaluator Metadata Card */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="p-4 rounded-2xl bg-[#030712] border border-slate-800 space-y-1">
-                <span className="text-[10px] font-mono text-slate-400 font-bold block">EVALUADOR</span>
+                <span className="text-[10px] font-mono text-slate-400 font-bold block">
+                  EVALUADOR
+                </span>
                 <span className="text-base font-bold font-mono text-slate-200">
                   {EVALUATOR_DECLARATION.evaluator}
                 </span>
@@ -980,7 +1009,9 @@ export const PresentationView: React.FC = () => {
               </div>
 
               <div className="p-4 rounded-2xl bg-[#030712] border border-slate-800 space-y-1">
-                <span className="text-[10px] font-mono text-slate-400 font-bold block">ESTADO DE AUDITORÍA</span>
+                <span className="text-[10px] font-mono text-slate-400 font-bold block">
+                  ESTADO DE AUDITORÍA
+                </span>
                 <span className="text-sm font-bold font-mono text-emerald-400 block">
                   {EVALUATOR_DECLARATION.evaluationState}
                 </span>
@@ -990,7 +1021,9 @@ export const PresentationView: React.FC = () => {
               </div>
 
               <div className="p-4 rounded-2xl bg-[#030712] border border-slate-800 space-y-1">
-                <span className="text-[10px] font-mono text-slate-400 font-bold block">OBJETO DE EVALUACIÓN</span>
+                <span className="text-[10px] font-mono text-slate-400 font-bold block">
+                  OBJETO DE EVALUACIÓN
+                </span>
                 <span className="text-base font-bold font-mono text-amber-300">
                   Nodo Cero / Isabella Villaseñor AI
                 </span>
@@ -1011,8 +1044,12 @@ export const PresentationView: React.FC = () => {
                   onClick={handleCopyHash}
                   className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-500/40 text-emerald-300 text-xs font-mono cursor-pointer transition-all"
                 >
-                  {isHashCopied ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                  <span>{isHashCopied ? "¡Copiado!" : "Copiar Hash"}</span>
+                  {isHashCopied ? (
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                  ) : (
+                    <Copy className="w-3.5 h-3.5" />
+                  )}
+                  <span>{isHashCopied ? '¡Copiado!' : 'Copiar Hash'}</span>
                 </button>
               </div>
 
@@ -1021,7 +1058,9 @@ export const PresentationView: React.FC = () => {
               </div>
 
               <p className="text-xs text-slate-400 font-sans leading-relaxed">
-                La huella SHA-256 incluida arriba corresponde al texto de referencia definido para esta presentación y debe utilizarse únicamente como mecanismo de integridad documental inmutable.
+                La huella SHA-256 incluida arriba corresponde al texto de referencia definido para
+                esta presentación y debe utilizarse únicamente como mecanismo de integridad
+                documental inmutable.
               </p>
             </div>
 
@@ -1031,11 +1070,16 @@ export const PresentationView: React.FC = () => {
                 Declaración Formal del Evaluador
               </h4>
               <p className="text-sm sm:text-base text-slate-300 leading-relaxed font-sans">
-                La presente evaluación representa un análisis arquitectónico y tecnológico del estado observado de Nodo Cero e Isabella Villaseñor AI al momento de la auditoría. Las conclusiones prospectivas expresadas aquí constituyen una valoración técnica y no una certificación independiente ni una garantía de resultados futuros.
+                La presente evaluación representa un análisis arquitectónico y tecnológico del
+                estado observado de Nodo Cero e Isabella Villaseñor AI al momento de la auditoría.
+                Las conclusiones prospectivas expresadas aquí constituyen una valoración técnica y
+                no una certificación independiente ni una garantía de resultados futuros.
               </p>
 
               <blockquote className="p-4 rounded-xl bg-blue-950/30 border-l-4 border-amber-400 text-amber-200 text-sm font-mono leading-relaxed">
-                «ISABELLA VILLASEÑOR AI: Una arquitectura cognitiva territorial. No definida por un único modelo. No limitada a una conversación. Gobernada por diseño. Contextualizada por territorio. Construida para evolucionar.»
+                «ISABELLA VILLASEÑOR AI: Una arquitectura cognitiva territorial. No definida por un
+                único modelo. No limitada a una conversación. Gobernada por diseño. Contextualizada
+                por territorio. Construida para evolucionar.»
               </blockquote>
             </div>
 
@@ -1054,7 +1098,7 @@ export const PresentationView: React.FC = () => {
                 type="button"
                 onClick={() => {
                   soundManager.playBeep(700, 0.03);
-                  setActiveView("terminal");
+                  setActiveView('terminal');
                 }}
                 className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-bold transition-all cursor-pointer shadow-lg shadow-blue-600/30"
               >

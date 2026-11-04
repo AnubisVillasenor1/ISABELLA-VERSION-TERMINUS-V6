@@ -1,11 +1,23 @@
-import React, { useEffect, useState } from "react";
-import { Activity, ShieldAlert, BookOpen, Database, BrainCircuit, Globe, Landmark, Coins, ShieldCheck, Lock, Sparkles } from "lucide-react";
-import { useServerFn } from "../../lib/tanstack-polyfill";
-import { getCockpitSnapshot } from "../../lib/atlas.functions";
-import { RScoreGauge } from "./RScoreGauge";
-import { Litle32Gates } from "./Litle32Gates";
-import { QuantumReflectionCard } from "./QuantumReflectionCard";
-import { CrownGovernanceCard } from "./CrownGovernanceCard";
+import React, { useEffect, useState } from 'react';
+import {
+  Activity,
+  ShieldAlert,
+  BookOpen,
+  Database,
+  BrainCircuit,
+  Globe,
+  Landmark,
+  Coins,
+  ShieldCheck,
+  Lock,
+  Sparkles,
+} from 'lucide-react';
+import { useServerFn } from '../../lib/tanstack-polyfill';
+import { getCockpitSnapshot } from '../../lib/atlas.functions';
+import { RScoreGauge } from './RScoreGauge';
+import { Litle32Gates } from './Litle32Gates';
+import { QuantumReflectionCard } from './QuantumReflectionCard';
+import { CrownGovernanceCard } from './CrownGovernanceCard';
 
 export const Cockpit: React.FC = () => {
   const [data, setData] = useState<any>(null);
@@ -65,7 +77,9 @@ export const Cockpit: React.FC = () => {
                 PQC VERIFIED
               </span>
             </h1>
-            <p className="text-xs text-slate-400 font-mono">Telemetría en vivo de infraestructura cognitiva e institucional.</p>
+            <p className="text-xs text-slate-400 font-mono">
+              Telemetría en vivo de infraestructura cognitiva e institucional.
+            </p>
           </div>
         </div>
 
@@ -87,7 +101,6 @@ export const Cockpit: React.FC = () => {
 
       {/* Primary KPI Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 font-mono">
-        
         {/* BookPI */}
         <div className="bg-gradient-to-br from-slate-900 to-[#030712] border border-slate-800/80 p-5 rounded-2xl flex flex-col justify-between shadow-xl">
           <div className="flex items-center justify-between mb-4">
@@ -100,7 +113,9 @@ export const Cockpit: React.FC = () => {
           </div>
           <div>
             <div className="text-3xl font-bold text-white tracking-wider">{bookpi.stats.total}</div>
-            <p className="text-[10px] text-slate-500 mt-1 uppercase tracking-wider">Bloques Minados</p>
+            <p className="text-[10px] text-slate-500 mt-1 uppercase tracking-wider">
+              Bloques Minados
+            </p>
           </div>
           <div className="mt-3 text-[10px] text-slate-500 truncate bg-[#030712] p-2 rounded border border-slate-800">
             HASH: {bookpi.stats.latestHash?.slice(0, 16)}...
@@ -119,10 +134,21 @@ export const Cockpit: React.FC = () => {
           </div>
           <div>
             <div className="text-3xl font-bold text-white tracking-wider">{anubis.stats.total}</div>
-            <p className="text-[10px] text-slate-500 mt-1 uppercase tracking-wider">Políticas Evaluadas</p>
+            <p className="text-[10px] text-slate-500 mt-1 uppercase tracking-wider">
+              Políticas Evaluadas
+            </p>
           </div>
           <div className="mt-3 flex justify-between text-[11px] text-slate-400 bg-[#030712] p-2 rounded border border-slate-800">
-            <span>Críticos: <span className={anubis.stats.criticals > 0 ? "text-rose-400 font-bold" : "text-emerald-400"}>{anubis.stats.criticals}</span></span>
+            <span>
+              Críticos:{' '}
+              <span
+                className={
+                  anubis.stats.criticals > 0 ? 'text-rose-400 font-bold' : 'text-emerald-400'
+                }
+              >
+                {anubis.stats.criticals}
+              </span>
+            </span>
             <span>Riesgo: {(anubis.stats.avgAnomalyScore * 100).toFixed(1)}%</span>
           </div>
         </div>
@@ -138,8 +164,12 @@ export const Cockpit: React.FC = () => {
             </span>
           </div>
           <div>
-            <div className="text-3xl font-bold text-white tracking-wider">{isabella.stats.episodesRecorded}</div>
-            <p className="text-[10px] text-slate-500 mt-1 uppercase tracking-wider">Episodios en Memoria</p>
+            <div className="text-3xl font-bold text-white tracking-wider">
+              {isabella.stats.episodesRecorded}
+            </div>
+            <p className="text-[10px] text-slate-500 mt-1 uppercase tracking-wider">
+              Episodios en Memoria
+            </p>
           </div>
           <div className="mt-3 w-full bg-slate-800 h-2 rounded-full overflow-hidden">
             <div
@@ -160,15 +190,18 @@ export const Cockpit: React.FC = () => {
             </span>
           </div>
           <div>
-            <div className="text-3xl font-bold text-white tracking-wider">${economy.stats.totalVolume.toLocaleString()}</div>
-            <p className="text-[10px] text-slate-500 mt-1 uppercase tracking-wider">Volumen Transaccionado</p>
+            <div className="text-3xl font-bold text-white tracking-wider">
+              ${economy.stats.totalVolume.toLocaleString()}
+            </div>
+            <p className="text-[10px] text-slate-500 mt-1 uppercase tracking-wider">
+              Volumen Transaccionado
+            </p>
           </div>
           <div className="mt-3 text-[10px] text-slate-400 flex justify-between bg-[#030712] p-2 rounded border border-slate-800">
             <span>Órdenes: {economy.stats.ordersCount}</span>
             <span>Pagadas: {economy.stats.paidOrdersCount}</span>
           </div>
         </div>
-
       </div>
     </div>
   );

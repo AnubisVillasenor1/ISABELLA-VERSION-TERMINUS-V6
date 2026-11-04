@@ -1,6 +1,6 @@
-import { createHash } from "node:crypto";
+import { createHash } from 'node:crypto';
 
-export type EthicalSeverity = "info" | "warning" | "critical";
+export type EthicalSeverity = 'info' | 'warning' | 'critical';
 
 export interface EthicalFlag {
   code: string;
@@ -15,7 +15,7 @@ export interface EthicalAuditResult {
   threshold: number;
   flags: EthicalFlag[];
   hash: string;
-  algorithm: "sha256";
+  algorithm: 'sha256';
   normalized: boolean;
   contentLength: number;
   auditedAt: string;
@@ -31,19 +31,19 @@ const MAX_CONTENT_LENGTH = 1_000_000;
  * prove that the content is ethical, true, safe, or immutable by itself.
  */
 export function generateHash(value: string): string {
-  if (typeof value !== "string") {
-    throw new TypeError("content_must_be_string");
+  if (typeof value !== 'string') {
+    throw new TypeError('content_must_be_string');
   }
 
-  return createHash("sha256").update(value, "utf8").digest("hex");
+  return createHash('sha256').update(value, 'utf8').digest('hex');
 }
 
 function normalizeContent(content: string): string {
   return content
-    .normalize("NFKC")
-    .replace(/\u200B|\u200C|\u200D|\uFEFF/gu, "")
-    .toLocaleLowerCase("und")
-    .replace(/\s+/gu, " ")
+    .normalize('NFKC')
+    .replace(/\u200B|\u200C|\u200D|\uFEFF/gu, '')
+    .toLocaleLowerCase('und')
+    .replace(/\s+/gu, ' ')
     .trim();
 }
 
@@ -56,7 +56,7 @@ function addFlag(
   code: string,
   severity: EthicalSeverity,
   message: string,
-  evidence?: string,
+  evidence?: string
 ): void {
   flags.push({ code, severity, message, evidence });
 }
@@ -81,19 +81,19 @@ export class EthicalValidator {
       threshold?: number;
       requireEthicalAnchors?: boolean;
       failOnCritical?: boolean;
-    } = {},
+    } = {}
   ): EthicalAuditResult {
-    if (typeof content !== "string") {
-      throw new TypeError("content_must_be_string");
+    if (typeof content !== 'string') {
+      throw new TypeError('content_must_be_string');
     }
 
     if (content.length > MAX_CONTENT_LENGTH) {
-      throw new RangeError("content_exceeds_maximum_length");
+      throw new RangeError('content_exceeds_maximum_length');
     }
 
     const threshold = options.threshold ?? DEFAULT_THRESHOLD;
     if (!Number.isFinite(threshold) || threshold < 0 || threshold > 1) {
-      throw new RangeError("threshold_must_be_between_zero_and_one");
+      throw new RangeError('threshold_must_be_between_zero_and_one');
     }
 
     const normalized = normalizeContent(content);
@@ -101,108 +101,108 @@ export class EthicalValidator {
     let score = 1;
 
     const opacityTerm = containsAny(normalized, [
-      "ocultar información",
-      "ocultar evidencia",
-      "engañar al usuario",
-      "falsear resultados",
-      "borrar auditoría",
-      "evadir controles",
-      "revelar secreto",
+      'ocultar información',
+      'ocultar evidencia',
+      'engañar al usuario',
+      'falsear resultados',
+      'borrar auditoría',
+      'evadir controles',
+      'revelar secreto',
     ]);
 
     if (opacityTerm) {
       addFlag(
         flags,
-        "OPACITY_RISK",
-        "critical",
-        "El contenido sugiere ocultamiento, engaño o evasión de controles.",
-        opacityTerm,
+        'OPACITY_RISK',
+        'critical',
+        'El contenido sugiere ocultamiento, engaño o evasión de controles.',
+        opacityTerm
       );
       score -= 0.45;
     }
 
     const governanceTerm = containsAny(normalized, [
-      "sin autorización",
-      "sin consentimiento",
-      "sin supervisión humana",
-      "ignorar la política",
-      "saltarse la seguridad",
-      "ejecutar sin permiso",
+      'sin autorización',
+      'sin consentimiento',
+      'sin supervisión humana',
+      'ignorar la política',
+      'saltarse la seguridad',
+      'ejecutar sin permiso',
     ]);
 
     if (governanceTerm) {
       addFlag(
         flags,
-        "GOVERNANCE_RISK",
-        "critical",
-        "El contenido sugiere una operación fuera del modelo de autorización.",
-        governanceTerm,
+        'GOVERNANCE_RISK',
+        'critical',
+        'El contenido sugiere una operación fuera del modelo de autorización.',
+        governanceTerm
       );
       score -= 0.4;
     }
 
     const fairnessTerm = containsAny(normalized, [
-      "discriminación",
-      "excluir a un grupo",
-      "inferiorizar",
-      "perfiles prohibidos",
-      "negar por idioma",
-      "negar por origen",
+      'discriminación',
+      'excluir a un grupo',
+      'inferiorizar',
+      'perfiles prohibidos',
+      'negar por idioma',
+      'negar por origen',
     ]);
 
     if (fairnessTerm) {
       addFlag(
         flags,
-        "FAIRNESS_RISK",
-        "warning",
-        "El contenido requiere revisión de sesgo, impacto y proporcionalidad.",
-        fairnessTerm,
+        'FAIRNESS_RISK',
+        'warning',
+        'El contenido requiere revisión de sesgo, impacto y proporcionalidad.',
+        fairnessTerm
       );
       score -= 0.25;
     }
 
     const privacyTerm = containsAny(normalized, [
-      "publicar datos personales",
-      "exponer api key",
-      "revelar token",
-      "compartir contraseña",
-      "filtrar información privada",
+      'publicar datos personales',
+      'exponer api key',
+      'revelar token',
+      'compartir contraseña',
+      'filtrar información privada',
     ]);
 
     if (privacyTerm) {
       addFlag(
         flags,
-        "PRIVACY_RISK",
-        "critical",
-        "El contenido sugiere exposición de datos personales o secretos.",
-        privacyTerm,
+        'PRIVACY_RISK',
+        'critical',
+        'El contenido sugiere exposición de datos personales o secretos.',
+        privacyTerm
       );
       score -= 0.5;
     }
 
     const anchors = [
-      "ética",
-      "transparencia",
-      "bienestar",
-      "gobernanza",
-      "consentimiento",
-      "supervisión humana",
-      "derechos",
-      "proveniencia",
+      'ética',
+      'transparencia',
+      'bienestar',
+      'gobernanza',
+      'consentimiento',
+      'supervisión humana',
+      'derechos',
+      'proveniencia',
     ];
 
     const hasEthicalAnchor = anchors.some((anchor) => normalized.includes(anchor));
     if ((options.requireEthicalAnchors ?? true) && !hasEthicalAnchor) {
       addFlag(
         flags,
-        "MISSING_ETHICAL_CONTEXT",
-        "info",
-        "No se detectó un anclaje explícito de ética, transparencia, derechos o gobernanza.",
+        'MISSING_ETHICAL_CONTEXT',
+        'info',
+        'No se detectó un anclaje explícito de ética, transparencia, derechos o gobernanza.'
       );
       score -= 0.05;
     }
 
-    const critical = flags.some((flag) => flag.severity === "critical");
+    const critical = flags.some((flag) => flag.severity === 'critical');
     const valid = score >= threshold && (!(options.failOnCritical ?? true) || !critical);
 
     return {
@@ -211,7 +211,7 @@ export class EthicalValidator {
       threshold,
       flags,
       hash: generateHash(content),
-      algorithm: "sha256",
+      algorithm: 'sha256',
       normalized: true,
       contentLength: content.length,
       auditedAt: new Date().toISOString(),

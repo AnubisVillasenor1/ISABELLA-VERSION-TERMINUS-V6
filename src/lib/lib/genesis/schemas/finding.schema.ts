@@ -1,24 +1,24 @@
-import { z } from "zod";
+import { z } from 'zod';
 
-export const FindingSeveritySchema = z.enum(["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFORMATIONAL"]);
+export const FindingSeveritySchema = z.enum(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFORMATIONAL']);
 
 export type FindingSeverity = z.infer<typeof FindingSeveritySchema>;
 
 export const FindingCategorySchema = z.enum([
-  "FINANCIAL",
-  "SECURITY",
-  "DATABASE",
-  "AUTH",
-  "AUDIT",
-  "CI_CD",
-  "SUPPLY_CHAIN",
-  "ENVIRONMENT",
-  "GOVERNANCE",
-  "PRIVACY",
-  "COMPLIANCE",
-  "PERFORMANCE",
-  "RELIABILITY",
-  "MAINTAINABILITY",
+  'FINANCIAL',
+  'SECURITY',
+  'DATABASE',
+  'AUTH',
+  'AUDIT',
+  'CI_CD',
+  'SUPPLY_CHAIN',
+  'ENVIRONMENT',
+  'GOVERNANCE',
+  'PRIVACY',
+  'COMPLIANCE',
+  'PERFORMANCE',
+  'RELIABILITY',
+  'MAINTAINABILITY',
 ]);
 
 export type FindingCategory = z.infer<typeof FindingCategorySchema>;
@@ -45,7 +45,7 @@ export const FindingSchema = z.object({
         type: z.string(),
         hash: z.string().length(128),
         description: z.string(),
-      }),
+      })
     )
     .default([]),
   impact: z
@@ -60,14 +60,14 @@ export const FindingSchema = z.object({
     .default({}),
   exploitability: z
     .object({
-      attackVector: z.enum(["NETWORK", "ADJACENT", "LOCAL", "PHYSICAL"]).default("NETWORK"),
-      attackComplexity: z.enum(["LOW", "HIGH"]).default("LOW"),
-      privilegesRequired: z.enum(["NONE", "LOW", "HIGH"]).default("NONE"),
-      userInteraction: z.enum(["NONE", "REQUIRED"]).default("NONE"),
-      scope: z.enum(["UNCHANGED", "CHANGED"]).default("UNCHANGED"),
+      attackVector: z.enum(['NETWORK', 'ADJACENT', 'LOCAL', 'PHYSICAL']).default('NETWORK'),
+      attackComplexity: z.enum(['LOW', 'HIGH']).default('LOW'),
+      privilegesRequired: z.enum(['NONE', 'LOW', 'HIGH']).default('NONE'),
+      userInteraction: z.enum(['NONE', 'REQUIRED']).default('NONE'),
+      scope: z.enum(['UNCHANGED', 'CHANGED']).default('UNCHANGED'),
     })
     .default({}),
-  blastRadius: z.enum(["SYSTEM", "TENANT", "USER", "COMPONENT"]).default("COMPONENT"),
+  blastRadius: z.enum(['SYSTEM', 'TENANT', 'USER', 'COMPONENT']).default('COMPONENT'),
   cvss: z
     .object({
       baseScore: z.number().min(0).max(10),
@@ -87,14 +87,14 @@ export const FindingSchema = z.object({
   remediation: z
     .object({
       description: z.string(),
-      effort: z.enum(["LOW", "MEDIUM", "HIGH"]),
+      effort: z.enum(['LOW', 'MEDIUM', 'HIGH']),
       owner: z.string().optional(),
       dueDate: z.string().datetime().optional(),
       compensatingControl: z.string().optional(),
       verificationSteps: z.array(z.string()).default([]),
     })
     .optional(),
-  status: z.enum(["OPEN", "IN_PROGRESS", "RESOLVED", "ACCEPTED", "DEFERRED"]).default("OPEN"),
+  status: z.enum(['OPEN', 'IN_PROGRESS', 'RESOLVED', 'ACCEPTED', 'DEFERRED']).default('OPEN'),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
@@ -112,7 +112,7 @@ export function calculateCVSS(finding: Finding): {
   const { exploitability, impact } = finding;
 
   // CVSS 3.1 Base Score Calculation
-  const S = exploitability.scope === "CHANGED" ? 1 : 0;
+  const S = exploitability.scope === 'CHANGED' ? 1 : 0;
 
   const C = impact.confidentiality;
   const I = impact.integrity;
@@ -129,7 +129,7 @@ export function calculateCVSS(finding: Finding): {
 
   baseScore = Math.round(baseScore * 10) / 10;
 
-  const vectorString = `CVSS:3.1/AV:${exploitability.attackVector}/AC:${exploitability.attackComplexity}/PR:${exploitability.privilegesRequired}/UI:${exploitability.userInteraction}/S:${exploitability.scope === "CHANGED" ? "C" : "U"}/C:${C > 0.5 ? "H" : C > 0 ? "L" : "N"}/I:${I > 0.5 ? "H" : I > 0 ? "L" : "N"}/A:${A > 0.5 ? "H" : A > 0 ? "L" : "N"}`;
+  const vectorString = `CVSS:3.1/AV:${exploitability.attackVector}/AC:${exploitability.attackComplexity}/PR:${exploitability.privilegesRequired}/UI:${exploitability.userInteraction}/S:${exploitability.scope === 'CHANGED' ? 'C' : 'U'}/C:${C > 0.5 ? 'H' : C > 0 ? 'L' : 'N'}/I:${I > 0.5 ? 'H' : I > 0 ? 'L' : 'N'}/A:${A > 0.5 ? 'H' : A > 0 ? 'L' : 'N'}`;
 
   return { baseScore, vectorString };
 }
@@ -167,29 +167,29 @@ export function calculatePriority(finding: Finding): {
 
   const baseScore = severityWeights[finding.severity];
   const categoryMultiplier = categoryWeights[finding.category] || 1.0;
-  const exploitabilityBonus = finding.exploitability.attackVector === "NETWORK" ? 10 : 0;
+  const exploitabilityBonus = finding.exploitability.attackVector === 'NETWORK' ? 10 : 0;
   const blastRadiusBonus =
-    finding.blastRadius === "SYSTEM"
+    finding.blastRadius === 'SYSTEM'
       ? 15
-      : finding.blastRadius === "TENANT"
+      : finding.blastRadius === 'TENANT'
         ? 10
-        : finding.blastRadius === "USER"
+        : finding.blastRadius === 'USER'
           ? 5
           : 0;
 
   const score = Math.min(
     Math.round(baseScore * categoryMultiplier + exploitabilityBonus + blastRadiusBonus),
-    100,
+    100
   );
   const shouldBlockRelease =
-    finding.severity === "CRITICAL" ||
-    (finding.severity === "HIGH" && finding.category === "FINANCIAL");
+    finding.severity === 'CRITICAL' ||
+    (finding.severity === 'HIGH' && finding.category === 'FINANCIAL');
   const slaHours =
-    finding.severity === "CRITICAL"
+    finding.severity === 'CRITICAL'
       ? 4
-      : finding.severity === "HIGH"
+      : finding.severity === 'HIGH'
         ? 24
-        : finding.severity === "MEDIUM"
+        : finding.severity === 'MEDIUM'
           ? 72
           : 168;
   const rank = Math.max(1, Math.round(score / 10));

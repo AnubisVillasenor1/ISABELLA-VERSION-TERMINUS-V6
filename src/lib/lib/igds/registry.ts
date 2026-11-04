@@ -1,45 +1,45 @@
 /**
- * IGDS — Registro Genesis (src/lib/igds/registry.ts)
+ * IGDS — Registro Genesis (src/lib/lib/igds/registry.ts)
  * -----------------------------------------------------------------
  * Log append-only con hashes encadenados + árbol Merkle + checkpoints firmados.
  * No usa blockchain: la evidencia se sostiene en hash chaining, Merkle root,
  * firmas y (opcionalmente) timestamps externos RFC 3161.
  *
  * Implementación de referencia en memoria/JSON; la persistencia durable en
- * PostgreSQL vive en `src/lib/repositories/igds-genesis-repository.ts` y
+ * PostgreSQL vive en `src/lib/lib/repositories/igds-genesis-repository.ts` y
  * respeta la MISMA fórmula de hash (`computeEntryHash`).
  */
-import * as fs from "node:fs";
-import * as path from "node:path";
-import { randomUUID } from "node:crypto";
-import { canonicalize } from "./canonical";
-import { digestHex } from "./digests";
-import { merkleRoot } from "./merkle";
-import { manifestFinalDigest } from "./manifest";
-import type { SealSigner, SignatureEnvelope } from "./keys";
-import { signDigest, verifySignatureEnvelope } from "./keys";
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import { randomUUID } from 'node:crypto';
+import { canonicalize } from './canonical';
+import { digestHex } from './digests';
+import { merkleRoot } from './merkle';
+import { manifestFinalDigest } from './manifest';
+import type { SealSigner, SignatureEnvelope } from './keys';
+import { signDigest, verifySignatureEnvelope } from './keys';
 import type {
   GenesisCheckpoint,
   GenesisEntry,
   GenesisRevocationPayload,
   GenesisEntryType,
   IgdsManifest,
-} from "./types";
-import type { TsaClient } from "./tsa";
+} from './types';
+import type { TsaClient } from './tsa';
 
-export const GENESIS_PREVIOUS_HASH = "0".repeat(64);
+export const GENESIS_PREVIOUS_HASH = '0'.repeat(64);
 
 export type GenesisEntryPayload = Pick<
   GenesisEntry,
-  | "sequence"
-  | "entry_id"
-  | "type"
-  | "document_id"
-  | "document_digest"
-  | "manifest_digest"
-  | "previous_entry_hash"
-  | "created_at"
-  | "revocation"
+  | 'sequence'
+  | 'entry_id'
+  | 'type'
+  | 'document_id'
+  | 'document_digest'
+  | 'manifest_digest'
+  | 'previous_entry_hash'
+  | 'created_at'
+  | 'revocation'
 >;
 
 export function canonicalEntryPayload(payload: GenesisEntryPayload): Record<string, unknown> {
@@ -57,7 +57,7 @@ export function canonicalEntryPayload(payload: GenesisEntryPayload): Record<stri
 }
 
 export function computeEntryHash(payload: GenesisEntryPayload): string {
-  return digestHex("sha256", canonicalize(canonicalEntryPayload(payload)));
+  return digestHex('sha256', canonicalize(canonicalEntryPayload(payload)));
 }
 
 export interface AppendSealInput {
@@ -99,7 +99,7 @@ export interface GenesisRegistryOptions {
 function loadEntries(storePath: string): GenesisEntry[] {
   if (!fs.existsSync(storePath)) return [];
   try {
-    const parsed = JSON.parse(fs.readFileSync(storePath, "utf8")) as Partial<RegistryFile>;
+    const parsed = JSON.parse(fs.readFileSync(storePath, 'utf8')) as Partial<RegistryFile>;
     return Array.isArray(parsed.entries) ? parsed.entries : [];
   } catch {
     return [];
@@ -108,13 +108,13 @@ function loadEntries(storePath: string): GenesisEntry[] {
 
 function saveEntries(storePath: string, entries: readonly GenesisEntry[]): void {
   fs.mkdirSync(path.dirname(storePath), { recursive: true });
-  fs.writeFileSync(storePath, JSON.stringify({ entries } satisfies RegistryFile, null, 2), "utf8");
+  fs.writeFileSync(storePath, JSON.stringify({ entries } satisfies RegistryFile, null, 2), 'utf8');
 }
 
 /** Implementación de referencia (memoria o JSON) del registro Genesis. */
 export function createGenesisRegistry(options: GenesisRegistryOptions = {}): GenesisRegistry {
   const persistent = options.persistent ?? Boolean(options.storePath);
-  const storePath = options.storePath ?? path.join(process.cwd(), "isabella_genesis_registry.json");
+  const storePath = options.storePath ?? path.join(process.cwd(), 'isabella_genesis_registry.json');
   let entries: GenesisEntry[] = persistent ? loadEntries(storePath) : [];
   let tail: Promise<unknown> = Promise.resolve();
 
@@ -165,27 +165,27 @@ export function createGenesisRegistry(options: GenesisRegistryOptions = {}): Gen
       return locked(() =>
         append({
           entryId: input.entryId,
-          type: "seal",
+          type: 'seal',
           documentId: input.documentId,
           documentDigest: input.documentDigest,
           manifestDigest: input.manifestDigest,
           signature: input.signature,
           createdAt: input.createdAt,
-        }),
+        })
       );
     },
     appendRevocation(input) {
       return locked(() =>
         append({
           entryId: input.entryId,
-          type: "revocation",
+          type: 'revocation',
           documentId: input.revocation.target_id,
-          documentDigest: "",
-          manifestDigest: "",
+          documentDigest: '',
+          manifestDigest: '',
           signature: input.signature,
           revocation: input.revocation,
           createdAt: input.createdAt,
-        }),
+        })
       );
     },
     size() {
@@ -217,18 +217,18 @@ export function verifyGenesisChain(entries: readonly GenesisEntry[]): {
     if (entry.sequence !== index) {
       return {
         success: false,
-        error: "Secuencia Genesis discontinua.",
+        error: 'Secuencia Genesis discontinua.',
         corruptedSequence: entry.sequence,
       };
     }
     if (entry.previous_entry_hash !== previousHash) {
-      return { success: false, error: "Cadena Genesis rota.", corruptedSequence: entry.sequence };
+      return { success: false, error: 'Cadena Genesis rota.', corruptedSequence: entry.sequence };
     }
     const recomputed = computeEntryHash(entry);
     if (recomputed !== entry.entry_hash) {
       return {
         success: false,
-        error: "Entrada Genesis alterada.",
+        error: 'Entrada Genesis alterada.',
         corruptedSequence: entry.sequence,
       };
     }
@@ -238,7 +238,7 @@ export function verifyGenesisChain(entries: readonly GenesisEntry[]): {
 }
 
 export function manifestDigestOf(manifest: IgdsManifest): string {
-  return manifestFinalDigest(manifest, "sha256");
+  return manifestFinalDigest(manifest, 'sha256');
 }
 
 export interface CheckpointInput {
@@ -261,7 +261,7 @@ function checkpointBase(input: CheckpointBase): string {
 }
 
 export async function buildGenesisCheckpoint(
-  input: CheckpointInput,
+  input: CheckpointInput
 ): Promise<GenesisCheckpoint | null> {
   const entries = await input.registry.list(Number.MAX_SAFE_INTEGER);
   if (entries.length === 0) return null;
@@ -273,9 +273,9 @@ export async function buildGenesisCheckpoint(
     last_sequence: entries[entries.length - 1]!.sequence,
     generated_at: input.generatedAt ?? new Date().toISOString(),
   };
-  const rootDigest = digestHex("sha256", checkpointBase(base));
+  const rootDigest = digestHex('sha256', checkpointBase(base));
   const timestamp = input.tsa ? await input.tsa.timestamp(rootDigest) : null;
-  const finalDigest = digestHex("sha256", canonicalize({ ...base, timestamp_token: timestamp }));
+  const finalDigest = digestHex('sha256', canonicalize({ ...base, timestamp_token: timestamp }));
   const signature = signDigest(input.signer, finalDigest);
   return { ...base, signature, timestamp_token: timestamp };
 }
@@ -289,8 +289,8 @@ export function verifyCheckpoint(checkpoint: GenesisCheckpoint): boolean {
     generated_at: checkpoint.generated_at,
   };
   const finalDigest = digestHex(
-    "sha256",
-    canonicalize({ ...base, timestamp_token: checkpoint.timestamp_token }),
+    'sha256',
+    canonicalize({ ...base, timestamp_token: checkpoint.timestamp_token })
   );
   return verifySignatureEnvelope(checkpoint.signature, finalDigest);
 }

@@ -68,7 +68,7 @@ export function computeEri(input: EriInput): EriResult {
   const boundedLevel = Math.min(4, Math.max(0, input.evidenceLevel));
   const evidenceBonus = boundedLevel * EVIDENCE_BONUS_PER_LEVEL;
   const eri = clampEriScore(
-    Math.round(100 - entropy - fragmentation - biasPenalty + evidenceBonus),
+    Math.round(100 - entropy - fragmentation - biasPenalty + evidenceBonus)
   );
   return {
     eri,
@@ -87,29 +87,29 @@ export function isEriCompliant(eri: number): boolean {
 }
 
 const SYCOPHANCY_PHRASES = [
-  "tienes razón",
-  "exactamente como dices",
-  "eres genial",
-  "no puedo estar más de acuerdo",
-  "tu punto de vista es perfecto",
-  "admiro tu inteligencia",
-  "que gran idea",
-  "es un honor acompañarte",
+  'tienes razón',
+  'exactamente como dices',
+  'eres genial',
+  'no puedo estar más de acuerdo',
+  'tu punto de vista es perfecto',
+  'admiro tu inteligencia',
+  'que gran idea',
+  'es un honor acompañarte',
   "you're absolutely right",
   "couldn't agree more",
-  "what a brilliant idea",
+  'what a brilliant idea',
 ] as const;
 
 const TERRITORIAL_DRIFT_PHRASES = [
-  "según la legislación estadounidense",
-  "under us law",
-  "bajo jurisdicción extranjera",
-  "normativa de la unión europea",
-  "aplicar la ley de estados unidos",
-  "jurisprudencia francesa",
-  "framework externo impuesto",
-  "seguir el estándar norteamericano",
-  "ignore territorial sovereignty",
+  'según la legislación estadounidense',
+  'under us law',
+  'bajo jurisdicción extranjera',
+  'normativa de la unión europea',
+  'aplicar la ley de estados unidos',
+  'jurisprudencia francesa',
+  'framework externo impuesto',
+  'seguir el estándar norteamericano',
+  'ignore territorial sovereignty',
 ] as const;
 
 export interface BiasDetection {

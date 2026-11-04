@@ -1,6 +1,16 @@
 export const CATEGORIES = [
-  "modismo", "jerga", "tecnicismo", "regionalismo", "albur", "doble_sentido",
-  "empresarial", "programacion", "ingenieria", "dicho", "expresion", "cultural",
+  'modismo',
+  'jerga',
+  'tecnicismo',
+  'regionalismo',
+  'albur',
+  'doble_sentido',
+  'empresarial',
+  'programacion',
+  'ingenieria',
+  'dicho',
+  'expresion',
+  'cultural',
 ] as const;
 
 export type Category = (typeof CATEGORIES)[number];

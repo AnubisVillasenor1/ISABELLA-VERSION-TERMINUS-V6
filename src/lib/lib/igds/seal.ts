@@ -1,5 +1,5 @@
 /**
- * IGDS — Motor de sellado (src/lib/igds/seal.ts)
+ * IGDS — Motor de sellado (src/lib/lib/igds/seal.ts)
  * -----------------------------------------------------------------
  * Orquesta el flujo canónico:
  *   contenido → digest → manifiesto base → (RFC 3161) → manifiesto final
@@ -8,21 +8,21 @@
  * Fail-closed: si el perfil exige PQC o timestamp y no están disponibles, el
  * sellado aborta. Nunca se emite un sello degradado en silencio.
  */
-import { canonicalize } from "./canonical";
-import { digestHex } from "./digests";
-import type { DigestAlgorithm } from "./digests";
+import { canonicalize } from './canonical';
+import { digestHex } from './digests';
+import type { DigestAlgorithm } from './digests';
 import {
   attachSignatures,
   buildManifest,
   manifestClaimDigest,
   manifestFinalDigest,
   withTimestamp,
-} from "./manifest";
-import { getSealProfileSpec, type SealProfile } from "./profiles";
-import { getPqcProvider, signDigest, type SealSigner } from "./keys";
-import type { SignatureEnvelope } from "./keys";
-import type { GenesisRegistry } from "./registry";
-import type { TsaClient } from "./tsa";
+} from './manifest';
+import { getSealProfileSpec, type SealProfile } from './profiles';
+import { getPqcProvider, signDigest, type SealSigner } from './keys';
+import type { SignatureEnvelope } from './keys';
+import type { GenesisRegistry } from './registry';
+import type { TsaClient } from './tsa';
 import {
   IGDS_SEAL_LABEL,
   type GenesisEntry,
@@ -34,16 +34,16 @@ import {
   type IgdsSealPackage,
   type IgdsSource,
   type IgdsSoftBindingAssertion,
-} from "./types";
+} from './types';
 
-const CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+const CROCKFORD = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
 
 /** Identificador corto visible (12 caracteres, sin el digest completo). */
 export function shortSealId(digestValue: string): string {
-  const bytes = Buffer.from(digestValue, "hex").subarray(0, 8);
+  const bytes = Buffer.from(digestValue, 'hex').subarray(0, 8);
   let value = 0n;
   for (const byte of bytes) value = (value << 8n) | BigInt(byte);
-  let output = "";
+  let output = '';
   for (let index = 0; index < 12; index += 1) {
     output = CROCKFORD[Number(value & 31n)] + output;
     value >>= 5n;
@@ -52,9 +52,9 @@ export function shortSealId(digestValue: string): string {
 }
 
 export function normalizeContent(content: string | Buffer | unknown): Buffer {
-  if (typeof content === "string") return Buffer.from(content, "utf8");
+  if (typeof content === 'string') return Buffer.from(content, 'utf8');
   if (Buffer.isBuffer(content)) return content;
-  return Buffer.from(canonicalize(content), "utf8");
+  return Buffer.from(canonicalize(content), 'utf8');
 }
 
 export interface SealDocumentInput {
@@ -82,14 +82,14 @@ export interface SealDependencies {
 
 export async function sealDocument(
   input: SealDocumentInput,
-  dependencies: SealDependencies,
+  dependencies: SealDependencies
 ): Promise<IgdsSealPackage> {
   const spec = getSealProfileSpec(input.profile);
   const now = dependencies.now ?? (() => new Date());
   const createdAt = input.createdAt ?? now().toISOString();
 
-  const primaryAlgorithm: DigestAlgorithm = spec.hashAlgorithms.includes("sha256")
-    ? "sha256"
+  const primaryAlgorithm: DigestAlgorithm = spec.hashAlgorithms.includes('sha256')
+    ? 'sha256'
     : spec.hashAlgorithms[0]!;
   const contentBytes = normalizeContent(input.content);
   const contentDigest = digestHex(primaryAlgorithm, contentBytes);
@@ -115,7 +115,7 @@ export async function sealDocument(
   if (spec.requireTimestamp) {
     if (!dependencies.tsa) {
       throw new Error(
-        `IGDS seal: el perfil "${input.profile}" exige timestamp RFC 3161 y no hay TSA configurada.`,
+        `IGDS seal: el perfil "${input.profile}" exige timestamp RFC 3161 y no hay TSA configurada.`
       );
     }
     timestamp = await dependencies.tsa.timestamp(claimDigest);
@@ -123,7 +123,7 @@ export async function sealDocument(
       timestamp.message_imprint.algorithm !== primaryAlgorithm ||
       timestamp.message_imprint.value !== claimDigest
     ) {
-      throw new Error("IGDS seal: el token RFC 3161 no cubre el digest del manifiesto base.");
+      throw new Error('IGDS seal: el token RFC 3161 no cubre el digest del manifiesto base.');
     }
   }
 
@@ -132,21 +132,21 @@ export async function sealDocument(
 
   const signatures: SignatureEnvelope[] = [signDigest(dependencies.signer, finalDigest)];
 
-  const pqcRequested = spec.signatureAlgorithms.includes("ML-DSA-65");
+  const pqcRequested = spec.signatureAlgorithms.includes('ML-DSA-65');
   if (pqcRequested) {
     const provider = getPqcProvider();
     if (!provider) {
       if (spec.requirePqc) {
         throw new Error(
-          `IGDS seal: el perfil "${input.profile}" exige ML-DSA-65 y no hay proveedor PQC registrado.`,
+          `IGDS seal: el perfil "${input.profile}" exige ML-DSA-65 y no hay proveedor PQC registrado.`
         );
       }
     } else {
       signatures.push({
-        algorithm: "ML-DSA-65",
+        algorithm: 'ML-DSA-65',
         key_id: provider.keyId,
         public_key: provider.publicKey,
-        value: provider.sign(Buffer.from(finalDigest, "utf8")).toString("base64"),
+        value: provider.sign(Buffer.from(finalDigest, 'utf8')).toString('base64'),
         signed_digest: finalDigest,
       });
     }
@@ -170,7 +170,7 @@ export async function sealDocument(
     issued: createdAt,
     hash_algorithms: [...spec.hashAlgorithms],
     signature_algorithms: signatures.map((signature) => signature.algorithm),
-    registry: "Isabella Genesis",
+    registry: 'Isabella Genesis',
     instruction: `Verifica en Isabella Genesis con la entrada #${entry.sequence}.`,
   };
 

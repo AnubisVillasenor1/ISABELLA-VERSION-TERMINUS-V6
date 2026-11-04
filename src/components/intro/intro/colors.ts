@@ -6,15 +6,15 @@
  */
 
 export const COLORS = {
-  voidBlack: "#02040A",
-  deepSpace: "#07111F",
-  indigoCore: "#312E81",
-  electricViolet: "#8B5CF6",
-  cyanSignal: "#22D3EE",
-  roseHeart: "#FB7185",
-  emeraldLife: "#34D399",
-  goldAccent: "#FACC15",
-  whiteLight: "#F8FAFC",
+  voidBlack: '#02040A',
+  deepSpace: '#07111F',
+  indigoCore: '#312E81',
+  electricViolet: '#8B5CF6',
+  cyanSignal: '#22D3EE',
+  roseHeart: '#FB7185',
+  emeraldLife: '#34D399',
+  goldAccent: '#FACC15',
+  whiteLight: '#F8FAFC',
 } as const;
 
 export const COLORS_THREE = {

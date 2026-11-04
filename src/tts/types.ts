@@ -1,11 +1,37 @@
 /** state: engine-generated — shared TTS types. */
-export type VoiceMode = "CONVERSACION" | "PODCAST" | "TIEMPO_REAL" | "EDGE_LITE" | "CROSS_LINGUAL";
-export const VOICE_MODES: readonly VoiceMode[] = ["CONVERSACION", "PODCAST", "TIEMPO_REAL", "EDGE_LITE", "CROSS_LINGUAL"];
-export type MxRegion = "norte" | "occidente" | "cdmx" | "bajio" | "sur" | "peninsular";
-export const MX_REGIONS: readonly MxRegion[] = ["norte", "occidente", "cdmx", "bajio", "sur", "peninsular"];
+export type VoiceMode = 'CONVERSACION' | 'PODCAST' | 'TIEMPO_REAL' | 'EDGE_LITE' | 'CROSS_LINGUAL';
+export const VOICE_MODES: readonly VoiceMode[] = [
+  'CONVERSACION',
+  'PODCAST',
+  'TIEMPO_REAL',
+  'EDGE_LITE',
+  'CROSS_LINGUAL',
+];
+export type MxRegion = 'norte' | 'occidente' | 'cdmx' | 'bajio' | 'sur' | 'peninsular';
+export const MX_REGIONS: readonly MxRegion[] = [
+  'norte',
+  'occidente',
+  'cdmx',
+  'bajio',
+  'sur',
+  'peninsular',
+];
 
 /** Emotion axes actually implemented (a 12-axis subset of the spec's Ω-X128 — see docs/tts). */
-export const EMOTION_AXES = ["authority", "confidence", "urgency", "humor", "empathy", "excitement", "calm", "warmth", "curiosity", "concern", "formality", "sadness"] as const;
+export const EMOTION_AXES = [
+  'authority',
+  'confidence',
+  'urgency',
+  'humor',
+  'empathy',
+  'excitement',
+  'calm',
+  'warmth',
+  'curiosity',
+  'concern',
+  'formality',
+  'sadness',
+] as const;
 export type EmotionAxis = (typeof EMOTION_AXES)[number];
 export type EmotionVector = Readonly<Record<EmotionAxis, number>>;
 
@@ -16,7 +42,6 @@ export interface SpeechRequest {
   readonly mode?: VoiceMode;
   readonly region?: MxRegion;
   readonly emotionVector?: Partial<Record<string, number>>;
-  readonly voice?: string;
 }
 
 export interface CulturalCue {
@@ -43,4 +68,4 @@ export interface ProsodyPlan {
   readonly estimatedDurationMs: number;
 }
 
-export type ExpertKind = "native-fsim" | "server-tts" | "browser-speech";
+export type ExpertKind = 'native-fsim' | 'server-tts' | 'browser-speech';

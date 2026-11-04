@@ -2,16 +2,16 @@
  * WAN 2.2 I2V Native Integration Ω
  * state: engine-generated
  * Part of ISABELLA-Q Ω Cognitive Architecture
- * 
+ *
  * Native integration for Hugging Face Space: kulkas2pintu/wan777
  * Gradio API wrapper for Wan 2.2 14B Image-to-Video with Lightning LoRA
- * 
+ *
  * Endpoint: https://kulkas2pintu-wan777.hf.space
  * Auth: Bearer HF_TOKEN
  */
 
-import { EventEmitter } from "node:events";
-import { randomBytes, createHash } from "node:crypto";
+import { EventEmitter } from 'node:events';
+import { randomBytes, createHash } from 'node:crypto';
 
 export interface WANConfig {
   readonly spaceUrl: string;
@@ -39,16 +39,16 @@ export interface WANGenerateParams {
   readonly lastImage?: WANImageInput;
 }
 
-export type WANScheduler = 
-  | "FlowMatchEulerDiscrete"
-  | "SASolver"
-  | "DEISMultistep"
-  | "DPMSolverMultistepInverse"
-  | "UniPCMultistep"
-  | "DPMSolverMultistep"
-  | "DPMSolverSinglestep";
+export type WANScheduler =
+  | 'FlowMatchEulerDiscrete'
+  | 'SASolver'
+  | 'DEISMultistep'
+  | 'DPMSolverMultistepInverse'
+  | 'UniPCMultistep'
+  | 'DPMSolverMultistep'
+  | 'DPMSolverSinglestep';
 
-export type WANFrameMultiplier = "16" | "32" | "64" | "128";
+export type WANFrameMultiplier = '16' | '32' | '64' | '128';
 
 export interface WANImageInput {
   readonly path?: string;
@@ -71,7 +71,7 @@ export interface WANFileData {
   readonly origName?: string | null;
   readonly mimeType?: string | null;
   readonly isStream?: boolean;
-  readonly meta: { _type: "gradio.FileData" };
+  readonly meta: { _type: 'gradio.FileData' };
 }
 
 export interface WANFrameExtractResult {
@@ -81,7 +81,7 @@ export interface WANFrameExtractResult {
   readonly origName?: string | null;
   readonly mimeType?: string | null;
   readonly isStream?: boolean;
-  readonly meta: { _type: "gradio.FileData" };
+  readonly meta: { _type: 'gradio.FileData' };
 }
 
 export interface WANQueueResponse {
@@ -90,7 +90,7 @@ export interface WANQueueResponse {
 }
 
 export interface WANJobStatus {
-  readonly status: "queued" | "processing" | "completed" | "failed";
+  readonly status: 'queued' | 'processing' | 'completed' | 'failed';
   readonly position?: number;
   readonly output?: WANVideoOutput;
   readonly error?: string;
@@ -98,11 +98,12 @@ export interface WANJobStatus {
 }
 
 const DEFAULT_CONFIG: WANConfig = {
-  spaceUrl: "https://kulkas2pintu-wan777.hf.space",
-  hfToken: process.env.HF_TOKEN || "",
+  spaceUrl: 'https://kulkas2pintu-wan777.hf.space',
+  hfToken: process.env.HF_TOKEN || '',
   defaultParams: {
-    prompt: "make this image come alive, cinematic motion, smooth animation",
-    negativePrompt: "色调艳丽, 过曝, 静态, 细节模糊不清, 字幕, 风格, 作品, 画作, 画面, 静止, 整体发灰, 最差质量, 低质量, JPEG压缩残留, 丑陋的, 残缺的, 多余的手指, 画得不好的手部, 画得不好的脸部, 畸形的, 毁容的, 形态畸形的肢体, 手指融合, 静止不动的画面, 杂乱的背景, 三条腿, 背景人很多, 倒着走",
+    prompt: 'make this image come alive, cinematic motion, smooth animation',
+    negativePrompt:
+      '色调艳丽, 过曝, 静态, 细节模糊不清, 字幕, 风格, 作品, 画作, 画面, 静止, 整体发灰, 最差质量, 低质量, JPEG压缩残留, 丑陋的, 残缺的, 多余的手指, 画得不好的手部, 画得不好的脸部, 畸形的, 毁容的, 形态畸形的肢体, 手指融合, 静止不动的画面, 杂乱的背景, 三条腿, 背景人很多, 倒着走',
     steps: 4,
     durationSeconds: 3.5,
     guidanceScale: 1,
@@ -110,9 +111,9 @@ const DEFAULT_CONFIG: WANConfig = {
     seed: 42,
     randomizeSeed: true,
     quality: 6,
-    scheduler: "UniPCMultistep",
+    scheduler: 'UniPCMultistep',
     flowShift: 3.0,
-    frameMultiplier: "16",
+    frameMultiplier: '16',
     safeMode: true,
     displayResult: true,
   },
@@ -121,11 +122,11 @@ const DEFAULT_CONFIG: WANConfig = {
 };
 
 const ENDPOINTS = {
-  generateVideo: "/generate_video",
-  extractFrame: "/extract_frame",
-  queueJoin: "/gradio_api/queue/join",
-  queueData: "/gradio_api/queue/data",
-  upload: "/gradio_api/upload",
+  generateVideo: '/generate_video',
+  extractFrame: '/extract_frame',
+  queueJoin: '/gradio_api/queue/join',
+  queueData: '/gradio_api/queue/data',
+  upload: '/gradio_api/upload',
 };
 
 /**
@@ -142,15 +143,15 @@ export class WANClient extends EventEmitter {
   }
 
   private generateSessionHash(): string {
-    return randomBytes(16).toString("hex");
+    return randomBytes(16).toString('hex');
   }
 
   private getHeaders(): Record<string, string> {
     const headers: Record<string, string> = {
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
     };
     if (this.config.hfToken) {
-      headers["Authorization"] = `Bearer ${this.config.hfToken}`;
+      headers['Authorization'] = `Bearer ${this.config.hfToken}`;
     }
     return headers;
   }
@@ -158,28 +159,32 @@ export class WANClient extends EventEmitter {
   /**
    * Upload an image file to the Gradio server
    */
-  async uploadImage(file: Buffer | string, filename: string, mimeType: string): Promise<WANFileData> {
+  async uploadImage(
+    file: Buffer | string,
+    filename: string,
+    mimeType: string
+  ): Promise<WANFileData> {
     const formData = new FormData();
-    
-    if (typeof file === "string") {
+
+    if (typeof file === 'string') {
       // URL or base64
-      if (file.startsWith("http")) {
+      if (file.startsWith('http')) {
         // Fetch and upload
         const response = await fetch(file);
         const blob = await response.blob();
-        formData.append("files", blob, filename);
+        formData.append('files', blob, filename);
       } else {
         // Assume base64
-        const buffer = Buffer.from(file, "base64");
-        formData.append("files", new Blob([new Uint8Array(buffer)]), filename);
+        const buffer = Buffer.from(file, 'base64');
+        formData.append('files', new Blob([new Uint8Array(buffer)]), filename);
       }
     } else {
-      formData.append("files", new Blob([new Uint8Array(file)]), filename);
+      formData.append('files', new Blob([new Uint8Array(file)]), filename);
     }
 
     const response = await fetch(`${this.config.spaceUrl}${ENDPOINTS.upload}`, {
-      method: "POST",
-      headers: this.config.hfToken ? { "Authorization": `Bearer ${this.config.hfToken}` } : {},
+      method: 'POST',
+      headers: this.config.hfToken ? { Authorization: `Bearer ${this.config.hfToken}` } : {},
       body: formData,
     });
 
@@ -196,7 +201,7 @@ export class WANClient extends EventEmitter {
    */
   private prepareImageInput(input: WANImageInput): Record<string, unknown> {
     const result: Record<string, unknown> = {
-      meta: { _type: "gradio.FileData" },
+      meta: { _type: 'gradio.FileData' },
     };
 
     if (input.path) result.path = input.path;
@@ -220,7 +225,7 @@ export class WANClient extends EventEmitter {
     params: Partial<WANGenerateParams> = {}
   ): Promise<WANVideoOutput> {
     const mergedParams = { ...this.config.defaultParams, ...params };
-    
+
     // Prepare payload
     const payload = [
       this.prepareImageInput(inputImage),
@@ -243,14 +248,14 @@ export class WANClient extends EventEmitter {
 
     // Join queue
     const joinResponse = await this.joinQueue(payload);
-    
+
     // Wait for completion
     return this.waitForCompletion(joinResponse);
   }
 
   private async joinQueue(data: unknown[]): Promise<WANQueueResponse> {
     const response = await fetch(`${this.config.spaceUrl}${ENDPOINTS.queueJoin}`, {
-      method: "POST",
+      method: 'POST',
       headers: this.getHeaders(),
       body: JSON.stringify({
         data,
@@ -272,26 +277,26 @@ export class WANClient extends EventEmitter {
 
     while (Date.now() - startTime < this.config.timeoutMs) {
       const status = await this.checkStatus();
-      
-      if (status.status === "completed" && status.output) {
-        this.emit("generation:completed", status.output);
+
+      if (status.status === 'completed' && status.output) {
+        this.emit('generation:completed', status.output);
         return status.output;
       }
-      
-      if (status.status === "failed") {
+
+      if (status.status === 'failed') {
         throw new Error(`GENERATION_FAILED: ${status.error}`);
       }
-      
+
       if (status.position !== undefined && status.position !== lastPosition) {
         lastPosition = status.position;
-        this.emit("generation:progress", { position: status.position, progress: status.progress });
+        this.emit('generation:progress', { position: status.position, progress: status.progress });
       }
-      
+
       // Wait before polling
       await this.sleep(Math.min(2000 + status.position! * 100, 10000));
     }
 
-    throw new Error("GENERATION_TIMEOUT");
+    throw new Error('GENERATION_TIMEOUT');
   }
 
   private async checkStatus(): Promise<WANJobStatus> {
@@ -305,42 +310,42 @@ export class WANClient extends EventEmitter {
     }
 
     const data = await response.json();
-    
+
     if (!data.msg || data.msg.length === 0) {
-      return { status: "queued", position: 0 };
+      return { status: 'queued', position: 0 };
     }
 
     const msg = data.msg[0];
-    
-    if (msg.msg === "process_completed") {
+
+    if (msg.msg === 'process_completed') {
       return {
-        status: "completed",
+        status: 'completed',
         output: msg.output as WANVideoOutput,
       };
     }
-    
-    if (msg.msg === "process_error") {
+
+    if (msg.msg === 'process_error') {
       return {
-        status: "failed",
-        error: msg.output?.error || "Unknown error",
+        status: 'failed',
+        error: msg.output?.error || 'Unknown error',
       };
     }
 
     return {
-      status: "processing",
-      position: msg.msg === "queue_full" ? data.msg[1]?.position : 0,
-      progress: msg.msg === "progress" ? msg.output?.progress : undefined,
+      status: 'processing',
+      position: msg.msg === 'queue_full' ? data.msg[1]?.position : 0,
+      progress: msg.msg === 'progress' ? msg.output?.progress : undefined,
     };
   }
 
   /**
    * Extract a frame from generated video
    */
-  async extractFrame(videoPath: WANFileData, timestamp: number = 0): Promise<WANFrameExtractResult> {
-    const payload = [
-      { video: videoPath, subtitles: null },
-      timestamp,
-    ];
+  async extractFrame(
+    videoPath: WANFileData,
+    timestamp: number = 0
+  ): Promise<WANFrameExtractResult> {
+    const payload = [{ video: videoPath, subtitles: null }, timestamp];
 
     const joinResponse = await this.joinQueueWithFnIndex(payload, 1); // extract_frame is fn_index 1
     return this.waitForFrameExtraction(joinResponse);
@@ -348,7 +353,7 @@ export class WANClient extends EventEmitter {
 
   private async joinQueueWithFnIndex(data: unknown[], fnIndex: number): Promise<WANQueueResponse> {
     const response = await fetch(`${this.config.spaceUrl}${ENDPOINTS.queueJoin}`, {
-      method: "POST",
+      method: 'POST',
       headers: this.getHeaders(),
       body: JSON.stringify({
         data,
@@ -364,7 +369,9 @@ export class WANClient extends EventEmitter {
     return response.json();
   }
 
-  private async waitForFrameExtraction(joinResponse: WANQueueResponse): Promise<WANFrameExtractResult> {
+  private async waitForFrameExtraction(
+    joinResponse: WANQueueResponse
+  ): Promise<WANFrameExtractResult> {
     const startTime = Date.now();
 
     while (Date.now() - startTime < this.config.timeoutMs) {
@@ -378,13 +385,13 @@ export class WANClient extends EventEmitter {
       }
 
       const data = await response.json();
-      
+
       if (data.msg && data.msg.length > 0) {
         const msg = data.msg[0];
-        if (msg.msg === "process_completed") {
+        if (msg.msg === 'process_completed') {
           return msg.output as WANFrameExtractResult;
         }
-        if (msg.msg === "process_error") {
+        if (msg.msg === 'process_error') {
           throw new Error(`FRAME_EXTRACTION_FAILED: ${msg.output?.error}`);
         }
       }
@@ -392,7 +399,7 @@ export class WANClient extends EventEmitter {
       await this.sleep(1000);
     }
 
-    throw new Error("FRAME_EXTRACTION_TIMEOUT");
+    throw new Error('FRAME_EXTRACTION_TIMEOUT');
   }
 
   /**
@@ -400,13 +407,13 @@ export class WANClient extends EventEmitter {
    */
   getSchedulers(): WANScheduler[] {
     return [
-      "FlowMatchEulerDiscrete",
-      "SASolver",
-      "DEISMultistep",
-      "DPMSolverMultistepInverse",
-      "UniPCMultistep",
-      "DPMSolverMultistep",
-      "DPMSolverSinglestep",
+      'FlowMatchEulerDiscrete',
+      'SASolver',
+      'DEISMultistep',
+      'DPMSolverMultistepInverse',
+      'UniPCMultistep',
+      'DPMSolverMultistep',
+      'DPMSolverSinglestep',
     ];
   }
 
@@ -414,7 +421,7 @@ export class WANClient extends EventEmitter {
    * Get available frame multipliers
    */
   getFrameMultipliers(): WANFrameMultiplier[] {
-    return ["16", "32", "64", "128"];
+    return ['16', '32', '64', '128'];
   }
 
   /**
@@ -424,38 +431,47 @@ export class WANClient extends EventEmitter {
     const errors: string[] = [];
 
     if (params.steps !== undefined && (params.steps < 1 || params.steps > 30)) {
-      errors.push("steps must be between 1 and 30");
+      errors.push('steps must be between 1 and 30');
     }
-    if (params.durationSeconds !== undefined && (params.durationSeconds < 0.5 || params.durationSeconds > 10)) {
-      errors.push("durationSeconds must be between 0.5 and 10");
+    if (
+      params.durationSeconds !== undefined &&
+      (params.durationSeconds < 0.5 || params.durationSeconds > 10)
+    ) {
+      errors.push('durationSeconds must be between 0.5 and 10');
     }
-    if (params.guidanceScale !== undefined && (params.guidanceScale < 0 || params.guidanceScale > 10)) {
-      errors.push("guidanceScale must be between 0 and 10");
+    if (
+      params.guidanceScale !== undefined &&
+      (params.guidanceScale < 0 || params.guidanceScale > 10)
+    ) {
+      errors.push('guidanceScale must be between 0 and 10');
     }
-    if (params.guidanceScale2 !== undefined && (params.guidanceScale2 < 0 || params.guidanceScale2 > 10)) {
-      errors.push("guidanceScale2 must be between 0 and 10");
+    if (
+      params.guidanceScale2 !== undefined &&
+      (params.guidanceScale2 < 0 || params.guidanceScale2 > 10)
+    ) {
+      errors.push('guidanceScale2 must be between 0 and 10');
     }
     if (params.seed !== undefined && (params.seed < 0 || params.seed > 2147483647)) {
-      errors.push("seed must be between 0 and 2147483647");
+      errors.push('seed must be between 0 and 2147483647');
     }
     if (params.quality !== undefined && (params.quality < 1 || params.quality > 10)) {
-      errors.push("quality must be between 1 and 10");
+      errors.push('quality must be between 1 and 10');
     }
     if (params.flowShift !== undefined && (params.flowShift < 0.5 || params.flowShift > 15)) {
-      errors.push("flowShift must be between 0.5 and 15");
+      errors.push('flowShift must be between 0.5 and 15');
     }
-    if (params.frameMultiplier && !["16", "32", "64", "128"].includes(params.frameMultiplier)) {
-      errors.push("frameMultiplier must be one of: 16, 32, 64, 128");
+    if (params.frameMultiplier && !['16', '32', '64', '128'].includes(params.frameMultiplier)) {
+      errors.push('frameMultiplier must be one of: 16, 32, 64, 128');
     }
     if (params.scheduler && !this.getSchedulers().includes(params.scheduler)) {
-      errors.push(`scheduler must be one of: ${this.getSchedulers().join(", ")}`);
+      errors.push(`scheduler must be one of: ${this.getSchedulers().join(', ')}`);
     }
 
     return { valid: errors.length === 0, errors };
   }
 
   private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**
@@ -465,7 +481,7 @@ export class WANClient extends EventEmitter {
     const start = Date.now();
     try {
       const response = await fetch(`${this.config.spaceUrl}/config`, {
-        method: "GET",
+        method: 'GET',
         headers: this.getHeaders(),
       });
       return { healthy: response.ok, latencyMs: Date.now() - start };
@@ -481,7 +497,7 @@ export class WANClient extends EventEmitter {
  */
 export class WANTool extends EventEmitter {
   private client: WANClient;
-  private toolId = "multimodal.wan.i2v";
+  private toolId = 'multimodal.wan.i2v';
 
   constructor(config?: Partial<WANConfig>) {
     super();
@@ -491,66 +507,70 @@ export class WANTool extends EventEmitter {
   getToolDefinition() {
     return {
       id: this.toolId,
-      name: "WAN 2.2 I2V",
-      description: "Generate video animations from static images using Wan 2.2 14B Image-to-Video model with Lightning LoRA",
-      category: "multimodal",
-      subcategory: "video-generation",
-      capabilities: [
-        "image-to-video",
-        "animation",
-        "cinematic-motion",
-        "frame-extraction",
-      ],
+      name: 'WAN 2.2 I2V',
+      description:
+        'Generate video animations from static images using Wan 2.2 14B Image-to-Video model with Lightning LoRA',
+      category: 'multimodal',
+      subcategory: 'video-generation',
+      capabilities: ['image-to-video', 'animation', 'cinematic-motion', 'frame-extraction'],
       inputSchema: {
-        type: "object",
-        required: ["inputImage"],
+        type: 'object',
+        required: ['inputImage'],
         properties: {
           inputImage: {
-            type: "object",
-            description: "Input image (URL, base64, or file path)",
+            type: 'object',
+            description: 'Input image (URL, base64, or file path)',
             properties: {
-              url: { type: "string", format: "uri" },
-              base64: { type: "string" },
-              path: { type: "string" },
-              origName: { type: "string" },
-              mimeType: { type: "string" },
+              url: { type: 'string', format: 'uri' },
+              base64: { type: 'string' },
+              path: { type: 'string' },
+              origName: { type: 'string' },
+              mimeType: { type: 'string' },
             },
           },
-          prompt: { type: "string", description: "Animation prompt" },
-          negativePrompt: { type: "string", description: "Negative prompt" },
-          steps: { type: "integer", minimum: 1, maximum: 30, default: 4 },
-          durationSeconds: { type: "number", minimum: 0.5, maximum: 10, default: 3.5 },
-          guidanceScale: { type: "number", minimum: 0, maximum: 10, default: 1 },
-          guidanceScale2: { type: "number", minimum: 0, maximum: 10, default: 1 },
-          seed: { type: "integer", minimum: 0, maximum: 2147483647, default: 42 },
-          randomizeSeed: { type: "boolean", default: true },
-          quality: { type: "integer", minimum: 1, maximum: 10, default: 6 },
-          scheduler: { type: "string", enum: this.client.getSchedulers(), default: "UniPCMultistep" },
-          flowShift: { type: "number", minimum: 0.5, maximum: 15, default: 3.0 },
-          frameMultiplier: { type: "string", enum: this.client.getFrameMultipliers(), default: "16" },
-          safeMode: { type: "boolean", default: true },
-          lastImage: { type: "object", description: "Optional end frame image" },
+          prompt: { type: 'string', description: 'Animation prompt' },
+          negativePrompt: { type: 'string', description: 'Negative prompt' },
+          steps: { type: 'integer', minimum: 1, maximum: 30, default: 4 },
+          durationSeconds: { type: 'number', minimum: 0.5, maximum: 10, default: 3.5 },
+          guidanceScale: { type: 'number', minimum: 0, maximum: 10, default: 1 },
+          guidanceScale2: { type: 'number', minimum: 0, maximum: 10, default: 1 },
+          seed: { type: 'integer', minimum: 0, maximum: 2147483647, default: 42 },
+          randomizeSeed: { type: 'boolean', default: true },
+          quality: { type: 'integer', minimum: 1, maximum: 10, default: 6 },
+          scheduler: {
+            type: 'string',
+            enum: this.client.getSchedulers(),
+            default: 'UniPCMultistep',
+          },
+          flowShift: { type: 'number', minimum: 0.5, maximum: 15, default: 3.0 },
+          frameMultiplier: {
+            type: 'string',
+            enum: this.client.getFrameMultipliers(),
+            default: '16',
+          },
+          safeMode: { type: 'boolean', default: true },
+          lastImage: { type: 'object', description: 'Optional end frame image' },
         },
       },
       outputSchema: {
-        type: "object",
+        type: 'object',
         properties: {
           video: {
-            type: "object",
+            type: 'object',
             properties: {
-              path: { type: "string" },
-              url: { type: "string" },
-              size: { type: "integer" },
-              origName: { type: "string" },
-              mimeType: { type: "string" },
+              path: { type: 'string' },
+              url: { type: 'string' },
+              size: { type: 'integer' },
+              origName: { type: 'string' },
+              mimeType: { type: 'string' },
             },
           },
-          subtitles: { type: ["object", "null"] },
-          seed: { type: "integer" },
+          subtitles: { type: ['object', 'null'] },
+          seed: { type: 'integer' },
         },
       },
-      costEstimate: { compute: "high", latency: "medium", credits: "variable" },
-      requirements: { gpu: true, memory: "16GB+" },
+      costEstimate: { compute: 'high', latency: 'medium', credits: 'variable' },
+      requirements: { gpu: true, memory: '16GB+' },
     };
   }
 
@@ -560,19 +580,19 @@ export class WANTool extends EventEmitter {
     [key: string]: unknown;
   }): Promise<WANVideoOutput> {
     const { inputImage, lastImage, ...generationParams } = params;
-    
-    this.emit("tool:started", { toolId: this.toolId, params: generationParams });
-    
+
+    this.emit('tool:started', { toolId: this.toolId, params: generationParams });
+
     try {
       const result = await this.client.generateVideo(inputImage, {
         ...generationParams,
         lastImage,
       } as WANGenerateParams);
-      
-      this.emit("tool:completed", { toolId: this.toolId, result });
+
+      this.emit('tool:completed', { toolId: this.toolId, result });
       return result;
     } catch (error) {
-      this.emit("tool:failed", { toolId: this.toolId, error: String(error) });
+      this.emit('tool:failed', { toolId: this.toolId, error: String(error) });
       throw error;
     }
   }

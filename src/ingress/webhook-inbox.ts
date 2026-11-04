@@ -5,19 +5,24 @@
  * Estados: NEW → (complete) DONE | (fail) liberado para que el reintento del proveedor lo reprocese.
  * Límite honesto: memoria de proceso; con varias instancias necesita un almacén compartido.
  */
-export type InboxBegin = "NEW" | "IN_FLIGHT" | "DUPLICATE";
+export type InboxBegin = 'NEW' | 'IN_FLIGHT' | 'DUPLICATE';
 
 interface Entry {
-  state: "IN_FLIGHT" | "DONE";
+  state: 'IN_FLIGHT' | 'DONE';
   expiresAt: number;
 }
 
 export class WebhookInbox {
   private readonly entries = new Map<string, Entry>();
 
-  constructor(private readonly ttlMs = 72 * 3_600_000, private readonly maxEntries = 50_000, private readonly inFlightTtlMs = 5 * 60_000) {
-    if (!(ttlMs > 0) || !(inFlightTtlMs > 0)) throw new RangeError("INBOX: ttl must be positive");
-    if (!Number.isInteger(maxEntries) || maxEntries < 1) throw new RangeError("INBOX: maxEntries must be >= 1");
+  constructor(
+    private readonly ttlMs = 72 * 3_600_000,
+    private readonly maxEntries = 50_000,
+    private readonly inFlightTtlMs = 5 * 60_000
+  ) {
+    if (!(ttlMs > 0) || !(inFlightTtlMs > 0)) throw new RangeError('INBOX: ttl must be positive');
+    if (!Number.isInteger(maxEntries) || maxEntries < 1)
+      throw new RangeError('INBOX: maxEntries must be >= 1');
   }
 
   get size(): number {
@@ -25,22 +30,24 @@ export class WebhookInbox {
   }
 
   begin(eventId: string, now = Date.now()): InboxBegin {
-    if (typeof eventId !== "string" || eventId.length === 0 || eventId.length > 256) throw new RangeError("INBOX: invalid event id");
+    if (typeof eventId !== 'string' || eventId.length === 0 || eventId.length > 256)
+      throw new RangeError('INBOX: invalid event id');
     const existing = this.entries.get(eventId);
-    if (existing !== undefined && existing.expiresAt > now) return existing.state === "DONE" ? "DUPLICATE" : "IN_FLIGHT";
-    this.entries.set(eventId, { state: "IN_FLIGHT", expiresAt: now + this.inFlightTtlMs });
+    if (existing !== undefined && existing.expiresAt > now)
+      return existing.state === 'DONE' ? 'DUPLICATE' : 'IN_FLIGHT';
+    this.entries.set(eventId, { state: 'IN_FLIGHT', expiresAt: now + this.inFlightTtlMs });
     if (this.entries.size > this.maxEntries) this.evict(now);
-    return "NEW";
+    return 'NEW';
   }
 
   complete(eventId: string, now = Date.now()): void {
-    this.entries.set(eventId, { state: "DONE", expiresAt: now + this.ttlMs });
+    this.entries.set(eventId, { state: 'DONE', expiresAt: now + this.ttlMs });
   }
 
   /** El procesamiento falló: se libera para que el reintento del proveedor vuelva a intentarlo. */
   fail(eventId: string): void {
     const e = this.entries.get(eventId);
-    if (e !== undefined && e.state === "IN_FLIGHT") this.entries.delete(eventId);
+    if (e !== undefined && e.state === 'IN_FLIGHT') this.entries.delete(eventId);
   }
 
   private evict(now: number): void {
@@ -63,7 +70,8 @@ export class EventOrderGuard {
   private readonly last = new Map<string, number>();
 
   constructor(private readonly maxKeys = 50_000) {
-    if (!Number.isInteger(maxKeys) || maxKeys < 1) throw new RangeError("ORDER_GUARD: maxKeys must be >= 1");
+    if (!Number.isInteger(maxKeys) || maxKeys < 1)
+      throw new RangeError('ORDER_GUARD: maxKeys must be >= 1');
   }
 
   /** true si el evento es el más reciente conocido para la clave (y lo registra); false si es obsoleto. */

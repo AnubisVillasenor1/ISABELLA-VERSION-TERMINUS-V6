@@ -3,7 +3,7 @@
  * In-process append-only chain for TINA orchestration events.
  * Production durable ledger remains BookPI Postgres / bookpi-signer.
  */
-import { sha256Hex } from "./ethical";
+import { sha256Hex } from './ethical';
 
 export interface TinaBookEvent {
   type: string;

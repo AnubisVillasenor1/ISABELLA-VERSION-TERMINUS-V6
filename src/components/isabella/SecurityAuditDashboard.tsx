@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   ShieldCheck,
   ShieldAlert,
@@ -10,9 +10,9 @@ import {
   CheckCircle2,
   AlertTriangle,
   XCircle,
-} from "lucide-react";
-import { getSessionToken } from "@/lib/auth-client";
-import { toast } from "sonner";
+} from 'lucide-react';
+import { getSessionToken } from '@/lib/auth-client';
+import { toast } from 'sonner';
 
 export interface SecurityAuditLogItem {
   id: string;
@@ -20,7 +20,7 @@ export interface SecurityAuditLogItem {
   action: string;
   actor: string;
   source: string;
-  securityStatus: "ALLOWED" | "CHALLENGED" | "QUARANTINED" | "BLOCKED";
+  securityStatus: 'ALLOWED' | 'CHALLENGED' | 'QUARANTINED' | 'BLOCKED';
   severity: string;
   evidenceId: string;
 }
@@ -31,16 +31,16 @@ const INITIAL_AUDIT_LOGS: SecurityAuditLogItem[] = [];
 export function SecurityAuditDashboard() {
   const [logs, setLogs] = useState<SecurityAuditLogItem[]>(INITIAL_AUDIT_LOGS);
   const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [auditSecretVerified, setAuditSecretVerified] = useState(false);
 
   const fetchSecurityAuditLogs = useCallback(async () => {
     setLoading(true);
     try {
-      const token = getSessionToken() || sessionStorage.getItem("isabella_session_token");
+      const token = getSessionToken() || sessionStorage.getItem('isabella_session_token');
       if (token) {
-        const res = await fetch("/api/security?action=audit-logs", {
+        const res = await fetch('/api/security?action=audit-logs', {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (res.ok) {
@@ -68,31 +68,31 @@ export function SecurityAuditDashboard() {
       item.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.actor.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.source.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "ALL" || item.securityStatus === statusFilter;
+    const matchesStatus = statusFilter === 'ALL' || item.securityStatus === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
-  const getStatusBadge = (status: SecurityAuditLogItem["securityStatus"]) => {
+  const getStatusBadge = (status: SecurityAuditLogItem['securityStatus']) => {
     switch (status) {
-      case "ALLOWED":
+      case 'ALLOWED':
         return (
           <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 font-mono text-[10px] font-bold text-emerald-400">
             <CheckCircle2 className="size-3" /> PERMITIDO
           </span>
         );
-      case "CHALLENGED":
+      case 'CHALLENGED':
         return (
           <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-0.5 font-mono text-[10px] font-bold text-amber-400">
             <AlertTriangle className="size-3" /> DESAFÍO
           </span>
         );
-      case "QUARANTINED":
+      case 'QUARANTINED':
         return (
           <span className="inline-flex items-center gap-1 rounded-full border border-purple-500/30 bg-purple-500/10 px-2.5 py-0.5 font-mono text-[10px] font-bold text-purple-400">
             <ShieldAlert className="size-3" /> CUARENTENA
           </span>
         );
-      case "BLOCKED":
+      case 'BLOCKED':
         return (
           <span className="inline-flex items-center gap-1 rounded-full border border-rose-500/30 bg-rose-500/10 px-2.5 py-0.5 font-mono text-[10px] font-bold text-rose-400">
             <XCircle className="size-3" /> BLOQUEADO
@@ -122,12 +122,12 @@ export function SecurityAuditDashboard() {
               <span
                 className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-mono text-[10px] font-bold ${
                   auditSecretVerified
-                    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
-                    : "border-rose-500/30 bg-rose-500/10 text-rose-400"
+                    ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
+                    : 'border-rose-500/30 bg-rose-500/10 text-rose-400'
                 }`}
               >
                 <Lock className="size-3" />
-                {auditSecretVerified ? "AEGIS_AUDIT_SECRET VERIFICADO" : "CONTEXTO NO AUTENTICADO"}
+                {auditSecretVerified ? 'AEGIS_AUDIT_SECRET VERIFICADO' : 'CONTEXTO NO AUTENTICADO'}
               </span>
             </div>
             <p className="font-mono text-xs text-slate-400 mt-0.5">
@@ -139,12 +139,12 @@ export function SecurityAuditDashboard() {
         <button
           onClick={() => {
             void fetchSecurityAuditLogs();
-            toast.success("Logs de auditoría sincronizados.");
+            toast.success('Logs de auditoría sincronizados.');
           }}
           disabled={loading}
           className="self-start md:self-auto flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-3.5 py-2 font-mono text-xs text-slate-200 hover:bg-slate-800 transition-all disabled:opacity-50"
         >
-          <RefreshCw className={`size-3.5 ${loading ? "animate-spin text-purple-400" : ""}`} />
+          <RefreshCw className={`size-3.5 ${loading ? 'animate-spin text-purple-400' : ''}`} />
           <span>Sincronizar Logs</span>
         </button>
       </div>
@@ -165,14 +165,14 @@ export function SecurityAuditDashboard() {
         <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto">
           <Filter className="size-4 text-slate-400 shrink-0" />
           <span className="font-mono text-xs text-slate-400 shrink-0">Filtrar:</span>
-          {["ALL", "ALLOWED", "CHALLENGED", "QUARANTINED", "BLOCKED"].map((st) => (
+          {['ALL', 'ALLOWED', 'CHALLENGED', 'QUARANTINED', 'BLOCKED'].map((st) => (
             <button
               key={st}
               onClick={() => setStatusFilter(st)}
               className={`rounded-lg px-2.5 py-1 font-mono text-[11px] font-semibold transition-all shrink-0 border ${
                 statusFilter === st
-                  ? "border-purple-500 bg-purple-500/20 text-purple-300"
-                  : "border-slate-800 bg-slate-950 text-slate-400 hover:text-slate-200"
+                  ? 'border-purple-500 bg-purple-500/20 text-purple-300'
+                  : 'border-slate-800 bg-slate-950 text-slate-400 hover:text-slate-200'
               }`}
             >
               {st}
@@ -205,7 +205,7 @@ export function SecurityAuditDashboard() {
               filteredLogs.map((log) => (
                 <tr key={log.id} className="hover:bg-slate-900/40 transition-colors">
                   <td className="whitespace-nowrap px-4 py-3 text-slate-400">
-                    {new Date(log.timestamp).toLocaleString("es-MX", {
+                    {new Date(log.timestamp).toLocaleString('es-MX', {
                       hour12: false,
                     })}
                   </td>

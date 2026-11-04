@@ -1,10 +1,10 @@
-import { createHash, generateKeyPairSync, sign, verify, KeyObject } from "node:crypto";
-import { randomUUID } from "node:crypto";
-import { checkPermission, ROLES, type Role } from "./rbac";
-import { permissionFor, RESOURCES, ACTIONS, type Resource, type Action } from "./permission-matrix";
-import { evaluateAbac, type AttributeContext } from "./abac";
-import { canonicalize } from "./igds/canonical";
-import { isProductionLike, resolveRuntimeMode } from "./runtime-mode";
+import { createHash, generateKeyPairSync, sign, verify, KeyObject } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
+import { checkPermission, ROLES, type Role } from './rbac';
+import { permissionFor, RESOURCES, ACTIONS, type Resource, type Action } from './permission-matrix';
+import { evaluateAbac, type AttributeContext } from './abac';
+import { canonicalize } from './igds/canonical';
+import { isProductionLike, resolveRuntimeMode } from './runtime-mode';
 
 /**
  * C.R.O.W.N. / A.R.G.U.S. - PDP (Policy Decision Point)
@@ -17,9 +17,9 @@ import { isProductionLike, resolveRuntimeMode } from "./runtime-mode";
 // ============================================================================
 // CONFIGURACIÓN CRIPTOGRÁFICA
 // ============================================================================
-const HASH_ALGORITHM = "sha3-512";
-const SIGNATURE_ALGORITHM = "SHA384"; // Used with ECDSA
-const CURVE = "secp384r1"; // High security curve
+const HASH_ALGORITHM = 'sha3-512';
+const SIGNATURE_ALGORITHM = 'SHA384'; // Used with ECDSA
+const CURVE = 'secp384r1'; // High security curve
 
 export interface AuthorizationDecision {
   decision_id: string;
@@ -80,19 +80,19 @@ class CryptoManager {
   private signatureChainState = new Map<string, string>(); // tenant_id -> last_hash (cache)
 
   constructor() {
-    const { privateKey, publicKey } = generateKeyPairSync("ec", {
+    const { privateKey, publicKey } = generateKeyPairSync('ec', {
       namedCurve: CURVE,
     });
     this.privateKey = privateKey;
     this.publicKey = publicKey;
-    this.keyId = `key_${randomUUID().replace(/-/g, "")}`;
+    this.keyId = `key_${randomUUID().replace(/-/g, '')}`;
     // Honestidad (AGENTS §0.1): esto NO es un HSM ni un KMS. Es una clave
     // software efimera por proceso; sin KMS persistente las firmas de este
     // proceso no son verificables por otro proceso (limitación declarada en
     // production-capabilities.json, no oculta).
     console.info(
       `[CryptoManager] Clave ECDSA software efimera generada (${CURVE}, keyId=${this.keyId}). ` +
-        `Sin HSM/KMS fisico: la cadena de firmas durable vive en Postgres hsm_signature_chain en runtime productivo.`,
+        `Sin HSM/KMS fisico: la cadena de firmas durable vive en Postgres hsm_signature_chain en runtime productivo.`
     );
     // Informa si el runtime exige cadena durable (la exigencia real se
     // evalúa en cada llamada a getAndAdvanceChainDurable, fail-closed).
@@ -101,11 +101,11 @@ class CryptoManager {
 
   private async logDurableMode(): Promise<void> {
     try {
-      const { config } = await import("./config");
+      const { config } = await import('./config');
       const cfg = config();
       if (isProductionLike(resolveRuntimeMode(cfg.ISABELLA_RUNTIME_MODE))) {
         console.info(
-          "[CryptoManager] Runtime productivo: cadena de firmas exige Postgres hsm_signature_chain (sin fallback a memoria).",
+          '[CryptoManager] Runtime productivo: cadena de firmas exige Postgres hsm_signature_chain (sin fallback a memoria).'
         );
       }
     } catch {
@@ -121,13 +121,13 @@ class CryptoManager {
    * `replacer` sólo FILTRA claves y no las reordena (hash no canónico).
    */
   public calculateHash(payload: Record<string, unknown>): string {
-    return createHash(HASH_ALGORITHM).update(canonicalize(payload), "utf8").digest("hex");
+    return createHash(HASH_ALGORITHM).update(canonicalize(payload), 'utf8').digest('hex');
   }
 
   public signPayload(payload: Record<string, unknown>): string {
     const raw = canonicalize(payload);
     const signature = sign(SIGNATURE_ALGORITHM, Buffer.from(raw), this.privateKey);
-    return signature.toString("base64url");
+    return signature.toString('base64url');
   }
 
   public verifySignature(payload: Record<string, unknown>, signatureB64: string): boolean {
@@ -136,23 +136,23 @@ class CryptoManager {
       SIGNATURE_ALGORITHM,
       Buffer.from(raw),
       this.publicKey,
-      Buffer.from(signatureB64, "base64url"),
+      Buffer.from(signatureB64, 'base64url')
     );
   }
 
   public getAndAdvanceChain(
     tenantId: string,
     newDecisionHash: string,
-    newSignature: string,
+    newSignature: string
   ): { previousHash: string; signatureChain: string } {
     // Fast path: si durable está habilitado, la cadena se gestiona vía DB con advisory lock
     // Aquí mantenemos compatibilidad sync para callers existentes; la versión durable async es getAndAdvanceChainDurable
-    const previousHash = this.signatureChainState.get(tenantId) || "genesis_hash_0000000000000000";
+    const previousHash = this.signatureChainState.get(tenantId) || 'genesis_hash_0000000000000000';
     const previousSigChain =
-      this.signatureChainState.get(`sigchain_${tenantId}`) || "genesis_sigchain_00000000";
+      this.signatureChainState.get(`sigchain_${tenantId}`) || 'genesis_sigchain_00000000';
     const nextSigChain = createHash(HASH_ALGORITHM)
       .update(previousSigChain + newSignature)
-      .digest("hex");
+      .digest('hex');
     this.signatureChainState.set(tenantId, newDecisionHash);
     this.signatureChainState.set(`sigchain_${tenantId}`, nextSigChain);
     return { previousHash, signatureChain: nextSigChain };
@@ -170,30 +170,30 @@ class CryptoManager {
   public async getAndAdvanceChainDurable(
     tenantId: string,
     newDecisionHash: string,
-    newSignature: string,
+    newSignature: string
   ): Promise<{ previousHash: string; signatureChain: string }> {
     const productionLike = await this.isProductionLikeRuntime();
     if (!productionLike) {
       return this.getAndAdvanceChain(tenantId, newDecisionHash, newSignature);
     }
-    const { createHash: createHash2 } = await import("node:crypto");
-    let pool: import("pg").Pool | null = null;
+    const { createHash: createHash2 } = await import('node:crypto');
+    let pool: import('pg').Pool | null = null;
     let release: (() => void) | null = null;
     try {
-      const { config } = await import("./config");
+      const { config } = await import('./config');
       const cfg = config();
       if (!cfg.DATABASE_URL) {
         throw new HsmDurableUnavailableError(
-          "DATABASE_URL ausente: la cadena durable de firmas no existe en este runtime productivo.",
+          'DATABASE_URL ausente: la cadena durable de firmas no existe en este runtime productivo.'
         );
       }
-      const { Pool } = await import("pg");
+      const { Pool } = await import('pg');
       pool = new Pool({ connectionString: cfg.DATABASE_URL, max: 1 });
       const client = await pool.connect();
       release = () => client.release();
-      await client.query("BEGIN");
-      const lockId = createHash2("sha256").update(tenantId).digest().readInt32BE(0);
-      await client.query("SELECT pg_advisory_xact_lock($1)", [lockId]);
+      await client.query('BEGIN');
+      const lockId = createHash2('sha256').update(tenantId).digest().readInt32BE(0);
+      await client.query('SELECT pg_advisory_xact_lock($1)', [lockId]);
       // Crea tabla si no existe (idempotente)
       await client.query(`
           CREATE TABLE IF NOT EXISTS hsm_signature_chain (
@@ -204,20 +204,20 @@ class CryptoManager {
           )
         `);
       const res = await client.query(
-        "SELECT last_hash, sigchain FROM hsm_signature_chain WHERE tenant_id = $1 FOR UPDATE",
-        [tenantId],
+        'SELECT last_hash, sigchain FROM hsm_signature_chain WHERE tenant_id = $1 FOR UPDATE',
+        [tenantId]
       );
-      const previousHash = res.rows[0]?.last_hash ?? "genesis_hash_0000000000000000";
-      const previousSigChain = res.rows[0]?.sigchain ?? "genesis_sigchain_00000000";
+      const previousHash = res.rows[0]?.last_hash ?? 'genesis_hash_0000000000000000';
+      const previousSigChain = res.rows[0]?.sigchain ?? 'genesis_sigchain_00000000';
       const nextSigChain = createHash(HASH_ALGORITHM)
         .update(previousSigChain + newSignature)
-        .digest("hex");
+        .digest('hex');
       await client.query(
         `INSERT INTO hsm_signature_chain (tenant_id, last_hash, sigchain) VALUES ($1,$2,$3)
            ON CONFLICT (tenant_id) DO UPDATE SET last_hash = EXCLUDED.last_hash, sigchain = EXCLUDED.sigchain, updated_at = NOW()`,
-        [tenantId, newDecisionHash, nextSigChain],
+        [tenantId, newDecisionHash, nextSigChain]
       );
-      await client.query("COMMIT");
+      await client.query('COMMIT');
       // Actualiza cache L1 (la fuente de verdad sigue siendo Postgres)
       this.signatureChainState.set(tenantId, newDecisionHash);
       this.signatureChainState.set(`sigchain_${tenantId}`, nextSigChain);
@@ -225,7 +225,7 @@ class CryptoManager {
     } catch (e) {
       if (e instanceof HsmDurableUnavailableError) throw e;
       throw new HsmDurableUnavailableError(
-        `hsm_signature_chain inaccesible en runtime productivo: ${(e as Error).message}`,
+        `hsm_signature_chain inaccesible en runtime productivo: ${(e as Error).message}`
       );
     } finally {
       release?.();
@@ -236,12 +236,12 @@ class CryptoManager {
   /** Determina si el runtime exige cadena durable. Si no se puede determinar, se asume productivo (fail-closed). */
   private async isProductionLikeRuntime(): Promise<boolean> {
     try {
-      const { config } = await import("./config");
+      const { config } = await import('./config');
       return isProductionLike(resolveRuntimeMode(config().ISABELLA_RUNTIME_MODE));
     } catch (error) {
       console.error(
-        "[CryptoManager] No se pudo resolver ISABELLA_RUNTIME_MODE; se asume runtime productivo:",
-        (error as Error).message,
+        '[CryptoManager] No se pudo resolver ISABELLA_RUNTIME_MODE; se asume runtime productivo:',
+        (error as Error).message
       );
       return true;
     }
@@ -256,7 +256,7 @@ class CryptoManager {
 export class HsmDurableUnavailableError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = "HsmDurableUnavailableError";
+    this.name = 'HsmDurableUnavailableError';
   }
 }
 
@@ -281,32 +281,32 @@ export const authorizationCrypto = hsm;
  * P-384) con hash chaining.
  */
 export async function evaluateAuthorization(
-  ctx: AuthorizationContext,
+  ctx: AuthorizationContext
 ): Promise<AuthorizationDecision> {
-  const decisionId = `dec_${randomUUID().replace(/-/g, "")}`;
+  const decisionId = `dec_${randomUUID().replace(/-/g, '')}`;
   const now = new Date();
 
   let allow = false;
   const obligations: string[] = [];
-  let denyReason = "deny-by-default";
+  let denyReason = 'deny-by-default';
 
   // Etapa 0: identidad mínima demostrable.
   if (!ctx.subject_id || !ctx.tenant_id) {
-    denyReason = "missing-identity";
+    denyReason = 'missing-identity';
   } else if (ctx.context.behavior_score !== undefined && ctx.context.behavior_score > 80) {
     // Etapa 1: anomalía de comportamiento bloquea (fail-closed).
-    denyReason = "behavior-anomaly";
+    denyReason = 'behavior-anomaly';
   } else if (ctx.role === undefined || !ROLES.includes(ctx.role as Role)) {
     // Etapa 2: rol desconocido o ausente → deny (nunca allow implícito).
-    denyReason = "unknown-role";
+    denyReason = 'unknown-role';
   } else {
     // Etapa 3: normalizar (recurso, acción) a la matriz canónica.
     // Los skills (`skill:<id>`) y herramientas (`tool:<id>`) requieren tool:execute.
     let resource: Resource | null = null;
     let action: Action | null = null;
-    if (ctx.resource.startsWith("skill:") || ctx.resource.startsWith("tool:")) {
-      resource = "tool";
-      action = "execute";
+    if (ctx.resource.startsWith('skill:') || ctx.resource.startsWith('tool:')) {
+      resource = 'tool';
+      action = 'execute';
     } else if (
       (RESOURCES as readonly string[]).includes(ctx.resource) &&
       (ACTIONS as readonly string[]).includes(ctx.action)
@@ -315,7 +315,7 @@ export async function evaluateAuthorization(
       action = ctx.action as Action;
     }
     if (resource === null || action === null) {
-      denyReason = "unknown-operation";
+      denyReason = 'unknown-operation';
     } else {
       const derived = permissionFor(resource, action);
       if (derived.permission === null) {
@@ -339,19 +339,19 @@ export async function evaluateAuthorization(
             // Tenant del recurso: sólo se afirma si el llamador lo entrega.
             // Si se omitiera y se rellenara con ctx.tenant_id la política
             // territorial sería una tautología (siempre notApplied).
-            resourceTenant: ctx.resource_tenant_id ?? "",
-            resourceOwner: ctx.resource_owner ?? "",
+            resourceTenant: ctx.resource_tenant_id ?? '',
+            resourceOwner: ctx.resource_owner ?? '',
             subject: ctx.subject_id,
             risk,
             authenticated: ctx.authenticated ?? false,
-            timezone: "UTC",
+            timezone: 'UTC',
           };
           const abac = evaluateAbac(attr);
-          if (abac.decision === "deny") {
-            denyReason = `abac-deny:${abac.policy ?? "unknown"}:${abac.reason}`;
+          if (abac.decision === 'deny') {
+            denyReason = `abac-deny:${abac.policy ?? 'unknown'}:${abac.reason}`;
           } else {
             allow = true;
-            obligations.push("log_verbose", "pqc_signature_required");
+            obligations.push('log_verbose', 'pqc_signature_required');
           }
         }
       }
@@ -368,7 +368,7 @@ export async function evaluateAuthorization(
     resource: ctx.resource,
     allow,
     obligations,
-    policy_version: "v4.0.0-real",
+    policy_version: 'v4.0.0-real',
     issued_at: now.toISOString(),
     expires_at: new Date(now.getTime() + 5 * 60000).toISOString(), // 5 min TTL
   };
@@ -388,16 +388,16 @@ export async function evaluateAuthorization(
     const deniedPayload = {
       ...basePayload,
       allow: false,
-      obligations: [...obligations, "deny:hsm-durable-unavailable"],
+      obligations: [...obligations, 'deny:hsm-durable-unavailable'],
     };
     console.error(
-      `[PDP] Cadena durable de firmas no disponible; decisión convertida en DENY: ${error.message}`,
+      `[PDP] Cadena durable de firmas no disponible; decisión convertida en DENY: ${error.message}`
     );
     return {
       ...deniedPayload,
       signature: hsm.signPayload(deniedPayload),
-      signature_chain: "unavailable:hsm-durable",
-      previous_decision_hash: "unavailable:hsm-durable",
+      signature_chain: 'unavailable:hsm-durable',
+      previous_decision_hash: 'unavailable:hsm-durable',
     };
   }
 

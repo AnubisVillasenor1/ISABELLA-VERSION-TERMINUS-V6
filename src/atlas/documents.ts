@@ -5,16 +5,21 @@
  * Esquema document_uid: ATLAS-DOC-{federation}-{namespace}-{ULID}-{hash_prefix}
  * Estados: draft → validated → published → archived.
  */
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes } from 'node:crypto';
 
-export type DocumentState = "draft" | "validated" | "published" | "archived";
+export type DocumentState = 'draft' | 'validated' | 'published' | 'archived';
 
-export const DOCUMENT_STATES: readonly DocumentState[] = ["draft", "validated", "published", "archived"];
+export const DOCUMENT_STATES: readonly DocumentState[] = [
+  'draft',
+  'validated',
+  'published',
+  'archived',
+];
 
 const DOCUMENT_TRANSITIONS: Readonly<Record<DocumentState, readonly DocumentState[]>> = {
-  draft: ["validated", "archived"],
-  validated: ["published", "archived", "draft"],
-  published: ["archived"],
+  draft: ['validated', 'archived'],
+  validated: ['published', 'archived', 'draft'],
+  published: ['archived'],
   archived: [],
 };
 
@@ -48,23 +53,30 @@ const FEDERATION_RE = /^F[1-7]$/;
 const NAMESPACE_RE = /^[A-Z][A-Z0-9]{1,15}$/;
 
 function normalizeWhitespace(value: string): string {
-  return value.replace(/\s+/g, " ").trim();
+  return value.replace(/\s+/g, ' ').trim();
 }
 
 function sortValue(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(sortValue);
-  if (value && typeof value === "object") {
+  if (value && typeof value === 'object') {
     const record = value as Record<string, unknown>;
-    return Object.fromEntries(Object.keys(record).sort().map((key) => [key, sortValue(record[key])]));
+    return Object.fromEntries(
+      Object.keys(record)
+        .sort()
+        .map((key) => [key, sortValue(record[key])])
+    );
   }
   return value;
 }
 
 /** Canonicaliza el documento (trim, whitespace normalizado, claves ordenadas). */
 export function canonicalizeDocument(doc: DocumentInput): CanonicalDocument {
-  if (!FEDERATION_RE.test(doc.federation)) throw new Error(`ATLAS: invalid federation '${doc.federation}' (expected F1..F7)`);
-  if (!NAMESPACE_RE.test(doc.namespace)) throw new Error(`ATLAS: invalid namespace '${doc.namespace}'`);
-  if (!doc.title.trim() || !doc.content.trim()) throw new Error("ATLAS: title and content are required");
+  if (!FEDERATION_RE.test(doc.federation))
+    throw new Error(`ATLAS: invalid federation '${doc.federation}' (expected F1..F7)`);
+  if (!NAMESPACE_RE.test(doc.namespace))
+    throw new Error(`ATLAS: invalid namespace '${doc.namespace}'`);
+  if (!doc.title.trim() || !doc.content.trim())
+    throw new Error('ATLAS: title and content are required');
   return {
     title: doc.title.trim(),
     content: normalizeWhitespace(doc.content),
@@ -75,10 +87,10 @@ export function canonicalizeDocument(doc: DocumentInput): CanonicalDocument {
 
 /** Hash SHA-256 del documento canonicalizado. */
 export function hashCanonicalDocument(doc: CanonicalDocument): string {
-  return createHash("sha256").update(JSON.stringify(doc)).digest("hex");
+  return createHash('sha256').update(JSON.stringify(doc)).digest('hex');
 }
 
-const CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+const CROCKFORD = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
 
 /**
  * ULID Crockford: 26 caracteres = 10 de tiempo (48 bits) + 16 aleatorios (80 bits).
@@ -88,23 +100,23 @@ export function generateUlid(timeMs = Date.now()): string {
   let time = timeMs;
   const timeChars: string[] = new Array(10);
   for (let i = 9; i >= 0; i -= 1) {
-    timeChars[i] = CROCKFORD[time % 32] ?? "0";
+    timeChars[i] = CROCKFORD[time % 32] ?? '0';
     time = Math.floor(time / 32);
   }
   // 80 bits aleatorios = 16 caracteres Crockford de 5 bits (16 * 5 = 80).
   const random = randomBytes(10);
   let accumulator = 0;
   let bits = 0;
-  let randomPart = "";
+  let randomPart = '';
   for (const byte of random) {
     accumulator = ((accumulator << 8) | byte) >>> 0;
     bits += 8;
     while (bits >= 5 && randomPart.length < 16) {
       bits -= 5;
-      randomPart += CROCKFORD[(accumulator >>> bits) & 31] ?? "0";
+      randomPart += CROCKFORD[(accumulator >>> bits) & 31] ?? '0';
     }
   }
-  return timeChars.join("") + randomPart.slice(0, 16);
+  return timeChars.join('') + randomPart.slice(0, 16);
 }
 
 /** Construye el document_uid canónico. */
@@ -114,8 +126,8 @@ export function buildDocumentUid(input: {
   canonicalHash: string;
   ulid?: string;
 }): string {
-  if (!FEDERATION_RE.test(input.federation)) throw new Error("ATLAS: invalid federation");
-  if (!NAMESPACE_RE.test(input.namespace)) throw new Error("ATLAS: invalid namespace");
+  if (!FEDERATION_RE.test(input.federation)) throw new Error('ATLAS: invalid federation');
+  if (!NAMESPACE_RE.test(input.namespace)) throw new Error('ATLAS: invalid namespace');
   const ulid = input.ulid ?? generateUlid();
   const hashPrefix = input.canonicalHash.slice(0, 8);
   return `ATLAS-DOC-${input.federation}-${input.namespace.toUpperCase()}-${ulid}-${hashPrefix}`;
@@ -125,8 +137,12 @@ export function buildDocumentUid(input: {
 export function createCanonicalDocument(doc: DocumentInput): CanonicalDocumentRecord {
   const canonical = canonicalizeDocument(doc);
   const canonicalHash = hashCanonicalDocument(canonical);
-  const documentUid = buildDocumentUid({ federation: doc.federation, namespace: canonical.namespace, canonicalHash });
-  return { ...canonical, documentUid, version: 1, state: "draft", canonicalHash };
+  const documentUid = buildDocumentUid({
+    federation: doc.federation,
+    namespace: canonical.namespace,
+    canonicalHash,
+  });
+  return { ...canonical, documentUid, version: 1, state: 'draft', canonicalHash };
 }
 
 export interface DocumentVersioning {
@@ -138,14 +154,17 @@ export interface DocumentVersioning {
 }
 
 /** Versiona un documento canonicalizado; falla si el contenido no cambió. */
-export function versionDocument(previous: CanonicalDocumentRecord, doc: DocumentInput): {
+export function versionDocument(
+  previous: CanonicalDocumentRecord,
+  doc: DocumentInput
+): {
   record: CanonicalDocumentRecord;
   change: DocumentVersioning;
 } {
   const canonical = canonicalizeDocument(doc);
   const canonicalHashAfter = hashCanonicalDocument(canonical);
   if (canonicalHashAfter === previous.canonicalHash) {
-    throw new Error("ATLAS: versioning requires a content change");
+    throw new Error('ATLAS: versioning requires a content change');
   }
   const record: CanonicalDocumentRecord = {
     ...canonical,
@@ -170,7 +189,7 @@ export function versionDocument(previous: CanonicalDocumentRecord, doc: Document
 export function changeDocumentState(
   record: CanonicalDocumentRecord,
   newState: DocumentState,
-  reason: string,
+  reason: string
 ): { record: CanonicalDocumentRecord; reason: string } {
   if (!allowDocumentTransition(record.state, newState)) {
     throw new Error(`ATLAS: illegal document transition ${record.state} → ${newState}`);

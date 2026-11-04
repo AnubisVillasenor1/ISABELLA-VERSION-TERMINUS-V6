@@ -4,16 +4,16 @@
  * Normaliza y analiza intenciones de entrada, extrayendo entidades y categorías.
  */
 
-export type InputModality = "text" | "voice" | "multimodal";
+export type InputModality = 'text' | 'voice' | 'multimodal';
 export type IntentCategory =
-  | "chat"
-  | "assistant"
-  | "research"
-  | "edge"
-  | "quantum"
-  | "implementation"
-  | "monetization"
-  | "general";
+  | 'chat'
+  | 'assistant'
+  | 'research'
+  | 'edge'
+  | 'quantum'
+  | 'implementation'
+  | 'monetization'
+  | 'general';
 
 export interface PerceptionResult {
   intent: string;
@@ -24,14 +24,14 @@ export interface PerceptionResult {
 }
 
 export class PerceptionEngine {
-  async process(input: string, modality: InputModality = "text"): Promise<PerceptionResult> {
+  async process(input: string, modality: InputModality = 'text'): Promise<PerceptionResult> {
     const trimmed = input.trim();
     const entities: string[] = [];
 
     // Extracción básica de entidades / palabras clave
     const words = trimmed.split(/\s+/);
     for (const w of words) {
-      if (w.startsWith("@") || w.startsWith("#") || /^[A-Z][a-z]+/.test(w)) {
+      if (w.startsWith('@') || w.startsWith('#') || /^[A-Z][a-z]+/.test(w)) {
         entities.push(w);
       }
     }

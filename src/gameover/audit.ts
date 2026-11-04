@@ -6,9 +6,9 @@
  * ledger is hash-chained; it is not a WORM device and does not provide hardware
  * immutability.
  */
-import { randomUUID } from "node:crypto";
-import { bookPiLedger } from "../bookpi/ledger";
-import { GAMEOVER_METHOD_IDS } from "./types";
+import { randomUUID } from 'node:crypto';
+import { bookPiLedger } from '../bookpi/ledger';
+import { GAMEOVER_METHOD_IDS } from './types';
 
 export interface GovernanceAuditLedger {
   append(input: {
@@ -68,7 +68,7 @@ export interface AuditServiceOptions {
   readonly historyLimit?: number;
 }
 
-const DEFAULT_TYPE = "gameover.governance.decision";
+const DEFAULT_TYPE = 'gameover.governance.decision';
 const DEFAULT_HISTORY_LIMIT = 500;
 
 export function createAuditService(options: AuditServiceOptions = {}): AuditService {

@@ -1,5 +1,5 @@
-import { AsyncLocalStorage } from "node:async_hooks";
-import { randomUUID } from "node:crypto";
+import { AsyncLocalStorage } from 'node:async_hooks';
+import { randomUUID } from 'node:crypto';
 
 /**
  * CONTEXTO ÚNICO POR REQUEST (src/lib/request-context.ts)
@@ -24,11 +24,11 @@ export interface RequestContextData {
 export const requestStore = new AsyncLocalStorage<RequestContextData>();
 
 function genId(): string {
-  return randomUUID().replace(/-/g, "");
+  return randomUUID().replace(/-/g, '');
 }
 
 export function createRequestContext(
-  opts: Partial<Pick<RequestContextData, "clientIp" | "method" | "path" | "route">>,
+  opts: Partial<Pick<RequestContextData, 'clientIp' | 'method' | 'path' | 'route'>>
 ): RequestContextData {
   const startedAt = Date.now();
   return {
@@ -52,5 +52,5 @@ export function getRequestContext(): RequestContextData | undefined {
 }
 
 export function getTraceId(): string {
-  return getRequestContext()?.traceId ?? "";
+  return getRequestContext()?.traceId ?? '';
 }

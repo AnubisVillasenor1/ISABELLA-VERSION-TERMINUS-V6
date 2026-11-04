@@ -1,5 +1,5 @@
-import { config, type Env } from "./config";
-import { EnvKMSProvider, type KMSProvider } from "./kms-provider";
+import { config, type Env } from './config';
+import { EnvKMSProvider, type KMSProvider } from './kms-provider';
 
 /**
  * ACCESO CENTRALIZADO A SECRETOS (src/lib/secrets.ts)
@@ -13,7 +13,7 @@ import { EnvKMSProvider, type KMSProvider } from "./kms-provider";
  */
 
 export type SecretKind =
-  "jwt" | "encryption" | "bookpi" | "ai" | "supabase-service" | "policy-signing";
+  'jwt' | 'encryption' | 'bookpi' | 'ai' | 'supabase-service' | 'policy-signing';
 
 export class SecretsManager {
   private readonly kms: KMSProvider;
@@ -29,14 +29,14 @@ export class SecretsManager {
   private async getActiveSecret(
     kind: SecretKind,
     keyName: keyof Env,
-    label: string,
+    label: string
   ): Promise<string> {
     // Si KMS lo tiene, úsalo (permitiendo rotación dinámica).
     const secretValue = (await this.kms.getSecret(keyName as string)) ?? this.cachedConfig[keyName];
 
-    if (!secretValue || String(secretValue).trim() === "") {
+    if (!secretValue || String(secretValue).trim() === '') {
       throw new Error(
-        `[Zero Trust Secrets] Secreto requerido no configurado: ${label} (${kind}). No se admiten fallbacks locales.`,
+        `[Zero Trust Secrets] Secreto requerido no configurado: ${label} (${kind}). No se admiten fallbacks locales.`
       );
     }
 
@@ -46,9 +46,9 @@ export class SecretsManager {
   private getActiveSecretSync(kind: SecretKind, keyName: keyof Env, label: string): string {
     const secretValue = this.cachedConfig[keyName];
 
-    if (!secretValue || String(secretValue).trim() === "") {
+    if (!secretValue || String(secretValue).trim() === '') {
       throw new Error(
-        `[Zero Trust Secrets] Secreto requerido no configurado: ${label} (${kind}). No se admiten fallbacks locales.`,
+        `[Zero Trust Secrets] Secreto requerido no configurado: ${label} (${kind}). No se admiten fallbacks locales.`
       );
     }
 
@@ -58,50 +58,54 @@ export class SecretsManager {
   // --- MÉTODOS SINCRÓNICOS (Usan config estática, fallan rápido) ---
 
   jwtSecret(): string {
-    return this.getActiveSecretSync("jwt", "AUTH_JWT_SECRET", "AUTH_JWT_SECRET");
+    return this.getActiveSecretSync('jwt', 'AUTH_JWT_SECRET', 'AUTH_JWT_SECRET');
   }
 
   encryptionMasterKey(): string {
     return this.getActiveSecretSync(
-      "encryption",
-      "ENCRYPTION_MASTER_KEY",
-      "ENCRYPTION_MASTER_KEY (mín. 32 caracteres)",
+      'encryption',
+      'ENCRYPTION_MASTER_KEY',
+      'ENCRYPTION_MASTER_KEY (mín. 32 caracteres)'
     );
   }
 
   bookpiSigningKey(): string {
-    return this.getActiveSecretSync("bookpi", "BOOKPI_SIGNING_KEY", "BOOKPI_SIGNING_KEY");
+    return this.getActiveSecretSync('bookpi', 'BOOKPI_SIGNING_KEY', 'BOOKPI_SIGNING_KEY');
   }
 
   aiGatewayKey(): string {
-    return this.getActiveSecretSync("ai", "GEMINI_API_KEY", "GEMINI_API_KEY");
+    return this.getActiveSecretSync('ai', 'GEMINI_API_KEY', 'GEMINI_API_KEY');
   }
 
-  optionalProviderKey(provider: "gemini" | "groq" | "xai" | "ai-gateway"): string | undefined {
+  optionalProviderKey(
+    provider: 'gemini' | 'groq' | 'xai' | 'deepseek' | 'ai-gateway'
+  ): string | undefined {
     const keyName =
-      provider === "gemini"
-        ? "GEMINI_API_KEY"
-        : provider === "groq"
-          ? "GROQ_API_KEY"
-          : provider === "ai-gateway"
-            ? "AI_GATEWAY_API_KEY"
-            : "XAI_API_KEY";
+      provider === 'gemini'
+        ? 'GEMINI_API_KEY'
+        : provider === 'groq'
+          ? 'GROQ_API_KEY'
+          : provider === 'xai'
+            ? 'XAI_API_KEY'
+            : provider === 'deepseek'
+              ? 'DEEPSEEK_APIKEY'
+              : 'AI_GATEWAY_API_KEY';
     const value = this.cachedConfig[keyName];
-    return typeof value === "string" && value.trim() ? value : undefined;
+    return typeof value === 'string' && value.trim() ? value : undefined;
   }
 
   aegisAuditSecretConfigured(): boolean {
     const value = this.cachedConfig.AEGIS_AUDIT_SECRET;
-    return typeof value === "string" && value.trim().length > 0;
+    return typeof value === 'string' && value.trim().length > 0;
   }
 
   aegisAuditSecret(): string {
-    return this.getActiveSecretSync("policy-signing", "AEGIS_AUDIT_SECRET", "AEGIS_AUDIT_SECRET");
+    return this.getActiveSecretSync('policy-signing', 'AEGIS_AUDIT_SECRET', 'AEGIS_AUDIT_SECRET');
   }
 
   apiKeyHashSecret(): string {
     // P1: Desacoplamiento de dominios criptográficos.
-    return this.getActiveSecretSync("jwt", "API_KEY_HASH_SECRET", "API_KEY_HASH_SECRET");
+    return this.getActiveSecretSync('jwt', 'API_KEY_HASH_SECRET', 'API_KEY_HASH_SECRET');
   }
 
   supabaseJwtSecret(): string | undefined {

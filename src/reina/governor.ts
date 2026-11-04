@@ -14,17 +14,28 @@
  * confiable del proceso (p. ej. verificando firmas con `QuorumSession`), nunca
  * copiados de una entrada HTTP.
  */
-import { createHash } from "node:crypto";
-import { TransparencyLog } from "../bookpi/transparency";
-import { evaluateAutonomy, type AutonomyLevel, type ImpactClass } from "../governance/autonomy";
-import { assessRisk, type RiskInputs, type RiskTier } from "../governance/risk-score";
-import type { QuorumTally } from "../governance/quorum";
-import { IdempotencyStore, requestFingerprint, type IdempotencyOutcome } from "../ingress/idempotency";
-import type { KillSwitch } from "../security/kill-switch";
+import { createHash } from 'node:crypto';
+import { TransparencyLog } from '../bookpi/transparency';
+import { evaluateAutonomy, type AutonomyLevel, type ImpactClass } from '../governance/autonomy';
+import { assessRisk, type RiskInputs, type RiskTier } from '../governance/risk-score';
+import type { QuorumTally } from '../governance/quorum';
+import {
+  IdempotencyStore,
+  requestFingerprint,
+  type IdempotencyOutcome,
+} from '../ingress/idempotency';
+import type { KillSwitch } from '../security/kill-switch';
 
-export const REINA_METHOD_ID = "N.IDENTITY.E03_GOVERNANCE.adjudicate_action.v1.0.0.HIGH.INSTITUTIONAL";
+export const REINA_METHOD_ID =
+  'N.IDENTITY.E03_GOVERNANCE.adjudicate_action.v1.0.0.HIGH.INSTITUTIONAL';
 
-export type ReinaVerdict = "PERMIT" | "REQUIRE_CONFIRMATION" | "REQUIRE_QUORUM" | "REQUIRE_HUMAN_APPROVAL" | "DENY" | "HALTED";
+export type ReinaVerdict =
+  | 'PERMIT'
+  | 'REQUIRE_CONFIRMATION'
+  | 'REQUIRE_QUORUM'
+  | 'REQUIRE_HUMAN_APPROVAL'
+  | 'DENY'
+  | 'HALTED';
 
 export interface ReinaRequest {
   readonly requestId: string;
@@ -54,7 +65,12 @@ export interface ReinaDecision {
   readonly riskTier: RiskTier | null;
   readonly methodId: string;
   readonly decidedAt: string;
-  readonly evidence: { readonly logIndex: number; readonly leafHash: string; readonly treeSize: number; readonly rootHash: string };
+  readonly evidence: {
+    readonly logIndex: number;
+    readonly leafHash: string;
+    readonly treeSize: number;
+    readonly rootHash: string;
+  };
 }
 
 export interface EvidenceRecord {
@@ -75,25 +91,28 @@ export interface ReinaOptions {
 
 export class ReinaIdempotencyConflictError extends Error {
   constructor() {
-    super("REINA: idempotency key reused with a different request");
-    this.name = "ReinaIdempotencyConflictError";
+    super('REINA: idempotency key reused with a different request');
+    this.name = 'ReinaIdempotencyConflictError';
   }
 }
 
-const IMPACTS: readonly ImpactClass[] = ["NEGLIGIBLE", "LOW", "MEDIUM", "HIGH", "CRITICAL"];
-const LEVELS: readonly AutonomyLevel[] = ["A0", "A1", "A2", "A3", "A4", "A5"];
+const IMPACTS: readonly ImpactClass[] = ['NEGLIGIBLE', 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
+const LEVELS: readonly AutonomyLevel[] = ['A0', 'A1', 'A2', 'A3', 'A4', 'A5'];
 
 function digest(value: string): string {
-  return createHash("sha256").update(value, "utf8").digest("hex");
+  return createHash('sha256').update(value, 'utf8').digest('hex');
 }
 
 function validate(req: ReinaRequest): string | null {
-  if (typeof req.requestId !== "string" || req.requestId.length === 0 || req.requestId.length > 128) return "INVALID_REQUEST_ID";
-  if (typeof req.actor !== "string" || req.actor.trim().length === 0) return "INVALID_ACTOR";
-  if (typeof req.action !== "string" || req.action.trim().length === 0 || req.action.length > 256) return "INVALID_ACTION";
-  if (typeof req.scope !== "string" || !/^[A-Za-z0-9_:.\-]{1,128}$/.test(req.scope)) return "INVALID_SCOPE";
-  if (!IMPACTS.includes(req.impact)) return "INVALID_IMPACT";
-  if (!LEVELS.includes(req.autonomyLevel)) return "INVALID_AUTONOMY_LEVEL";
+  if (typeof req.requestId !== 'string' || req.requestId.length === 0 || req.requestId.length > 128)
+    return 'INVALID_REQUEST_ID';
+  if (typeof req.actor !== 'string' || req.actor.trim().length === 0) return 'INVALID_ACTOR';
+  if (typeof req.action !== 'string' || req.action.trim().length === 0 || req.action.length > 256)
+    return 'INVALID_ACTION';
+  if (typeof req.scope !== 'string' || !/^[A-Za-z0-9_:.\-]{1,128}$/.test(req.scope))
+    return 'INVALID_SCOPE';
+  if (!IMPACTS.includes(req.impact)) return 'INVALID_IMPACT';
+  if (!LEVELS.includes(req.autonomyLevel)) return 'INVALID_AUTONOMY_LEVEL';
   return null;
 }
 
@@ -111,31 +130,39 @@ export class ReinaGovernor {
     if (req.idempotencyKey === undefined) return this.decide(req);
     const outcome: IdempotencyOutcome<ReinaDecision> = await this.idem.run(
       req.idempotencyKey,
-      requestFingerprint("ADJUDICATE", "reina", { ...req, idempotencyKey: undefined }),
+      requestFingerprint('ADJUDICATE', 'reina', { ...req, idempotencyKey: undefined }),
       async () => this.decide(req),
-      this.now(),
+      this.now()
     );
-    if (outcome.kind === "CONFLICT") throw new ReinaIdempotencyConflictError();
-    if (outcome.kind === "INVALID_KEY") return this.seal(req, "DENY", ["INVALID_IDEMPOTENCY_KEY"], null, null);
+    if (outcome.kind === 'CONFLICT') throw new ReinaIdempotencyConflictError();
+    if (outcome.kind === 'INVALID_KEY')
+      return this.seal(req, 'DENY', ['INVALID_IDEMPOTENCY_KEY'], null, null);
     return outcome.value;
   }
 
   private decide(req: ReinaRequest): ReinaDecision {
     const invalid = validate(req);
-    if (invalid !== null) return this.seal(req, "DENY", [invalid], null, null);
+    if (invalid !== null) return this.seal(req, 'DENY', [invalid], null, null);
 
-    if (this.opts.killSwitch.isHalted(req.scope, this.now())) return this.seal(req, "HALTED", ["KILL_SWITCH_ENGAGED"], null, null);
+    if (this.opts.killSwitch.isHalted(req.scope, this.now()))
+      return this.seal(req, 'HALTED', ['KILL_SWITCH_ENGAGED'], null, null);
 
     let assessment;
     try {
       assessment = assessRisk(req.risk);
     } catch {
-      return this.seal(req, "DENY", ["INVALID_RISK_INPUTS"], null, null);
+      return this.seal(req, 'DENY', ['INVALID_RISK_INPUTS'], null, null);
     }
     const { score, tier } = assessment;
 
     if (assessment.requiresHumanApproval && req.humanApprovalVerified !== true) {
-      return this.seal(req, "REQUIRE_HUMAN_APPROVAL", ["EPIC_RISK_BLOCKED_UNTIL_HUMAN_APPROVAL"], score, tier);
+      return this.seal(
+        req,
+        'REQUIRE_HUMAN_APPROVAL',
+        ['EPIC_RISK_BLOCKED_UNTIL_HUMAN_APPROVAL'],
+        score,
+        tier
+      );
     }
 
     const autonomy = evaluateAutonomy({
@@ -148,23 +175,37 @@ export class ReinaGovernor {
       ...(req.timeLimitMs !== undefined ? { timeLimitMs: req.timeLimitMs } : {}),
     });
     if (!autonomy.allowed) {
-      return this.seal(req, autonomy.needsHuman ? "REQUIRE_CONFIRMATION" : "DENY", autonomy.reasons, score, tier);
+      return this.seal(
+        req,
+        autonomy.needsHuman ? 'REQUIRE_CONFIRMATION' : 'DENY',
+        autonomy.reasons,
+        score,
+        tier
+      );
     }
 
-    const needsQuorum = tier === "RELEVANT_HEADS" || tier === "EPIC" || req.impact === "CRITICAL";
+    const needsQuorum = tier === 'RELEVANT_HEADS' || tier === 'EPIC' || req.impact === 'CRITICAL';
     if (needsQuorum) {
       const q = req.quorum;
-      if (q === undefined || q === null || q.status === "PENDING") return this.seal(req, "REQUIRE_QUORUM", ["FEDERATED_QUORUM_REQUIRED"], score, tier);
-      if (q.status !== "APPROVED") return this.seal(req, "DENY", [`QUORUM_${q.status}`], score, tier);
+      if (q === undefined || q === null || q.status === 'PENDING')
+        return this.seal(req, 'REQUIRE_QUORUM', ['FEDERATED_QUORUM_REQUIRED'], score, tier);
+      if (q.status !== 'APPROVED')
+        return this.seal(req, 'DENY', [`QUORUM_${q.status}`], score, tier);
     }
-    return this.seal(req, "PERMIT", ["NO_BLOCKING_RULE_MATCHED"], score, tier);
+    return this.seal(req, 'PERMIT', ['NO_BLOCKING_RULE_MATCHED'], score, tier);
   }
 
-  private seal(req: ReinaRequest, verdict: ReinaVerdict, reasons: readonly string[], riskScore: number | null, riskTier: RiskTier | null): ReinaDecision {
+  private seal(
+    req: ReinaRequest,
+    verdict: ReinaVerdict,
+    reasons: readonly string[],
+    riskScore: number | null,
+    riskTier: RiskTier | null
+  ): ReinaDecision {
     const decidedAt = new Date(this.now()).toISOString();
     // La evidencia guarda huellas, no el actor/acción en claro (minimización de datos).
     const record = {
-      requestId: typeof req.requestId === "string" ? req.requestId.slice(0, 128) : "invalid",
+      requestId: typeof req.requestId === 'string' ? req.requestId.slice(0, 128) : 'invalid',
       actorDigest: digest(String(req.actor)),
       actionDigest: digest(String(req.action)),
       verdict,
@@ -188,7 +229,13 @@ export class ReinaGovernor {
       evidence: { logIndex, leafHash, treeSize, rootHash: this.log.rootHash(treeSize) },
     };
     try {
-      this.opts.evidenceSink?.({ requestId: record.requestId, verdict, riskTier, decidedAt, leafHash });
+      this.opts.evidenceSink?.({
+        requestId: record.requestId,
+        verdict,
+        riskTier,
+        decidedAt,
+        leafHash,
+      });
     } catch {
       // el sink es best-effort: la decisión ya está sellada en el log de transparencia
     }
@@ -196,26 +243,26 @@ export class ReinaGovernor {
   }
 
   status(): {
-    name: "REINA";
-    state: "draft | engine-generated";
+    name: 'REINA';
+    state: 'draft | engine-generated';
     claims: readonly string[];
     disclaimers: readonly string[];
     logSize: number;
     rootHash: string;
-    killSwitch: ReturnType<KillSwitch["status"]>;
+    killSwitch: ReturnType<KillSwitch['status']>;
   } {
     return {
-      name: "REINA",
-      state: "draft | engine-generated",
+      name: 'REINA',
+      state: 'draft | engine-generated',
       claims: [
-        "Adjudica previo a la ejecución (kill switch, riesgo, autonomía A0-A5, quórum M-de-N).",
-        "Sella cada decisión en un log Merkle RFC 6962 con pruebas de inclusión/consistencia.",
+        'Adjudica previo a la ejecución (kill switch, riesgo, autonomía A0-A5, quórum M-de-N).',
+        'Sella cada decisión en un log Merkle RFC 6962 con pruebas de inclusión/consistencia.',
       ],
       disclaimers: [
-        "No ejecuta acciones.",
-        "No es conciencia, AGI ni autoridad: CAPABILITY ≠ AUTHORITY ≠ EXECUTION.",
-        "El log es en memoria (volátil, no WORM, sin anclaje externo).",
-        "Sin revisión humana con nombre: estado draft.",
+        'No ejecuta acciones.',
+        'No es conciencia, AGI ni autoridad: CAPABILITY ≠ AUTHORITY ≠ EXECUTION.',
+        'El log es en memoria (volátil, no WORM, sin anclaje externo).',
+        'Sin revisión humana con nombre: estado draft.',
       ],
       logSize: this.log.size,
       rootHash: this.log.rootHash(),

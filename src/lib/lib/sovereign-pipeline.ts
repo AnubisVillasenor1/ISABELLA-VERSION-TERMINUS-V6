@@ -11,17 +11,17 @@
 
 // Autoridad canónica runtime: CROWN v6 (compat adapter de crown.ts v2.0.0).
 // Auditoría P1-03: el pipeline soberano no importa crown.ts directamente.
-import * as CROWN from "./crown-runtime-authority";
-import { evaluateConstitutionalGate } from "./constitutional-gate";
-import { evaluatePolicy, type PolicyEvaluationResult } from "./policy-engine";
-import { createToolRegistry } from "./tool-registry";
-import { createExecutionAuthority, type ApprovalGrant } from "./execution-authority";
-import { createMemoryEngine, type MemoryActorRole } from "./memory-engine";
-import type { MemoryRepository } from "./repositories/memory-repository";
-import type { AuditRepository } from "./repositories/audit-repository";
-import type { DbPolicyStore } from "./repositories/policy-repository";
-import type { LedgerStore } from "./governance/decision-ledger";
-import { doublePipeline } from "./isabella/double-pipeline";
+import * as CROWN from './crown-runtime-authority';
+import { evaluateConstitutionalGate } from './constitutional-gate';
+import { evaluatePolicy, type PolicyEvaluationResult } from './policy-engine';
+import { createToolRegistry } from './tool-registry';
+import { createExecutionAuthority, type ApprovalGrant } from './execution-authority';
+import { createMemoryEngine, type MemoryActorRole } from './memory-engine';
+import type { MemoryRepository } from './repositories/memory-repository';
+import type { AuditRepository } from './repositories/audit-repository';
+import type { DbPolicyStore } from './repositories/policy-repository';
+import type { LedgerStore } from './governance/decision-ledger';
+import { doublePipeline } from './isabella/double-pipeline';
 
 export interface ApprovalStore {
   has(traceId: string, tool: string, actorId: string, tenantId: string): Promise<boolean>;
@@ -29,7 +29,7 @@ export interface ApprovalStore {
     traceId: string,
     tool: string,
     actorId: string,
-    tenantId: string,
+    tenantId: string
   ): Promise<ApprovalGrant | null>;
 }
 
@@ -53,7 +53,7 @@ export interface PipelineInput {
 
 export interface PipelineResult {
   decision: CROWN.RoutingDecision;
-  constitutionalGate: ReturnType<typeof evaluateConstitutionalGate>["checks"];
+  constitutionalGate: ReturnType<typeof evaluateConstitutionalGate>['checks'];
   policyResult: PolicyEvaluationResult | null;
   memoryRecords: number;
   toolExecuted: boolean;
@@ -65,7 +65,7 @@ export interface PipelineResult {
 
 async function hasMatchingApproval(
   input: PipelineInput,
-  approvalStore?: ApprovalStore,
+  approvalStore?: ApprovalStore
 ): Promise<boolean> {
   if (
     approvalStore &&
@@ -83,7 +83,7 @@ async function hasMatchingApproval(
       approval.tool === input.toolRequest &&
       approval.actorId === input.actorId &&
       approval.tenantId === input.tenantId &&
-      approval.expiresAt > now,
+      approval.expiresAt > now
   );
 }
 
@@ -119,9 +119,9 @@ export function createSovereignPipeline(opts?: {
             requestId: input.requestId,
             input: input.input,
             timestamp: input.timestamp,
-            source: "user",
+            source: 'user',
             actorId: input.actorId,
-            locale: "es-MX",
+            locale: 'es-MX',
           };
 
           const intent = CROWN.assessIntent(input.input);
@@ -137,9 +137,9 @@ export function createSovereignPipeline(opts?: {
               traceId: input.traceId,
               correlationId: input.requestId,
               actorIp: input.actorIp,
-              event: "constitutional_gate_denied",
-              severity: "S1",
-              details: `Artículos denegados: ${gate.deniedArticles.join(", ")}`,
+              event: 'constitutional_gate_denied',
+              severity: 'S1',
+              details: `Artículos denegados: ${gate.deniedArticles.join(', ')}`,
             });
 
             return {
@@ -153,32 +153,32 @@ export function createSovereignPipeline(opts?: {
                 ...routing,
                 policy: {
                   ...routing.policy,
-                  status: "denied",
-                  reasons: [`Puerta constitucional denegada: ${gate.deniedArticles.join(", ")}`],
+                  status: 'denied',
+                  reasons: [`Puerta constitucional denegada: ${gate.deniedArticles.join(', ')}`],
                 },
               }),
               denied: true,
-              denialReason: `Puerta constitucional denegada: ${gate.deniedArticles.join(", ")}`,
+              denialReason: `Puerta constitucional denegada: ${gate.deniedArticles.join(', ')}`,
             };
           }
 
           const allowedScopes = CROWN.resolveAllowedMemoryScopes(intent, input.identity);
           const roleNames = input.identity.roles.map((role) => role.toLowerCase());
-          const actorRole: MemoryActorRole = roleNames.includes("sovereignowner")
-            ? "SovereignOwner"
-            : roleNames.includes("operator")
-              ? "Operator"
-              : roleNames.includes("auditor")
-                ? "Auditor"
-                : roleNames.includes("system")
-                  ? "System"
-                  : "Guest";
+          const actorRole: MemoryActorRole = roleNames.includes('sovereignowner')
+            ? 'SovereignOwner'
+            : roleNames.includes('operator')
+              ? 'Operator'
+              : roleNames.includes('auditor')
+                ? 'Auditor'
+                : roleNames.includes('system')
+                  ? 'System'
+                  : 'Guest';
 
           const memoryResult = await memoryEngine.retrieve({
             tenantId: input.tenantId,
             actorId: input.actorId,
             role: actorRole,
-            scope: input.memoryScope ?? "turn",
+            scope: input.memoryScope ?? 'turn',
             authenticated: input.identity.authenticated,
             grantedScopes: allowedScopes as unknown as readonly CROWN.MemoryScope[],
           });
@@ -192,18 +192,18 @@ export function createSovereignPipeline(opts?: {
                 tool: toolMeta,
                 territorialBoundaryEnforced: false,
                 humanInTheLoop: input.identity.authenticated,
-                approvalThreshold: "medium",
+                approvalThreshold: 'medium',
                 consentRequired: toolMeta.requiresApproval,
                 consentGranted: approvalGranted,
               });
 
-              if (policyResult.decision === "denied") {
+              if (policyResult.decision === 'denied') {
                 const auditEvent = await opts?.auditRepository?.append({
                   traceId: input.traceId,
                   correlationId: input.requestId,
                   actorIp: input.actorIp,
-                  event: "policy_denied",
-                  severity: "S2",
+                  event: 'policy_denied',
+                  severity: 'S2',
                   details: policyResult.reason,
                 });
 
@@ -249,8 +249,8 @@ export function createSovereignPipeline(opts?: {
                 traceId: input.traceId,
                 correlationId: input.requestId,
                 actorIp: input.actorIp,
-                event: "tool_execution_denied",
-                severity: "S2",
+                event: 'tool_execution_denied',
+                severity: 'S2',
                 details: `${outcome.stage}: ${outcome.reason}`,
               });
               return {
@@ -271,8 +271,8 @@ export function createSovereignPipeline(opts?: {
             traceId: input.traceId,
             correlationId: input.requestId,
             actorIp: input.actorIp,
-            event: "pipeline_completed",
-            severity: "S3",
+            event: 'pipeline_completed',
+            severity: 'S3',
             details: JSON.stringify({
               intent: intent.category,
               action: intent.action,
@@ -299,7 +299,7 @@ export function createSovereignPipeline(opts?: {
           tenantId: input.tenantId,
           userId: input.actorId,
           input: input.input,
-        },
+        }
       );
 
       return outcome.result;
@@ -309,7 +309,7 @@ export function createSovereignPipeline(opts?: {
       return (
         opts?.auditRepository?.verifyChain() ?? {
           success: false,
-          error: "Sin repositorio de auditoría; la cadena no puede verificarse.",
+          error: 'Sin repositorio de auditoría; la cadena no puede verificarse.',
         }
       );
     },

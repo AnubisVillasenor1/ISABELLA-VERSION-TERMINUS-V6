@@ -1,4 +1,4 @@
-import { PLATFORM_FEE_BASIS_POINTS, type RevenueSplit } from "./types";
+import { PLATFORM_FEE_BASIS_POINTS, type RevenueSplit } from './types';
 
 /**
  * COST-FIRST SOVEREIGN MONETIZATION MODEL (antes "Zero-Loss")
@@ -23,22 +23,31 @@ export function splitZeroLossRevenue(input: ZeroLossRevenueInput): RevenueSplit 
   const { grossPaidCents, infrastructureCostCents, refundReserveRatio, communityShareRatio } =
     input;
 
-  if (grossPaidCents < 0) throw new Error("grossPaidCents cannot be negative");
-  if (infrastructureCostCents < 0) throw new Error("infrastructureCostCents cannot be negative");
+  if (grossPaidCents < 0) throw new Error('grossPaidCents cannot be negative');
+  if (infrastructureCostCents < 0) throw new Error('infrastructureCostCents cannot be negative');
+  if (!Number.isFinite(refundReserveRatio) || refundReserveRatio < 0 || refundReserveRatio > 1) {
+    throw new Error('refundReserveRatio must be within 0..1');
+  }
+  if (!Number.isFinite(communityShareRatio) || communityShareRatio < 0 || communityShareRatio > 1) {
+    throw new Error('communityShareRatio must be within 0..1');
+  }
 
   // 1. DEDUCT PLATFORM COSTS FIRST (Zero-Loss Guarantee)
   const netMarginCents = grossPaidCents - infrastructureCostCents;
 
   if (netMarginCents < 0) {
-    // If infrastructure costs exceeded gross (which should never happen due to upfront pricing),
-    // the platform takes a total loss, and there is $0 to distribute.
+    // If infrastructure costs exceeded gross, there is $0 to distribute. The
+    // residual (infra − gross) is an uncovered loss; it is reported explicitly
+    // instead of silently inflating infrastructureCostCents (which would break
+    // the accounting invariant gross = infra + fee + community + reserve + user).
     return {
       grossAmountCents: grossPaidCents,
-      infrastructureCostCents,
+      infrastructureCostCents: grossPaidCents,
       platformFeeCents: 0,
       refundReserveCents: 0,
       communityShareCents: 0,
       netUserAmountCents: 0,
+      uncoveredLossCents: infrastructureCostCents - grossPaidCents,
     };
   }
 
@@ -56,10 +65,22 @@ export function splitZeroLossRevenue(input: ZeroLossRevenueInput): RevenueSplit 
   const refundReserveCents = Math.round(userGrossProfitCents * refundReserveRatio);
   const netUserAmountCents = userGrossProfitCents - refundReserveCents;
 
+  // 6. ABSORB ROUNDING RESIDUAL so the exact invariant holds. Independent
+  // Math.round() calls leave 1–3 cents unassigned for some (gross, infra) pairs;
+  // those cents are added to the platform fee (the party that owns the pool),
+  // never dropped and never invented.
+  const distributed =
+    infrastructureCostCents +
+    platformFeeCents +
+    communityShareCents +
+    refundReserveCents +
+    netUserAmountCents;
+  const residual = grossPaidCents - distributed;
+
   return {
     grossAmountCents: grossPaidCents,
     infrastructureCostCents,
-    platformFeeCents,
+    platformFeeCents: platformFeeCents + residual,
     refundReserveCents,
     communityShareCents,
     netUserAmountCents,

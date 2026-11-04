@@ -5,7 +5,7 @@
  * insuficientes, en línea con la doctrina "incertidumbre estructurada".
  */
 
-import { embed } from "./embed";
+import { embed } from './embed';
 
 export interface IntentSeed {
   intent: string;
@@ -74,16 +74,16 @@ export class NativeIntentClassifier {
   predict(text: string): IntentPrediction {
     const scores = this.scores(text);
     if (scores.length === 0) {
-      return { intent: "desconocido", confidence: 0, margin: 0, scores: [] };
+      return { intent: 'desconocido', confidence: 0, margin: 0, scores: [] };
     }
     const first = scores[0];
     if (!first) {
-      return { intent: "desconocido", confidence: 0, margin: 0, scores };
+      return { intent: 'desconocido', confidence: 0, margin: 0, scores };
     }
     const second = scores[1];
     const margin = second ? first.score - second.score : first.score;
     if (first.score < this.options.minConfidence || margin < this.options.minMargin) {
-      return { intent: "desconocido", confidence: first.score, margin, scores };
+      return { intent: 'desconocido', confidence: first.score, margin, scores };
     }
     return { intent: first.intent, confidence: first.score, margin, scores };
   }
@@ -113,48 +113,48 @@ export function seedRdmIntents(options: IntentClassifierOptions = {}): NativeInt
   const classifier = new NativeIntentClassifier(options);
   const seeds: IntentSeed[] = [
     {
-      intent: "mineria",
+      intent: 'mineria',
       examples: [
-        "historia de la mineria en Real del Monte",
-        "minas de plata de Pachuca",
-        "extraccion de mineral en el distrito minero",
-        "pedro romero de terreros conde de regla",
+        'historia de la mineria en Real del Monte',
+        'minas de plata de Pachuca',
+        'extraccion de mineral en el distrito minero',
+        'pedro romero de terreros conde de regla',
       ],
     },
     {
-      intent: "paste",
+      intent: 'paste',
       examples: [
-        "que es el paste",
-        "receta tradicional del paste",
-        "donde comer paste en Real del Monte",
-        "origen del paste minero",
+        'que es el paste',
+        'receta tradicional del paste',
+        'donde comer paste en Real del Monte',
+        'origen del paste minero',
       ],
     },
     {
-      intent: "plateria",
+      intent: 'plateria',
       examples: [
-        "plateria de plata 925",
-        "artesania en plata de Hidalgo",
-        "joyeria de plata pura",
-        "taller de plateria",
+        'plateria de plata 925',
+        'artesania en plata de Hidalgo',
+        'joyeria de plata pura',
+        'taller de plateria',
       ],
     },
     {
-      intent: "patrimonio",
+      intent: 'patrimonio',
       examples: [
-        "patrimonio cultural de Real del Monte",
-        "sitios historicos de Hidalgo",
-        "museo de sitio mina de acosta",
-        "iglesias y arquitectura del pueblo magico",
+        'patrimonio cultural de Real del Monte',
+        'sitios historicos de Hidalgo',
+        'museo de sitio mina de acosta',
+        'iglesias y arquitectura del pueblo magico',
       ],
     },
     {
-      intent: "gobernanza",
+      intent: 'gobernanza',
       examples: [
-        "politicas de privacidad de Isabella",
-        "como se decide una autorizacion",
-        "quien aprueba las acciones del sistema",
-        "principios de soberania humana",
+        'politicas de privacidad de Isabella',
+        'como se decide una autorizacion',
+        'quien aprueba las acciones del sistema',
+        'principios de soberania humana',
       ],
     },
   ];

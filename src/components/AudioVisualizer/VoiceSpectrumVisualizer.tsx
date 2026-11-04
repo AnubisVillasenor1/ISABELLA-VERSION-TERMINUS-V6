@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   Activity,
   Radio,
@@ -9,12 +9,12 @@ import {
   Square,
   Maximize2,
   Minimize2,
-} from "lucide-react";
-import { useCrown } from "../../context/CrownContext";
-import { getAudioContextConstructor } from "../../utils/audioContext";
+} from 'lucide-react';
+import { useCrown } from '../../context/CrownContext';
+import { getAudioContextConstructor } from '../../utils/audioContext';
 
-export type VisualizerMode = "spectrum" | "waveform" | "circular" | "vumeter";
-export type ColorTheme = "sovereign_gold" | "aurora_cyan" | "isa_rose" | "amber_crown";
+export type VisualizerMode = 'spectrum' | 'waveform' | 'circular' | 'vumeter';
+export type ColorTheme = 'sovereign_gold' | 'aurora_cyan' | 'isa_rose' | 'amber_crown';
 
 interface VoiceSpectrumVisualizerProps {
   height?: number;
@@ -34,44 +34,44 @@ const THEMES: Record<
   }
 > = {
   sovereign_gold: {
-    name: "Oro Soberano & Jade",
-    primary: "#E0BB5D",
-    secondary: "#2EB67D",
-    accent: "#F7E8B8",
-    gradient: ["#166a48", "#2eb67d", "#e0bb5d"],
-    canvasGlow: "rgba(224, 187, 93, 0.4)",
+    name: 'Oro Soberano & Jade',
+    primary: '#E0BB5D',
+    secondary: '#2EB67D',
+    accent: '#F7E8B8',
+    gradient: ['#166a48', '#2eb67d', '#e0bb5d'],
+    canvasGlow: 'rgba(224, 187, 93, 0.4)',
   },
   aurora_cyan: {
-    name: "Cian & Azul Eléctrico",
-    primary: "#38bdf8",
-    secondary: "#0284c7",
-    accent: "#bae6fd",
-    gradient: ["#0369a1", "#38bdf8", "#7dd3fc"],
-    canvasGlow: "rgba(56, 189, 248, 0.45)",
+    name: 'Cian & Azul Eléctrico',
+    primary: '#38bdf8',
+    secondary: '#0284c7',
+    accent: '#bae6fd',
+    gradient: ['#0369a1', '#38bdf8', '#7dd3fc'],
+    canvasGlow: 'rgba(56, 189, 248, 0.45)',
   },
   isa_rose: {
-    name: "Resonancia Rosa ISA",
-    primary: "#f43f5e",
-    secondary: "#fb7185",
-    accent: "#fecdd3",
-    gradient: ["#9f1239", "#f43f5e", "#fda4af"],
-    canvasGlow: "rgba(244, 63, 94, 0.45)",
+    name: 'Resonancia Rosa ISA',
+    primary: '#f43f5e',
+    secondary: '#fb7185',
+    accent: '#fecdd3',
+    gradient: ['#9f1239', '#f43f5e', '#fda4af'],
+    canvasGlow: 'rgba(244, 63, 94, 0.45)',
   },
   amber_crown: {
-    name: "Ámbar Fuego CROWN",
-    primary: "#f59e0b",
-    secondary: "#d97706",
-    accent: "#fde68a",
-    gradient: ["#b45309", "#f59e0b", "#fde68a"],
-    canvasGlow: "rgba(245, 158, 11, 0.45)",
+    name: 'Ámbar Fuego CROWN',
+    primary: '#f59e0b',
+    secondary: '#d97706',
+    accent: '#fde68a',
+    gradient: ['#b45309', '#f59e0b', '#fde68a'],
+    canvasGlow: 'rgba(245, 158, 11, 0.45)',
   },
 };
 
-const FREQ_LABELS = ["60Hz", "125Hz", "250Hz", "500Hz", "1kHz", "2kHz", "4kHz", "8kHz", "16kHz"];
+const FREQ_LABELS = ['60Hz', '125Hz', '250Hz', '500Hz', '1kHz', '2kHz', '4kHz', '8kHz', '16kHz'];
 
 export const VoiceSpectrumVisualizer: React.FC<VoiceSpectrumVisualizerProps> = ({
   height = 180,
-  className = "",
+  className = '',
   showControls = true,
 }) => {
   const { state } = useCrown();
@@ -79,8 +79,8 @@ export const VoiceSpectrumVisualizer: React.FC<VoiceSpectrumVisualizerProps> = (
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  const [mode, setMode] = useState<VisualizerMode>("spectrum");
-  const [theme, setTheme] = useState<ColorTheme>("sovereign_gold");
+  const [mode, setMode] = useState<VisualizerMode>('spectrum');
+  const [theme, setTheme] = useState<ColorTheme>('sovereign_gold');
   const [gain, setGain] = useState<number>(1.2);
   const [smoothing, setSmoothing] = useState<number>(0.85);
   const [isPlayingTestTone, setIsPlayingTestTone] = useState<boolean>(false);
@@ -114,7 +114,7 @@ export const VoiceSpectrumVisualizer: React.FC<VoiceSpectrumVisualizerProps> = (
         audioCtxRef.current = ctx;
         analyserRef.current = analyser;
       }
-    } else if (audioCtxRef.current.state === "suspended") {
+    } else if (audioCtxRef.current.state === 'suspended') {
       audioCtxRef.current.resume().catch(() => {
         /* browser autoplay policy */
       });
@@ -142,7 +142,7 @@ export const VoiceSpectrumVisualizer: React.FC<VoiceSpectrumVisualizerProps> = (
                 const source = ctx.createMediaStreamSource(stream);
                 source.connect(analyser);
               } catch (e) {
-                console.warn("Could not connect mic to analyser", e);
+                console.warn('Could not connect mic to analyser', e);
               }
             }
           })
@@ -188,12 +188,12 @@ export const VoiceSpectrumVisualizer: React.FC<VoiceSpectrumVisualizerProps> = (
         const gNode = ctx.createGain();
 
         // Formant base ~220Hz (A3 / natural female register)
-        osc.type = "sawtooth";
+        osc.type = 'sawtooth';
         osc.frequency.setValueAtTime(224, ctx.currentTime);
 
         // Biquad filter to mimic vocal tract resonance (Formant F1)
         const filter = ctx.createBiquadFilter();
-        filter.type = "bandpass";
+        filter.type = 'bandpass';
         filter.frequency.setValueAtTime(620, ctx.currentTime);
         filter.Q.setValueAtTime(4.0, ctx.currentTime);
 
@@ -210,7 +210,7 @@ export const VoiceSpectrumVisualizer: React.FC<VoiceSpectrumVisualizerProps> = (
         gainNodeRef.current = gNode;
         setIsPlayingTestTone(true);
       } catch (err) {
-        console.warn("Failed to start acoustic test tone", err);
+        console.warn('Failed to start acoustic test tone', err);
       }
     }
   }, [ensureAudioContext, isPlayingTestTone]);
@@ -226,7 +226,7 @@ export const VoiceSpectrumVisualizer: React.FC<VoiceSpectrumVisualizerProps> = (
           /* unmount clean */
         }
       }
-      if (audioCtxRef.current && audioCtxRef.current.state !== "closed") {
+      if (audioCtxRef.current && audioCtxRef.current.state !== 'closed') {
         audioCtxRef.current.close().catch(() => {});
       }
     };
@@ -236,7 +236,7 @@ export const VoiceSpectrumVisualizer: React.FC<VoiceSpectrumVisualizerProps> = (
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
     let phase = 0;
@@ -263,11 +263,11 @@ export const VoiceSpectrumVisualizer: React.FC<VoiceSpectrumVisualizerProps> = (
       let detectedF0 = 220;
 
       // Clear Canvas with sleek subtle background
-      ctx.fillStyle = "#030712";
+      ctx.fillStyle = '#030712';
       ctx.fillRect(0, 0, width, h);
 
       // Draw subtle frequency grid lines
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.04)";
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
       ctx.lineWidth = 1;
       for (let x = 0; x <= width; x += width / 8) {
         ctx.beginPath();
@@ -285,7 +285,7 @@ export const VoiceSpectrumVisualizer: React.FC<VoiceSpectrumVisualizerProps> = (
       const activeColor = THEMES[theme];
 
       // ─── RENDER MODE: SPECTRUM ANALYZER BARS ───
-      if (mode === "spectrum") {
+      if (mode === 'spectrum') {
         const barWidth = (width - barCount * 2) / barCount;
         let sumAmp = 0;
         let maxAmp = 0;
@@ -308,7 +308,7 @@ export const VoiceSpectrumVisualizer: React.FC<VoiceSpectrumVisualizerProps> = (
           } else if (isListening) {
             magnitude = Math.min(
               0.85,
-              Math.max(0.03, (Math.sin(i * 0.3 + phase * 4) * 0.3 + 0.35) * gain),
+              Math.max(0.03, (Math.sin(i * 0.3 + phase * 4) * 0.3 + 0.35) * gain)
             );
           } else {
             // Idle ambient carrier breath
@@ -356,7 +356,7 @@ export const VoiceSpectrumVisualizer: React.FC<VoiceSpectrumVisualizerProps> = (
       }
 
       // ─── RENDER MODE: CONTINUOUS WAVEFORM / OSCILLOSCOPE ───
-      else if (mode === "waveform") {
+      else if (mode === 'waveform') {
         ctx.lineWidth = 2.5;
         ctx.strokeStyle = activeColor.primary;
         ctx.shadowColor = activeColor.canvasGlow;
@@ -393,7 +393,7 @@ export const VoiceSpectrumVisualizer: React.FC<VoiceSpectrumVisualizerProps> = (
 
         // Baseline reference
         ctx.shadowBlur = 0;
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
         ctx.lineWidth = 1;
         ctx.setLineDash([4, 4]);
         ctx.beginPath();
@@ -407,7 +407,7 @@ export const VoiceSpectrumVisualizer: React.FC<VoiceSpectrumVisualizerProps> = (
       }
 
       // ─── RENDER MODE: CIRCULAR / RESONANT POLAR RADAR ───
-      else if (mode === "circular") {
+      else if (mode === 'circular') {
         const centerX = width / 2;
         const centerY = h / 2;
         const baseRadius = Math.min(centerX, centerY) * 0.65;
@@ -456,7 +456,7 @@ export const VoiceSpectrumVisualizer: React.FC<VoiceSpectrumVisualizerProps> = (
       }
 
       // ─── RENDER MODE: STEREO DUAL VU METER ───
-      else if (mode === "vumeter") {
+      else if (mode === 'vumeter') {
         const meterHeight = 16;
         const padding = 20;
         const startY = h / 2 - meterHeight - 4;
@@ -474,23 +474,23 @@ export const VoiceSpectrumVisualizer: React.FC<VoiceSpectrumVisualizerProps> = (
             : 0.07;
 
         // Channel L
-        ctx.fillStyle = "rgba(255, 255, 255, 0.1)";
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
         ctx.fillRect(padding, startY, meterWidth, meterHeight);
         ctx.fillStyle = activeColor.primary;
         ctx.fillRect(padding, startY, meterWidth * leftAmp, meterHeight);
 
         // Channel R
         const rY = h / 2 + 8;
-        ctx.fillStyle = "rgba(255, 255, 255, 0.1)";
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
         ctx.fillRect(padding, rY, meterWidth, meterHeight);
         ctx.fillStyle = activeColor.secondary;
         ctx.fillRect(padding, rY, meterWidth * rightAmp, meterHeight);
 
         // Labels
-        ctx.font = "10px monospace";
-        ctx.fillStyle = "#94a3b8";
-        ctx.fillText("CH-L [Izquierdo]", padding, startY - 4);
-        ctx.fillText("CH-R [Derecho]", padding, rY - 4);
+        ctx.font = '10px monospace';
+        ctx.fillStyle = '#94a3b8';
+        ctx.fillText('CH-L [Izquierdo]', padding, startY - 4);
+        ctx.fillText('CH-R [Derecho]', padding, rY - 4);
 
         currentRms = Math.round(-38 + leftAmp * 34);
       }
@@ -521,8 +521,8 @@ export const VoiceSpectrumVisualizer: React.FC<VoiceSpectrumVisualizerProps> = (
       }
     };
     handleResize();
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, [expanded, height]);
 
   const activeColor = THEMES[theme];
@@ -547,12 +547,12 @@ export const VoiceSpectrumVisualizer: React.FC<VoiceSpectrumVisualizerProps> = (
               <span
                 className={`w-2 h-2 rounded-full ${
                   isSpeaking
-                    ? "bg-amber-400 animate-ping"
+                    ? 'bg-amber-400 animate-ping'
                     : isListening
-                      ? "bg-rose-400 animate-ping"
+                      ? 'bg-rose-400 animate-ping'
                       : isPlayingTestTone
-                        ? "bg-emerald-400 animate-ping"
-                        : "bg-slate-600"
+                        ? 'bg-emerald-400 animate-ping'
+                        : 'bg-slate-600'
                 }`}
               />
             </h3>
@@ -566,11 +566,11 @@ export const VoiceSpectrumVisualizer: React.FC<VoiceSpectrumVisualizerProps> = (
         <div className="flex items-center gap-1 bg-[#030712] p-1 rounded-xl border border-slate-800">
           <button
             type="button"
-            onClick={() => setMode("spectrum")}
+            onClick={() => setMode('spectrum')}
             className={`px-3 py-1 rounded-lg text-[10px] font-mono transition-all flex items-center gap-1 cursor-pointer ${
-              mode === "spectrum"
-                ? "bg-slate-800 text-sky-300 font-bold shadow-xs"
-                : "text-slate-400 hover:text-slate-200"
+              mode === 'spectrum'
+                ? 'bg-slate-800 text-sky-300 font-bold shadow-xs'
+                : 'text-slate-400 hover:text-slate-200'
             }`}
           >
             <Activity className="w-3 h-3" />
@@ -578,11 +578,11 @@ export const VoiceSpectrumVisualizer: React.FC<VoiceSpectrumVisualizerProps> = (
           </button>
           <button
             type="button"
-            onClick={() => setMode("waveform")}
+            onClick={() => setMode('waveform')}
             className={`px-3 py-1 rounded-lg text-[10px] font-mono transition-all flex items-center gap-1 cursor-pointer ${
-              mode === "waveform"
-                ? "bg-slate-800 text-sky-300 font-bold shadow-xs"
-                : "text-slate-400 hover:text-slate-200"
+              mode === 'waveform'
+                ? 'bg-slate-800 text-sky-300 font-bold shadow-xs'
+                : 'text-slate-400 hover:text-slate-200'
             }`}
           >
             <Waves className="w-3 h-3" />
@@ -590,11 +590,11 @@ export const VoiceSpectrumVisualizer: React.FC<VoiceSpectrumVisualizerProps> = (
           </button>
           <button
             type="button"
-            onClick={() => setMode("circular")}
+            onClick={() => setMode('circular')}
             className={`px-3 py-1 rounded-lg text-[10px] font-mono transition-all flex items-center gap-1 cursor-pointer ${
-              mode === "circular"
-                ? "bg-slate-800 text-sky-300 font-bold shadow-xs"
-                : "text-slate-400 hover:text-slate-200"
+              mode === 'circular'
+                ? 'bg-slate-800 text-sky-300 font-bold shadow-xs'
+                : 'text-slate-400 hover:text-slate-200'
             }`}
           >
             <Sparkles className="w-3 h-3" />
@@ -602,11 +602,11 @@ export const VoiceSpectrumVisualizer: React.FC<VoiceSpectrumVisualizerProps> = (
           </button>
           <button
             type="button"
-            onClick={() => setMode("vumeter")}
+            onClick={() => setMode('vumeter')}
             className={`px-3 py-1 rounded-lg text-[10px] font-mono transition-all flex items-center gap-1 cursor-pointer ${
-              mode === "vumeter"
-                ? "bg-slate-800 text-sky-300 font-bold shadow-xs"
-                : "text-slate-400 hover:text-slate-200"
+              mode === 'vumeter'
+                ? 'bg-slate-800 text-sky-300 font-bold shadow-xs'
+                : 'text-slate-400 hover:text-slate-200'
             }`}
           >
             <Gauge className="w-3 h-3" />
@@ -617,7 +617,7 @@ export const VoiceSpectrumVisualizer: React.FC<VoiceSpectrumVisualizerProps> = (
             type="button"
             onClick={() => setExpanded(!expanded)}
             className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 transition-colors ml-1 cursor-pointer"
-            title={expanded ? "Reducir" : "Expandir"}
+            title={expanded ? 'Reducir' : 'Expandir'}
           >
             {expanded ? (
               <Minimize2 className="w-3.5 h-3.5" />
@@ -637,7 +637,7 @@ export const VoiceSpectrumVisualizer: React.FC<VoiceSpectrumVisualizerProps> = (
         />
 
         {/* Live Frequency Calibration Overlays */}
-        {mode === "spectrum" && (
+        {mode === 'spectrum' && (
           <div className="absolute bottom-1 left-0 right-0 flex justify-between px-3 text-[9px] font-mono text-slate-500 pointer-events-none">
             {FREQ_LABELS.map((label, idx) => (
               <span key={idx}>{label}</span>
@@ -650,32 +650,32 @@ export const VoiceSpectrumVisualizer: React.FC<VoiceSpectrumVisualizerProps> = (
           <span
             className={`px-2.5 py-0.5 rounded-full text-[9px] font-mono font-bold uppercase tracking-wider border backdrop-blur-md flex items-center gap-1.5 ${
               isSpeaking
-                ? "bg-amber-950/80 text-amber-300 border-amber-500/40"
+                ? 'bg-amber-950/80 text-amber-300 border-amber-500/40'
                 : isListening
-                  ? "bg-rose-950/80 text-rose-300 border-rose-500/40"
+                  ? 'bg-rose-950/80 text-rose-300 border-rose-500/40'
                   : isPlayingTestTone
-                    ? "bg-emerald-950/80 text-emerald-300 border-emerald-500/40"
-                    : "bg-slate-900/80 text-slate-400 border-slate-800"
+                    ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40'
+                    : 'bg-slate-900/80 text-slate-400 border-slate-800'
             }`}
           >
             <span
               className={`w-1.5 h-1.5 rounded-full ${
                 isSpeaking
-                  ? "bg-amber-400 animate-ping"
+                  ? 'bg-amber-400 animate-ping'
                   : isListening
-                    ? "bg-rose-400 animate-ping"
+                    ? 'bg-rose-400 animate-ping'
                     : isPlayingTestTone
-                      ? "bg-emerald-400"
-                      : "bg-slate-500"
+                      ? 'bg-emerald-400'
+                      : 'bg-slate-500'
               }`}
             />
             {isSpeaking
-              ? "Sintetizando Voz Femenina de Isabella"
+              ? 'Sintetizando Voz Femenina de Isabella'
               : isListening
-                ? "Recepción de Micrófono Activa"
+                ? 'Recepción de Micrófono Activa'
                 : isPlayingTestTone
-                  ? "Tono Acústico de Calibración (F0=224Hz)"
-                  : "Canal en Reposo (Ruido de Fondo -60 dBFS)"}
+                  ? 'Tono Acústico de Calibración (F0=224Hz)'
+                  : 'Canal en Reposo (Ruido de Fondo -60 dBFS)'}
           </span>
         </div>
       </div>
@@ -685,7 +685,7 @@ export const VoiceSpectrumVisualizer: React.FC<VoiceSpectrumVisualizerProps> = (
         <div className="p-2.5 rounded-xl bg-[#030712] border border-slate-800/80">
           <span className="text-[10px] text-slate-400 block">Frecuencia Fundamental (F0)</span>
           <span className="text-sky-300 font-bold text-sm">
-            {isSpeaking || isPlayingTestTone ? `${fundamentalFreq} Hz` : "—"}
+            {isSpeaking || isPlayingTestTone ? `${fundamentalFreq} Hz` : '—'}
           </span>
           <span className="text-[9px] text-slate-500 block">Cadencia femenina natural</span>
         </div>
@@ -693,7 +693,7 @@ export const VoiceSpectrumVisualizer: React.FC<VoiceSpectrumVisualizerProps> = (
         <div className="p-2.5 rounded-xl bg-[#030712] border border-slate-800/80">
           <span className="text-[10px] text-slate-400 block">Pico Armónico Principal</span>
           <span className="text-amber-300 font-bold text-sm">
-            {isSpeaking || isPlayingTestTone ? `${peakFreq} Hz` : "—"}
+            {isSpeaking || isPlayingTestTone ? `${peakFreq} Hz` : '—'}
           </span>
           <span className="text-[9px] text-slate-500 block">Formante F1 / Resonancia</span>
         </div>
@@ -703,10 +703,10 @@ export const VoiceSpectrumVisualizer: React.FC<VoiceSpectrumVisualizerProps> = (
           <span
             className={`font-bold text-sm ${
               rmsLevel > -12
-                ? "text-amber-400"
+                ? 'text-amber-400'
                 : rmsLevel > -30
-                  ? "text-emerald-300"
-                  : "text-slate-400"
+                  ? 'text-emerald-300'
+                  : 'text-slate-400'
             }`}
           >
             {rmsLevel} dBFS
@@ -731,8 +731,8 @@ export const VoiceSpectrumVisualizer: React.FC<VoiceSpectrumVisualizerProps> = (
               onClick={toggleTestTone}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[11px] font-bold transition-all cursor-pointer ${
                 isPlayingTestTone
-                  ? "bg-rose-950/80 text-rose-300 border-rose-500/50 shadow-md shadow-rose-950/40"
-                  : "bg-[#030712] text-slate-300 border-slate-800 hover:border-slate-700"
+                  ? 'bg-rose-950/80 text-rose-300 border-rose-500/50 shadow-md shadow-rose-950/40'
+                  : 'bg-[#030712] text-slate-300 border-slate-800 hover:border-slate-700'
               }`}
             >
               {isPlayingTestTone ? (

@@ -2,7 +2,7 @@
  * Federated Learning Engine Ω
  * state: engine-generated
  * Part of ISABELLA-Q Ω Cognitive Architecture
- * 
+ *
  * Implements federated learning with:
  * - Active Learning (query strategies, uncertainty sampling)
  * - Direct Preference Optimization (DPO)
@@ -14,18 +14,20 @@
  * - Model Versioning & Rollback
  */
 
-import { EventEmitter } from "node:events";
-import { randomBytes, createHash } from "node:crypto";
+import { EventEmitter } from 'node:events';
+import { randomBytes, createHash } from 'node:crypto';
 
-export type LearningPhase = "pretraining" | "finetuning" | "rlhf" | "dpo" | "rlaif" | "continual";
-export type AggregationStrategy = "fedavg" | "fedprox" | "scaffold" | "fedadam" | "fedavgm" | "secure";
-export type QueryStrategy = "uncertainty" | "diversity" | "expected_improvement" | "badge" | "coreset" | "random";
-export type PrivacyMechanism = "none" | "dp_sgd" | "secure_aggregation" | "homomorphic" | "mpc";
+export type LearningPhase = 'pretraining' | 'finetuning' | 'rlhf' | 'dpo' | 'rlaif' | 'continual';
+export type AggregationStrategy =
+  'fedavg' | 'fedprox' | 'scaffold' | 'fedadam' | 'fedavgm' | 'secure';
+export type QueryStrategy =
+  'uncertainty' | 'diversity' | 'expected_improvement' | 'badge' | 'coreset' | 'random';
+export type PrivacyMechanism = 'none' | 'dp_sgd' | 'secure_aggregation' | 'homomorphic' | 'mpc';
 
 export interface ModelAdapter {
   readonly id: string;
   readonly baseModelId: string;
-  readonly type: "lora" | "adalora" | "ia3" | "prompt_tuning" | "prefix_tuning" | "full";
+  readonly type: 'lora' | 'adalora' | 'ia3' | 'prompt_tuning' | 'prefix_tuning' | 'full';
   readonly config: AdapterConfig;
   readonly parameters: ModelParameters;
   readonly metadata: AdapterMetadata;
@@ -39,7 +41,7 @@ export interface AdapterConfig {
   readonly dropout: number;
   readonly targetModules: string[];
   readonly scaling: number;
-  readonly initMethod: "gaussian" | "loftq" | "pissa";
+  readonly initMethod: 'gaussian' | 'loftq' | 'pissa';
 }
 
 export interface ModelParameters {
@@ -58,11 +60,11 @@ export interface AdapterMetadata {
 
 export interface TrainingJob {
   readonly id: string;
-  readonly type: "centralized" | "federated" | "active" | "dpo" | "rlaif";
+  readonly type: 'centralized' | 'federated' | 'active' | 'dpo' | 'rlaif';
   readonly modelId: string;
   readonly datasetId: string;
   readonly config: TrainingConfig;
-  readonly status: "pending" | "running" | "completed" | "failed" | "cancelled";
+  readonly status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
   readonly progress: number;
   readonly currentEpoch: number;
   readonly currentStep: number;
@@ -118,7 +120,7 @@ export interface TrainingMetrics {
 export interface Dataset {
   readonly id: string;
   readonly name: string;
-  readonly type: "text" | "preference" | "feedback" | "instruction" | "conversation" | "code";
+  readonly type: 'text' | 'preference' | 'feedback' | 'instruction' | 'conversation' | 'code';
   readonly samples: DatasetSample[];
   readonly splits: { train: number[]; eval: number[]; test: number[] };
   readonly metadata: Record<string, unknown>;
@@ -149,13 +151,13 @@ export interface FederatedClient {
   readonly endpoint: string;
   readonly publicKey: string;
   readonly capabilities: ClientCapabilities;
-  status: "active" | "inactive" | "training" | "error";
+  status: 'active' | 'inactive' | 'training' | 'error';
   lastSeen: number;
   readonly metadata: Record<string, unknown>;
 }
 
 export interface ClientCapabilities {
-  readonly compute: "low" | "medium" | "high";
+  readonly compute: 'low' | 'medium' | 'high';
   readonly memory: number; // GB
   readonly gpu: boolean;
   readonly supportedFrameworks: string[];
@@ -242,7 +244,7 @@ export class LoRAManager extends EventEmitter {
 
   registerBaseModel(modelId: string, parameters: ModelParameters): void {
     this.baseModels.set(modelId, parameters);
-    this.emit("base_model:registered", modelId);
+    this.emit('base_model:registered', modelId);
   }
 
   createAdapter(
@@ -253,7 +255,7 @@ export class LoRAManager extends EventEmitter {
     const baseModel = this.baseModels.get(baseModelId);
     if (!baseModel) throw new Error(`BASE_MODEL_NOT_FOUND: ${baseModelId}`);
 
-    const adapterId = `adapter_${randomBytes(12).toString("hex")}`;
+    const adapterId = `adapter_${randomBytes(12).toString('hex')}`;
     const now = Date.now();
 
     // Initialize LoRA weights
@@ -262,15 +264,15 @@ export class LoRAManager extends EventEmitter {
       // In production, would get actual weight shapes from base model
       const shape = this.getModuleShape(baseModel, module);
       const [outDim, inDim] = shape;
-      
+
       // LoRA A: (rank, inDim), LoRA B: (outDim, rank)
       const loraA = new Float32Array(config.rank * inDim);
       const loraB = new Float32Array(outDim * config.rank);
-      
+
       // Initialize
       this.initializeLoRA(loraA, config.initMethod, inDim, config.rank);
       this.initializeLoRA(loraB, config.initMethod, config.rank, outDim);
-      
+
       weights.set(`${module}.lora_A`, loraA);
       weights.set(`${module}.lora_B`, loraB);
     }
@@ -278,7 +280,7 @@ export class LoRAManager extends EventEmitter {
     const adapter: ModelAdapter = {
       id: adapterId,
       baseModelId,
-      type: "lora",
+      type: 'lora',
       config,
       parameters: { weights, metadata: {} },
       metadata: {
@@ -294,7 +296,7 @@ export class LoRAManager extends EventEmitter {
     };
 
     this.adapters.set(adapterId, adapter);
-    this.emit("adapter:created", adapter);
+    this.emit('adapter:created', adapter);
     return adapter;
   }
 
@@ -306,14 +308,12 @@ export class LoRAManager extends EventEmitter {
 
   private initializeLoRA(
     array: Float32Array,
-    method: AdapterConfig["initMethod"],
+    method: AdapterConfig['initMethod'],
     fanIn: number,
     fanOut: number
   ): void {
-    const scale = method === "gaussian" 
-      ? Math.sqrt(2 / (fanIn + fanOut))
-      : 1 / Math.sqrt(fanIn);
-    
+    const scale = method === 'gaussian' ? Math.sqrt(2 / (fanIn + fanOut)) : 1 / Math.sqrt(fanIn);
+
     for (let i = 0; i < array.length; i++) {
       array[i] = (Math.random() * 2 - 1) * scale;
     }
@@ -322,11 +322,11 @@ export class LoRAManager extends EventEmitter {
   mergeAdapter(adapterId: string, targetModelId: string, alpha?: number): ModelParameters {
     const adapter = this.adapters.get(adapterId);
     const modelId = targetModelId || adapter?.baseModelId;
-    if (!modelId) throw new Error("BASE_MODEL_ID_REQUIRED");
+    if (!modelId) throw new Error('BASE_MODEL_ID_REQUIRED');
     const baseModel = this.baseModels.get(modelId);
-    
+
     if (!adapter || !baseModel) {
-      throw new Error("ADAPTER_OR_BASE_MODEL_NOT_FOUND");
+      throw new Error('ADAPTER_OR_BASE_MODEL_NOT_FOUND');
     }
 
     const scale = alpha || adapter.config.alpha / adapter.config.rank;
@@ -339,13 +339,13 @@ export class LoRAManager extends EventEmitter {
 
     // Apply LoRA deltas
     for (const [key, delta] of adapter.parameters.weights) {
-      const baseKey = key.replace(/\.lora_[AB]$/, "");
+      const baseKey = key.replace(/\.lora_[AB]$/, '');
       const baseWeight = mergedWeights.get(baseKey);
-      
-      if (baseWeight && key.endsWith(".lora_A")) {
-        const loraBKey = key.replace(".lora_A", ".lora_B");
+
+      if (baseWeight && key.endsWith('.lora_A')) {
+        const loraBKey = key.replace('.lora_A', '.lora_B');
         const loraB = adapter.parameters.weights.get(loraBKey);
-        
+
         if (loraB) {
           // Compute LoRA delta: B @ A * scale
           const [outDim, inDim] = [baseWeight.length / adapter.config.rank, adapter.config.rank];
@@ -368,7 +368,7 @@ export class LoRAManager extends EventEmitter {
     // Simplified rank-1 update - real implementation uses proper matmul
     const outDim = Math.sqrt(baseWeight.length);
     const inDim = outDim;
-    
+
     for (let i = 0; i < outDim; i++) {
       for (let j = 0; j < inDim; j++) {
         let delta = 0;
@@ -385,8 +385,9 @@ export class LoRAManager extends EventEmitter {
   }
 
   listAdapters(baseModelId?: string): ModelAdapter[] {
-    return Array.from(this.adapters.values())
-      .filter(a => !baseModelId || a.baseModelId === baseModelId);
+    return Array.from(this.adapters.values()).filter(
+      (a) => !baseModelId || a.baseModelId === baseModelId
+    );
   }
 }
 
@@ -401,7 +402,7 @@ export class ActiveLearningEngine extends EventEmitter {
   setPool(samples: DatasetSample[]): void {
     this.pool = samples;
     this.labeled.clear();
-    this.emit("pool:updated", samples.length);
+    this.emit('pool:updated', samples.length);
   }
 
   markLabeled(sampleId: string): void {
@@ -412,40 +413,39 @@ export class ActiveLearningEngine extends EventEmitter {
     strategy: QueryStrategy,
     budget: number,
     modelFn: (inputs: string[]) => Promise<Float32Array[]>, // Returns embeddings/logits
-    config: { diversityWeight?: number; uncertaintyMeasure?: "entropy" | "margin" | "variance" } = {}
+    config: {
+      diversityWeight?: number;
+      uncertaintyMeasure?: 'entropy' | 'margin' | 'variance';
+    } = {}
   ): Promise<ActiveLearningQuery> {
     const unlabeledIndices = this.pool
       .map((_, i) => i)
-      .filter(i => !this.labeled.has(this.pool[i].id));
+      .filter((i) => !this.labeled.has(this.pool[i].id));
 
     if (unlabeledIndices.length === 0) {
-      throw new Error("NO_UNLABELED_SAMPLES");
+      throw new Error('NO_UNLABELED_SAMPLES');
     }
 
-    const scores = await this.computeScores(
-      unlabeledIndices,
-      strategy,
-      modelFn,
-      config
-    );
+    const scores = await this.computeScores(unlabeledIndices, strategy, modelFn, config);
 
     // Select top-k
-    const scored = unlabeledIndices.map((idx, i) => ({ idx, score: scores[i] }))
+    const scored = unlabeledIndices
+      .map((idx, i) => ({ idx, score: scores[i] }))
       .sort((a, b) => b.score - a.score)
       .slice(0, budget);
 
     const query: ActiveLearningQuery = {
-      id: `alq_${randomBytes(10).toString("hex")}`,
+      id: `alq_${randomBytes(10).toString('hex')}`,
       poolIndices: unlabeledIndices,
       strategy,
       scores,
-      selectedIndices: scored.map(s => s.idx),
+      selectedIndices: scored.map((s) => s.idx),
       budget,
       createdAt: Date.now(),
     };
 
     this.queryHistory.push(query);
-    this.emit("query:completed", query);
+    this.emit('query:completed', query);
     return query;
   }
 
@@ -453,32 +453,32 @@ export class ActiveLearningEngine extends EventEmitter {
     indices: number[],
     strategy: QueryStrategy,
     modelFn: (inputs: string[]) => Promise<Float32Array[]>,
-    config: { diversityWeight?: number; uncertaintyMeasure?: "entropy" | "margin" | "variance" }
+    config: { diversityWeight?: number; uncertaintyMeasure?: 'entropy' | 'margin' | 'variance' }
   ): Promise<Float32Array> {
-    const inputs = indices.map(i => this.pool[i].input);
+    const inputs = indices.map((i) => this.pool[i].input);
     const outputs = await modelFn(inputs); // embeddings or logits
-    
+
     const scores = new Float32Array(indices.length);
-    
+
     switch (strategy) {
-      case "uncertainty":
-        return this.uncertaintyScores(outputs, config.uncertaintyMeasure || "entropy");
-      
-      case "diversity":
+      case 'uncertainty':
+        return this.uncertaintyScores(outputs, config.uncertaintyMeasure || 'entropy');
+
+      case 'diversity':
         return this.diversityScores(outputs, indices);
-      
-      case "expected_improvement":
+
+      case 'expected_improvement':
         return this.expectedImprovementScores(outputs, indices);
-      
-      case "badge":
+
+      case 'badge':
         return this.badgeScores(outputs, indices);
-      
-      case "coreset":
+
+      case 'coreset':
         return this.coresetScores(outputs, indices);
-      
-      case "random":
+
+      case 'random':
         return new Float32Array(indices.length).fill(0).map(() => Math.random());
-      
+
       default:
         return new Float32Array(indices.length).fill(0.5);
     }
@@ -486,29 +486,29 @@ export class ActiveLearningEngine extends EventEmitter {
 
   private uncertaintyScores(
     outputs: Float32Array[],
-    measure: "entropy" | "margin" | "variance"
+    measure: 'entropy' | 'margin' | 'variance'
   ): Float32Array {
     const scores = new Float32Array(outputs.length);
-    
+
     for (let i = 0; i < outputs.length; i++) {
       const logits = outputs[i];
       const probs = this.softmax(logits);
-      
+
       switch (measure) {
-        case "entropy":
+        case 'entropy':
           scores[i] = -probs.reduce((sum, p) => sum + (p > 0 ? p * Math.log(p) : 0), 0);
           break;
-        case "margin":
+        case 'margin':
           const sorted = [...probs].sort((a, b) => b - a);
           scores[i] = 1 - (sorted[0] - sorted[1]); // Smaller margin = higher uncertainty
           break;
-        case "variance":
+        case 'variance':
           const mean = probs.reduce((a, b) => a + b, 0) / probs.length;
           scores[i] = probs.reduce((sum, p) => sum + (p - mean) ** 2, 0) / probs.length;
           break;
       }
     }
-    
+
     return this.normalize(scores);
   }
 
@@ -517,42 +517,42 @@ export class ActiveLearningEngine extends EventEmitter {
     const embeddings = outputs; // Assume these are embeddings
     const scores = new Float32Array(embeddings.length);
     const selected = new Set<number>();
-    
+
     // Start with random
     selected.add(0);
     scores[0] = 1;
-    
+
     for (let iter = 1; iter < Math.min(embeddings.length, 100); iter++) {
       let maxDist = -1;
       let maxIdx = -1;
-      
+
       for (let i = 0; i < embeddings.length; i++) {
         if (selected.has(i)) continue;
-        
+
         let minDist = Infinity;
         for (const s of selected) {
           const dist = this.euclideanDistance(embeddings[i], embeddings[s]);
           minDist = Math.min(minDist, dist);
         }
-        
+
         if (minDist > maxDist) {
           maxDist = minDist;
           maxIdx = i;
         }
       }
-      
+
       if (maxIdx >= 0) {
         selected.add(maxIdx);
         scores[maxIdx] = maxDist;
       }
     }
-    
+
     return this.normalize(scores);
   }
 
   private expectedImprovementScores(outputs: Float32Array[], indices: number[]): Float32Array {
     // Simplified EI - would need GP in production
-    return this.uncertaintyScores(outputs, "entropy");
+    return this.uncertaintyScores(outputs, 'entropy');
   }
 
   private badgeScores(outputs: Float32Array[], indices: number[]): Float32Array {
@@ -568,9 +568,9 @@ export class ActiveLearningEngine extends EventEmitter {
 
   private softmax(logits: Float32Array): Float32Array {
     const max = Math.max(...logits);
-    const exps = logits.map(v => Math.exp(v - max));
+    const exps = logits.map((v) => Math.exp(v - max));
     const sum = exps.reduce((a, b) => a + b, 0);
-    return new Float32Array(exps.map(v => v / sum));
+    return new Float32Array(exps.map((v) => v / sum));
   }
 
   private euclideanDistance(a: Float32Array, b: Float32Array): number {
@@ -585,7 +585,7 @@ export class ActiveLearningEngine extends EventEmitter {
     const min = Math.min(...arr);
     const max = Math.max(...arr);
     if (max === min) return new Float32Array(arr.length).fill(0.5);
-    return new Float32Array(arr.map(v => (v - min) / (max - min)));
+    return new Float32Array(arr.map((v) => (v - min) / (max - min)));
   }
 
   getQueryHistory(): ActiveLearningQuery[] {
@@ -607,12 +607,12 @@ export class DPOTrainer extends EventEmitter {
       epochs: number;
       batchSize: number;
       maxLength: number;
-      beta_schedule?: "constant" | "linear" | "cosine";
+      beta_schedule?: 'constant' | 'linear' | 'cosine';
     }
   ): Promise<{ modelId: string; metrics: TrainingMetrics }> {
     // DPO Loss: -log(sigmoid(beta * (log π(y_w|x) - log π(y_l|x) - log π_ref(y_w|x) + log π_ref(y_l|x))))
     // In production, would use actual training loop with PyTorch/JAX
-    
+
     const metrics: TrainingMetrics = {
       trainLoss: [],
       evalLoss: [],
@@ -623,36 +623,40 @@ export class DPOTrainer extends EventEmitter {
 
     // Simulated training
     for (let epoch = 0; epoch < config.epochs; epoch++) {
-      const beta = config.beta_schedule === "cosine" 
-        ? config.beta * (1 + Math.cos(Math.PI * epoch / config.epochs)) / 2
-        : config.beta_schedule === "linear"
-        ? config.beta * (1 - epoch / config.epochs)
-        : config.beta;
+      const beta =
+        config.beta_schedule === 'cosine'
+          ? (config.beta * (1 + Math.cos((Math.PI * epoch) / config.epochs))) / 2
+          : config.beta_schedule === 'linear'
+            ? config.beta * (1 - epoch / config.epochs)
+            : config.beta;
 
       // Batch training
       for (let i = 0; i < preferences.length; i += config.batchSize) {
         const batch = preferences.slice(i, i + config.batchSize);
-        
+
         // Compute DPO loss (simulated)
         const loss = this.computeDPOLoss(batch, beta);
         const rewardMargin = this.computeRewardMargin(batch);
         const accuracy = this.computeAccuracy(batch);
-        
+
         metrics.trainLoss.push(loss);
         metrics.customMetrics.dpo_loss.push(loss);
         metrics.customMetrics.reward_margin.push(rewardMargin);
         metrics.customMetrics.accuracy.push(accuracy);
-        
-        this.emit("batch:completed", { epoch, batch: i / config.batchSize, loss, beta });
+
+        this.emit('batch:completed', { epoch, batch: i / config.batchSize, loss, beta });
       }
-      
+
       metrics.learningRate.push(config.learningRate);
-      this.emit("epoch:completed", { epoch, loss: metrics.trainLoss[metrics.trainLoss.length - 1] });
+      this.emit('epoch:completed', {
+        epoch,
+        loss: metrics.trainLoss[metrics.trainLoss.length - 1],
+      });
     }
 
-    const newModelId = `${modelId}-dpo-${randomBytes(8).toString("hex")}`;
-    this.emit("training:completed", { modelId: newModelId, metrics });
-    
+    const newModelId = `${modelId}-dpo-${randomBytes(8).toString('hex')}`;
+    this.emit('training:completed', { modelId: newModelId, metrics });
+
     return { modelId: newModelId, metrics };
   }
 
@@ -692,30 +696,25 @@ export class RLAIFTrainer extends EventEmitter {
       // 1. Generate samples
       const prompts = this.generatePrompts(config.samplesPerIteration);
       const responses = await generateFn(prompts);
-      
+
       // 2. Compute rewards
       const rewards = await rewardFn(prompts, responses);
-      
+
       // 3. PPO update (simulated)
-      const ppoMetrics = await this.ppoStep(
-        prompts,
-        responses,
-        rewards,
-        config.ppoConfig
-      );
-      
+      const ppoMetrics = await this.ppoStep(prompts, responses, rewards, config.ppoConfig);
+
       metrics.trainLoss.push(ppoMetrics.loss);
       metrics.customMetrics.reward.push(ppoMetrics.meanReward);
       metrics.customMetrics.kl_div.push(ppoMetrics.klDiv);
       metrics.customMetrics.entropy.push(ppoMetrics.entropy);
       metrics.customMetrics.clipfrac.push(ppoMetrics.clipfrac);
-      
-      this.emit("iteration:completed", { iteration: iter, ...ppoMetrics });
+
+      this.emit('iteration:completed', { iteration: iter, ...ppoMetrics });
     }
 
-    const newModelId = `rlaif-${randomBytes(10).toString("hex")}`;
-    this.emit("training:completed", { modelId: newModelId, metrics });
-    
+    const newModelId = `rlaif-${randomBytes(10).toString('hex')}`;
+    this.emit('training:completed', { modelId: newModelId, metrics });
+
     return { modelId: newModelId, metrics };
   }
 
@@ -729,7 +728,13 @@ export class RLAIFTrainer extends EventEmitter {
     responses: string[],
     rewards: number[],
     config: PPOConfig
-  ): Promise<{ loss: number; meanReward: number; klDiv: number; entropy: number; clipfrac: number }> {
+  ): Promise<{
+    loss: number;
+    meanReward: number;
+    klDiv: number;
+    entropy: number;
+    clipfrac: number;
+  }> {
     // Simulated PPO step
     return {
       loss: Math.random() * 0.3 + 0.05,
@@ -750,22 +755,22 @@ export class FederatedCoordinator extends EventEmitter {
   private rounds: FederatedRound[] = [];
   private config: FederationConfig | null = null;
 
-  registerClient(client: Omit<FederatedClient, "id" | "lastSeen" | "status">): FederatedClient {
-    const id = `client_${randomBytes(10).toString("hex")}`;
+  registerClient(client: Omit<FederatedClient, 'id' | 'lastSeen' | 'status'>): FederatedClient {
+    const id = `client_${randomBytes(10).toString('hex')}`;
     const fullClient: FederatedClient = {
       ...client,
       id,
-      status: "active",
+      status: 'active',
       lastSeen: Date.now(),
     };
     this.clients.set(id, fullClient);
-    this.emit("client:registered", fullClient);
+    this.emit('client:registered', fullClient);
     return fullClient;
   }
 
   setGlobalModel(model: ModelParameters): void {
     this.globalModel = model;
-    this.emit("global_model:updated", model);
+    this.emit('global_model:updated', model);
   }
 
   async startTraining(config: FederationConfig): Promise<FederatedRound[]> {
@@ -776,60 +781,63 @@ export class FederatedCoordinator extends EventEmitter {
       const roundResult = await this.runRound(round);
       allRounds.push(roundResult);
       this.rounds.push(roundResult);
-      
-      this.emit("round:completed", roundResult);
-      
+
+      this.emit('round:completed', roundResult);
+
       if (roundResult.clientUpdates.length === 0) {
-        this.emit("training:stalled", { round });
+        this.emit('training:stalled', { round });
         break;
       }
     }
 
-    this.emit("training:completed", { rounds: allRounds.length });
+    this.emit('training:completed', { rounds: allRounds.length });
     return allRounds;
   }
 
   private async runRound(roundNum: number): Promise<FederatedRound> {
     if (!this.globalModel || !this.config) {
-      throw new Error("NOT_INITIALIZED");
+      throw new Error('NOT_INITIALIZED');
     }
 
     // Select clients
-    const activeClients = Array.from(this.clients.values())
-      .filter(c => c.status === "active");
-    
+    const activeClients = Array.from(this.clients.values()).filter((c) => c.status === 'active');
+
     const numSelected = Math.max(1, Math.floor(activeClients.length * this.config.clientFraction));
     const selected = this.shuffle(activeClients).slice(0, numSelected);
 
     // Simulate client training
     const clientUpdates: ClientUpdate[] = [];
-    
+
     for (const client of selected) {
-      client.status = "training";
-      this.emit("client:training_started", { clientId: client.id, round: roundNum });
-      
+      client.status = 'training';
+      this.emit('client:training_started', { clientId: client.id, round: roundNum });
+
       // Simulate local training
       const update = await this.simulateClientTraining(client, roundNum);
       clientUpdates.push(update);
-      
-      client.status = "active";
+
+      client.status = 'active';
       client.lastSeen = Date.now();
-      this.emit("client:training_completed", { clientId: client.id, round: roundNum });
+      this.emit('client:training_completed', { clientId: client.id, round: roundNum });
     }
 
     // Aggregate
     const aggregated = this.aggregateUpdates(clientUpdates, this.config.strategy);
     const globalModelHash = this.hashModel(this.globalModel);
     const aggregatedModelHash = this.hashModel(aggregated);
-    
+
     // Update global model
     this.globalModel = aggregated;
 
     const roundMetrics: RoundMetrics = {
       avgLoss: clientUpdates.reduce((sum, u) => sum + u.loss, 0) / clientUpdates.length,
-      avgAccuracy: clientUpdates.reduce((sum, u) => sum + (u.metrics.accuracy || 0), 0) / clientUpdates.length,
+      avgAccuracy:
+        clientUpdates.reduce((sum, u) => sum + (u.metrics.accuracy || 0), 0) / clientUpdates.length,
       participationRate: clientUpdates.length / activeClients.length,
-      communicationCost: clientUpdates.reduce((sum, u) => sum + this.estimateModelSize(u.modelDelta), 0),
+      communicationCost: clientUpdates.reduce(
+        (sum, u) => sum + this.estimateModelSize(u.modelDelta),
+        0
+      ),
     };
 
     return {
@@ -848,18 +856,21 @@ export class FederatedCoordinator extends EventEmitter {
     round: number
   ): Promise<ClientUpdate> {
     // Simulate local training
-    await new Promise(r => setTimeout(r, 10));
-    
+    await new Promise((r) => setTimeout(r, 10));
+
     const delta: ModelDelta = {
       weights: new Map(),
-      hash: `delta_${randomBytes(8).toString("hex")}`,
+      hash: `delta_${randomBytes(8).toString('hex')}`,
     };
-    
+
     // In production, would compute actual weight deltas
     if (this.globalModel) {
       for (const [key] of this.globalModel.weights) {
         const shape = this.globalModel.weights.get(key)!.length;
-        delta.weights.set(key, new Float32Array(shape).map(() => (Math.random() - 0.5) * 0.01));
+        delta.weights.set(
+          key,
+          new Float32Array(shape).map(() => (Math.random() - 0.5) * 0.01)
+        );
       }
     }
 
@@ -877,7 +888,7 @@ export class FederatedCoordinator extends EventEmitter {
     updates: ClientUpdate[],
     strategy: AggregationStrategy
   ): ModelParameters {
-    if (updates.length === 0) throw new Error("NO_UPDATES");
+    if (updates.length === 0) throw new Error('NO_UPDATES');
 
     const totalSamples = updates.reduce((sum, u) => sum + u.numSamples, 0);
     const aggregated = new Map<string, Float32Array>();
@@ -888,9 +899,9 @@ export class FederatedCoordinator extends EventEmitter {
     }
 
     switch (strategy) {
-      case "fedavg":
-      case "fedadam":
-      case "fedavgm":
+      case 'fedavg':
+      case 'fedadam':
+      case 'fedavgm':
         // Weighted average by num_samples
         for (const update of updates) {
           const weight = update.numSamples / totalSamples;
@@ -902,8 +913,8 @@ export class FederatedCoordinator extends EventEmitter {
           }
         }
         break;
-        
-      case "fedprox":
+
+      case 'fedprox':
         // FedAvg with proximal term (simulated same as FedAvg here)
         for (const update of updates) {
           const weight = update.numSamples / totalSamples;
@@ -915,8 +926,8 @@ export class FederatedCoordinator extends EventEmitter {
           }
         }
         break;
-        
-      case "scaffold":
+
+      case 'scaffold':
         // SCAFFOLD uses control variates (simplified)
         for (const update of updates) {
           const weight = update.numSamples / totalSamples;
@@ -928,8 +939,8 @@ export class FederatedCoordinator extends EventEmitter {
           }
         }
         break;
-        
-      case "secure":
+
+      case 'secure':
         // Secure aggregation would use MPC - simplified to FedAvg
         for (const update of updates) {
           const weight = update.numSamples / totalSamples;
@@ -956,12 +967,12 @@ export class FederatedCoordinator extends EventEmitter {
   }
 
   private hashModel(model: ModelParameters): string {
-    const hasher = createHash("sha256");
+    const hasher = createHash('sha256');
     for (const [key, value] of model.weights) {
       hasher.update(key);
       hasher.update(Buffer.from(value.buffer));
     }
-    return hasher.digest("hex").slice(0, 32);
+    return hasher.digest('hex').slice(0, 32);
   }
 
   private estimateModelSize(delta: ModelDelta): number {
@@ -992,15 +1003,15 @@ export class ModelVersionManager extends EventEmitter {
   private versions: Map<string, ModelVersion> = new Map();
   private aliases: Map<string, string> = new Map(); // alias -> versionId
 
-  registerVersion(version: Omit<ModelVersion, "id" | "createdAt">): ModelVersion {
-    const id = `ver_${randomBytes(12).toString("hex")}`;
+  registerVersion(version: Omit<ModelVersion, 'id' | 'createdAt'>): ModelVersion {
+    const id = `ver_${randomBytes(12).toString('hex')}`;
     const fullVersion: ModelVersion = {
       ...version,
       id,
       createdAt: Date.now(),
     };
     this.versions.set(id, fullVersion);
-    this.emit("version:registered", fullVersion);
+    this.emit('version:registered', fullVersion);
     return fullVersion;
   }
 
@@ -1009,7 +1020,7 @@ export class ModelVersionManager extends EventEmitter {
       throw new Error(`VERSION_NOT_FOUND: ${versionId}`);
     }
     this.aliases.set(alias, versionId);
-    this.emit("alias:set", { alias, versionId });
+    this.emit('alias:set', { alias, versionId });
   }
 
   resolveAlias(alias: string): ModelVersion | undefined {
@@ -1023,7 +1034,7 @@ export class ModelVersionManager extends EventEmitter {
 
   listVersions(modelId?: string): ModelVersion[] {
     return Array.from(this.versions.values())
-      .filter(v => !modelId || v.modelId === modelId)
+      .filter((v) => !modelId || v.modelId === modelId)
       .sort((a, b) => b.createdAt - a.createdAt);
   }
 
@@ -1033,7 +1044,7 @@ export class ModelVersionManager extends EventEmitter {
       this.setAlias(`${alias}-backup-${Date.now()}`, current);
     }
     this.setAlias(alias, targetVersionId);
-    this.emit("rollback", { alias, from: current, to: targetVersionId });
+    this.emit('rollback', { alias, from: current, to: targetVersionId });
   }
 }
 
@@ -1060,24 +1071,24 @@ export class FederatedLearningEngine extends EventEmitter {
 
   constructor() {
     super();
-    
+
     this.loraManager = new LoRAManager();
     this.activeLearning = new ActiveLearningEngine();
     this.dpoTrainer = new DPOTrainer();
     this.rlaifTrainer = new RLAIFTrainer();
     this.federatedCoordinator = new FederatedCoordinator();
     this.versionManager = new ModelVersionManager();
-    
+
     this.setupEventHandlers();
   }
 
   private setupEventHandlers(): void {
-    this.loraManager.on("adapter:created", a => this.emit("adapter:created", a));
-    this.activeLearning.on("query:completed", q => this.emit("active_learning:query", q));
-    this.dpoTrainer.on("training:completed", t => this.emit("dpo:completed", t));
-    this.rlaifTrainer.on("training:completed", t => this.emit("rlaif:completed", t));
-    this.federatedCoordinator.on("round:completed", r => this.emit("federated:round", r));
-    this.versionManager.on("version:registered", v => this.emit("version:registered", v));
+    this.loraManager.on('adapter:created', (a) => this.emit('adapter:created', a));
+    this.activeLearning.on('query:completed', (q) => this.emit('active_learning:query', q));
+    this.dpoTrainer.on('training:completed', (t) => this.emit('dpo:completed', t));
+    this.rlaifTrainer.on('training:completed', (t) => this.emit('rlaif:completed', t));
+    this.federatedCoordinator.on('round:completed', (r) => this.emit('federated:round', r));
+    this.versionManager.on('version:registered', (v) => this.emit('version:registered', v));
   }
 
   /**
@@ -1117,7 +1128,7 @@ export class FederatedLearningEngine extends EventEmitter {
 
       // Wait for labeling
       await params.labelFn(query.selectedIndices);
-      
+
       for (const idx of query.selectedIndices) {
         this.activeLearning.markLabeled(params.pool[idx].id);
       }
@@ -1133,7 +1144,7 @@ export class FederatedLearningEngine extends EventEmitter {
     modelId: string;
     referenceModelId: string;
     preferences: PreferencePair[];
-    config: Parameters<DPOTrainer["train"]>[3];
+    config: Parameters<DPOTrainer['train']>[3];
   }): Promise<{ modelId: string; version: ModelVersion }> {
     const result = await this.dpoTrainer.train(
       params.modelId,
@@ -1147,9 +1158,12 @@ export class FederatedLearningEngine extends EventEmitter {
       baseModelId: params.modelId,
       metrics: {
         final_loss: result.metrics.trainLoss[result.metrics.trainLoss.length - 1] || 0,
-        final_accuracy: result.metrics.customMetrics.accuracy?.[result.metrics.customMetrics.accuracy.length - 1] || 0,
+        final_accuracy:
+          result.metrics.customMetrics.accuracy?.[
+            result.metrics.customMetrics.accuracy.length - 1
+          ] || 0,
       },
-      metadata: { type: "dpo", config: params.config },
+      metadata: { type: 'dpo', config: params.config },
     });
 
     return { modelId: result.modelId, version };
@@ -1163,20 +1177,18 @@ export class FederatedLearningEngine extends EventEmitter {
     generateFn: (prompts: string[]) => Promise<string[]>;
     rewardFn: (prompts: string[], responses: string[]) => Promise<number[]>;
   }): Promise<{ modelId: string; version: ModelVersion }> {
-    const result = await this.rlaifTrainer.train(
-      params.config,
-      params.generateFn,
-      params.rewardFn
-    );
+    const result = await this.rlaifTrainer.train(params.config, params.generateFn, params.rewardFn);
 
     const version = this.versionManager.registerVersion({
       modelId: result.modelId,
       baseModelId: params.config.policyModelId,
       metrics: {
-        final_reward: result.metrics.customMetrics.reward[result.metrics.customMetrics.reward.length - 1] || 0,
-        final_kl: result.metrics.customMetrics.kl_div[result.metrics.customMetrics.kl_div.length - 1] || 0,
+        final_reward:
+          result.metrics.customMetrics.reward[result.metrics.customMetrics.reward.length - 1] || 0,
+        final_kl:
+          result.metrics.customMetrics.kl_div[result.metrics.customMetrics.kl_div.length - 1] || 0,
       },
-      metadata: { type: "rlaif", config: params.config },
+      metadata: { type: 'rlaif', config: params.config },
     });
 
     return { modelId: result.modelId, version };
@@ -1187,7 +1199,7 @@ export class FederatedLearningEngine extends EventEmitter {
    */
   async runFederatedLearning(params: {
     config: FederationConfig;
-    clients: Array<Omit<FederatedClient, "id" | "lastSeen" | "status">>;
+    clients: Array<Omit<FederatedClient, 'id' | 'lastSeen' | 'status'>>;
     globalModel: ModelParameters;
   }): Promise<{ rounds: FederatedRound[]; finalModel: ModelParameters }> {
     // Register clients
@@ -1200,17 +1212,17 @@ export class FederatedLearningEngine extends EventEmitter {
     const finalModel = this.federatedCoordinator.getGlobalModel()!;
 
     const version = this.versionManager.registerVersion({
-      modelId: `federated-${randomBytes(8).toString("hex")}`,
-      baseModelId: "global",
+      modelId: `federated-${randomBytes(8).toString('hex')}`,
+      baseModelId: 'global',
       metrics: {
         final_loss: rounds[rounds.length - 1]?.metrics.avgLoss || 0,
         final_accuracy: rounds[rounds.length - 1]?.metrics.avgAccuracy || 0,
         rounds: rounds.length,
       },
-      metadata: { type: "federated", config: params.config },
+      metadata: { type: 'federated', config: params.config },
     });
 
-    this.versionManager.setAlias("latest-federated", version.id);
+    this.versionManager.setAlias('latest-federated', version.id);
 
     return { rounds, finalModel };
   }

@@ -13,7 +13,7 @@
  * el QUÉ puedes hacer lo decide `authorization.ts`.
  */
 
-import { type PrincipalIdentity, type Role } from "./rbac";
+import { type PrincipalIdentity, type Role } from './rbac';
 
 /** Contrato mínimo del cliente de auth de Supabase que necesita este módulo. */
 export interface SupabaseAuthClientLike {
@@ -34,7 +34,7 @@ export interface UserLike {
 }
 
 /** Fuente de la identidad para telemetría. */
-export type AuthSource = "supabase_session" | "legacy_isa_token" | "oidc_id_token";
+export type AuthSource = 'supabase_session' | 'legacy_isa_token' | 'oidc_id_token';
 
 export interface ResolvedPrincipal {
   identity: PrincipalIdentity;
@@ -46,18 +46,18 @@ export interface ResolvedPrincipal {
  * Cualquier valor desconocido cae a `Guest` (fail-closed).
  */
 export function mapSupabaseRole(raw: unknown): Role {
-  if (typeof raw !== "string") return "Guest";
+  if (typeof raw !== 'string') return 'Guest';
   const value = raw.toLowerCase();
-  if (value === "sovereignowner" || value === "sovereign_owner" || value === "owner") {
-    return "SovereignOwner";
+  if (value === 'sovereignowner' || value === 'sovereign_owner' || value === 'owner') {
+    return 'SovereignOwner';
   }
-  if (value === "governance_admin" || value === "governance-admin" || value === "gov_admin") {
-    return "governance_admin";
+  if (value === 'governance_admin' || value === 'governance-admin' || value === 'gov_admin') {
+    return 'governance_admin';
   }
-  if (value === "operator") return "Operator";
-  if (value === "auditor") return "Auditor";
-  if (value === "system") return "System";
-  return "Guest";
+  if (value === 'operator') return 'Operator';
+  if (value === 'auditor') return 'Auditor';
+  if (value === 'system') return 'System';
+  return 'Guest';
 }
 
 /**
@@ -70,14 +70,14 @@ export function principalFromSupabaseUser(user: UserLike): ResolvedPrincipal {
   const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
 
   const tenantId =
-    typeof app.tenant_id === "string"
+    typeof app.tenant_id === 'string'
       ? app.tenant_id
-      : typeof app.tenantId === "string"
+      : typeof app.tenantId === 'string'
         ? app.tenantId
-        : "system";
+        : 'system';
   const role = mapSupabaseRole(app.role ?? app.roles);
   const username =
-    typeof meta.username === "string"
+    typeof meta.username === 'string'
       ? meta.username
       : (user.email ?? user.phone ?? `user_${user.id.slice(0, 8)}`);
 
@@ -86,10 +86,10 @@ export function principalFromSupabaseUser(user: UserLike): ResolvedPrincipal {
     username,
     tenantId,
     role,
-    scopes: ["openid", "profile"],
+    scopes: ['openid', 'profile'],
     authenticated: true,
   };
-  return { identity, source: "supabase_session" };
+  return { identity, source: 'supabase_session' };
 }
 
 /**
@@ -97,7 +97,7 @@ export function principalFromSupabaseUser(user: UserLike): ResolvedPrincipal {
  * Devuelve `null` si no hay sesión válida (no lanza para sesión ausente).
  */
 export async function resolvePrincipalFromSession(
-  client: SupabaseAuthClientLike,
+  client: SupabaseAuthClientLike
 ): Promise<ResolvedPrincipal | null> {
   const { data, error } = await client.getUser();
   if (error || !data?.user) {

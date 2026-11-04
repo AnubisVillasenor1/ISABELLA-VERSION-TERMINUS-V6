@@ -1,5 +1,5 @@
-import React, { useEffect, useRef } from "react";
-import { useCrown } from "../../context/CrownContext";
+import React, { useEffect, useRef } from 'react';
+import { useCrown } from '../../context/CrownContext';
 
 interface AdaptiveVoiceFeedbackProps {
   className?: string;
@@ -7,10 +7,10 @@ interface AdaptiveVoiceFeedbackProps {
   height?: number;
 }
 
-export const AdaptiveVoiceFeedback: React.FC<AdaptiveVoiceFeedbackProps> = ({ 
-  className = "", 
-  width = 600, 
-  height = 100 
+export const AdaptiveVoiceFeedback: React.FC<AdaptiveVoiceFeedbackProps> = ({
+  className = '',
+  width = 600,
+  height = 100,
 }) => {
   const { state } = useCrown();
   const { isSpeaking, isListening } = state;
@@ -28,19 +28,19 @@ export const AdaptiveVoiceFeedback: React.FC<AdaptiveVoiceFeedbackProps> = ({
         audioContextRef.current.close().catch(console.error);
       }
       if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current.getTracks().forEach((track) => track.stop());
         streamRef.current = null;
       }
       const canvas = canvasRef.current;
       if (canvas) {
-        const ctx = canvas.getContext("2d");
+        const ctx = canvas.getContext('2d');
         if (ctx) {
           ctx.clearRect(0, 0, canvas.width, canvas.height);
           // Draw flat line
           ctx.beginPath();
           ctx.moveTo(0, canvas.height / 2);
           ctx.lineTo(canvas.width, canvas.height / 2);
-          ctx.strokeStyle = "rgba(16, 185, 129, 0.2)";
+          ctx.strokeStyle = 'rgba(16, 185, 129, 0.2)';
           ctx.lineWidth = 2;
           ctx.stroke();
         }
@@ -68,9 +68,9 @@ export const AdaptiveVoiceFeedback: React.FC<AdaptiveVoiceFeedbackProps> = ({
           // In a real VITS implementation, the <audio> tag stream would be piped here using createMediaElementSource
           const oscillator = audioCtx.createOscillator();
           const gainNode = audioCtx.createGain();
-          oscillator.type = "sine";
+          oscillator.type = 'sine';
           oscillator.frequency.value = 150; // Human vocal fundamental freq
-          
+
           // Modulate gain to simulate speech envelope
           const modulateEnvelope = () => {
             if (!isSpeaking || !gainNode) return;
@@ -81,7 +81,7 @@ export const AdaptiveVoiceFeedback: React.FC<AdaptiveVoiceFeedbackProps> = ({
             gainNode.gain.linearRampToValueAtTime(0.1, now + duration);
             setTimeout(modulateEnvelope, duration * 1000);
           };
-          
+
           oscillator.connect(gainNode);
           gainNode.connect(analyser);
           // Do not connect to destination to avoid playing the simulated tone
@@ -91,7 +91,7 @@ export const AdaptiveVoiceFeedback: React.FC<AdaptiveVoiceFeedbackProps> = ({
 
         drawWaveform();
       } catch (err) {
-        console.error("Failed to initialize Web Audio API for AdaptiveVoiceFeedback", err);
+        console.error('Failed to initialize Web Audio API for AdaptiveVoiceFeedback', err);
       }
     };
 
@@ -103,7 +103,7 @@ export const AdaptiveVoiceFeedback: React.FC<AdaptiveVoiceFeedbackProps> = ({
         audioContextRef.current.close().catch(console.error);
       }
       if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current.getTracks().forEach((track) => track.stop());
       }
     };
   }, [isSpeaking, isListening]);
@@ -111,7 +111,7 @@ export const AdaptiveVoiceFeedback: React.FC<AdaptiveVoiceFeedbackProps> = ({
   const drawWaveform = () => {
     if (!canvasRef.current || !analyserRef.current) return;
     const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
     const analyser = analyserRef.current;
@@ -122,12 +122,12 @@ export const AdaptiveVoiceFeedback: React.FC<AdaptiveVoiceFeedbackProps> = ({
       animationRef.current = requestAnimationFrame(draw);
       analyser.getByteTimeDomainData(dataArray);
 
-      ctx.fillStyle = "rgba(3, 7, 18, 0.2)"; // Slate-950 with opacity for motion trail
+      ctx.fillStyle = 'rgba(3, 7, 18, 0.2)'; // Slate-950 with opacity for motion trail
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       ctx.lineWidth = 2;
       // Use Amber when speaking (Isabella), Rose/Emerald when listening (User)
-      ctx.strokeStyle = isSpeaking ? "rgba(245, 158, 11, 0.8)" : "rgba(16, 185, 129, 0.8)"; 
+      ctx.strokeStyle = isSpeaking ? 'rgba(245, 158, 11, 0.8)' : 'rgba(16, 185, 129, 0.8)';
       ctx.beginPath();
 
       const sliceWidth = (canvas.width * 1.0) / bufferLength;
@@ -161,13 +161,13 @@ export const AdaptiveVoiceFeedback: React.FC<AdaptiveVoiceFeedbackProps> = ({
         width={width}
         height={height}
         className="w-full h-full rounded-lg border border-slate-800/50 bg-[#030712] shadow-inner"
-        style={{ filter: "drop-shadow(0 0 8px rgba(16, 185, 129, 0.1))" }}
+        style={{ filter: 'drop-shadow(0 0 8px rgba(16, 185, 129, 0.1))' }}
       />
       {/* Decorative center line */}
       <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
         <div className="w-full h-[1px] bg-emerald-500/10" />
       </div>
-      
+
       {/* Status Badges */}
       <div className="absolute top-2 right-2 flex gap-2">
         {isListening && (

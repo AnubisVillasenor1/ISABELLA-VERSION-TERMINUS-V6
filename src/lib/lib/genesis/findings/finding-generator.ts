@@ -5,8 +5,8 @@ import {
   validateFinding,
   calculateCVSS,
   calculatePriority,
-} from "../schemas/finding.schema";
-import { Claim, Evidence } from "../schemas";
+} from '../schemas/finding.schema';
+import { Claim, Evidence } from '../schemas';
 
 export type FindingGeneratorConfig = Record<string, never>;
 
@@ -25,7 +25,7 @@ export class FindingGenerator {
       gaps: string[];
       confidenceScore: number;
       blockingFindings: Finding[];
-    },
+    }
   ): Finding[] {
     const findings: Finding[] = [];
 
@@ -39,17 +39,17 @@ export class FindingGenerator {
             severity,
             category: claim.category as FindingCategory,
             claimId: claim.id,
-            location: { file: "claims registry" },
+            location: { file: 'claims registry' },
             remediation: {
               description: `Resolver gap: ${gap}`,
-              effort: "MEDIUM",
+              effort: 'MEDIUM',
               verificationSteps: [
-                "Verificar evidencia",
-                "Ejecutar tests",
-                "Actualizar documentación",
+                'Verificar evidencia',
+                'Ejecutar tests',
+                'Actualizar documentación',
               ],
             },
-          }),
+          })
         );
       }
     }
@@ -59,20 +59,20 @@ export class FindingGenerator {
         this.createFinding({
           title: `Low confidence for claim ${claim.id}`,
           description: `Confianza baja (${(verificationResult.confidenceScore * 100).toFixed(0)}%) para claim ${claim.id}`,
-          severity: verificationResult.confidenceScore < 0.4 ? "HIGH" : "MEDIUM",
+          severity: verificationResult.confidenceScore < 0.4 ? 'HIGH' : 'MEDIUM',
           category: claim.category as FindingCategory,
           claimId: claim.id,
-          location: { file: "claims registry" },
+          location: { file: 'claims registry' },
           remediation: {
-            description: "Mejorar calidad y cantidad de evidencia",
-            effort: "HIGH",
+            description: 'Mejorar calidad y cantidad de evidencia',
+            effort: 'HIGH',
             verificationSteps: [
-              "Revisar evidencia existente",
-              "Generar evidencia faltante",
-              "Re-ejecutar tests",
+              'Revisar evidencia existente',
+              'Generar evidencia faltante',
+              'Re-ejecutar tests',
             ],
           },
-        }),
+        })
       );
     }
 
@@ -89,7 +89,7 @@ export class FindingGenerator {
       completeness: number;
       immutability: boolean;
       overallScore: number;
-    },
+    }
   ): Finding[] {
     const findings: Finding[] = [];
 
@@ -98,8 +98,8 @@ export class FindingGenerator {
         this.createFinding({
           title: `Evidence ${evidence.id} not independently verifiable`,
           description: `La evidencia ${evidence.id} no puede verificarse independientemente`,
-          severity: "HIGH",
-          category: "AUDIT",
+          severity: 'HIGH',
+          category: 'AUDIT',
           evidence: [
             {
               type: evidence.type,
@@ -108,10 +108,10 @@ export class FindingGenerator {
             },
           ],
           remediation: {
-            description: "Hacer la evidencia verificable independientemente",
-            effort: "MEDIUM",
+            description: 'Hacer la evidencia verificable independientemente',
+            effort: 'MEDIUM',
           },
-        }),
+        })
       );
     }
 
@@ -120,8 +120,8 @@ export class FindingGenerator {
         this.createFinding({
           title: `Evidence ${evidence.id} not reproducible`,
           description: `La evidencia ${evidence.id} no es reproducible`,
-          severity: "HIGH",
-          category: "AUDIT",
+          severity: 'HIGH',
+          category: 'AUDIT',
           evidence: [
             {
               type: evidence.type,
@@ -130,10 +130,10 @@ export class FindingGenerator {
             },
           ],
           remediation: {
-            description: "Asegurar que la evidencia se pueda reproducir",
-            effort: "HIGH",
+            description: 'Asegurar que la evidencia se pueda reproducir',
+            effort: 'HIGH',
           },
-        }),
+        })
       );
     }
 
@@ -142,8 +142,8 @@ export class FindingGenerator {
         this.createFinding({
           title: `Evidence ${evidence.id} expired`,
           description: `La evidencia ${evidence.id} ha expirado (TTL: ${evidence.metadata.ttlDays} días)`,
-          severity: "MEDIUM",
-          category: "AUDIT",
+          severity: 'MEDIUM',
+          category: 'AUDIT',
           evidence: [
             {
               type: evidence.type,
@@ -152,10 +152,10 @@ export class FindingGenerator {
             },
           ],
           remediation: {
-            description: "Regenerar evidencia fresca",
-            effort: "MEDIUM",
+            description: 'Regenerar evidencia fresca',
+            effort: 'MEDIUM',
           },
-        }),
+        })
       );
     }
 
@@ -164,8 +164,8 @@ export class FindingGenerator {
         this.createFinding({
           title: `Evidence ${evidence.id} not tamper-evident`,
           description: `La evidencia ${evidence.id} no tiene evidencia de manipulación`,
-          severity: "CRITICAL",
-          category: "AUDIT",
+          severity: 'CRITICAL',
+          category: 'AUDIT',
           evidence: [
             {
               type: evidence.type,
@@ -174,10 +174,10 @@ export class FindingGenerator {
             },
           ],
           remediation: {
-            description: "Implementar hash chain y firma criptográfica",
-            effort: "HIGH",
+            description: 'Implementar hash chain y firma criptográfica',
+            effort: 'HIGH',
           },
-        }),
+        })
       );
     }
 
@@ -185,9 +185,9 @@ export class FindingGenerator {
   }
 
   generateFromContradiction(contradiction: {
-    type: "claim_vs_code" | "docs_vs_implementation" | "test_vs_behavior" | "evidence_vs_claim";
+    type: 'claim_vs_code' | 'docs_vs_implementation' | 'test_vs_behavior' | 'evidence_vs_claim';
     description: string;
-    severity: "CRITICAL" | "HIGH" | "MEDIUM";
+    severity: 'CRITICAL' | 'HIGH' | 'MEDIUM';
     nodes: string[];
   }): Finding {
     return this.createFinding({
@@ -195,14 +195,14 @@ export class FindingGenerator {
       description: contradiction.description,
       severity: contradiction.severity,
       category: this.mapContradictionTypeToCategory(contradiction.type),
-      location: { file: contradiction.nodes.join(", ") },
+      location: { file: contradiction.nodes.join(', ') },
       remediation: {
-        description: `Resolver contradicción entre ${contradiction.nodes.join(" y ")}`,
-        effort: "HIGH",
+        description: `Resolver contradicción entre ${contradiction.nodes.join(' y ')}`,
+        effort: 'HIGH',
         verificationSteps: [
-          "Identificar fuente de verdad",
-          "Corregir implementación o documentación",
-          "Re-verificar",
+          'Identificar fuente de verdad',
+          'Corregir implementación o documentación',
+          'Re-verificar',
         ],
       },
     });
@@ -213,38 +213,38 @@ export class FindingGenerator {
       this.createFinding({
         title: `Missing evidence for claim ${claim.id}: ${type}`,
         description: `El claim ${claim.id} (${claim.title}) requiere evidencia de tipo ${type} que no se encontró`,
-        severity: claim.requiredStatus === "PRODUCTION-VERIFIED" ? "CRITICAL" : "HIGH",
+        severity: claim.requiredStatus === 'PRODUCTION-VERIFIED' ? 'CRITICAL' : 'HIGH',
         category: claim.category as FindingCategory,
         claimId: claim.id,
-        location: { file: "claims registry" },
+        location: { file: 'claims registry' },
         remediation: {
           description: `Generar evidencia de tipo ${type}`,
-          effort: "HIGH",
+          effort: 'HIGH',
           verificationSteps: [
             `Ejecutar tests para ${type}`,
-            "Verificar resultados",
-            "Registrar evidencia",
+            'Verificar resultados',
+            'Registrar evidencia',
           ],
         },
-      }),
+      })
     );
   }
 
   private determineGapSeverity(claim: Claim, gap: string): FindingSeverity {
-    if (claim.requiredStatus === "PRODUCTION-VERIFIED") return "CRITICAL";
-    if (claim.requiredStatus === "VERIFIED") return "HIGH";
-    if (gap.includes("EXTERNAL_AUDIT") || gap.includes("CONCURRENCY_TEST")) return "HIGH";
-    return "MEDIUM";
+    if (claim.requiredStatus === 'PRODUCTION-VERIFIED') return 'CRITICAL';
+    if (claim.requiredStatus === 'VERIFIED') return 'HIGH';
+    if (gap.includes('EXTERNAL_AUDIT') || gap.includes('CONCURRENCY_TEST')) return 'HIGH';
+    return 'MEDIUM';
   }
 
   private mapContradictionTypeToCategory(type: string): FindingCategory {
     const map: Record<string, FindingCategory> = {
-      claim_vs_code: "SECURITY",
-      docs_vs_implementation: "MAINTAINABILITY",
-      test_vs_behavior: "RELIABILITY",
-      evidence_vs_claim: "AUDIT",
+      claim_vs_code: 'SECURITY',
+      docs_vs_implementation: 'MAINTAINABILITY',
+      test_vs_behavior: 'RELIABILITY',
+      evidence_vs_claim: 'AUDIT',
     };
-    return map[type] ?? "SECURITY";
+    return map[type] ?? 'SECURITY';
   }
 
   private createFinding(params: {
@@ -263,7 +263,7 @@ export class FindingGenerator {
     evidence?: Array<{ type: string; hash: string; description: string }>;
     remediation?: {
       description: string;
-      effort: "LOW" | "MEDIUM" | "HIGH";
+      effort: 'LOW' | 'MEDIUM' | 'HIGH';
       owner?: string;
       dueDate?: string;
       compensatingControl?: string;
@@ -289,26 +289,26 @@ export class FindingGenerator {
         compliance: 0,
       },
       exploitability: {
-        attackVector: "NETWORK",
-        attackComplexity: "LOW",
-        privilegesRequired: "NONE",
-        userInteraction: "NONE",
-        scope: "UNCHANGED",
+        attackVector: 'NETWORK',
+        attackComplexity: 'LOW',
+        privilegesRequired: 'NONE',
+        userInteraction: 'NONE',
+        scope: 'UNCHANGED',
       } as const,
-      blastRadius: "COMPONENT" as const,
+      blastRadius: 'COMPONENT' as const,
       priority: { score: 0, rank: 0, shouldBlockRelease: false, slaHours: 24 },
       remediation: (() => {
         const configured = params.remediation;
         return {
-          description: configured?.description ?? "Remediation needed",
-          effort: configured?.effort ?? "MEDIUM",
+          description: configured?.description ?? 'Remediation needed',
+          effort: configured?.effort ?? 'MEDIUM',
           verificationSteps: configured?.verificationSteps ?? [],
           owner: configured?.owner,
           dueDate: configured?.dueDate,
           compensatingControl: configured?.compensatingControl,
-        } satisfies Finding["remediation"];
+        } satisfies Finding['remediation'];
       })(),
-      status: "OPEN" as const,
+      status: 'OPEN' as const,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };

@@ -47,6 +47,34 @@ describe("HF Hub routes", () => {
     expect(HF_HUB_ROUTES_VERSION).toBe("1.0.0");
   });
 
+  it("GET references devuelve referencias verificadas y niega ejecución", async () => {
+    const handlers = harness();
+    const { res, captured } = makeRes();
+    await handlers.get("GET /api/v1/hf/references")!({ query: {} } as unknown as Request, res);
+    const body = captured.body as {
+      success: boolean; executionPerformed: boolean; downloaded: boolean; count: number; references: unknown[];
+    };
+    expect(body.success).toBe(true);
+    expect(body.executionPerformed).toBe(false);
+    expect(body.downloaded).toBe(false);
+    expect(body.count).toBeGreaterThan(0);
+    expect(body.references.length).toBe(body.count);
+  });
+
+  it("GET references filtra por dominio y respeta el bucket de rate limit", async () => {
+    const handlers = harness({ denyRate: true });
+    const { res, captured } = makeRes();
+    await handlers.get("GET /api/v1/hf/references")!({ query: { domain: "moe" } } as unknown as Request, res);
+    expect(captured.body).toBeUndefined();
+
+    const ok = harness();
+    const okRes = makeRes();
+    await ok.get("GET /api/v1/hf/references")!({ query: { domain: "moe" } } as unknown as Request, okRes.res);
+    const body = okRes.captured.body as { references: { domain: string }[] };
+    expect(body.references.length).toBeGreaterThan(0);
+    expect(body.references.every((r) => r.domain === "moe")).toBe(true);
+  });
+
   it("GET catalog responde el catálogo (viewer)", async () => {
     const handlers = harness();
     const { res, captured } = makeRes();

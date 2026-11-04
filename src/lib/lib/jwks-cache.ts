@@ -57,7 +57,7 @@ export class JwksCache {
   private inFlight: Promise<JwksDocument> | undefined;
 
   constructor(issuer: string, options: JwksCacheOptions = {}) {
-    this.issuer = issuer.replace(/\/+$/, "");
+    this.issuer = issuer.replace(/\/+$/, '');
     this.options = {
       ttlMs: options.ttlMs ?? DEFAULT_TTL_MS,
       timeoutMs: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
@@ -91,7 +91,7 @@ export class JwksCache {
     const timer = setTimeout(() => controller.abort(), this.options.timeoutMs);
     try {
       const response = await fetch(this.jwksUrl, {
-        headers: { accept: "application/json" },
+        headers: { accept: 'application/json' },
         signal: controller.signal,
       });
       if (!response.ok) {
@@ -116,7 +116,7 @@ export class JwksCache {
     document = await this.fetchDocument();
     const retry = findByKid(document, kid);
     if (retry) return retry;
-    throw new Error(`No se halló clave JWKS para kid '${kid ?? "(ausente)"}'.`);
+    throw new Error(`No se halló clave JWKS para kid '${kid ?? '(ausente)'}'.`);
   }
 
   /** Limpia el caché (p. ej. ante un error de verificación). */
@@ -135,7 +135,7 @@ export class JwksCache {
 }
 
 function findByKid(document: JwksDocument, kid: string | undefined): JwkKey | undefined {
-  if (kid === undefined || kid === "") {
+  if (kid === undefined || kid === '') {
     // Un único `keys` admite omisión de kid; uso de firma como fallback.
     return document.keys.length === 1 ? document.keys[0] : undefined;
   }

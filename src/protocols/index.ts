@@ -1,2 +1,2 @@
-export * from "./registry";
-export { PROTOCOL_CATALOG } from "./catalog";
+export * from './registry';
+export { PROTOCOL_CATALOG } from './catalog';
