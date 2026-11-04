@@ -7,7 +7,13 @@
  * It does not verify network reachability of the dependencies: that is the job of readyz / smoke.
  */
 import { isPostgresStoreMode } from '../database/postgres-store-mode';
-import { runPreflight, weakSecretReason, type PreflightFinding } from './preflight';
+import { envFlag } from '../lib/env-flags';
+import {
+  looksLikeTemplate,
+  runPreflight,
+  weakSecretReason,
+  type PreflightFinding,
+} from './preflight';
 
 type Env = Readonly<Record<string, string | undefined>>;
 
@@ -16,7 +22,15 @@ export interface DeployReadinessReport {
   readonly findings: readonly PreflightFinding[];
 }
 
-const has = (env: Env, name: string): boolean => (env[name]?.trim() ?? '') !== '';
+/**
+ * Un valor con forma de plantilla (`<user>`, `<generate-with-openssl-rand-base64-32>`) no está
+ * configurado. Antes sólo se miraba «no está vacío», así que copiar `.env.example` sobre `.env`
+ * dejaba la compuerta en verde con credenciales que no nombran ningún servidor.
+ */
+const has = (env: Env, name: string): boolean => {
+  const value = env[name]?.trim() ?? '';
+  return value !== '' && !looksLikeTemplate(value);
+};
 
 const POSTGRES_URL_PATTERN = /^postgres(?:ql)?:\/\//i;
 
@@ -93,13 +107,23 @@ export function runDeployReadiness(env: Env): DeployReadinessReport {
     env.POSTGRES_URL?.trim() ||
     env.POSTGRES_PRISMA_URL?.trim() ||
     env.POSTGRES_URL_NON_POOLING?.trim();
+  // Los almacenes durables sólo pueden usar una cadena que no sea plantilla; con `<host>` sin
+  // rellenar el adaptador Postgres falla al conectar y cae a memoria, que es justo lo que el
+  // contrato serverless quiere prohibir.
+  const realDbUrl = dbUrl && !looksLikeTemplate(dbUrl) ? dbUrl : undefined;
   if (!dbUrl) {
     add(
       'DR-DATABASE-MISSING',
       'ERROR',
       'No DATABASE_URL / POSTGRES_URL: BookPI and subscriptions would be volatile.'
     );
-  } else if (!/^postgres(?:ql)?:\/\//i.test(dbUrl)) {
+  } else if (looksLikeTemplate(dbUrl)) {
+    add(
+      'DR-DATABASE-PLACEHOLDER',
+      'ERROR',
+      'The database URL still contains template tokens such as <user> or <host>; it names no server and is not a credential.'
+    );
+  } else if (!POSTGRES_URL_PATTERN.test(dbUrl)) {
     add(
       'DR-DATABASE-INVALID',
       'ERROR',
@@ -151,6 +175,12 @@ export function runDeployReadiness(env: Env): DeployReadinessReport {
         'DR-VERIFIED-KNOWLEDGE-MONGODB-URI-MISSING',
         'ERROR',
         'MongoDB is the verified-knowledge backend, but MONGODB_URI is not configured.'
+      );
+    } else if (looksLikeTemplate(mongoUri)) {
+      add(
+        'DR-VERIFIED-KNOWLEDGE-MONGODB-URI-PLACEHOLDER',
+        'ERROR',
+        'MONGODB_URI still contains template tokens such as <user> or <host>: no cluster is named, so verified knowledge would be unwritable.'
       );
     } else {
       const normalizedMongoUri = mongoUri.toLowerCase();
@@ -233,7 +263,9 @@ export function runDeployReadiness(env: Env): DeployReadinessReport {
 
   // Serverless instances are ephemeral. Neither process memory nor local files are
   // a durable credential store; production must not pass readiness with either backend.
-  if (has(env, 'VERCEL') || has(env, 'VERCEL_ENV')) {
+  // `envFlag`, no `has`: un `.env.example` que documenta VERCEL=false no es un despliegue
+  // serverless y no debe activar reglas que luego el despliegue real no verá.
+  if (envFlag(env, 'VERCEL') || envFlag(env, 'VERCEL_ENV')) {
     checkDurableStore(
       {
         variable: 'ISABELLA_API_KEY_STORE',
@@ -246,7 +278,7 @@ export function runDeployReadiness(env: Env): DeployReadinessReport {
           'ISABELLA_API_KEY_STORE selects Postgres, but no usable DATABASE_URL / POSTGRES_URL exists: keys would fall back to process memory.',
         unknownId: 'DR-SERVERLESS-API_KEYS_MODE_UNKNOWN',
       },
-      dbUrl,
+      realDbUrl,
       add
     );
     checkDurableStore(
@@ -261,7 +293,7 @@ export function runDeployReadiness(env: Env): DeployReadinessReport {
           'ISABELLA_FEDERATION_STORE selects Postgres, but no usable DATABASE_URL / POSTGRES_URL exists: connector and inbox state would fall back to process memory.',
         unknownId: 'DR-SERVERLESS-FEDERATION_MODE_UNKNOWN',
       },
-      dbUrl,
+      realDbUrl,
       add
     );
   }
