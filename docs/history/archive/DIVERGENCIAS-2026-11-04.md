@@ -79,6 +79,20 @@ ejecución en `shadow` bajo portador humano es arbitraje de §7 paso 4 y sigue e
 nominal. Las 33 pruebas de `test/nexus/capability.test.ts` y las 18 de la fábrica siguen verdes
 con el cambio.
 
+### 2.5 La compuerta del porcentaje global cambió de prosa a aritmética
+`test/deployment/readiness-consistency.test.ts` afirmaba que el README **no** publicaba un
+porcentaje global (`/Avance global de implementación: no publicado como porcentaje único/`).
+Esa redacción se escribió cuando no existía denominador, y el README de Terminus V6 ahora sí
+publica uno. **Se archiva la divergencia en lugar de reescribir la prueba para que calque la
+prosa**: la aserción se reemplazó por una estrictamente más dura —el test ejecuta
+`scripts/production-progress.mjs` con `execFileSync` y exige que el README contenga exactamente
+la cifra que el instrumento calcula en este árbol, más los pesos declarados, la ruta de la
+evidencia sellada y la cláusula «avance ponderado, no aptitud». Una cifra inventada, desactualizada
+o retirada del instrumento rompe el test; antes solo rompía si alguien escribía «100 %».
+Coherencia documental: `docs/ESTADO-REAL-ACTUAL.md:12` decía que el denominador no existía; ahora
+apunta al instrumento y declara que su tabla de dominios (61/100) es **otra rúbrica sin pesos**,
+que no se suma ni se promedia con el 62,6 %.
+
 ## 3. Sigue sin implementar (no declarar como hecho)
 
 1. **Parser de `robots.txt`** en el camino de extracción: hace falta un fetcher que lea el
