@@ -161,9 +161,10 @@ Orden por dependencia. Ningún punto es código.
    propósito) y `APP_PUBLIC_URL`.
 5. Decidir si `readyz` en 503 con degradación honesta es el estado inicial aceptable, o si se exige
    proveedor durable antes del primer despliegue.
-6. Autorizar el commit/push. Estado actual: la tanda de §2 **ya está publicada** (`5468bc3`, y
-   `origin/main` coincide con `HEAD`); lo cableado después de esa publicación se describe en §8 y
-   espera su propio commit/push.
+6. Autorizar el commit/push. Estado actual: la tanda de §2 está publicada en `main` como `5468bc3`, y el
+   cableado de §8 se publicó en el commit que contiene esta línea (verificable con
+   `git log --oneline -1 docs/history/archive/AUDITORIA-2026-11-03.md`). Publicar no despliega: falta
+   todo lo demás de esta lista.
 
 ## §6 Nota de seguridad
 
@@ -288,3 +289,8 @@ sigue ejecutando `pnpm run …`; lo que cambia es el lanzador local, no el vered
 desbloqueado, proyecto Vercel con sus tres credenciales, y las credenciales de persistencia). Con esas
 piezas ausentes, el resultado esperado del pipeline es **readiness BLOQUEADA con los IDs `DR-*`/`PF-*`
 nombrados**, que es exactamente lo que el cableado nuevo hace visible.
+
+**Aviso del remoto, medido al empujar.** El `git push` de esta tanda devolvió «1 vulnerability (1
+moderate) en la rama por defecto» con el enlace `security/dependabot/88` del repo. Su contenido no se
+estimó: leer el advisory requiere acceso a la cuenta `OsoPanda1`, y sigue como tarea del owner junto con
+`pnpm audit --prod`.
