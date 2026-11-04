@@ -3,16 +3,39 @@
  * state: draft | engine-generated.
  *
  * Superficie gobernada del runtime Nexus: grafo de conocimiento, bucle de agente,
- * simulador cuántico, salud antifrágil y workflow de diagnóstico. Las escrituras
- * exigen bearer administrativo verificado por el servidor; el cuerpo HTTP nunca
- * concede aprobación.
+ * simulador cuántico, salud antifrágil, workflow de diagnóstico y la fábrica de
+ * Capability Contracts. Las escrituras exigen bearer administrativo verificado por
+ * el servidor; el cuerpo HTTP nunca concede aprobación ni declara capacidades.
  */
+import { randomUUID } from 'node:crypto';
 import type { Application, Request, Response } from 'express';
 import type { FixedWindowRateLimiter } from '../security/rate-limit';
 import type { NexusRuntime } from '../nexus/runtime';
 import type { NexusCircuit } from '../nexus/quantum';
+import type { ToolContext } from '../nexus/tool-registry';
 
 export const NEXUS_ROUTES_VERSION = '0.1.0' as const;
+
+/** Techo de una invocación de capacidad desde HTTP. */
+const CAPABILITY_DEADLINE_MS = 30_000;
+
+/**
+ * Contexto de ejecución construido por el servidor. El cuerpo de la petición aporta
+ * identificadores opacos, nunca autoridad: `approvalGranted` viene del bearer.
+ */
+function capabilityContext(body: Record<string, unknown>, approvalGranted: boolean): ToolContext {
+  const requestId =
+    typeof body.requestId === 'string' && body.requestId.trim().length > 0
+      ? body.requestId.trim().slice(0, 80)
+      : `cap-${randomUUID()}`;
+  return {
+    requestId,
+    actorId: approvalGranted ? 'service:genesis-admin-token' : 'human:public-session',
+    tenantId: typeof body.tenantId === 'string' ? body.tenantId.slice(0, 80) : 'public',
+    approvalGranted,
+    signal: AbortSignal.timeout(CAPABILITY_DEADLINE_MS),
+  };
+}
 
 export interface NexusRouteDeps {
   readonly app: Application;
@@ -152,6 +175,164 @@ export function registerNexusRoutes(deps: NexusRouteDeps): void {
       return;
     }
     res.json({ success: true, fact });
+  });
+
+  /**
+   * Fábrica de capacidades (plano NEXUS ∞).
+   *
+   * No hay POST /capabilities: un contrato se declara en código y se verifica contra
+   * el árbol y el registro gobernado. Aceptar contratos desde el cuerpo HTTP sería
+   * permitir que el llamante se otorgue sus propios permisos.
+   */
+  app.get('/api/v1/nexus/capabilities', (req, res) => {
+    if (!deps.enforceRateLimit(req, res, deps.rateLimiter, 'nexus-capabilities-list')) return;
+    const capabilities = nexus.capabilityList();
+    res.json({
+      success: true,
+      count: capabilities.length,
+      capabilities,
+      notice: nexus.capabilityNotice,
+      disclaimer:
+        'El estado es una proyección a la taxonomía canónica; la confianza sale solo de hechos observables. Ninguna cifra es estimada.',
+    });
+  });
+
+  app.get('/api/v1/nexus/capabilities/:id', (req, res) => {
+    if (!deps.enforceRateLimit(req, res, deps.rateLimiter, 'nexus-capabilities-describe')) return;
+    const described = nexus.capabilityDescribe(req.params.id);
+    if (!described) {
+      res.status(404).json({ success: false, error: 'CAPABILITY_NOT_FOUND' });
+      return;
+    }
+    res.json({ success: true, capability: described });
+  });
+
+  app.post('/api/v1/nexus/capabilities/:id/simulate', (req, res) => {
+    if (!deps.enforceRateLimit(req, res, deps.rateLimiter, 'nexus-capabilities-simulate')) return;
+    const report = nexus.capabilitySimulate(req.params.id);
+    if (!report) {
+      res.status(404).json({ success: false, error: 'CAPABILITY_NOT_FOUND' });
+      return;
+    }
+    res.json({ success: true, simulation: report });
+  });
+
+  app.post('/api/v1/nexus/capabilities/:id/execute', async (req, res) => {
+    if (!deps.enforceRateLimit(req, res, deps.writeRateLimiter, 'nexus-capabilities-execute')) {
+      return;
+    }
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    // `input` es el payload de la capacidad; los campos de control nunca entran a su
+    // esquema, porque un contrato estricto los rechazaría como clave no reconocida.
+    const input = (body.input ?? {}) as Record<string, unknown>;
+    const approvalGranted = deps.isAdminAuthorized(req);
+    const result = await nexus.capabilityExecute(
+      req.params.id,
+      input,
+      capabilityContext(body, approvalGranted)
+    );
+    res.status(result.code === 'CAPABILITY_NOT_FOUND' ? 404 : result.ok ? 200 : 403).json({
+      success: result.ok,
+      ...result,
+      approvalSource: approvalGranted ? 'verified-admin-token' : 'none',
+    });
+  });
+
+  app.post('/api/v1/nexus/capabilities/:id/rollback', async (req, res) => {
+    if (!deps.enforceRateLimit(req, res, deps.writeRateLimiter, 'nexus-capabilities-rollback')) {
+      return;
+    }
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const approvalGranted = deps.isAdminAuthorized(req);
+    if (!approvalGranted) {
+      res.status(401).json({ success: false, error: 'UNAUTHORIZED' });
+      return;
+    }
+    const result = await nexus.capabilityRollback(req.params.id, capabilityContext(body, true));
+    res.status(result.ok ? 200 : 403).json({ success: result.ok, ...result });
+  });
+
+  /**
+   * Fábrica de agentes externos (MCP por HTTP y tarjetas A2A).
+   *
+   * No hay POST /fabric: los agentes se declaran en el manifiesto que nombra el
+   * operador y se cruzan con la compuerta de egreso en el arranque. Descubrir y
+   * llamar pasan por `capabilityExecute`, así que aprobación, techos, esquema y
+   * evidencia siguen siendo la única compuerta hacia la red externa.
+   */
+  app.get('/api/v1/nexus/fabric', (req, res) => {
+    if (!deps.enforceRateLimit(req, res, deps.rateLimiter, 'nexus-fabric-status')) return;
+    const status = nexus.fabricStatus();
+    res.json({
+      success: true,
+      ...status,
+      disclaimer:
+        'El descubrimiento (`tools/list`) es evidencia, no permiso: solo se puede invocar lo declarado en el manifiesto del operador.',
+    });
+  });
+
+  app.get('/api/v1/nexus/fabric/:id', (req, res) => {
+    if (!deps.enforceRateLimit(req, res, deps.rateLimiter, 'nexus-fabric-describe')) return;
+    const agent = nexus.fabricDescribe(req.params.id);
+    if (!agent) {
+      res.status(404).json({ success: false, error: 'FABRIC_AGENT_NOT_FOUND' });
+      return;
+    }
+    res.json({ success: true, agent });
+  });
+
+  app.post('/api/v1/nexus/fabric/:id/discover', async (req, res) => {
+    if (!deps.enforceRateLimit(req, res, deps.writeRateLimiter, 'nexus-fabric-discover')) return;
+    const agent = nexus.fabricDescribe(req.params.id);
+    if (!agent) {
+      res.status(404).json({ success: false, error: 'FABRIC_AGENT_NOT_FOUND' });
+      return;
+    }
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const approvalGranted = deps.isAdminAuthorized(req);
+    const result = await nexus.capabilityExecute(
+      agent.capabilityId,
+      { method: 'tools/list' },
+      capabilityContext(body, approvalGranted)
+    );
+    res
+      .status(result.ok ? 200 : result.status === 'denied' ? 403 : 502)
+      .json({ success: result.ok, ...result });
+  });
+
+  app.post('/api/v1/nexus/fabric/:id/call', async (req, res) => {
+    if (!deps.enforceRateLimit(req, res, deps.writeRateLimiter, 'nexus-fabric-call')) return;
+    const agent = nexus.fabricDescribe(req.params.id);
+    if (!agent) {
+      res.status(404).json({ success: false, error: 'FABRIC_AGENT_NOT_FOUND' });
+      return;
+    }
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const input = (body.input ?? {}) as Record<string, unknown>;
+    if (typeof input.tool !== 'string' || input.tool.trim().length === 0) {
+      res.status(400).json({ success: false, error: 'FABRIC_TOOL_REQUIRED' });
+      return;
+    }
+    // El manifiesto es la lista de lo invocable: una herramienta no declarada se
+    // rechaza antes de armar el contexto, para que ni siquiera llegue al upstream.
+    if (!agent.declaredTools.includes(input.tool)) {
+      res.status(403).json({
+        success: false,
+        error: 'FABRIC_TOOL_NOT_DECLARED',
+        agent: agent.id,
+        declaredTools: agent.declaredTools,
+      });
+      return;
+    }
+    const approvalGranted = deps.isAdminAuthorized(req);
+    const result = await nexus.capabilityExecute(
+      agent.capabilityId,
+      input,
+      capabilityContext(body, approvalGranted)
+    );
+    res
+      .status(result.ok ? 200 : result.status === 'denied' ? 403 : 502)
+      .json({ success: result.ok, ...result });
   });
 
   app.post('/api/v1/nexus/quantum/simulate', (req, res) => {

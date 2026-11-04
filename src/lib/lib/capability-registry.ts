@@ -1,5 +1,5 @@
 /**
- * REGISTRO FORMAL DE CAPACIDADES (src/lib/capability-registry.ts)
+ * REGISTRO FORMAL DE CAPACIDADES (src/lib/lib/capability-registry.ts)
  * -----------------------------------------------------------------
  * Taxonomía canónica de estados de capacidad:
  *   implemented | verified | experimental | simulated | shadow | planned | unavailable
@@ -79,29 +79,48 @@ export function createDefaultCapabilityRegistry(): CapabilityRegistryService {
   };
 
   register('build', 'implemented', ['package.json scripts', 'npm run typecheck/lint/test/build']);
-  register('auth', 'implemented', ['src/lib/principal-context.ts', 'src/lib/jwt-verifier.ts']);
+  register('auth', 'implemented', [
+    'src/lib/lib/principal-context.ts',
+    'src/lib/lib/jwt-verifier.ts',
+  ]);
   register('identity.oidc', 'planned');
-  register('tenancy', 'implemented', ['supabase/migrations/*', 'src/lib/tenant-guard.ts']);
-  register('memory', 'implemented', ['src/lib/memory-engine.ts', 'tabla memories']);
-  register('bookpi', 'implemented', ['src/lib/bookpi*.ts', 'tabla bookpi_ledger']);
+  register('tenancy', 'implemented', ['supabase/migrations/*', 'src/lib/lib/tenant-guard.ts']);
+  register('memory', 'implemented', ['src/lib/lib/memory-engine.ts', 'tabla memories']);
+  register('bookpi', 'implemented', [
+    'src/lib/lib/bookpi/BookPiEngine.ts',
+    'src/lib/lib/bookpi-dev-adapter.ts',
+    'tabla bookpi_ledger',
+  ]);
   register('audit', 'implemented', ['src/lib/lib/repositories/audit-repository.ts']);
-  register('crown', 'implemented', ['src/lib/crown.ts', 'constitutional-gate.ts']);
-  register('llm', 'implemented', ['src/routes/api/isabella.ts']);
-  register('voice', 'implemented', ['src/routes/api/isabella-voice.ts']);
-  register('tools', 'experimental', ['src/lib/tool-registry.ts', 'src/lib/orion-engine.ts']);
-  register('sandbox', 'experimental', ['src/lib/sovereign-sandbox.ts']);
+  register('crown', 'implemented', ['src/lib/lib/crown.ts', 'src/lib/lib/constitutional-gate.ts']);
+  register('llm', 'implemented', ['src/inference/foundational-llm.ts', 'src/server.ts']);
+  register('voice', 'implemented', [
+    'src/lib/lib/voice.ts',
+    'src/routes/tts.ts',
+    'src/routes/ivcc.ts',
+  ]);
+  register('tools', 'experimental', [
+    'src/lib/lib/tool-registry.ts',
+    'src/lib/lib/orion-engine.ts',
+  ]);
+  register('sandbox', 'experimental', ['src/lib/lib/sovereign-sandbox.ts']);
   register('pqc', 'unavailable');
-  register('monetization', 'implemented', ['src/lib/monetization/*']);
+  register('monetization', 'implemented', ['src/lib/lib/monetization/*']);
   register('learning', 'implemented', [
-    'src/lib/isabella-learning.ts',
-    'src/lib/isabella-learning-api.ts',
+    'src/lib/lib/isabella-learning.ts',
+    'src/lib/lib/isabella-learning-api.ts',
   ]);
   register('learning.cognitive-training', 'implemented', [
-    'src/lib/isabella-cognitive-training.ts',
-    'test/lib/isabella-cognitive-training.test.ts',
+    'src/lib/lib/isabella-cognitive-training.ts',
   ]);
-  register('heads.12', 'implemented', ['12 cognitive heads configured in sovereign-engine.ts']);
-  register('nuclei.24', 'simulated', ['24 cognitive nuclei modeled in sovereign-engine.ts']);
+  register('heads.12', 'implemented', [
+    '12 cognitive heads configured in sovereign-engine.ts',
+    'src/lib/lib/sovereign-engine.ts',
+  ]);
+  register('nuclei.24', 'simulated', [
+    '24 cognitive nuclei modeled in sovereign-engine.ts',
+    'src/lib/lib/sovereign-engine.ts',
+  ]);
 
   return svc;
 }

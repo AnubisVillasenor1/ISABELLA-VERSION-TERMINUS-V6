@@ -1,6 +1,24 @@
 import { defineConfig } from "vitest/config";
+import { fileURLToPath } from "node:url";
+
+/**
+ * `tsconfig.json` define `@/*` y `@/lib/*`, pero los `paths` de TypeScript son sólo de
+ * compilación: no reescriben el JS emitido. `tsc` y `esbuild` sí los resuelven, y con eso
+ * el typecheck y el build pasaban — pero vitest no, así que cualquier prueba que tocara el
+ * subtree `src/lib/lib` (output-gate, capability-token, orion-engine…) moría en
+ * `Cannot find package '@/lib/...'` antes de ejecutar una sola aserción. Ese fue el origen
+ * real de los huecos de prueba, no la ausencia de tests.
+ * El orden importa: `@/lib/` debe ganar a `@/`, igual que en `compilerOptions.paths`.
+ */
+const srcRoot = fileURLToPath(new URL("./src", import.meta.url)).replace(/\\/g, "/");
 
 export default defineConfig({
+  resolve: {
+    alias: [
+      { find: /^@\/lib\//, replacement: `${srcRoot}/lib/lib/` },
+      { find: /^@\//, replacement: `${srcRoot}/` },
+    ],
+  },
   test: {
     environment: "node",
     globals: true,
