@@ -29,6 +29,19 @@ const TOKEN_VARS = [
 const PLACEHOLDER =
   /^(changeme|change-me|change_me|secret|password|token|test|example|placeholder|todo|xxx+|your[-_ ]?token.*|replace.*)$/i;
 
+/**
+ * Token de plantilla: `<user>`, `<host>`, `<generate-with-openssl-rand-base64-32>`. No mide
+ * fortaleza criptográfica sino autenticidad de la forma. Los literales que este propio repo
+ * publica en `.env.example` superan un control de longitud y de entropía (38 caracteres
+ * distintivos bastan) y, sin embargo, no nombran ningún servidor ni ninguna clave: si sólo
+ * se mira la entropía, copiar el archivo de ejemplo deja la compuerta en verde.
+ */
+const TEMPLATE_TOKEN = /<[^<>\s]{2,}>/;
+
+export function looksLikeTemplate(value: string): boolean {
+  return TEMPLATE_TOKEN.test(value);
+}
+
 /** Entropía de Shannon estimada en bits totales (cota optimista: asume símbolos iid). */
 export function estimateEntropyBits(value: string): number {
   if (value.length === 0) return 0;
@@ -45,6 +58,7 @@ export function estimateEntropyBits(value: string): number {
 export function weakSecretReason(value: string): string | null {
   if (value.length < 32) return 'shorter than 32 characters';
   if (PLACEHOLDER.test(value.trim())) return 'looks like a placeholder';
+  if (looksLikeTemplate(value)) return 'is an unfilled template token';
   if (new Set(value).size < 8) return 'too few distinct characters';
   if (estimateEntropyBits(value) < 96) return 'estimated entropy below 96 bits';
   return null;
