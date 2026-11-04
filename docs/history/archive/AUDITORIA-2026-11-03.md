@@ -276,6 +276,72 @@ El archivo que no carga es el mismo que en §1: `test/atlas/hcu-store.test.ts` f
 `@supabase/functions-js`, que requiere `tslib`. `tslib@2.8.1` está fijado en `pnpm-lock.yaml:2320` pero no
 está materializado en `node_modules/.pnpm` de esta máquina: instalación local incompleta, no código — CI
 hace `pnpm install --frozen-lockfile`, y ninguno de los tres archivos de esta tanda lo alcanza.
+
+## §9 El pipeline sigue sin ejecutarse, y el advisory moderate ya está estimado
+
+Dos hechos medidos sobre el remoto, después de `9c4a8d9`. Ninguno requiere tocar código.
+
+**1) CI: rojo por facturación, no por aserción.** Los runs existen (`total_count=1938`), así que el
+flujo de triggers funciona; pero los 7 check-runs que fallan en `9238d28` arrastran la misma anotación:
+`The job was not started because your account is locked due to a billing issue`. Los jobs que sí
+arrancaron quedaron en `skipped` por dependencia. Confirmado sobre el grafo real de check-runs
+(`GET /commits/9238d28/check-runs` + `/check-runs/{id}/annotations`, anónimo: el repo es público).
+Conclusión: §5.1 sigue abierto y **no hay evidencia de CI verde para ninguno de los tres commits
+publicados**. Es la única compuerta de esta tanda que no puede cerrarse localmente, porque las puertas
+locales ya corrieron verdes (§8) y Actions no ejecuta el árbol.
+
+**2) El advisory es uno, moderate, y no vive en el artefacto desplegado.** Sin credenciales de la
+cuenta se resolvió el grafo completo de `pnpm-lock.yaml` (508 paquetes snapshot, 236 alcanzables desde
+las 22 dependencias de producción) contra `api.osv.dev/v1/querybatch` + `/v1/vulns/{id}`:
+
+| Campo | Valor medido |
+|---|---|
+| Paquete | `minimatch@3.1.5` (el único `minimatch` del lock por debajo de 11.0.1; el otro es `11.0.1`) |
+| Advisory | `GHSA-g3hv-75wg-m249` / `CVE-2026-118764` — DoS por amplificación de partes de glob |
+| Severidad | MODERATE, `CVSS:4.0/…VC:N/VI:N/VA:L/SC:N/SI:N/SA:N` → sólo disponibilidad |
+| Alcance | **`prod:false`** — cadena inversa: `eslint@9.39.5`, `@eslint/config-array@0.21.2`, `@eslint/eslintrc@3.3.7`. Herramienta de desarrollo |
+| Fix | `introduced: 0`, `fixed: 11.0.1`. **No existe `3.1.6` ni `3.1.7`** (registry: el último 3.x es `3.1.5`) |
+
+Es coherente con el «1 vulnerability (1 moderate)» que devolvió el push, y no se halló ningún otro.
+
+**El repo ya lo conocía.** `pnpm-workspace.yaml:24-27` tiene una entrada para este mismo
+`GHSA-g3hv-75wg-m249`, acotada a `minimatch@>=10.0.0 <11.0.1` → `11.0.1` (la línea que usa braintrust), y
+el comentario explica por qué no se tocó el `3.1.5` de ESLint: «subir también el minimatch de eslint
+cambiaría el instrumento con el que se verifica todo lo demás». El lock refleja nueve overrides en
+`pnpm-lock.yaml` → `lock.overrides` (medido: `@hono/node-server`, `hono`, `qs`, `minimatch`, `lodash`,
+`valibot`, `body-parser`, `undici`, `fast-uri`). La corrección de esta tanda **no** es escribir código
+nuevo: es dejar de describir el aviso como sin resolver.
+
+**Qué añade la medición de esta tanda.** El alcance residual (`3.1.5`, sólo ESLint) quedó acotado con
+evidencia propia en lugar de con intuición:
+
+- Los tres call sites de ESLint usan el export nombrado, no el módulo callable:
+  `const { Minimatch } = require("minimatch")` (`file-enumerator.js:42`), `minimatch.Minimatch`
+  (`eslint-helpers.js:30`) y `const Minimatch = minimatch.Minimatch` (`config-array/index.cjs:224`). En
+  la familia ≥9/≥10 el módulo ya no es callable (`typeof exports === "object"`), pero
+  `typeof exports.Minimatch === "function"`: lo que ESLint consume sigue presente.
+- `IMinimatch` / `IMinimatchStatic` (`config-array/index.cjs:207-208`) aparecen sólo en bloques
+  `@typedef`/`@import` de JSDoc: sin dependencia en runtime.
+- Diferencia conductual sobre los patrones reales del repo: 17 patrones `ignores` de
+  `eslint.config.mjs` × 628 rutas rastreadas = **10 676 comparaciones, 0 discrepancias, 0 errores** entre
+  `3.1.5` y `10.2.6` con `{dot:true, allowWindowsEscape:true}`.
+- Único consumo de opción que se pierde: `allowWindowsEscape` existe en 3.1.5 y ya no en ≥10, donde pasa
+  a ser un no-op silencioso. Con separadores `/` (los que produce `git ls-files`) no altera ningún
+  resultado; con patrones de barras invertidas en una máquina dev, sí habría que revisarlo.
+
+**Por qué no se amplía el override ahora, aun siendo neutral en esta muestra.** Lo bloquea la razón del
+propio comentario, no la técnica: el paso `3.1.5 → 11.0.1` cambia ESLint, que es el instrumento que
+verifica al resto del repo, y Actions está bloqueado por facturación (§9.1). Un cambio en el verificador
+sin CI que lo refute es exactamente el tipo de mérito que no se puede afirmar. La acción queda lista para
+cuando el pipeline vuelva a correr: ampliar la clave a `"minimatch@^3.1.5": ^11.0.1` en
+`pnpm-workspace.yaml` (campo `overrides`, no `package.json`: desde pnpm 10 el bloque `pnpm` de
+`package.json` no se lee), regenerar con `pnpm install --lockfile-only`, y verificar `pnpm run lint`,
+`pnpm run typecheck` y `pnpm install --frozen-lockfile` antes de comitear. Nota operativa medida en esta
+tanda: `npx -y pnpm@10.28.0` **sí** ejecuta pnpm 10.28.0 en esta máquina (`10.28.0` impreso), aunque no
+haya `pnpm` ni `corepack` en el PATH — así que la regeneración del lock es realizable sin instalar nada.
+Mientras no se ejecute esa verificación, la posición honesta sigue siendo la documentada por el repo:
+**riesgo aceptado y anotado** (dev-only, sólo disponibilidad, patrones de glob controlados por el
+repositorio).
 | `tsc --noEmit` | exit 0 |
 | `eslint test/deployment/workflow-contract.test.ts` | exit 0 |
 | `prettier --check` sobre el workflow y `test/**` | fuera del gate: `format:check` sólo cubre `src/**` (`package.json`), y `ci.yml:63` ejecuta ese script |
@@ -291,6 +357,6 @@ piezas ausentes, el resultado esperado del pipeline es **readiness BLOQUEADA con
 nombrados**, que es exactamente lo que el cableado nuevo hace visible.
 
 **Aviso del remoto, medido al empujar.** El `git push` de esta tanda devolvió «1 vulnerability (1
-moderate) en la rama por defecto» con el enlace `security/dependabot/88` del repo. Su contenido no se
-estimó: leer el advisory requiere acceso a la cuenta `OsoPanda1`, y sigue como tarea del owner junto con
-`pnpm audit --prod`.
+moderate) en la rama por defecto» con el enlace `security/dependabot/88`. El API de alerts requiere
+sesión de la cuenta, y no se usó la de el owner: el advisory se estimó por otra vía, medible sin
+credenciales, y se documenta en §9.
