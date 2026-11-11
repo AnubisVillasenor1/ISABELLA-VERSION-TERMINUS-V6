@@ -14,7 +14,7 @@ const good = {
   SUPABASE_URL: "https://x.supabase.co",
   SUPABASE_SERVICE_ROLE_KEY: strong("sb"),
   SUPABASE_ANON_KEY: "eyJhbGciOi-example-anon-key",
-  GROQ_API_KEY: "gsk_example",
+  GROQ_API_KEY: strong("groq"),
   ALLOWED_ORIGINS: "https://isabella.example.org",
   BOOKPI_LEDGER_PATH: "/app/data/ledger.jsonl",
 } as const;
