@@ -209,4 +209,51 @@ describe('deploy readiness', () => {
     const r = runDeployReadiness({ ...good, BOOKPI_INTEGRITY_SECRET: 'changeme' });
     expect(JSON.stringify(r)).not.toContain('changeme');
   });
+
+  it("blocks the literal placeholders that .env.example publishes", () => {
+    // Medido: antes de este cierre, correr la compuerta sobre .env.example devolvía sólo
+    // [WARN] DR-DATABASE-TLS y ningún ERROR. Copiar el ejemplo sobre .env desplegaba «listo».
+    const r = runDeployReadiness({
+      GENESIS_ADMIN_API_TOKEN: "<generate-with-openssl-rand-base64-32>",
+      APP_PUBLIC_URL: "http://localhost:8080",
+      ALLOWED_ORIGINS: "http://localhost:8080",
+      DATABASE_URL: "postgresql://<user>:<password>@<host>:5432/<database>",
+      BOOKPI_INTEGRITY_SECRET: "<generate-with-openssl-rand-base64-32>",
+      ISABELLA_VERIFIED_KNOWLEDGE_BACKEND: "mongodb",
+      MONGODB_URI: "mongodb+srv://<user>:<password>@<cluster>/?retryWrites=true",
+      VERCEL: "false",
+    });
+    expect(r.status).toBe("BLOCKED");
+    const ids = r.findings.map((f) => f.id);
+    expect(ids).toContain("DR-DATABASE-PLACEHOLDER");
+    expect(ids).toContain("DR-BOOKPI-SECRET-WEAK");
+    expect(ids).toContain("DR-VERIFIED-KNOWLEDGE-MONGODB-URI-PLACEHOLDER");
+    expect(ids).toContain("PF-TOKEN-WEAK-GENESIS_ADMIN_API_TOKEN");
+    expect(JSON.stringify(r)).not.toContain("openssl-rand-base64");
+  });
+
+  it("does not apply serverless rules to a documented VERCEL=false", () => {
+    // .env.example declara VERCEL=false; has() lo leía como «definido» y bloqueaba un
+    // despliegue que no corre en Vercel con errores que el despliegue real no vería.
+    const r = runDeployReadiness({ ...good, VERCEL: "false", ISABELLA_API_KEY_STORE: "file" });
+    const ids = r.findings.map((f) => f.id);
+    expect(ids).not.toContain("DR-SERVERLESS-NON_DURABLE_API_KEYS");
+    expect(r.status).toBe("READY");
+  });
+
+  it("applies serverless rules when VERCEL_ENV says production even with VERCEL unset", () => {
+    const r = runDeployReadiness({
+      ...good,
+      VERCEL_ENV: "production",
+      ISABELLA_API_KEY_STORE: "postgres",
+      ISABELLA_FEDERATION_STORE: "postgres",
+      DATABASE_URL: "postgresql://<user>:<password>@<host>:5432/<database>",
+    });
+    const ids = r.findings.map((f) => f.id);
+    expect(ids).toContain("DR-DATABASE-PLACEHOLDER");
+    // Una URL de plantilla no es un almacén durable: el adaptador cae a memoria al fallar la conexión.
+    expect(ids).toContain("DR-SERVERLESS-API_KEYS_DB_MISSING");
+    expect(ids).toContain("DR-SERVERLESS-FEDERATION_DB_MISSING");
+    expect(r.status).toBe("BLOCKED");
+  });
 });

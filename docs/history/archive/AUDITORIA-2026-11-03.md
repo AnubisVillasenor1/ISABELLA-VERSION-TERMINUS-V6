@@ -30,8 +30,8 @@ provisionar.
 |---|---|---|---|
 | Typecheck principal | `tsc --noEmit` | **exit 0**, 0 errores | Tras promover 15 capas desde `tsconfig.layers.json`. |
 | Typecheck de capas | `tsc -p tsconfig.layers.json` | **exit 0** | Pasaba ya antes del cambio; por eso la promoción fue segura. |
-| Lint (ámbito ampliado) | `eslint src scripts test --max-warnings=0` | **exit 0** | 19 scripts y 390 archivos de test entran por primera vez. |
-| Formato | `prettier --check "src/**"` | **exit 0** | |
+| Lint (ámbito ampliado) | `eslint "src/**/*.{ts,tsx,js,jsx}" "scripts/**/*.mjs" "test/**/*.ts" --max-warnings=0` (el glob declarado en `package.json` → `lint`) | **exit 0** | 19 scripts y 390 archivos de test entran por primera vez. Ver §11: pasar los directorios a secas **no** sale 0. |
+| Formato | `prettier --check "src/**/*.{ts,tsx,js,jsx,json,md,yml,yaml}"` (`format:check`) | **exit 0** | `src/**` sin extensión arrastra `.jpeg` y `.css` y falla; el gate usa la lista de extensiones. |
 | Env example | `node scripts/check-env-example.mjs` | `ENV_EXAMPLE_OK keys=224 read_in_src=113` | |
 | SOPS | `node scripts/check-sops-placeholders.mjs` | `SOPS_PLACEHOLDERS_OK` | Ningún archivo cifrado rastreado. |
 | Suite completa | `vitest run` | **2709 pruebas passed / 0 failed** · 389/390 archivos | 1 archivo no carga por defecto de entorno (§3.F-F). |
@@ -269,8 +269,8 @@ del step de smoke`). Ambas mutaciones se revirtieron; `git diff` del workflow no
 | `vitest run` (suite completa) | **2711 pruebas passed / 0 failed**, 389/390 archivos |
 | `check:env` / `check:sops` | `ENV_EXAMPLE_OK keys=224 read_in_src=113` / `SOPS_PLACEHOLDERS_OK` |
 | `typecheck` + `typecheck:layers` | exit 0 ambos |
-| `eslint src scripts test --max-warnings=0` | exit 0 |
-| `prettier --check "src/**"` | exit 0 (ámbito real del gate, `ci.yml:63`) |
+| `lint` (glob de `package.json`) | exit 0 |
+| `format:check` (lista de extensiones de `package.json`) | exit 0 (ámbito real del gate, `ci.yml:63`) |
 
 El archivo que no carga es el mismo que en §1: `test/atlas/hcu-store.test.ts` falla al *importar*
 `@supabase/functions-js`, que requiere `tslib`. `tslib@2.8.1` está fijado en `pnpm-lock.yaml:2320` pero no
@@ -342,10 +342,6 @@ haya `pnpm` ni `corepack` en el PATH — así que la regeneración del lock es r
 Mientras no se ejecute esa verificación, la posición honesta sigue siendo la documentada por el repo:
 **riesgo aceptado y anotado** (dev-only, sólo disponibilidad, patrones de glob controlados por el
 repositorio).
-| `tsc --noEmit` | exit 0 |
-| `eslint test/deployment/workflow-contract.test.ts` | exit 0 |
-| `prettier --check` sobre el workflow y `test/**` | fuera del gate: `format:check` sólo cubre `src/**` (`package.json`), y `ci.yml:63` ejecuta ese script |
-
 **Nota de ejecución.** En esta máquina no hay `corepack`/`pnpm` en el PATH, así que las puertas se
 corrieron con `npx`/`node` sobre los mismos binarios de `node_modules/.bin` que CI usa bajo `pnpm`. CI
 sigue ejecutando `pnpm run …`; lo que cambia es el lanzador local, no el veredicto.
@@ -360,3 +356,94 @@ nombrados**, que es exactamente lo que el cableado nuevo hace visible.
 moderate) en la rama por defecto» con el enlace `security/dependabot/88`. El API de alerts requiere
 sesión de la cuenta, y no se usó la de el owner: el advisory se estimó por otra vía, medible sin
 credenciales, y se documenta en §9.
+
+## §10 La compuerta de readiness fallaba abierta ante los literales de `.env.example`
+
+Hallazgo propio, medido dos veces de forma independiente (una corrida propia y una de un subagente que
+evaluó el mismo camino sin ver mi conclusión). Es un defecto de **código**, no de configuración, y quedó
+cerrado en esta tanda.
+
+**El fallo, en su forma más clara.** Una producción enteramente real —token de admin fuerte, origen HTTPS
+exacto, proveedor de inferencia, Supabase completo, almacenes `postgres`— pero con las dos cadenas de
+conexión todavía en plantilla. Medido sobre el árbol con la compuerta antes del cierre:
+
+```
+STATUS=READY_WITH_WARNINGS  ERRORS=0  findings=[DR-DATABASE-TLS]
+```
+
+Es decir: **aprobaba el despliegue**. La causa son tres compruebas que sólo preguntaban «no está vacío» o
+«es largo y diverso»:
+
+1. `has()` (`src/health/deploy-readiness.ts:19` antes del cierre) medía `(env[name]?.trim() ?? '') !== ''`.
+2. `weakSecretReason` (`src/health/preflight.ts:58-64`) exigía ≥32 caracteres, ≥8 distintivos y ≥96 bits
+   estimados. El literal que el propio repo publica, `<generate-with-openssl-rand-base64-32>`, tiene 38
+   caracteres, más de 8 distintivos y más de 96 bits: **pasa un control de entropía sin nombrar nada**.
+3. `dbUrl` se validaba por prefijo (`postgres://`), y una URL con `<host>` conserva el prefijo; además
+   el prefijo coincidente la hacía elegible como almacén durable en la rama serverless.
+
+**Segundo defecto, en dirección contraria.** `.env.example:13` declara `VERCEL=false`. `has()` lo leía como
+«definido», así que un despliegue que no corre en Vercel recibía `DR-SERVERLESS-NON_DURABLE_API_KEYS` y
+`DR-SERVERLESS-NON_DURABLE_FEDERATION`: dos errores que el despliegue real nunca vería y que ocultaban el
+diagnóstico. La compuerta estaba mal en los dos sentidos —falsos negativos en credenciales, falsos positivos
+en la plataforma.
+
+**Cierre.** Cuatro cambios, todos en la dirección de apretar:
+
+- `TEMPLATE_TOKEN = /<[^<>\s]{2,}>/` y `looksLikeTemplate()` exportados desde
+  [src/health/preflight.ts:39-43](../../src/health/preflight.ts); conectados a `weakSecretReason` como
+  razón `'is an unfilled template token'`, así que los cuatro secretos del ejemplo quedan en ERROR.
+- `has()` es consciente de plantilla ([src/health/deploy-readiness.ts:25-28](../../src/health/deploy-readiness.ts)),
+  por lo que `SUPABASE_URL`/`PROVIDER_VARS`/orígenes con `<...>` ya no cuentan como configurados.
+- Nuevo `DR-DATABASE-PLACEHOLDER` (ERROR) antes de la rama TLS, y `realDbUrl` —la cadena sólo cuando no es
+  plantilla— alimentando las dos llamadas a `checkDurableStore`: con URL de plantilla, el contrato
+  serverless devuelve `DR-SERVERLESS-API_KEYS_DB_MISSING` y `..._FEDERATION_DB_MISSING` en lugar de aceptar.
+- Nuevo `DR-VERIFIED-KNOWLEDGE-MONGODB-URI-PLACEHOLDER`, y la rama serverless usa ahora
+  `envFlag(env,'VERCEL') || envFlag(env,'VERCEL_ENV')` (`src/lib/env-flags.ts:15`), el mismo criterio que
+  ya aplicaba `preflight` para el listener: `false`/`0`/`no`/`off` significan no-desplegado.
+
+**Medición después del cierre**, misma máquina, mismo lanzador (`npx tsx`):
+
+| Caso | Antes | Después |
+|---|---|---|
+| Config real con las dos URLs en plantilla | `READY_WITH_WARNINGS`, 0 ERROR | `BLOCKED`, 4 ERROR: `DR-DATABASE-PLACEHOLDER`, `DR-VERIFIED-KNOWLEDGE-MONGODB-URI-PLACEHOLDER`, `DR-SERVERLESS-API_KEYS_DB_MISSING`, `DR-SERVERLESS-FEDERATION_DB_MISSING` |
+| `.env.example` tal cual | 8 ERROR, 1 WARN — ninguno nombra las plantillas, y 2 son los serverless espurios | 11 ERROR, 0 WARN; cero IDs `DR-SERVERLESS-*` |
+| Igual pero con credenciales rellenadas | `READY` | `READY`, 0 ERROR |
+
+La tercera fila es la que demuestra que el cambio **no demerita**: una clave real no se bloquea. Es también
+el control contra el único coste del diseño: un secreto legítimo que contenga literalmente `<xx>` (dos o
+más caracteres sin espacios entre Less-than y greater-than) se marcaría como plantilla. No ocurre con
+base64, JWT, cadenas de conexión de Mongo/Postgres ni claves de proveedor; si ocurriera, el mensaje nombra
+la variable y nunca el valor, y el operador lo resuelve regenerando el secreto.
+
+**No vacuidad.** Anular el detector (`TEMPLATE_TOKEN` por un literal impossible) hizo fallar exactamente 3
+pruebas nuevas y ninguna antigua: `preflight > rejects an unfilled template token…`,
+`deploy readiness > blocks the literal placeholders that .env.example publishes`,
+`deploy readiness > applies serverless rules when VERCEL_ENV says production…`. La de `VERCEL=false` sigue
+en verde bajo esa anulación porque protege el otro defecto (`envFlag`), y se reprodujo por separado
+volviendo la rama a `has()`: reaparecieron los dos `DR-SERVERLESS-*`. Ambas mutaciones se revirtieron y se
+verificó `grep` = 0 coincidencias de marcador antes de comitear.
+
+**Puertas de esta tanda.** `vitest run test/health/ test/deployment/` → **153 pruebas / 23 archivos, 0
+fallos** (31 en health: 25 antes del cierre; 122 en deployment, sin regresión). `tsc --noEmit` exit 0,
+`lint` exit 0, `format:check` exit 0, con los globs declarados en `package.json`. Ninguna de estas cifras
+equivale a CI verde: §9.1 sigue abierto.
+
+## §11 Precisiones de medición sobre las propias puertas
+
+Dos transcripciones de comando estaban mal escritas en este documento (filas `lint` y `formato` de §1 y §8).
+No eran conclusiones falsas —las puertas sí pasan— pero el comando que se transcribió **no** pasa, y eso
+importa porque alguien puede replicarlo:
+
+- `eslint src scripts test --max-warnings=0` devuelve 6 errores de `Parsing error:
+  "parserOptions.project" ... The file was not found in any of the provided project(s)` sobre
+  `scripts/voice-profile-compare.ts`. El script `lint` del repo no usa directorios: usa
+  `"src/**/*.{ts,tsx,js,jsx}" "scripts/**/*.mjs" "test/**/*.ts"`, y `scripts/**/*.mjs` deja fuera los
+  `.ts` de esa carpeta. Con el glob real, exit 0.
+- `prettier --check "src/**"` falla con `No parser could be inferred for ... logo-isav6.jpeg` y un aviso
+  sobre `src/ui/platform/site.css`. El script `format:check` limita a
+  `"src/**/*.{ts,tsx,js,jsx,json,md,yml,yaml}"`. Con el glob real, exit 0.
+
+**Hecho nuevo que esto revela.** `scripts/voice-profile-compare.ts` está rastreado en git, no lo cubre el
+glob de `lint`, y no pertenece a ningún `tsconfig` proyectado: es un archivo de despliegue-adjacent que
+ninguna puerta mira. No se corrige aquí porque sacarlo de su exclusión es una decisión de ámbito del
+verificador, igual que la de `minimatch` en §9: requiere CI que la refute.

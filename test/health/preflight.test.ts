@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assertPreflight, estimateEntropyBits, runPreflight, weakSecretReason } from "../../src/health/preflight";
+import { assertPreflight, estimateEntropyBits, looksLikeTemplate, runPreflight, weakSecretReason } from "../../src/health/preflight";
 
 /** state: draft | engine-generated */
 const rand = "kT9#vL2$pQ7@xW4!mN8^bR5&hJ3*cF6(dG1)zY0_aS-eU+iO=lK";
@@ -11,6 +11,20 @@ describe("weakSecretReason", () => {
     expect(weakSecretReason("abababababababababababababababab".repeat(2))).not.toBeNull();
     expect(weakSecretReason(rand)).toBeNull();
     expect(estimateEntropyBits("")).toBe(0);
+  });
+  it("rejects an unfilled template token even when it is long and diverse", () => {
+    // El literal que el propio repo publica en .env.example: 38 caracteres, >8 distintivos y
+    // más de 96 bits estimados. Sin control de forma, copiar el ejemplo abre la compuerta.
+    const template = "<generate-with-openssl-rand-base64-32>";
+    expect(template.length).toBeGreaterThan(32);
+    expect(new Set(template).size).toBeGreaterThan(8);
+    expect(estimateEntropyBits(template)).toBeGreaterThan(96);
+    expect(weakSecretReason(template)).toBe("is an unfilled template token");
+    expect(looksLikeTemplate("postgresql://<user>:<password>@<host>:5432/<database>")).toBe(true);
+    expect(looksLikeTemplate(template)).toBe(true);
+    expect(looksLikeTemplate(rand)).toBe(false);
+    expect(looksLikeTemplate("<a>")).toBe(false); // un solo carácter entre Less-than no es una instrucción de relleno
+    expect(looksLikeTemplate("mongodb+srv://u:p@cluster0.abc.mongodb.net/")).toBe(false);
   });
 });
 

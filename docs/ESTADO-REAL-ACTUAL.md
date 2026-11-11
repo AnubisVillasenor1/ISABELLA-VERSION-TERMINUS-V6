@@ -9,7 +9,9 @@
 
 ## Readiness reportada y límites
 
-**Avance global de implementación: no publicado como porcentaje único.** Mientras no exista un denominador de requisitos ponderados y reproducible, una cifra agregada sería especulación y no se presenta como hecho.
+**Avance global para producción y despliegue: 62.6 %, calculado y no estimado.** El denominador que faltaba cuando este documento se negó a publicar una cifra agregada ya existe: `scripts/production-progress.mjs` mide cuatro ejes con peso declarado (superficie 0.2, pruebas 0.2, capacidades 0.15, despliegue 0.45) sobre artefactos del árbol y evidencia sellada en `docs/status/production-progress-evidence.json`. Se reproduce con `node scripts/production-progress.mjs` y `test/deployment/readiness-consistency.test.ts` falla si el README cita una cifra distinta a la calculada. Es avance ponderado, no aptitud: con la puerta `health_readiness` en `failed` el sistema sigue sin ser desplegable.
+
+> Histórico: la tabla de dominios de abajo es la rúbrica sin pesos de este mismo documento (61/100). Convive con el 62.6 % porque responde a otra pregunta —qué dominios tienen evidencia— y no es un porcentaje de producción; no se suman ni se promedian entre sí. Ver `docs/history/archive/DIVERGENCIAS-2026-11-04.md`.
 
 > Histórico: la versión de 12 de octubre de 2026 estimaba 46.25% con otra rúbrica (runtime 20, pruebas 20, seguridad 15, inferencia 15, persistencia 10, CI/Rust 10, operación 10). Se reemplazó para no mantener dos cifras contradictorias.
 
