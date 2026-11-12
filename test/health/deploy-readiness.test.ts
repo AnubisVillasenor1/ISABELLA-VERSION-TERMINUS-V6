@@ -1,7 +1,14 @@
-import { describe, expect, it } from "vitest";
-import { runDeployReadiness } from "../../src/health/deploy-readiness";
+import { describe, expect, it } from 'vitest';
+import { runDeployReadiness } from '../../src/health/deploy-readiness';
 
-const strong = (seed: string): string => Array.from({ length: 48 }, (_, i) => "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"[(i * 7 + seed.charCodeAt(i % seed.length)) % 62]).join("");
+const strong = (seed: string): string =>
+  Array.from(
+    { length: 48 },
+    (_, i) =>
+      'abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'[
+        (i * 7 + seed.charCodeAt(i % seed.length)) % 62
+      ]
+  ).join('');
 
 const good = {
   GENESIS_ADMIN_API_TOKEN: strong("admin"),
@@ -19,176 +26,187 @@ const good = {
   BOOKPI_LEDGER_PATH: "/app/data/ledger.jsonl",
 } as const;
 
-describe("deploy readiness", () => {
-  it("is READY for a complete production configuration", () => {
+describe('deploy readiness', () => {
+  it('is READY for a complete production configuration', () => {
     const r = runDeployReadiness(good);
-    expect(r.findings.filter((f) => f.severity === "ERROR")).toEqual([]);
-    expect(r.status).toBe("READY");
+    expect(r.findings.filter((f) => f.severity === 'ERROR')).toEqual([]);
+    expect(r.status).toBe('READY');
   });
 
-  it("blocks without the integrity secret or a database", () => {
+  it('blocks without the integrity secret or a database', () => {
     const { BOOKPI_INTEGRITY_SECRET: _s, DATABASE_URL: _d, ...rest } = good;
     const r = runDeployReadiness(rest);
-    expect(r.status).toBe("BLOCKED");
+    expect(r.status).toBe('BLOCKED');
     const ids = r.findings.map((f) => f.id);
-    expect(ids).toContain("DR-BOOKPI-SECRET-MISSING");
-    expect(ids).toContain("DR-DATABASE-MISSING");
+    expect(ids).toContain('DR-BOOKPI-SECRET-MISSING');
+    expect(ids).toContain('DR-DATABASE-MISSING');
   });
 
-  it("rejects a weak integrity secret and a non-postgres URL", () => {
-    const r = runDeployReadiness({ ...good, BOOKPI_INTEGRITY_SECRET: "changeme", DATABASE_URL: "mysql://x" });
+  it('rejects a weak integrity secret and a non-postgres URL', () => {
+    const r = runDeployReadiness({
+      ...good,
+      BOOKPI_INTEGRITY_SECRET: 'changeme',
+      DATABASE_URL: 'mysql://x',
+    });
     const ids = r.findings.map((f) => f.id);
-    expect(ids).toContain("DR-BOOKPI-SECRET-WEAK");
-    expect(ids).toContain("DR-DATABASE-INVALID");
+    expect(ids).toContain('DR-BOOKPI-SECRET-WEAK');
+    expect(ids).toContain('DR-DATABASE-INVALID');
   });
 
-  it("requires the Atlas/IKES Supabase backend in production", () => {
+  it('requires the Atlas/IKES Supabase backend in production', () => {
     const { SUPABASE_SERVICE_ROLE_KEY: _k, ...half } = good;
-    expect(runDeployReadiness(half).findings.map((f) => f.id)).toContain("DR-SUPABASE-PARTIAL");
+    expect(runDeployReadiness(half).findings.map((f) => f.id)).toContain('DR-SUPABASE-PARTIAL');
     const { SUPABASE_URL: _u, SUPABASE_SERVICE_ROLE_KEY: _k2, ...none } = good;
     const r = runDeployReadiness(none);
-    expect(r.findings.map((f) => f.id)).toContain("DR-SUPABASE-ABSENT");
-    expect(r.status).toBe("BLOCKED");
+    expect(r.findings.map((f) => f.id)).toContain('DR-SUPABASE-ABSENT');
+    expect(r.status).toBe('BLOCKED');
   });
 
-  it("blocks when Supabase is configured but its user-authentication key is absent", () => {
+  it('blocks when Supabase is configured but its user-authentication key is absent', () => {
     const { SUPABASE_ANON_KEY: _anon, ...rest } = good;
     const ids = runDeployReadiness(rest).findings.map((f) => f.id);
-    expect(ids).toContain("DR-SUPABASE-AUTH-KEY-MISSING");
+    expect(ids).toContain('DR-SUPABASE-AUTH-KEY-MISSING');
   });
 
-  it("warns about a missing inference provider and blocks local origins", () => {
+  it('warns about a missing inference provider and blocks local origins', () => {
     const { GROQ_API_KEY: _g, ...rest } = good;
-    const report = runDeployReadiness({ ...rest, ALLOWED_ORIGINS: "http://localhost:3000" });
+    const report = runDeployReadiness({ ...rest, ALLOWED_ORIGINS: 'http://localhost:3000' });
     const ids = report.findings.map((f) => f.id);
-    expect(ids).toContain("DR-NO-INFERENCE-PROVIDER");
-    expect(ids).toContain("DR-ORIGINS-LOCAL");
-    expect(report.findings.find((finding) => finding.id === "DR-ORIGINS-LOCAL")?.severity).toBe("ERROR");
-    expect(runDeployReadiness({ ...good, ALLOWED_ORIGINS: "*" }).findings.map((f) => f.id)).toContain(
-      "DR-ORIGINS-LOCAL"
+    expect(ids).toContain('DR-NO-INFERENCE-PROVIDER');
+    expect(ids).toContain('DR-ORIGINS-LOCAL');
+    expect(report.findings.find((finding) => finding.id === 'DR-ORIGINS-LOCAL')?.severity).toBe(
+      'ERROR'
     );
-    expect(runDeployReadiness({ ...good, ALLOWED_ORIGINS: "https://example.org/path" }).findings.map((f) => f.id)).toContain(
-      "DR-ORIGINS-INVALID"
-    );
+    expect(
+      runDeployReadiness({ ...good, ALLOWED_ORIGINS: '*' }).findings.map((f) => f.id)
+    ).toContain('DR-ORIGINS-LOCAL');
+    expect(
+      runDeployReadiness({ ...good, ALLOWED_ORIGINS: 'https://example.org/path' }).findings.map(
+        (f) => f.id
+      )
+    ).toContain('DR-ORIGINS-INVALID');
   });
 
-  it("blocks Vercel production when API-key or federation state is ephemeral", () => {
+  it('blocks Vercel production when API-key or federation state is ephemeral', () => {
     const r = runDeployReadiness({
       ...good,
-      VERCEL: "1",
-      ISABELLA_API_KEY_STORE: "memory",
-      ISABELLA_FEDERATION_STORE: "memory",
+      VERCEL: '1',
+      ISABELLA_API_KEY_STORE: 'memory',
+      ISABELLA_FEDERATION_STORE: 'memory',
     });
-    expect(r.status).toBe("BLOCKED");
+    expect(r.status).toBe('BLOCKED');
     const ids = r.findings.map((f) => f.id);
-    expect(ids).toContain("DR-SERVERLESS-NON_DURABLE_API_KEYS");
-    expect(ids).toContain("DR-SERVERLESS-NON_DURABLE_FEDERATION");
+    expect(ids).toContain('DR-SERVERLESS-NON_DURABLE_API_KEYS');
+    expect(ids).toContain('DR-SERVERLESS-NON_DURABLE_FEDERATION');
   });
 
-  it("blocks the file backend on Vercel as well", () => {
+  it('blocks the file backend on Vercel as well', () => {
     const r = runDeployReadiness({
       ...good,
-      VERCEL: "1",
-      ISABELLA_API_KEY_STORE: "file",
-      ISABELLA_FEDERATION_STORE: "file",
-    });
-    const ids = r.findings.map((f) => f.id);
-    expect(ids).toContain("DR-SERVERLESS-NON_DURABLE_API_KEYS");
-    expect(ids).toContain("DR-SERVERLESS-NON_DURABLE_FEDERATION");
-    expect(r.status).toBe("BLOCKED");
-  });
-
-  it("accepts a Postgres store pair as durable on serverless", () => {
-    const r = runDeployReadiness({
-      ...good,
-      VERCEL: "1",
-      ISABELLA_API_KEY_STORE: "postgres",
-      ISABELLA_FEDERATION_STORE: "postgres",
+      VERCEL: '1',
+      ISABELLA_API_KEY_STORE: 'file',
+      ISABELLA_FEDERATION_STORE: 'file',
     });
     const ids = r.findings.map((f) => f.id);
-    expect(ids).not.toContain("DR-SERVERLESS-NON_DURABLE_API_KEYS");
-    expect(ids).not.toContain("DR-SERVERLESS-NON_DURABLE_FEDERATION");
-    expect(r.status).toBe("READY");
+    expect(ids).toContain('DR-SERVERLESS-NON_DURABLE_API_KEYS');
+    expect(ids).toContain('DR-SERVERLESS-NON_DURABLE_FEDERATION');
+    expect(r.status).toBe('BLOCKED');
   });
 
-  it("accepts the neon alias in any case", () => {
+  it('accepts a Postgres store pair as durable on serverless', () => {
     const r = runDeployReadiness({
       ...good,
-      VERCEL: "1",
-      ISABELLA_API_KEY_STORE: "neon",
-      ISABELLA_FEDERATION_STORE: "NEON",
+      VERCEL: '1',
+      ISABELLA_API_KEY_STORE: 'postgres',
+      ISABELLA_FEDERATION_STORE: 'postgres',
     });
-    expect(r.status).toBe("READY");
+    const ids = r.findings.map((f) => f.id);
+    expect(ids).not.toContain('DR-SERVERLESS-NON_DURABLE_API_KEYS');
+    expect(ids).not.toContain('DR-SERVERLESS-NON_DURABLE_FEDERATION');
+    expect(r.status).toBe('READY');
   });
 
-  it("blocks a Postgres store mode that has no usable database URL", () => {
+  it('accepts the neon alias in any case', () => {
+    const r = runDeployReadiness({
+      ...good,
+      VERCEL: '1',
+      ISABELLA_API_KEY_STORE: 'neon',
+      ISABELLA_FEDERATION_STORE: 'NEON',
+    });
+    expect(r.status).toBe('READY');
+  });
+
+  it('blocks a Postgres store mode that has no usable database URL', () => {
     const { DATABASE_URL: _d, ...rest } = good;
     const r = runDeployReadiness({
       ...rest,
-      VERCEL: "1",
-      ISABELLA_API_KEY_STORE: "postgres",
-      ISABELLA_FEDERATION_STORE: "postgres",
+      VERCEL: '1',
+      ISABELLA_API_KEY_STORE: 'postgres',
+      ISABELLA_FEDERATION_STORE: 'postgres',
     });
     const ids = r.findings.map((f) => f.id);
-    expect(ids).toContain("DR-SERVERLESS-API_KEYS_DB_MISSING");
-    expect(ids).toContain("DR-SERVERLESS-FEDERATION_DB_MISSING");
-    expect(r.status).toBe("BLOCKED");
+    expect(ids).toContain('DR-SERVERLESS-API_KEYS_DB_MISSING');
+    expect(ids).toContain('DR-SERVERLESS-FEDERATION_DB_MISSING');
+    expect(r.status).toBe('BLOCKED');
   });
 
-  it("blocks a Postgres store mode whose URL is not a postgres connection string", () => {
+  it('blocks a Postgres store mode whose URL is not a postgres connection string', () => {
     const r = runDeployReadiness({
       ...good,
-      VERCEL: "1",
-      DATABASE_URL: "mysql://u:p@db.example.org:3306/isabella",
-      ISABELLA_API_KEY_STORE: "postgres",
-      ISABELLA_FEDERATION_STORE: "neon",
+      VERCEL: '1',
+      DATABASE_URL: 'mysql://u:p@db.example.org:3306/isabella',
+      ISABELLA_API_KEY_STORE: 'postgres',
+      ISABELLA_FEDERATION_STORE: 'neon',
     });
     const ids = r.findings.map((f) => f.id);
-    expect(ids).toContain("DR-DATABASE-INVALID");
-    expect(ids).toContain("DR-SERVERLESS-API_KEYS_DB_MISSING");
-    expect(ids).toContain("DR-SERVERLESS-FEDERATION_DB_MISSING");
+    expect(ids).toContain('DR-DATABASE-INVALID');
+    expect(ids).toContain('DR-SERVERLESS-API_KEYS_DB_MISSING');
+    expect(ids).toContain('DR-SERVERLESS-FEDERATION_DB_MISSING');
   });
 
-  it("blocks an unknown store mode without echoing its value", () => {
+  it('blocks an unknown store mode without echoing its value', () => {
     const r = runDeployReadiness({
       ...good,
-      VERCEL: "1",
-      ISABELLA_API_KEY_STORE: "shared",
-      ISABELLA_FEDERATION_STORE: "redis",
+      VERCEL: '1',
+      ISABELLA_API_KEY_STORE: 'shared',
+      ISABELLA_FEDERATION_STORE: 'redis',
     });
     const ids = r.findings.map((f) => f.id);
-    expect(ids).toContain("DR-SERVERLESS-API_KEYS_MODE_UNKNOWN");
-    expect(ids).toContain("DR-SERVERLESS-FEDERATION_MODE_UNKNOWN");
-    expect(JSON.stringify(r)).not.toContain("redis");
-    expect(JSON.stringify(r)).not.toContain("shared");
+    expect(ids).toContain('DR-SERVERLESS-API_KEYS_MODE_UNKNOWN');
+    expect(ids).toContain('DR-SERVERLESS-FEDERATION_MODE_UNKNOWN');
+    expect(JSON.stringify(r)).not.toContain('redis');
+    expect(JSON.stringify(r)).not.toContain('shared');
   });
 
-  it("requires a valid durable verified-knowledge backend", () => {
+  it('requires a valid durable verified-knowledge backend', () => {
     const { MONGODB_URI: _uri, ...withoutMongo } = good;
     expect(runDeployReadiness(withoutMongo).findings.map((f) => f.id)).toContain(
-      "DR-VERIFIED-KNOWLEDGE-MONGODB-URI-MISSING"
+      'DR-VERIFIED-KNOWLEDGE-MONGODB-URI-MISSING'
     );
-    expect(
-      runDeployReadiness({ ...good, MONGODB_URI: "postgresql://user:password@db.example.org/app" }).findings.map(
-        (f) => f.id
-      )
-    ).toContain("DR-VERIFIED-KNOWLEDGE-MONGODB-URI-INVALID");
-    expect(
-      runDeployReadiness({ ...good, ISABELLA_VERIFIED_KNOWLEDGE_BACKEND: "memory" }).findings.map((f) => f.id)
-    ).toContain("DR-VERIFIED-KNOWLEDGE-NON_DURABLE");
     expect(
       runDeployReadiness({
         ...good,
-        ISABELLA_VERIFIED_KNOWLEDGE_BACKEND: "supabase",
-        SUPABASE_URL: "",
-        SUPABASE_SERVICE_ROLE_KEY: "",
+        MONGODB_URI: 'postgresql://user:password@db.example.org/app',
       }).findings.map((f) => f.id)
-    ).toContain("DR-VERIFIED-KNOWLEDGE-SUPABASE-CONFIG-MISSING");
+    ).toContain('DR-VERIFIED-KNOWLEDGE-MONGODB-URI-INVALID');
+    expect(
+      runDeployReadiness({ ...good, ISABELLA_VERIFIED_KNOWLEDGE_BACKEND: 'memory' }).findings.map(
+        (f) => f.id
+      )
+    ).toContain('DR-VERIFIED-KNOWLEDGE-NON_DURABLE');
+    expect(
+      runDeployReadiness({
+        ...good,
+        ISABELLA_VERIFIED_KNOWLEDGE_BACKEND: 'supabase',
+        SUPABASE_URL: '',
+        SUPABASE_SERVICE_ROLE_KEY: '',
+      }).findings.map((f) => f.id)
+    ).toContain('DR-VERIFIED-KNOWLEDGE-SUPABASE-CONFIG-MISSING');
   });
 
-  it("never leaks secret values in findings", () => {
-    const r = runDeployReadiness({ ...good, BOOKPI_INTEGRITY_SECRET: "changeme" });
-    expect(JSON.stringify(r)).not.toContain("changeme");
+  it('never leaks secret values in findings', () => {
+    const r = runDeployReadiness({ ...good, BOOKPI_INTEGRITY_SECRET: 'changeme' });
+    expect(JSON.stringify(r)).not.toContain('changeme');
   });
 
   it("blocks the literal placeholders that .env.example publishes", () => {
