@@ -20,9 +20,14 @@ describe('IsabellaFoundationalLLM', () => {
       history: [{ role: 'user', content: 'previo' }],
       knowledgeContext: 'hecho-verificado',
     });
-    const prompt = (gatewayGenerate.mock.calls[0] as unknown as [{ prompt: string }])[0].prompt;
-    expect(prompt).toContain('previo');
-    expect(prompt).toContain('hecho-verificado');
+    const call = (
+      gatewayGenerate.mock.calls[0] as unknown as [{ system: string; prompt: string }]
+    )[0];
+    expect(call.prompt).toContain('previo');
+    expect(call.prompt).toContain('hecho-verificado');
+    expect(call.prompt).toContain('Contexto aportado por la aplicación');
+    expect(call.system).toContain('no presentes una propuesta como función operativa');
+    expect(call.system).toContain('solicita autorización humana');
   });
 
   it('does not share cache between different histories', async () => {
@@ -44,7 +49,10 @@ describe('IsabellaFoundationalLLM', () => {
   it('serves identical requests from cache and dedupes concurrent calls', async () => {
     const gatewayGenerate = vi.fn(async () => 'ok');
     const llm = createFoundationalLLM(failingRuntime, { gatewayGenerate, gatewayModel: 'm' });
-    await Promise.all([llm.generate({ ...base, input: 'q' }), llm.generate({ ...base, input: 'q' })]);
+    await Promise.all([
+      llm.generate({ ...base, input: 'q' }),
+      llm.generate({ ...base, input: 'q' }),
+    ]);
     const again = await llm.generate({ ...base, input: 'q' });
     expect(gatewayGenerate).toHaveBeenCalledTimes(1);
     expect(again.cached).toBe(true);
