@@ -1212,6 +1212,7 @@ const runCommand = (command) => {
   closePalette();
   switch (command) {
     case 'go-chat':
+    case 'go-platform-chat':
     case 'focus-prompt':
       closePanel(true);
       byId('chat')?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
@@ -1242,6 +1243,7 @@ const runCommand = (command) => {
       openPanel('governance');
       break;
     case 'go-nexus':
+    case 'go-platform':
       focusNexus('workbench');
       break;
     case 'go-nexus-keys':
@@ -1250,20 +1252,14 @@ const runCommand = (command) => {
     case 'go-nexus-connectors':
       focusNexus('connectors');
       break;
-    case 'go-platform-chat':
-      window.location.assign('/chat');
-      break;
-    case 'go-platform':
-      window.location.assign('/platform');
-      break;
     case 'go-library':
-      window.location.assign('/platform/library');
+      openPanel('studio');
       break;
     case 'go-profile':
-      window.location.assign('/platform/profile');
+      openPanel('workspace');
       break;
     case 'go-developers':
-      window.location.assign('/platform/developers');
+      focusNexus('catalog');
       break;
     case 'toggle-voice':
       soundToggle?.click();
