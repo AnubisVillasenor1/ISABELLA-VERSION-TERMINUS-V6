@@ -1,0 +1,27 @@
+{
+  "version": "1",
+  "agents": [
+    {
+      "id": "examplemcp",
+      "label": "Servidor MCP de ejemplo (reemplazar antes de usar)",
+      "endpoint": "https://replace-me.invalid/mcp",
+      "protocol": "mcp-http",
+      "toolAllowlist": [],
+      "risk": "LOW",
+      "autonomy": "A0",
+      "license": "MIT",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384
+    },
+    {
+      "id": "examplecard",
+      "label": "Tarjeta de agente A2A de ejemplo (reemplazar antes de usar)",
+      "endpoint": "https://replace-me.invalid/.well-known/agent-card.json",
+      "protocol": "a2a-card",
+      "toolAllowlist": [],
+      "risk": "LOW",
+      "autonomy": "A0",
+      "license": "MIT"
+    }
+  ]
+}

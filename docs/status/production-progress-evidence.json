@@ -1,0 +1,25 @@
+{
+  "state": "auto_generated",
+  "measuredAt": "2026-11-04T07:57:48.506Z",
+  "node": "v26.13.0",
+  "inputsDigest": "sha256:fd7534d09c10a537b5fd76ac7eb87f985457f6f133e56be8109c5ee62ac321cc",
+  "tests": {
+    "passed": 2834,
+    "total": 2834,
+    "testFiles": 396
+  },
+  "gates": {
+    "build": "passed",
+    "tests": "passed",
+    "secret_scan": "passed",
+    "dependency_scan": "not_observed",
+    "security_scan": "passed",
+    "auth_rls": "not_observed",
+    "smoke": "passed",
+    "health_readiness": "failed",
+    "canary": "not_observed",
+    "rollback_plan": "not_observed"
+  },
+  "unrecordedGates": [],
+  "note": "Cifra observada en esta máquina. `not_observed` cuenta como no pasada: el ausencia de evidencia no suma avance."
+}
