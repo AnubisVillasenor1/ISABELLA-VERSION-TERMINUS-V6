@@ -95,6 +95,7 @@ import { config } from './lib/lib/config';
 import { verifyBearerToken } from './security/api-token';
 import { FixedWindowRateLimiter } from './security/rate-limit';
 import { createDefaultApiKeyStore } from './security/isabella-api-keys';
+import { createOutputGuardMiddleware } from './security/output-guard-http';
 import { createOptionalApiKeyAuthenticator, registerApiKeyRoutes } from './routes/api-keys';
 import { appDb } from './database/app-db';
 import { resolvePostgresConnectTimeoutMs } from './database/postgres-client';
@@ -490,6 +491,12 @@ const blackoutController = new BlackoutController({
 });
 
 const IMMUTABLE_CACHE = 'public, max-age=31536000, immutable';
+/**
+ * Compuerta de salida fail-closed sobre las superficies que devuelven texto generado por
+ * modelos, agentes o herramientas. Va aquí, antes de registrar cualquier ruta, porque
+ * envuelve `res.json` de las peticiones que coinciden por prefijo.
+ */
+app.use(createOutputGuardMiddleware());
 app.get('/', (req, res) => {
   if (htmlAsset === null) {
     res
