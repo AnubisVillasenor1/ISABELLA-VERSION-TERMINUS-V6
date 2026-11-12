@@ -11,20 +11,19 @@ const strong = (seed: string): string =>
   ).join('');
 
 const good = {
-  GENESIS_ADMIN_API_TOKEN: strong('admin'),
-  OPS_API_TOKEN: strong('ops!!'),
-  APP_PUBLIC_URL: 'https://isabella.example.org',
-  BOOKPI_INTEGRITY_SECRET: strong('bookpi'),
-  DATABASE_URL: 'postgresql://u:p@db.example.org:5432/isabella?sslmode=require',
-  ISABELLA_VERIFIED_KNOWLEDGE_BACKEND: 'mongodb',
-  MONGODB_URI:
-    'mongodb+srv://user:password@cluster.example.org/isabella?retryWrites=true&w=majority',
-  SUPABASE_URL: 'https://x.supabase.co',
-  SUPABASE_SERVICE_ROLE_KEY: strong('sb'),
-  SUPABASE_ANON_KEY: 'eyJhbGciOi-example-anon-key',
-  GROQ_API_KEY: strong('groq-provider'),
-  ALLOWED_ORIGINS: 'https://isabella.example.org',
-  BOOKPI_LEDGER_PATH: '/app/data/ledger.jsonl',
+  GENESIS_ADMIN_API_TOKEN: strong("admin"),
+  OPS_API_TOKEN: strong("ops!!"),
+  APP_PUBLIC_URL: "https://isabella.example.org",
+  BOOKPI_INTEGRITY_SECRET: strong("bookpi"),
+  DATABASE_URL: "postgresql://u:p@db.example.org:5432/isabella?sslmode=require",
+  ISABELLA_VERIFIED_KNOWLEDGE_BACKEND: "mongodb",
+  MONGODB_URI: "mongodb+srv://user:password@cluster.example.org/isabella?retryWrites=true&w=majority",
+  SUPABASE_URL: "https://x.supabase.co",
+  SUPABASE_SERVICE_ROLE_KEY: strong("sb"),
+  SUPABASE_ANON_KEY: "eyJhbGciOi-example-anon-key",
+  GROQ_API_KEY: strong("groq"),
+  ALLOWED_ORIGINS: "https://isabella.example.org",
+  BOOKPI_LEDGER_PATH: "/app/data/ledger.jsonl",
 } as const;
 
 describe('deploy readiness', () => {
