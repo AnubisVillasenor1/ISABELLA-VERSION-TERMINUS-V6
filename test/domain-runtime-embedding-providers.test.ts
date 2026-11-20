@@ -72,4 +72,19 @@ describe('IDR embedding provider configuration', () => {
     await expect(configured.provider!.embed('x'.repeat(4_001))).rejects.toThrow('IDR_EMBEDDING_INPUT_INVALID');
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
+
+  it('supports self-hosted Text Embeddings Inference without sending requests to a hosted vendor', async () => {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response(JSON.stringify([[1, 3], [3, 5]]), {
+      status: 200, headers: { 'content-type': 'application/json' },
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+    const configured = createConfiguredEmbeddingProvider({
+      IDR_EMBEDDINGS_PROVIDER: 'tei',
+      IDR_TEI_BASE_URL: 'http://127.0.0.1:8080',
+    });
+    expect(configured.mode).toBe('tei');
+    await expect(configured.provider!.embed('intención local')).resolves.toEqual([2, 4]);
+    expect(String(fetchMock.mock.calls[0]?.[0])).toBe('http://127.0.0.1:8080/embed');
+  });
+
 });
