@@ -78,7 +78,7 @@ function ollamaProvider(env: NodeJS.ProcessEnv): ConfiguredEmbeddingProvider {
       (!loopback && !(remoteOptIn && parsed.protocol === 'https:'))) {
     return { mode: 'ollama', model: null, reason: 'invalid-configuration' };
   }
-  const model = env.IDR_OLLAMA_EMBEDDING_MODEL ?? 'nomic-embed-text';
+  const model = env.IDR_OLLAMA_EMBEDDING_MODEL ?? 'nomic-embed-text-v2-moe';
   if (!/^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$/.test(model)) {
     return { mode: 'ollama', model: null, reason: 'invalid-configuration' };
   }
