@@ -88,6 +88,16 @@ describe('IDR semantic router', () => {
     expect(result.rejected.some((entry) => entry.reason === 'DEPENDENCY_MISSING_OR_CYCLE')).toBe(true);
   });
 
+  it('fails closed for malformed risk labels instead of treating them as low risk', async () => {
+    const malformed = [{ ...capabilities[0], risk: 'toString' as never }];
+    const result = await resolveSemanticIntent({ intent: 'crear publicación', capabilities: malformed });
+    expect(result.status).toBe('INVALID_REQUEST');
+    expect(result.rejected[0]?.reason).toBe('INVALID_CAPABILITY_CONTRACT');
+    await expect(resolveSemanticIntent({
+      intent: 'crear publicación', capabilities, policy: { maxRisk: 'toString' as never },
+    })).rejects.toThrow('INVALID_POLICY_MAX_RISK');
+  });
+
   it('rejects duplicate capability identifiers and invalid budgets', async () => {
     const duplicate = await resolveSemanticIntent({ intent: 'crear publicación', capabilities: [capabilities[0], capabilities[0]] });
     expect(duplicate.status).toBe('INVALID_REQUEST');
