@@ -4832,9 +4832,9 @@
   {
     "route": "/api/v1/idr/status",
     "method": "GET",
-    "handler": "src/routes/domain-runtime.ts:registerDomainRuntimeRoutes",
+    "handler": "inline@src/routes/domain-runtime.ts:40",
     "verified": false,
-    "line": null,
+    "line": 40,
     "sensitive": false,
     "controls": {
       "auth": false,
@@ -4846,9 +4846,9 @@
   {
     "route": "/api/v1/idr/resolve",
     "method": "POST",
-    "handler": "src/routes/domain-runtime.ts:registerDomainRuntimeRoutes",
+    "handler": "inline@src/routes/domain-runtime.ts:54",
     "verified": false,
-    "line": null,
+    "line": 54,
     "sensitive": true,
     "controls": {
       "auth": false,
