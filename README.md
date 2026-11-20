@@ -48,6 +48,21 @@ Todas las respuestas declaran `production: false` y `executionPerformed: false`.
 
 DSP nativo en TypeScript (FFT radix-2, centroide, flatness, bandas, transitorios, estéreo M/S, niveles). No reproduce, no sintetiza, no separa fuentes. 11 presets, 8 etapas de redefinición con 15 puertas de validación, 10 lecturas de telemetría (4 de hardware declaradas como `measured: false`).
 
+## Isabella Domain Runtime (IDR) — prototipo de router semántico
+
+TERMINUS incluye un prototipo de **planificación semántica de capacidades**, expuesto en:
+
+- `GET /api/v1/idr/status` — versión, tamaño del registro y modo del router.
+- `POST /api/v1/idr/resolve` — resuelve una intención en un plan mínimo de capacidades permitidas. Cuerpo: `{"intent":"analizar crecimiento de creadores"}`.
+
+Implementación: `src/domain-runtime/semantic-router.ts`; catálogo inicial y rutas: `src/routes/domain-runtime.ts`; contrato: `schemas/idr-semantic-route.schema.json`; pruebas: `test/domain-runtime-semantic-router.test.ts`; especificación: `docs/idr/SEMANTIC-ROUTER.md`.
+
+El router combina coincidencia léxica determinista con un proveedor de embeddings opcional inyectable, resuelve dependencias del grafo, aplica límites de riesgo/dominio/PII/retención/costo y falla de forma cerrada ante dependencias ausentes o ciclos. El endpoint actual usa ranking léxico determinista; **no hay proveedor de embeddings conectado**.
+
+**Límite de seguridad:** este módulo planea; no monta dominios, invoca capacidades, emite mandatos, prueba firmas, genera pruebas ZK, mueve fondos ni acredita producción. La política del endpoint es del servidor y no se puede rebajar desde el cuerpo HTTP. Los estados `production: false` y `executionPerformed: false` son intencionales.
+
+Verificación pendiente tras integrar: `pnpm exec vitest run test/domain-runtime-semantic-router.test.ts`, `pnpm typecheck`, lint, suite completa, assurance y despliegue preview. No se declara que esas comprobaciones hayan pasado hasta ejecutar CI.
+
 ## Arquitectura
 
 ### 14 capas Ω + 9 Fabrics (`src/infinity/architecture.ts`)
