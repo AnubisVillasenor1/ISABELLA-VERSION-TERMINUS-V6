@@ -39,6 +39,7 @@ The runtime now includes `src/domain-runtime/embedding-providers.ts` and wires t
 | --- | --- | --- | --- |
 | `none` | `IDR_EMBEDDINGS_PROVIDER=none` (default) | No embedding network call; deterministic lexical ranking | No provider fee; always available |
 | `ollama` | Install Ollama, pull `nomic-embed-text-v2-moe`, set `IDR_EMBEDDINGS_PROVIDER=ollama` | Local endpoint, loopback only by default | Open-source runtime/model; no per-call API fee, but local compute has a cost |
+| `tei` | Self-host Hugging Face Text Embeddings Inference; set `IDR_EMBEDDINGS_PROVIDER=tei` | Self-hosted `/embed` endpoint, loopback only by default | Open-source serving stack; no per-call API fee, but local compute/hosting has a cost |
 | `huggingface` | Set `IDR_EMBEDDINGS_PROVIDER=huggingface` and server-side `HF_TOKEN` | Sends bounded intent/capability text to Hugging Face Inference | Not guaranteed free; quotas, model availability, terms and potential charges apply |
 
 ### Local Ollama setup
@@ -52,7 +53,7 @@ IDR_OLLAMA_EMBEDDING_MODEL=nomic-embed-text-v2-moe
 IDR_EMBEDDING_TIMEOUT_MS=8000
 ```
 
-For Hugging Face, create a token with only the required inference permission and store it in the server-side secret manager. Never prefix these values with `NEXT_PUBLIC_`, put them in client code, or commit credentials. Hugging Face feature-extraction is a hosted dependency and should be treated as an external data processor; check the current model/provider terms and account quota before enabling it.
+For self-hosted TEI, run the official Text Embeddings Inference container and expose its `/embed` endpoint only on a trusted local interface; configure `IDR_TEI_BASE_URL`. For hosted Hugging Face, create a token with only the required inference permission and store it in the server-side secret manager. Never prefix these values with `NEXT_PUBLIC_`, put them in client code, or commit credentials. Hugging Face feature-extraction is a hosted dependency and should be treated as an external data processor; check the current model/provider terms and account quota before enabling it.
 
 The adapters enforce bounded input length, timeout, vector dimension, finite-number validation, a bounded in-process cache, fixed remote host, and lexical fallback on provider failure. Remote calls are never selected automatically. Provider failure or malformed vectors cannot bypass the router's policy gates. The API status reports mode/model/configuration state only; it never exposes tokens.
 
