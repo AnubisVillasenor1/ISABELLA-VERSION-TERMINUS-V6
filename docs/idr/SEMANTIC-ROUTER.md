@@ -31,9 +31,30 @@ const result = await resolveSemanticIntent({
 
 The default policy disallows external execution and PII, allows low/medium/high risk only, limits plans to five capabilities and estimated cost 1.0, and permits only none/session/user-controlled retention. High-risk and critical-risk capabilities are marked for human approval; this is a signal, not an authorization.
 
-## Embeddings
+## Embeddings and provider wiring
 
-The router accepts an injected provider, so the runtime does not acquire an undeclared vendor dependency or transmit user intent to an external service implicitly. Production integration must select a provider, configure consent/data handling, enforce timeout and dimension bounds, and test model/version drift. Embeddings improve ranking only; they cannot override policy gates.
+The runtime now includes `src/domain-runtime/embedding-providers.ts` and wires the selected adapter into `POST /api/v1/idr/resolve`. Provider selection is explicit and defaults to `none`; no intent is sent to a remote provider unless an operator opts in.
+
+| Mode | Configuration | Data boundary | Cost/availability |
+| --- | --- | --- | --- |
+| `none` | `IDR_EMBEDDINGS_PROVIDER=none` (default) | No embedding network call; deterministic lexical ranking | No provider fee; always available |
+| `ollama` | Install Ollama, pull `nomic-embed-text`, set `IDR_EMBEDDINGS_PROVIDER=ollama` | Local endpoint, loopback only by default | Open-source runtime/model; no per-call API fee, but local compute has a cost |
+| `huggingface` | Set `IDR_EMBEDDINGS_PROVIDER=huggingface` and server-side `HF_TOKEN` | Sends bounded intent/capability text to Hugging Face Inference | Not guaranteed free; quotas, model availability, terms and potential charges apply |
+
+### Local Ollama setup
+
+```bash
+ollama pull nomic-embed-text
+# In the server environment:
+IDR_EMBEDDINGS_PROVIDER=ollama
+IDR_OLLAMA_BASE_URL=http://127.0.0.1:11434
+IDR_OLLAMA_EMBEDDING_MODEL=nomic-embed-text
+IDR_EMBEDDING_TIMEOUT_MS=8000
+```
+
+For Hugging Face, create a token with only the required inference permission and store it in the server-side secret manager. Never prefix these values with `NEXT_PUBLIC_`, put them in client code, or commit credentials. Hugging Face feature-extraction is a hosted dependency and should be treated as an external data processor; check the current model/provider terms and account quota before enabling it.
+
+The adapters enforce bounded input length, timeout, vector dimension, finite-number validation, a bounded in-process cache, fixed remote host, and lexical fallback on provider failure. Remote calls are never selected automatically. Provider failure or malformed vectors cannot bypass the router's policy gates. The API status reports mode/model/configuration state only; it never exposes tokens.
 
 ## Security and production boundary
 
