@@ -4828,5 +4828,33 @@
       "inputValidation": false
     },
     "verificationBasis": "test:test/routes/yun-events.test.ts"
+  },
+  {
+    "route": "/api/v1/idr/status",
+    "method": "GET",
+    "handler": "inline@src/routes/domain-runtime.ts:40",
+    "verified": false,
+    "line": 40,
+    "sensitive": false,
+    "controls": {
+      "auth": false,
+      "rateLimit": true,
+      "inputValidation": false
+    },
+    "verificationBasis": "IDR semantic-planning prototype; route is rate-limited and request validated; human review and integration tests required before production."
+  },
+  {
+    "route": "/api/v1/idr/resolve",
+    "method": "POST",
+    "handler": "inline@src/routes/domain-runtime.ts:54",
+    "verified": false,
+    "line": 54,
+    "sensitive": true,
+    "controls": {
+      "auth": false,
+      "rateLimit": true,
+      "inputValidation": true
+    },
+    "verificationBasis": "IDR semantic-planning prototype; route is rate-limited and request validated; human review and integration tests required before production."
   }
 ]
