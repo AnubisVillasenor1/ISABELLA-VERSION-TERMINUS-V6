@@ -68,7 +68,7 @@ The adapters enforce bounded input length, timeout, vector dimension, finite-num
 ## Verification
 
 ```bash
-pnpm exec vitest run test/domain-runtime-semantic-router.test.ts
+pnpm exec vitest run test/domain-runtime-semantic-router.test.ts test/domain-runtime-embedding-providers.test.ts
 pnpm typecheck
 pnpm lint
 ```
