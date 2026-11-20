@@ -127,7 +127,8 @@ Un solo porcentaje, calculado por `scripts/production-progress.mjs` sobre cuatro
 
 ## Evidencia actual
 
-AVANCE_REAL_GLOBAL_PRODUCCION_DESPLIEGUE=20.1% Mientras no exista un denominador de requisitos ponderados y reproducible, una cifra agregada sería especulación y no se presenta como hecho.
+AVANCE_REAL_GLOBAL_PRODUCCION_DESPLIEGUE=19.8%
+Mientras no exista un denominador de requisitos ponderados y reproducible, una cifra agregada sería especulación y no se presenta como hecho.
 
 - **397 archivos de prueba / 2843 pruebas verdes**.
 - `tsc --noEmit` = 0, `tsc -p tsconfig.layers.json` = 0.

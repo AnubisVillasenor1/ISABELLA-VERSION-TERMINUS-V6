@@ -11,6 +11,7 @@ export interface DomainRuntimeRouteDeps {
   readonly app: Application;
   readonly enforceRateLimit: (req: Request, res: Response, limiter: FixedWindowRateLimiter, bucket: string) => boolean;
   readonly rateLimiter: FixedWindowRateLimiter;
+  readonly publicSurface?: string;
 }
 
 export const IDR_CAPABILITY_REGISTRY: readonly CapabilityNode[] = [
