@@ -135,6 +135,7 @@ import { KNOWLEDGE_ENTRIES } from './agents/knowledge';
 import { registerAgentRoutes } from './routes/agents';
 import { registerDevAgentMeshRoutes } from './routes/agents-mesh';
 import { registerInfinityRoutes } from './routes/infinity';
+import { registerDomainRuntimeRoutes } from './routes/domain-runtime';
 import { EvolutionFabric } from './infinity';
 import { registerNexusRoutes } from './routes/nexus';
 import { createNexusRuntime } from './nexus/runtime';
@@ -6205,6 +6206,9 @@ registerInfinityRoutes({
     verifyBearerToken(req.get('authorization'), process.env.GENESIS_ADMIN_API_TOKEN) ===
     'AUTHORIZED',
 });
+
+// IDR: intent-to-capability planning only; policy is server-owned and execution is disabled.
+registerDomainRuntimeRoutes({ app, enforceRateLimit, rateLimiter: publicCognitionLimiter });
 
 // ── Nexus: grafo con procedencia, bucle de agente, workflow, salud y cuántica local ──
 // Todo es local y determinista; las escrituras exigen bearer administrativo verificado
