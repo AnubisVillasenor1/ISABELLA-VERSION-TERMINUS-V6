@@ -143,7 +143,7 @@ function normalizePolicy(policy: RouterPolicy = {}): Required<RouterPolicy> {
   if (!Number.isFinite(merged.maxCost) || merged.maxCost < 0) throw new Error('INVALID_POLICY_MAX_COST');
   if (!Number.isInteger(merged.maxCapabilities) || merged.maxCapabilities < 1 || merged.maxCapabilities > 20) throw new Error('INVALID_POLICY_MAX_CAPABILITIES');
   if (!Number.isFinite(merged.minScore) || merged.minScore < 0 || merged.minScore > 1) throw new Error('INVALID_POLICY_MIN_SCORE');
-  if (!(merged.maxRisk in RISK_ORDER)) throw new Error('INVALID_POLICY_MAX_RISK');
+  if (!Object.hasOwn(RISK_ORDER, merged.maxRisk)) throw new Error('INVALID_POLICY_MAX_RISK');
   return merged;
 }
 
@@ -205,6 +205,19 @@ export async function resolveSemanticIntent(input: ResolveIntentInput): Promise<
   for (const capability of input.capabilities) {
     if (!capability || typeof capability.id !== 'string' || !capability.id.trim() || byId.has(capability.id)) {
       return { ...base, status: 'INVALID_REQUEST', plan: [], ranking: 'deterministic-lexical', rejected: [{ capabilityId: String(capability?.id ?? 'unknown'), reason: 'INVALID_OR_DUPLICATE_CAPABILITY_ID' }] };
+    }
+    if (
+      typeof capability.domainId !== 'string' || !capability.domainId.trim() ||
+      typeof capability.description !== 'string' ||
+      !Array.isArray(capability.intents) || !capability.intents.every((item) => typeof item === 'string') ||
+      !Array.isArray(capability.tags) || !capability.tags.every((item) => typeof item === 'string') ||
+      !Object.hasOwn(RISK_ORDER, capability.risk) ||
+      !['none', 'session', 'user-controlled', 'provider-defined'].includes(capability.retention) ||
+      !Number.isFinite(capability.estimatedCost) || capability.estimatedCost < 0 ||
+      typeof capability.enabled !== 'boolean' || typeof capability.external !== 'boolean' ||
+      typeof capability.piiAllowed !== 'boolean' || typeof capability.requiresHumanApproval !== 'boolean'
+    ) {
+      return { ...base, status: 'INVALID_REQUEST', plan: [], ranking: 'deterministic-lexical', rejected: [{ capabilityId: capability.id, reason: 'INVALID_CAPABILITY_CONTRACT' }] };
     }
     byId.set(capability.id, capability);
   }
