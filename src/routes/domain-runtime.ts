@@ -5,6 +5,7 @@
 import type { Application, Request, Response } from 'express';
 import type { FixedWindowRateLimiter } from '../security/rate-limit';
 import { resolveSemanticIntent, type CapabilityNode, type RouterPolicy } from '../domain-runtime/semantic-router';
+import { createConfiguredEmbeddingProvider } from '../domain-runtime/embedding-providers';
 
 export interface DomainRuntimeRouteDeps {
   readonly app: Application;
@@ -37,6 +38,9 @@ function bodyOf(req: Request): Record<string, unknown> {
 }
 
 export function registerDomainRuntimeRoutes(deps: DomainRuntimeRouteDeps): void {
+  // One provider instance per process keeps the bounded embedding cache warm.
+  // Provider selection is explicit; default is `none` to avoid implicit data egress.
+  const embedding = createConfiguredEmbeddingProvider(process.env);
   deps.app.get('/api/v1/idr/status', (req, res) => {
     if (!deps.enforceRateLimit(req, res, deps.rateLimiter, 'idr-status')) return;
     res.json({
@@ -44,8 +48,10 @@ export function registerDomainRuntimeRoutes(deps: DomainRuntimeRouteDeps): void 
       runtime: 'Isabella Domain Runtime',
       version: '1.0.0',
       capabilityCount: IDR_CAPABILITY_REGISTRY.length,
-      embeddingProvider: 'not-configured',
-      mode: 'deterministic-lexical',
+      embeddingProvider: embedding.mode,
+      embeddingModel: embedding.model,
+      embeddingConfiguration: embedding.reason,
+      mode: embedding.provider ? 'hybrid-lexical-embedding-with-policy-gates' : 'deterministic-lexical',
       production: false,
       executionPerformed: false,
     });
@@ -67,6 +73,7 @@ export function registerDomainRuntimeRoutes(deps: DomainRuntimeRouteDeps): void 
         intent: body.intent,
         capabilities: [...IDR_CAPABILITY_REGISTRY],
         policy: SERVER_POLICY,
+        ...(embedding.provider ? { embeddingProvider: embedding.provider } : {}),
       });
       res.status(resolution.status === 'INVALID_REQUEST' ? 400 : 200).json({
         success: resolution.status === 'RESOLVED',
