@@ -75,6 +75,19 @@ describe('IDR semantic router', () => {
     expect(fallback.ranking).toBe('deterministic-lexical');
   });
 
+  it('rejects dependency cycles', async () => {
+    const cyclic = capabilities.map((item) => item.id === 'cap.content.draft'
+      ? { ...item, requires: ['cap.social.publish'] }
+      : item);
+    const result = await resolveSemanticIntent({
+      intent: 'publicar en redes sociales', capabilities: cyclic,
+      policy: { allowExternal: true, maxCost: 1 },
+    });
+    expect(result.status).toBe('NO_SAFE_ROUTE');
+    expect(result.plan).toEqual([]);
+    expect(result.rejected.some((entry) => entry.reason === 'DEPENDENCY_MISSING_OR_CYCLE')).toBe(true);
+  });
+
   it('rejects duplicate capability identifiers and invalid budgets', async () => {
     const duplicate = await resolveSemanticIntent({ intent: 'crear publicación', capabilities: [capabilities[0], capabilities[0]] });
     expect(duplicate.status).toBe('INVALID_REQUEST');
