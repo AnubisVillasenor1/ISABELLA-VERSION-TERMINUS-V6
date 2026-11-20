@@ -38,17 +38,17 @@ The runtime now includes `src/domain-runtime/embedding-providers.ts` and wires t
 | Mode | Configuration | Data boundary | Cost/availability |
 | --- | --- | --- | --- |
 | `none` | `IDR_EMBEDDINGS_PROVIDER=none` (default) | No embedding network call; deterministic lexical ranking | No provider fee; always available |
-| `ollama` | Install Ollama, pull `nomic-embed-text`, set `IDR_EMBEDDINGS_PROVIDER=ollama` | Local endpoint, loopback only by default | Open-source runtime/model; no per-call API fee, but local compute has a cost |
+| `ollama` | Install Ollama, pull `nomic-embed-text-v2-moe`, set `IDR_EMBEDDINGS_PROVIDER=ollama` | Local endpoint, loopback only by default | Open-source runtime/model; no per-call API fee, but local compute has a cost |
 | `huggingface` | Set `IDR_EMBEDDINGS_PROVIDER=huggingface` and server-side `HF_TOKEN` | Sends bounded intent/capability text to Hugging Face Inference | Not guaranteed free; quotas, model availability, terms and potential charges apply |
 
 ### Local Ollama setup
 
 ```bash
-ollama pull nomic-embed-text
+ollama pull nomic-embed-text-v2-moe
 # In the server environment:
 IDR_EMBEDDINGS_PROVIDER=ollama
 IDR_OLLAMA_BASE_URL=http://127.0.0.1:11434
-IDR_OLLAMA_EMBEDDING_MODEL=nomic-embed-text
+IDR_OLLAMA_EMBEDDING_MODEL=nomic-embed-text-v2-moe
 IDR_EMBEDDING_TIMEOUT_MS=8000
 ```
 
