@@ -30,7 +30,7 @@ describe('IDR embedding provider configuration', () => {
   });
 
   it('uses the local Ollama adapter, bounds input, and caches repeated embeddings', async () => {
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ embeddings: [[0.25, 0.75]] }), {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response(JSON.stringify({ embeddings: [[0.25, 0.75]] }), {
       status: 200, headers: { 'content-type': 'application/json' },
     }));
     vi.stubGlobal('fetch', fetchMock);
@@ -47,7 +47,7 @@ describe('IDR embedding provider configuration', () => {
   });
 
   it('validates and mean-pools hosted feature-extraction output', async () => {
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify([[1, 3], [3, 5]]), {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response(JSON.stringify([[1, 3], [3, 5]]), {
       status: 200, headers: { 'content-type': 'application/json' },
     }));
     vi.stubGlobal('fetch', fetchMock);
@@ -63,7 +63,7 @@ describe('IDR embedding provider configuration', () => {
   });
 
   it('rejects malformed vectors and oversized input before sending a request', async () => {
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ embeddings: [[1, 'bad']] }), {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response(JSON.stringify({ embeddings: [[1, 'bad']] }), {
       status: 200, headers: { 'content-type': 'application/json' },
     }));
     vi.stubGlobal('fetch', fetchMock);
