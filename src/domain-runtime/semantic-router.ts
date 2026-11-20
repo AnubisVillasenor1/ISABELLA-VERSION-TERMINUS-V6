@@ -237,10 +237,11 @@ export async function resolveSemanticIntent(input: ResolveIntentInput): Promise<
     }
   }
 
+  const queryVector = intentVector;
   const ranked = [...allowed.values()].map((capability) => {
     const lexical = lexicalScore(intent, capability);
-    const vector = intentVector && vectors.get(capability.id);
-    const semantic = vector ? cosine(intentVector, vector) : 0;
+    const vector = queryVector ? vectors.get(capability.id) : undefined;
+    const semantic = queryVector && vector ? cosine(queryVector, vector) : 0;
     const score = ranking === 'hybrid-lexical-embedding' ? lexical * 0.55 + semantic * 0.45 : lexical;
     return { capability, score, reasons: [lexical > 0 ? 'LEXICAL_MATCH' : 'LEXICAL_NO_MATCH', ...(vector ? ['EMBEDDING_MATCH'] : [])] };
   }).filter((entry) => entry.score >= policy.minScore)
