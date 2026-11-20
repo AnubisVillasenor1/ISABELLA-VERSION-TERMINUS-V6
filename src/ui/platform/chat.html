@@ -65,6 +65,11 @@
           <small id="chatSubtitle">SESIÓN LOCAL · SIN CUENTA REMOTA</small>
         </div>
         <div class="chat-topbar-spacer"></div>
+        <button class="v0-builder-trigger" id="v0BuilderOpen" type="button" aria-haspopup="dialog" aria-controls="v0BuilderDialog">
+          <span class="sr-only">Abrir el laboratorio de aplicaciones v0 de Isabella</span>
+          <span aria-hidden="true">v0</span>
+          <span class="v0-builder-trigger-label" aria-hidden="true">CREAR APP</span>
+        </button>
         <span class="chat-engine-badge" id="engineBadge"><i aria-hidden="true"></i><span id="engineBadgeText">AUTO · VERIFICANDO</span></span>
       </header>
 
@@ -187,6 +192,54 @@
       </div>
     </aside>
   </div>
+
+  <dialog class="v0-builder-dialog" id="v0BuilderDialog" aria-labelledby="v0BuilderTitle" aria-describedby="v0BuilderDescription">
+    <form class="v0-builder-panel" id="v0BuilderForm">
+      <header class="v0-builder-header">
+        <div>
+          <p class="v0-builder-eyebrow">TAMV ONLINE NETWORK · LABORATORIO</p>
+          <h2 id="v0BuilderTitle">Crear con <span>v0</span></h2>
+          <p id="v0BuilderDescription">Un espacio de prototipado privado, conectado a Isabella y separado de este repositorio.</p>
+        </div>
+        <button class="v0-builder-close" id="v0BuilderClose" type="button" aria-label="Cerrar laboratorio v0">×</button>
+      </header>
+
+      <p class="v0-builder-notice">
+        La API de v0 puede consumir créditos o generar cargos según el plan de la cuenta. v0-mini y la generación de imágenes desactivada ayudan a limitar el uso, pero no garantizan costo cero. No se conecta GitHub, no despliega y no modifica esta rama.
+      </p>
+
+      <div class="v0-builder-fields">
+        <label class="v0-builder-field" for="v0OperatorToken">
+          <span>Token de operador <small>GENESIS_ADMIN_API_TOKEN</small></span>
+          <input id="v0OperatorToken" name="operatorToken" type="password" autocomplete="off" spellcheck="false" required />
+          <small>Solo se envía a este servidor y se borra al cerrar el panel; nunca se guarda en el navegador.</small>
+        </label>
+        <label class="v0-builder-field" for="v0ChatId">
+          <span>Chat ID existente <small>opcional</small></span>
+          <input id="v0ChatId" name="chatId" type="text" maxlength="128" autocomplete="off" spellcheck="false" placeholder="Vacío = crear un espacio privado nuevo" />
+        </label>
+        <label class="v0-builder-field" for="v0Prompt">
+          <span>¿Qué quieres crear o refinar?</span>
+          <textarea id="v0Prompt" name="message" rows="5" maxlength="8000" required placeholder="Describe la aplicación, página o prototipo que Isabella enviará a v0…"></textarea>
+        </label>
+      </div>
+
+      <label class="v0-builder-consent" for="v0CostConsent">
+        <input id="v0CostConsent" name="costConsent" type="checkbox" required />
+        <span>Entiendo que enviar esta solicitud puede usar créditos de v0 y confirmo continuar.</span>
+      </label>
+
+      <div class="v0-builder-controls">
+        <button class="v0-builder-secondary" id="v0NewChat" type="button" hidden>Nuevo espacio</button>
+        <button class="v0-builder-secondary" id="v0CopyChatId" type="button" hidden>Copiar Chat ID</button>
+        <span class="v0-builder-spacer"></span>
+        <button class="v0-builder-secondary" id="v0BuilderCancel" type="button" hidden>Detener</button>
+        <button class="v0-builder-primary" id="v0BuilderSubmit" type="submit">Crear o continuar</button>
+      </div>
+      <p class="v0-builder-status" id="v0BuilderStatus" role="status" aria-live="polite">Elige un prompt, pega el token de operador y confirma el uso.</p>
+      <pre class="v0-builder-output" id="v0BuilderOutput" aria-label="Respuesta de v0" hidden></pre>
+    </form>
+  </dialog>
 
   <div class="chat-overlay" id="chatOverlay" aria-hidden="true"></div>
   <div class="chat-toast" id="chatToast" role="status" aria-live="polite"></div>

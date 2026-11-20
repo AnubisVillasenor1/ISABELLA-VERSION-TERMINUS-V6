@@ -99,7 +99,7 @@ function ollamaProvider(env: NodeJS.ProcessEnv): ConfiguredEmbeddingProvider {
 }
 
 function teiProvider(env: NodeJS.ProcessEnv): ConfiguredEmbeddingProvider {
-  const baseUrl = (env.IDR_TEI_BASE_URL ?? 'http://127.0.0.1:8080').replace(/\\/+$/, '');
+  const baseUrl = (env.IDR_TEI_BASE_URL ?? 'http://127.0.0.1:8080').replace(/\/+$/, '');
   let parsed: URL;
   try { parsed = new URL(baseUrl); } catch {
     return { mode: 'tei', model: null, reason: 'invalid-configuration' };

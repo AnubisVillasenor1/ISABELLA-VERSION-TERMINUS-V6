@@ -35,7 +35,7 @@ describe('route group gate wiring', () => {
   it('every route group wires an explicit authorization gate or declares a public surface', () => {
     const AUTH_GATE = /\bauthorizeAdmin\b|\bauthorizeApiToken\b|\bisAdminAuthorized\b/;
     const EXPLICIT_PUBLIC =
-      /\bpublicSurface:\s*(?:"read-only-html-and-chat"|PLATFORM_PUBLIC_SURFACE|SKILL_CATALOG_PUBLIC_SURFACE)\b/;
+      /\bpublicSurface:\s*(?:"read-only-html-and-chat"|"deterministic-nonexecuting-planner"|\bPLATFORM_PUBLIC_SURFACE\b|\bSKILL_CATALOG_PUBLIC_SURFACE\b)/;
     const ungated = blocks
       .filter((b) => !AUTH_GATE.test(b.body) && !EXPLICIT_PUBLIC.test(b.body))
       .map((b) => b.name);

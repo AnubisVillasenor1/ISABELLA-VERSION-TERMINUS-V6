@@ -15,7 +15,7 @@ CAPABILITY ≠ AUTHORITY ≠ EXECUTION ≠ EVIDENCE
 
 Ningún documento, tabla o respuesta de API puede elevar una categoría a otra. El inventario de rutas (`docs/api/route-inventory.json`), el canon Ω∞ (`src/platform/omega-canon.ts`) y las auditorías de `src/infinity/` declaran la madurez real de cada capacidad, y hay pruebas que fallan si una cifra inventada reaparece.
 
-## Superficie HTTP (347 entradas en el inventario de rutas; madurez variable)
+## Superficie HTTP (349 entradas en el inventario de rutas; madurez variable)
 
 ### Gobernanza y runtime
 - `GET /api/v1/nexus`, `GET /api/v1/nexus/health` — runtime Nexus (grafo, agente, workflows, cuántica local).
@@ -127,7 +127,7 @@ Un solo porcentaje, calculado por `scripts/production-progress.mjs` sobre cuatro
 
 ## Evidencia actual
 
-AVANCE_REAL_GLOBAL_PRODUCCION_DESPLIEGUE=20.1% Mientras no exista un denominador de requisitos ponderados y reproducible, una cifra agregada sería especulación y no se presenta como hecho.
+AVANCE_REAL_GLOBAL_PRODUCCION_DESPLIEGUE=19.9% Mientras no exista un denominador de requisitos ponderados y reproducible, una cifra agregada sería especulación y no se presenta como hecho.
 
 - **397 archivos de prueba / 2843 pruebas verdes**.
 - `tsc --noEmit` = 0, `tsc -p tsconfig.layers.json` = 0.

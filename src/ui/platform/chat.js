@@ -1438,7 +1438,227 @@
     }
   };
 
+  const bindV0Builder = () => {
+    const dialog = document.getElementById('v0BuilderDialog');
+    const openButton = document.getElementById('v0BuilderOpen');
+    const closeButton = document.getElementById('v0BuilderClose');
+    const form = document.getElementById('v0BuilderForm');
+    const operatorToken = document.getElementById('v0OperatorToken');
+    const chatIdInput = document.getElementById('v0ChatId');
+    const promptInput = document.getElementById('v0Prompt');
+    const costConsent = document.getElementById('v0CostConsent');
+    const submitButton = document.getElementById('v0BuilderSubmit');
+    const cancelButton = document.getElementById('v0BuilderCancel');
+    const newChatButton = document.getElementById('v0NewChat');
+    const copyChatIdButton = document.getElementById('v0CopyChatId');
+    const status = document.getElementById('v0BuilderStatus');
+    const output = document.getElementById('v0BuilderOutput');
+
+    if (
+      !dialog ||
+      typeof dialog.showModal !== 'function' ||
+      !form ||
+      !operatorToken ||
+      !chatIdInput ||
+      !promptInput ||
+      !costConsent ||
+      !submitButton ||
+      !cancelButton ||
+      !newChatButton ||
+      !copyChatIdButton ||
+      !status ||
+      !output
+    ) {
+      return;
+    }
+
+    let activeRequest = null;
+    let activeChatId = '';
+    let completed = false;
+
+    const setBusy = (busy) => {
+      submitButton.disabled = busy;
+      cancelButton.hidden = !busy;
+      form.setAttribute('aria-busy', String(busy));
+    };
+
+    const friendlyError = (code, upstreamStatus) => {
+      if (code === 'UNAUTHORIZED') return 'Token de operador inválido. Revisa GENESIS_ADMIN_API_TOKEN.';
+      if (code === 'API_TOKEN_NOT_CONFIGURED') return 'El servidor no tiene configurado el token de operador.';
+      if (code === 'V0_API_NOT_CONFIGURED') return 'La API v0 no está configurada en el servidor.';
+      if (code === 'COST_ACKNOWLEDGEMENT_REQUIRED') return 'Confirma el posible uso de créditos antes de enviar.';
+      if (code === 'RATE_LIMIT_EXCEEDED') return 'Límite de pruebas alcanzado. Intenta de nuevo en un minuto.';
+      if (upstreamStatus === 401) return 'v0 rechazó las credenciales del servidor; revisa V0_API_KEY en Vars.';
+      if (upstreamStatus === 429) return 'v0 reportó un límite de uso o créditos agotados para esta cuenta.';
+      if (upstreamStatus) return `v0 no pudo completar la solicitud (HTTP ${upstreamStatus}).`;
+      return 'No se pudo completar la solicitud de v0. Puedes reintentar sin reenviar automáticamente.';
+    };
+
+    const applyStreamEvent = (eventName, payload) => {
+      if (eventName === 'workspace' && typeof payload.chatId === 'string') {
+        activeChatId = payload.chatId;
+        chatIdInput.value = activeChatId;
+        copyChatIdButton.hidden = false;
+        newChatButton.hidden = false;
+        status.textContent = 'Espacio privado de v0 listo para continuar.';
+        return;
+      }
+
+      if (eventName === 'progress' && typeof payload.message === 'string') {
+        status.textContent = payload.message;
+        return;
+      }
+
+      if (eventName === 'text' && typeof payload.text === 'string') {
+        output.hidden = false;
+        output.textContent = payload.text;
+        return;
+      }
+
+      if (eventName === 'usage' && typeof payload.credits === 'number') {
+        status.textContent = `Uso reportado por v0: ${payload.credits} créditos · ${payload.model || 'v0-mini'}.`;
+        return;
+      }
+
+      if (eventName === 'done') {
+        completed = true;
+        if (typeof payload.chatId === 'string') {
+          activeChatId = payload.chatId;
+          chatIdInput.value = activeChatId;
+          copyChatIdButton.hidden = false;
+          newChatButton.hidden = false;
+        }
+        if (typeof payload.reply === 'string' && payload.reply) {
+          output.hidden = false;
+          output.textContent = payload.reply;
+        }
+        const credits = typeof payload.credits === 'number'
+          ? `${payload.credits} créditos reportados`
+          : 'costo no informado por la API';
+        status.textContent = `Borrador listo · ${payload.model || 'v0-mini'} · ${credits}. Revisa el resultado en v0 antes de adoptarlo.`;
+        promptInput.value = '';
+        return;
+      }
+
+      if (eventName === 'error') {
+        throw new Error(friendlyError(payload.code, payload.upstreamStatus));
+      }
+    };
+
+    const parseFrame = (frame) => {
+      let eventName = 'message';
+      const data = [];
+      for (const line of frame.split(/\r?\n/)) {
+        if (line.startsWith('event:')) eventName = line.slice(6).trim();
+        if (line.startsWith('data:')) data.push(line.slice(5).trimStart());
+      }
+      if (data.length === 0) return;
+      applyStreamEvent(eventName, JSON.parse(data.join('\n')));
+    };
+
+    const readStream = async (response) => {
+      if (!response.body) throw new Error('El servidor no devolvió un flujo de eventos.');
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        buffer += decoder.decode(value, { stream: !done });
+        const frames = buffer.split(/\r?\n\r?\n/);
+        buffer = frames.pop() || '';
+        for (const frame of frames) parseFrame(frame);
+        if (done) break;
+      }
+      if (buffer.trim()) parseFrame(buffer);
+      if (!completed) throw new Error('El flujo terminó antes de confirmar el resultado.');
+    };
+
+    openButton?.addEventListener('click', () => {
+      if (typeof dialog.showModal === 'function') dialog.showModal();
+      else toast('Este navegador no admite el laboratorio de v0.', 'warn');
+    });
+    closeButton?.addEventListener('click', () => dialog.close());
+    dialog.addEventListener('close', () => {
+      activeRequest?.abort();
+      operatorToken.value = '';
+      costConsent.checked = false;
+      activeRequest = null;
+      setBusy(false);
+    });
+    dialog.addEventListener('cancel', () => activeRequest?.abort());
+    newChatButton.addEventListener('click', () => {
+      activeChatId = '';
+      chatIdInput.value = '';
+      output.textContent = '';
+      output.hidden = true;
+      copyChatIdButton.hidden = true;
+      newChatButton.hidden = true;
+      status.textContent = 'Nuevo espacio: la próxima solicitud creará un chat privado en v0.';
+      promptInput.focus();
+    });
+    copyChatIdButton.addEventListener('click', async () => {
+      if (!activeChatId) return;
+      try {
+        await navigator.clipboard.writeText(activeChatId);
+        toast('Chat ID copiado.');
+      } catch {
+        toast('No se pudo copiar el Chat ID en este navegador.', 'warn');
+      }
+    });
+    cancelButton.addEventListener('click', () => {
+      activeRequest?.abort();
+      status.textContent = 'Se solicitó detener la generación de v0…';
+    });
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (!form.reportValidity()) return;
+
+      const token = operatorToken.value.trim();
+      const message = promptInput.value.trim();
+      const chatId = chatIdInput.value.trim();
+      if (!token || !message || !costConsent.checked) return;
+
+      const endpoint = chatId
+        ? `/api/isabella/v0/chats/${encodeURIComponent(chatId)}/messages`
+        : '/api/isabella/v0/chats';
+      activeRequest = new AbortController();
+      completed = false;
+      output.textContent = '';
+      output.hidden = true;
+      setBusy(true);
+      status.textContent = chatId ? 'Conectando con el espacio privado…' : 'Preparando el nuevo espacio privado…';
+
+      try {
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ message, acknowledgedCost: true }),
+          signal: activeRequest.signal,
+        });
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({}));
+          throw new Error(friendlyError(payload.error, payload.upstreamStatus || response.status));
+        }
+        await readStream(response);
+      } catch (error) {
+        if (error.name === 'AbortError') {
+          status.textContent = 'Solicitud detenida. Si v0 ya inició el trabajo, revisa el espacio antes de volver a enviar.';
+        } else {
+          status.textContent = error instanceof Error ? error.message : friendlyError('V0_API_ERROR');
+        }
+      } finally {
+        activeRequest = null;
+        costConsent.checked = false;
+        setBusy(false);
+      }
+    });
+  };
+
   const bindEvents = () => {
+    bindV0Builder();
     node.composer.addEventListener('submit', (event) => {
       event.preventDefault();
       sendMessage();

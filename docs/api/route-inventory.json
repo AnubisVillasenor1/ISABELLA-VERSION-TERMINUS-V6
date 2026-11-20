@@ -4856,5 +4856,33 @@
       "inputValidation": true
     },
     "verificationBasis": "IDR semantic-planning prototype; route is rate-limited and request validated; human review and integration tests required before production."
+  },
+  {
+    "route": "/api/isabella/v0/chats",
+    "method": "POST",
+    "handler": "inline@src/routes/v0-builder.ts:167",
+    "verified": false,
+    "line": 167,
+    "sensitive": true,
+    "controls": {
+      "auth": true,
+      "rateLimit": true,
+      "inputValidation": true
+    },
+    "verificationBasis": "draft; route tests cover operator auth, validation, private-chat settings and usage acknowledgement; the live v0 API and account billing have not been exercised."
+  },
+  {
+    "route": "/api/isabella/v0/chats/:chatId/messages",
+    "method": "POST",
+    "handler": "inline@src/routes/v0-builder.ts:212",
+    "verified": false,
+    "line": 212,
+    "sensitive": true,
+    "controls": {
+      "auth": true,
+      "rateLimit": true,
+      "inputValidation": true
+    },
+    "verificationBasis": "draft; route tests cover operator auth, validation, private-chat settings and usage acknowledgement; the live v0 API and account billing have not been exercised."
   }
 ]

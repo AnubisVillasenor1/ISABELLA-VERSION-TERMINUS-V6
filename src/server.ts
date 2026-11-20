@@ -43,6 +43,7 @@ import path from 'path';
 import { fileURLToPath } from 'node:url';
 import { GoogleGenAI } from '@google/genai';
 import { generateText } from 'ai';
+import { v0 } from 'v0';
 import Stripe from 'stripe';
 import {
   boundedMilliseconds,
@@ -100,6 +101,7 @@ import { createOptionalApiKeyAuthenticator, registerApiKeyRoutes } from './route
 import { appDb } from './database/app-db';
 import { resolvePostgresConnectTimeoutMs } from './database/postgres-client';
 import { registerPersistentChatRoutes } from './routes/persistent-chat';
+import { registerV0BuilderRoutes } from './routes/v0-builder';
 import { createDefaultFederationRegistry } from './federation/connectors';
 import { registerFederationRoutes } from './routes/federation';
 import { hashSourceContent } from './memory/ikes';
@@ -1560,6 +1562,14 @@ function enforceRateLimit(
 }
 
 registerPersistentChatRoutes(app, appDb, new FixedWindowRateLimiter(90, 60_000));
+registerV0BuilderRoutes({
+  app,
+  client: v0,
+  authorizeApiToken: (req, res) => authorizeApiToken(req, res, 'GENESIS_ADMIN_API_TOKEN'),
+  enforceRateLimit,
+  limiter: new FixedWindowRateLimiter(4, 60_000),
+  isConfigured: () => Boolean(process.env.V0_API_KEY),
+});
 
 /**
  * HyperCore Turbo provider gate. External inference calls run behind a bounded
@@ -6208,7 +6218,12 @@ registerInfinityRoutes({
 });
 
 // IDR: intent-to-capability planning only; policy is server-owned and execution is disabled.
-registerDomainRuntimeRoutes({ app, enforceRateLimit, rateLimiter: publicCognitionLimiter });
+registerDomainRuntimeRoutes({
+  app,
+  enforceRateLimit,
+  rateLimiter: publicCognitionLimiter,
+  publicSurface: "deterministic-nonexecuting-planner",
+});
 
 // ── Nexus: grafo con procedencia, bucle de agente, workflow, salud y cuántica local ──
 // Todo es local y determinista; las escrituras exigen bearer administrativo verificado
