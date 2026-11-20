@@ -7,7 +7,7 @@
  */
 import type { EmbeddingProvider } from './semantic-router';
 
-export type IdrEmbeddingMode = 'none' | 'ollama' | 'huggingface';
+export type IdrEmbeddingMode = 'none' | 'ollama' | 'tei' | 'huggingface';
 
 export interface ConfiguredEmbeddingProvider {
   readonly provider?: EmbeddingProvider;
@@ -98,6 +98,33 @@ function ollamaProvider(env: NodeJS.ProcessEnv): ConfiguredEmbeddingProvider {
   return { provider, mode: 'ollama', model, reason: 'configured' };
 }
 
+function teiProvider(env: NodeJS.ProcessEnv): ConfiguredEmbeddingProvider {
+  const baseUrl = (env.IDR_TEI_BASE_URL ?? 'http://127.0.0.1:8080').replace(/\\/+$/, '');
+  let parsed: URL;
+  try { parsed = new URL(baseUrl); } catch {
+    return { mode: 'tei', model: null, reason: 'invalid-configuration' };
+  }
+  const loopback = parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1' || parsed.hostname === '[::1]';
+  const remoteOptIn = env.IDR_TEI_ALLOW_REMOTE === 'true';
+  if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password ||
+      (!loopback && !(remoteOptIn && parsed.protocol === 'https:'))) {
+    return { mode: 'tei', model: null, reason: 'invalid-configuration' };
+  }
+  const model = env.IDR_TEI_MODEL ?? 'self-hosted-text-embeddings-inference';
+  const timeout = boundedTimeout(env.IDR_EMBEDDING_TIMEOUT_MS);
+  const provider = cachedProvider(async (text) => {
+    const response = await fetch(`${parsed.origin}/embed`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ inputs: text }),
+      signal: AbortSignal.timeout(timeout),
+    });
+    if (!response.ok) throw new Error(`IDR_TEI_HTTP_${response.status}`);
+    return parseVector(await response.json());
+  });
+  return { provider, mode: 'tei', model, reason: 'configured' };
+}
+
 function huggingFaceProvider(env: NodeJS.ProcessEnv): ConfiguredEmbeddingProvider {
   const token = env.HF_TOKEN?.trim();
   if (!token) return { mode: 'huggingface', model: null, reason: 'missing-credential' };
@@ -130,6 +157,7 @@ export function createConfiguredEmbeddingProvider(
     return { mode: 'none', model: null, reason: 'disabled' };
   }
   if (requested === 'ollama') return ollamaProvider(env);
+  if (requested === 'tei') return teiProvider(env);
   if (requested === 'huggingface') return huggingFaceProvider(env);
   return { mode: 'none', model: null, reason: 'invalid-configuration' };
 }
