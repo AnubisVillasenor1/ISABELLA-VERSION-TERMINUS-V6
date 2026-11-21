@@ -18,12 +18,12 @@ async function startTestServer(): Promise<string> {
   registerDomainRuntimeRoutes({
     app,
     enforceRateLimit: (_req, _res, _limiter, _bucket) => true,
-    rateLimiter: {} as FixedWindowRateLimiter,
+    rateLimiter: {} as unknown as FixedWindowRateLimiter,
   });
   server = createServer(app);
   await new Promise<void>((resolve, reject) => {
     server!.once('error', reject);
-    server!.listen(0, '127.0.0.1', resolve);
+    server!.listen(0, '127.0.0.1', () => resolve());
   });
   const address = server.address() as AddressInfo;
   return `http://127.0.0.1:${address.port}`;
