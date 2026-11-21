@@ -134,6 +134,7 @@ describe('IDR semantic router', () => {
     const badWeight = await resolveSemanticIntent({
       intent: 'crear publicación', capabilities,
       edges: [{ from: 'cap.content.draft', to: 'cap.social.publish', relation: 'requires', weight: 2 }],
+      policy: { allowExternal: true },
     });
     expect(badWeight.status).toBe('INVALID_REQUEST');
     expect(badWeight.rejected[0]?.reason).toBe('INVALID_KNOWLEDGE_GRAPH_EDGE');
