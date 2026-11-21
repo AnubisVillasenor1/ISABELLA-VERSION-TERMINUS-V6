@@ -132,7 +132,10 @@ describe('IDR embedding provider configuration', () => {
       embeddings: [[1, 2], ['invalid', 3]],
     }), { status: 200, headers: { 'content-type': 'application/json' } }));
     vi.stubGlobal('fetch', fetchMock);
-    const configured = createConfiguredEmbeddingProvider({ IDR_EMBEDDINGS_PROVIDER: 'ollama' });
+    const configured = createConfiguredEmbeddingProvider({
+      IDR_EMBEDDINGS_PROVIDER: 'huggingface',
+      HF_TOKEN: 'test-token-not-a-real-secret',
+    });
     await expect(configured.provider!.embed('malformed vector')).rejects.toThrow('IDR_INVALID_EMBEDDING_RESPONSE');
   });
 
