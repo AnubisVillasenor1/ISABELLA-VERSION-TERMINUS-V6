@@ -103,4 +103,57 @@ describe('IDR semantic router', () => {
     expect(duplicate.status).toBe('INVALID_REQUEST');
     await expect(resolveSemanticIntent({ intent: 'x', capabilities, policy: { maxCost: -1 } })).rejects.toThrow('INVALID_POLICY_MAX_COST');
   });
+
+  it('falls back to lexical ranking when provider vectors have inconsistent dimensions', async () => {
+    let calls = 0;
+    const result = await resolveSemanticIntent({
+      intent: 'crear publicación',
+      capabilities,
+      embeddingProvider: {
+        embed: async () => {
+          calls++;
+          return calls === 1 ? [1, 0] : [1, 0, 0];
+        },
+      },
+    });
+    expect(result.ranking).toBe('deterministic-lexical');
+  });
+
+  it('rejects malformed capability dependency contracts', async () => {
+    const malformed = [{ ...capabilities[0], requires: 'cap.social.publish' as unknown as string[] }];
+    const result = await resolveSemanticIntent({ intent: 'crear publicación', capabilities: malformed });
+    expect(result.status).toBe('INVALID_REQUEST');
+    expect(result.rejected[0]?.reason).toBe('INVALID_CAPABILITY_CONTRACT');
+  });
+
+  it('rejects malformed knowledge graph collections and weights', async () => {
+    const notAnArray = await resolveSemanticIntent({
+      intent: 'crear publicación', capabilities, edges: {} as never,
+    });
+    expect(notAnArray.status).toBe('INVALID_REQUEST');
+    const badWeight = await resolveSemanticIntent({
+      intent: 'crear publicación', capabilities,
+      edges: [{ from: 'cap.content.draft', to: 'cap.social.publish', relation: 'requires', weight: 2 }],
+      policy: { allowExternal: true },
+    });
+    expect(badWeight.status).toBe('INVALID_REQUEST');
+    expect(badWeight.rejected.some((entry) => entry.reason === 'INVALID_KNOWLEDGE_GRAPH_EDGE')).toBe(true);
+  });
+
+  it('rejects malformed graph input before invoking an embedding provider', async () => {
+    let providerCalls = 0;
+    const result = await resolveSemanticIntent({
+      intent: 'crear publicación',
+      capabilities,
+      edges: [{ from: 'cap.content.draft', to: 'cap.social.publish', relation: 'requires', weight: 2 }],
+      embeddingProvider: {
+        embed: async () => {
+          providerCalls++;
+          return [1, 0];
+        },
+      },
+    });
+    expect(result.status).toBe('INVALID_REQUEST');
+    expect(providerCalls).toBe(0);
+  });
 });

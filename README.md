@@ -55,13 +55,13 @@ TERMINUS incluye un prototipo de **planificación semántica de capacidades**, e
 - `GET /api/v1/idr/status` — versión, tamaño del registro y modo del router.
 - `POST /api/v1/idr/resolve` — resuelve una intención en un plan mínimo de capacidades permitidas. Cuerpo: `{"intent":"analizar crecimiento de creadores"}`.
 
-Implementación: `src/domain-runtime/semantic-router.ts`; adaptadores: `src/domain-runtime/embedding-providers.ts`; catálogo y rutas: `src/routes/domain-runtime.ts`; contrato: `schemas/idr-semantic-route.schema.json`; pruebas: `test/domain-runtime-semantic-router.test.ts` y `test/domain-runtime-embedding-providers.test.ts`; especificación: `docs/idr/SEMANTIC-ROUTER.md`.
+Implementación: `src/domain-runtime/semantic-router.ts`; adaptadores: `src/domain-runtime/embedding-providers.ts`; catálogo y rutas: `src/routes/domain-runtime.ts`; contrato: `schemas/idr-semantic-route.schema.json`; pruebas: `test/domain-runtime-semantic-router.test.ts`, `test/domain-runtime-embedding-providers.test.ts` y `test/domain-runtime-routes.test.ts`; especificación: `docs/idr/SEMANTIC-ROUTER.md`.
 
 El router combina coincidencia léxica determinista con embeddings opcionales, resuelve dependencias del grafo y aplica límites de riesgo/dominio/PII/retención/costo. El cableado de embeddings admite `none` (predeterminado, sin egreso de datos), `ollama` (local), `tei` (Text Embeddings Inference autoalojado) y `huggingface` (servicio alojado, token requerido y costo/cuota no garantizados). El proveedor remoto nunca se selecciona implícitamente; fallos o vectores inválidos degradan a ranking léxico sin relajar la política. Configuración: `.env.example`.
 
 **Límite de seguridad:** este módulo planea; no monta dominios, invoca capacidades, emite mandatos, prueba firmas, genera pruebas ZK, mueve fondos ni acredita producción. La política del endpoint es del servidor y no se puede rebajar desde el cuerpo HTTP. Los estados `production: false` y `executionPerformed: false` son intencionales.
 
-Verificación pendiente tras integrar: `pnpm exec vitest run test/domain-runtime-semantic-router.test.ts`, `pnpm typecheck`, lint, suite completa, assurance y despliegue preview. No se declara que esas comprobaciones hayan pasado hasta ejecutar CI.
+Verificación pendiente tras integrar: `pnpm exec vitest run test/domain-runtime-semantic-router.test.ts test/domain-runtime-embedding-providers.test.ts test/domain-runtime-routes.test.ts`, `pnpm typecheck`, lint, suite completa, assurance y despliegue preview. El hardening incluye deduplicación de peticiones concurrentes por texto, límites de concurrencia, respuestas de proveedor limitadas a 128 KiB, rechazo de vectores anidados malformados, validación estricta del grafo antes de cualquier egreso a proveedores, validación de URLs base y fallback léxico cuando los vectores tienen dimensiones incompatibles. No se declara que esas comprobaciones hayan pasado hasta ejecutar CI.
 
 ## Arquitectura
 

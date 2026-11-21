@@ -53,9 +53,17 @@ IDR_OLLAMA_EMBEDDING_MODEL=nomic-embed-text-v2-moe
 IDR_EMBEDDING_TIMEOUT_MS=8000
 ```
 
-For self-hosted TEI, run the official Text Embeddings Inference container and expose its `/embed` endpoint only on a trusted local interface; configure `IDR_TEI_BASE_URL`. For hosted Hugging Face, create a token with only the required inference permission and store it in the server-side secret manager. Never prefix these values with `NEXT_PUBLIC_`, put them in client code, or commit credentials. Hugging Face feature-extraction is a hosted dependency and should be treated as an external data processor; check the current model/provider terms and account quota before enabling it.
+For self-hosted TEI on an x86_64 CPU host, a minimal local run is:
 
-The adapters enforce bounded input length, timeout, vector dimension, finite-number validation, a bounded in-process cache, fixed remote host, and lexical fallback on provider failure. Remote calls are never selected automatically. Provider failure or malformed vectors cannot bypass the router's policy gates. The API status reports mode/model/configuration state only; it never exposes tokens.
+```bash
+docker run --rm --pull always -p 127.0.0.1:8080:80 \\
+  ghcr.io/huggingface/text-embeddings-inference:cpu-1.9 \\
+  --model-id nomic-ai/nomic-embed-text-v2-moe
+```
+
+This downloads model weights and the container image, so first startup needs network access and disk space. Keep the port bound to loopback and do not expose TEI publicly without a separately hardened authenticated gateway. Then set `IDR_EMBEDDINGS_PROVIDER=tei` and `IDR_TEI_BASE_URL=http://127.0.0.1:8080`. For self-hosted TEI, run the official Text Embeddings Inference container and expose its `/embed` endpoint only on a trusted local interface; configure `IDR_TEI_BASE_URL`. For hosted Hugging Face, create a token with only the required inference permission and store it in the server-side secret manager. Never prefix these values with `NEXT_PUBLIC_`, put them in client code, or commit credentials. Hugging Face feature-extraction is a hosted dependency and should be treated as an external data processor; check the current model/provider terms and account quota before enabling it.
+
+The adapters enforce bounded input length, timeout, response payload size (128 KiB), vector dimensions, finite-number validation, a bounded in-process cache, single-flight deduplication for repeated concurrent inputs, and a 32-distinct-request in-flight ceiling per provider instance. Malformed nested vectors are rejected rather than partially accepted. The local/self-hosted base URLs reject paths, queries and fragments, and the semantic router validates the knowledge graph before making any embedding-provider call.  Remote calls are never selected automatically. Provider failure or malformed vectors cannot bypass the router's policy gates. The API status reports mode/model/configuration state only; it never exposes tokens.
 
 ## Security and production boundary
 
@@ -69,7 +77,7 @@ The adapters enforce bounded input length, timeout, vector dimension, finite-num
 ## Verification
 
 ```bash
-pnpm exec vitest run test/domain-runtime-semantic-router.test.ts test/domain-runtime-embedding-providers.test.ts
+pnpm exec vitest run test/domain-runtime-semantic-router.test.ts test/domain-runtime-embedding-providers.test.ts test/domain-runtime-routes.test.ts
 pnpm typecheck
 pnpm lint
 ```
