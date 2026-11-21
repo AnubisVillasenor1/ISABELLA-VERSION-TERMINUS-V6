@@ -19,6 +19,7 @@ export interface ConfiguredEmbeddingProvider {
 const MAX_TEXT_CHARS = 4_000;
 const MAX_VECTOR_DIMENSIONS = 4_096;
 const CACHE_LIMIT = 256;
+const IN_FLIGHT_LIMIT = 32;
 
 function boundedTimeout(value: string | undefined): number {
   const parsed = Number(value ?? 8_000);
@@ -50,6 +51,7 @@ function parseVector(value: unknown): number[] {
 
 function cachedProvider(embedOne: (text: string) => Promise<number[]>): EmbeddingProvider {
   const cache = new Map<string, number[]>();
+  const inFlight = new Map<string, Promise<number[]>>();
   return {
     async embed(text: string): Promise<number[]> {
       if (typeof text !== 'string' || !text.trim() || text.length > MAX_TEXT_CHARS) {
@@ -58,10 +60,18 @@ function cachedProvider(embedOne: (text: string) => Promise<number[]>): Embeddin
       const key = text.trim();
       const cached = cache.get(key);
       if (cached) return [...cached];
-      const vector = await embedOne(key);
-      if (cache.size >= CACHE_LIMIT) cache.delete(cache.keys().next().value as string);
-      cache.set(key, vector);
-      return [...vector];
+      const existing = inFlight.get(key);
+      if (existing) return [...await existing];
+      if (inFlight.size >= IN_FLIGHT_LIMIT) throw new Error('IDR_EMBEDDING_CONCURRENCY_LIMIT');
+      const request = embedOne(key).then((vector) => {
+        if (cache.size >= CACHE_LIMIT) cache.delete(cache.keys().next().value as string);
+        cache.set(key, vector);
+        return vector;
+      }).finally(() => {
+        inFlight.delete(key);
+      });
+      inFlight.set(key, request);
+      return [...await request];
     },
   };
 }
@@ -74,7 +84,7 @@ function ollamaProvider(env: NodeJS.ProcessEnv): ConfiguredEmbeddingProvider {
   }
   const loopback = parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1' || parsed.hostname === '[::1]';
   const remoteOptIn = env.IDR_OLLAMA_ALLOW_REMOTE === 'true';
-  if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password ||
+  if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password || parsed.pathname !== '/' || parsed.search || parsed.hash ||
       (!loopback && !(remoteOptIn && parsed.protocol === 'https:'))) {
     return { mode: 'ollama', model: null, reason: 'invalid-configuration' };
   }
@@ -106,7 +116,7 @@ function teiProvider(env: NodeJS.ProcessEnv): ConfiguredEmbeddingProvider {
   }
   const loopback = parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1' || parsed.hostname === '[::1]';
   const remoteOptIn = env.IDR_TEI_ALLOW_REMOTE === 'true';
-  if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password ||
+  if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password || parsed.pathname !== '/' || parsed.search || parsed.hash ||
       (!loopback && !(remoteOptIn && parsed.protocol === 'https:'))) {
     return { mode: 'tei', model: null, reason: 'invalid-configuration' };
   }
@@ -128,7 +138,7 @@ function teiProvider(env: NodeJS.ProcessEnv): ConfiguredEmbeddingProvider {
 function huggingFaceProvider(env: NodeJS.ProcessEnv): ConfiguredEmbeddingProvider {
   const token = env.HF_TOKEN?.trim();
   if (!token) return { mode: 'huggingface', model: null, reason: 'missing-credential' };
-  const model = env.IDR_HF_EMBEDDING_MODEL ?? 'sentence-transformers/all-MiniLM-L6-v2';
+  const model = env.IDR_HF_EMBEDDING_MODEL ?? 'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2';
   if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(model)) {
     return { mode: 'huggingface', model: null, reason: 'invalid-configuration' };
   }
