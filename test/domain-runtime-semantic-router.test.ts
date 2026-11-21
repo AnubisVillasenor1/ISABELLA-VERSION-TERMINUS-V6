@@ -139,4 +139,21 @@ describe('IDR semantic router', () => {
     expect(badWeight.status).toBe('INVALID_REQUEST');
     expect(badWeight.rejected[0]?.reason).toBe('INVALID_KNOWLEDGE_GRAPH_EDGE');
   });
+
+  it('rejects malformed graph input before invoking an embedding provider', async () => {
+    let providerCalls = 0;
+    const result = await resolveSemanticIntent({
+      intent: 'crear publicación',
+      capabilities,
+      edges: [{ from: 'cap.content.draft', to: 'cap.social.publish', relation: 'requires', weight: 2 }],
+      embeddingProvider: {
+        embed: async () => {
+          providerCalls++;
+          return [1, 0];
+        },
+      },
+    });
+    expect(result.status).toBe('INVALID_REQUEST');
+    expect(providerCalls).toBe(0);
+  });
 });
