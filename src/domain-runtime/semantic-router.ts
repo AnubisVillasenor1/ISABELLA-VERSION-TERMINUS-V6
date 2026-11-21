@@ -233,6 +233,8 @@ export async function resolveSemanticIntent(input: ResolveIntentInput): Promise<
   }
   const rejectedIds = new Set(rejected.map((entry) => entry.capabilityId));
 
+  let ranking: IntentResolution['ranking'] = 'deterministic-lexical';
+
   if (input.edges !== undefined && !Array.isArray(input.edges)) {
     return { ...base, status: 'INVALID_REQUEST', plan: [], ranking, rejected: [{ capabilityId: 'knowledge-graph', reason: 'INVALID_KNOWLEDGE_GRAPH' }] };
   }
@@ -248,7 +250,6 @@ export async function resolveSemanticIntent(input: ResolveIntentInput): Promise<
 
   let intentVector: number[] | null = null;
   let vectors = new Map<string, number[]>();
-  let ranking: IntentResolution['ranking'] = 'deterministic-lexical';
   if (input.embeddingProvider) {
     try {
       intentVector = await input.embeddingProvider.embed(intent);
