@@ -96,6 +96,39 @@ export {
 } from './media';
 
 export {
+  DESIGN_PALETTES,
+  generateDesignTokens,
+  isDesignPalette,
+  describeDesignTokens,
+  type DesignPalette,
+  type DesignToken,
+  type DesignTokenSet,
+} from './design-tokens';
+
+export {
+  SUPPORTED_LOCALES,
+  selectLocale,
+  translate,
+  listMessages,
+  i18nDigest,
+  isSupportedLocale,
+  describeI18n,
+  type Locale,
+  type MessageCatalog,
+} from './i18n';
+
+export {
+  A11Y_CHECKS,
+  evaluateA11y,
+  isA11yCheck,
+  describeA11y,
+  type A11yCheck,
+  type A11yDeclaration,
+  type A11yFinding,
+  type A11yReport,
+} from './accessibility';
+
+export {
   BUILD_RUNTIMES,
   BUILD_TARGETS,
   BUILD_MAX_FILES,
@@ -148,6 +181,9 @@ import { summarizeArchitecture, auditArchitecture } from './architecture';
 import { summarizeCatalog, auditCatalog } from './catalog';
 import { describeNativeSkills } from './skills';
 import { describeMediaOperations } from './media';
+import { describeDesignTokens } from './design-tokens';
+import { describeI18n } from './i18n';
+import { describeA11y } from './accessibility';
 import { describeBuildFabric } from './build';
 import { describeEvolutionFabric } from './evolution-fabric';
 
@@ -161,6 +197,9 @@ export interface InfinitySummary {
   readonly media: ReturnType<typeof describeMediaOperations>;
   readonly build: ReturnType<typeof describeBuildFabric>;
   readonly evolution: ReturnType<typeof describeEvolutionFabric>;
+  readonly designTokens: ReturnType<typeof describeDesignTokens>;
+  readonly i18n: ReturnType<typeof describeI18n>;
+  readonly accessibility: ReturnType<typeof describeA11y>;
   readonly audit: {
     readonly ok: boolean;
     readonly issues: number;
@@ -185,6 +224,9 @@ export function describeInfinity(): InfinitySummary {
     media: describeMediaOperations(),
     build: describeBuildFabric(),
     evolution: describeEvolutionFabric(),
+    designTokens: describeDesignTokens(),
+    i18n: describeI18n(),
+    accessibility: describeA11y(),
     audit: {
       ok: architectureAudit.ok && catalogAudit.ok,
       issues: architectureAudit.issues.length + catalogAudit.issues.length,

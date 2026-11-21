@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tamv.online/schemas/idr-semantic-route.schema.json",
+  "title": "Isabella Domain Runtime Semantic Route Request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["intent"],
+  "properties": {
+    "intent": { "type": "string", "minLength": 1, "maxLength": 2000 },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "allowedDomains": { "type": "array", "items": { "type": "string", "minLength": 1 }, "maxItems": 100 },
+        "deniedCapabilities": { "type": "array", "items": { "type": "string", "minLength": 1 }, "maxItems": 500 },
+        "maxRisk": { "enum": ["low", "medium", "high", "critical"] },
+        "allowExternal": { "type": "boolean" },
+        "allowPii": { "type": "boolean" },
+        "allowedRetention": { "type": "array", "items": { "enum": ["none", "session", "user-controlled", "provider-defined"] } },
+        "requireHumanApprovalFor": { "type": "array", "items": { "enum": ["low", "medium", "high", "critical"] } },
+        "maxCost": { "type": "number", "minimum": 0 },
+        "maxCapabilities": { "type": "integer", "minimum": 1, "maximum": 20 },
+        "minScore": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    }
+  }
+}

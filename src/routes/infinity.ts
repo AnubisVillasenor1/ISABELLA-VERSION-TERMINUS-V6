@@ -13,6 +13,11 @@ import {
   describeInfinity,
   evaluateA2A,
   evaluateConstitutional,
+  generateDesignTokens,
+  isDesignPalette,
+  translate,
+  selectLocale,
+  evaluateA11y,
   planBuild,
   parseBuildFiles,
   runMediaOperation,
@@ -204,6 +209,90 @@ export function registerInfinityRoutes(deps: InfinityRouteDeps): void {
     });
   });
 
+  app.post('/api/v1/infinity/design-tokens', (req, res) => {
+    if (!deps.enforceRateLimit(req, res, deps.rateLimiter, 'infinity-design-tokens')) return;
+    const body = bodyOf(req);
+    const palette = typeof body.palette === 'string' ? body.palette : '';
+    const mode = typeof body.mode === 'string' ? body.mode : 'light';
+    if (!isDesignPalette(palette)) {
+      res.status(400).json({
+        success: false,
+        production: false,
+        executionPerformed: false,
+        error: 'INVALID_PALETTE',
+        message: 'palette debe ser una paleta soportada',
+      });
+      return;
+    }
+    const result = generateDesignTokens(palette, mode);
+    res.json({
+      success: true,
+      version: INFINITY_ROUTES_VERSION,
+      production: false,
+      ...result,
+      disclaimers: DISCLAIMERS,
+    });
+  });
+
+  app.post('/api/v1/infinity/i18n/translate', (req, res) => {
+    if (!deps.enforceRateLimit(req, res, deps.rateLimiter, 'infinity-i18n')) return;
+    const body = bodyOf(req);
+    const locale = typeof body.locale === 'string' ? body.locale : 'es-MX';
+    const key = typeof body.key === 'string' ? body.key : '';
+    if (!key.trim()) {
+      res.status(400).json({
+        success: false,
+        production: false,
+        executionPerformed: false,
+        error: 'KEY_REQUIRED',
+        message: 'key es requerido',
+      });
+      return;
+    }
+    const vars =
+      typeof body.vars === 'object' && body.vars !== null && !Array.isArray(body.vars)
+        ? (body.vars as Record<string, string | number>)
+        : {};
+    const text = translate(locale, key.trim(), vars);
+    res.json({
+      success: true,
+      version: INFINITY_ROUTES_VERSION,
+      production: false,
+      executionPerformed: false,
+      locale: selectLocale(locale),
+      key: key.trim(),
+      text,
+      disclaimers: DISCLAIMERS,
+    });
+  });
+
+  app.post('/api/v1/infinity/accessibility/evaluate', (req, res) => {
+    if (!deps.enforceRateLimit(req, res, deps.rateLimiter, 'infinity-a11y')) return;
+    const body = bodyOf(req);
+    const declaration =
+      typeof body.declaration === 'object' && body.declaration !== null && !Array.isArray(body.declaration)
+        ? (body.declaration as Record<string, unknown>)
+        : {};
+    try {
+      const result = evaluateA11y(declaration);
+      res.json({
+        success: true,
+        version: INFINITY_ROUTES_VERSION,
+        production: false,
+        ...result,
+        disclaimers: DISCLAIMERS,
+      });
+    } catch (error) {
+      res.status(400).json({
+        success: false,
+        production: false,
+        executionPerformed: false,
+        error: 'INVALID_DECLARATION',
+        message: error instanceof Error ? error.message : 'declaración inválida',
+      });
+    }
+  });
+
   app.post('/api/v1/infinity/media/evaluate', (req, res) => {
     if (!deps.enforceRateLimit(req, res, deps.rateLimiter, 'infinity-media')) return;
     const body = bodyOf(req);
@@ -226,8 +315,8 @@ export function registerInfinityRoutes(deps: InfinityRouteDeps): void {
       success: result.ok,
       version: INFINITY_ROUTES_VERSION,
       production: false,
-      executionPerformed: false,
       ...result,
+      executionPerformed: false,
       disclaimers: DISCLAIMERS,
     });
   });
