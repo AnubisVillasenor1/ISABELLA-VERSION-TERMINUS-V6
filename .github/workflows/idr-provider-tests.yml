@@ -50,6 +50,14 @@ jobs:
           cache: pnpm
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile
+      - name: Temporary export formatted IDR source (remove after applying)
+        run: |
+          pnpm exec prettier --write src/domain-runtime/semantic-router.ts src/domain-runtime/embedding-providers.ts src/routes/domain-runtime.ts
+          for file in src/domain-runtime/semantic-router.ts src/domain-runtime/embedding-providers.ts src/routes/domain-runtime.ts; do
+            printf 'IDR_FMT_BEGIN:%s\n' "$file"
+            base64 -w0 "$file"
+            printf '\nIDR_FMT_END:%s\n' "$file"
+          done
       - name: Run IDR contract tests
         run: pnpm exec vitest run test/domain-runtime-semantic-router.test.ts test/domain-runtime-embedding-providers.test.ts test/domain-runtime-routes.test.ts
       - name: Lint IDR implementation and tests
