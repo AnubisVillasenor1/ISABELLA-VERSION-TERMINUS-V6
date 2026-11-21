@@ -211,6 +211,9 @@ export async function resolveSemanticIntent(input: ResolveIntentInput): Promise<
       typeof capability.description !== 'string' ||
       !Array.isArray(capability.intents) || !capability.intents.every((item) => typeof item === 'string') ||
       !Array.isArray(capability.tags) || !capability.tags.every((item) => typeof item === 'string') ||
+      (capability.requires !== undefined && (!Array.isArray(capability.requires) || !capability.requires.every((item) => typeof item === 'string' && item.trim().length > 0))) ||
+      (capability.inputTypes !== undefined && (!Array.isArray(capability.inputTypes) || !capability.inputTypes.every((item) => typeof item === 'string'))) ||
+      (capability.outputTypes !== undefined && (!Array.isArray(capability.outputTypes) || !capability.outputTypes.every((item) => typeof item === 'string'))) ||
       !Object.hasOwn(RISK_ORDER, capability.risk) ||
       !['none', 'session', 'user-controlled', 'provider-defined'].includes(capability.retention) ||
       !Number.isFinite(capability.estimatedCost) || capability.estimatedCost < 0 ||
@@ -242,7 +245,15 @@ export async function resolveSemanticIntent(input: ResolveIntentInput): Promise<
           return [capability.id, vector] as const;
         }));
         vectors = new Map(entries.filter((entry) => entry[1].length && entry[1].every(Number.isFinite)));
-        if (intentVector.length && vectors.size) ranking = 'hybrid-lexical-embedding';
+        const dimensions = new Set([intentVector.length, ...[...vectors.values()].map((vector) => vector.length)]);
+        if (vectors.size && dimensions.size === 1) {
+          ranking = 'hybrid-lexical-embedding';
+        } else {
+          // Mixed model versions/dimensions must not silently depress semantic scores.
+          intentVector = null;
+          vectors.clear();
+          ranking = 'deterministic-lexical';
+        }
       }
     } catch {
       // Provider failure is non-fatal: deterministic lexical ranking remains available.
@@ -260,10 +271,16 @@ export async function resolveSemanticIntent(input: ResolveIntentInput): Promise<
   }).filter((entry) => entry.score >= policy.minScore)
     .sort((a, b) => b.score - a.score || a.capability.estimatedCost - b.capability.estimatedCost || a.capability.id.localeCompare(b.capability.id));
 
+  if (input.edges !== undefined && !Array.isArray(input.edges)) {
+    return { ...base, status: 'INVALID_REQUEST', plan: [], ranking, rejected: [{ capabilityId: 'knowledge-graph', reason: 'INVALID_KNOWLEDGE_GRAPH' }] };
+  }
   const edges = input.edges ?? [];
   for (const edge of edges) {
-    if (!byId.has(edge.from) || !byId.has(edge.to) || !['requires', 'produces', 'related'].includes(edge.relation)) {
-      return { ...base, status: 'INVALID_REQUEST', plan: [], ranking, rejected: [...rejected, { capabilityId: edge.from, reason: 'INVALID_KNOWLEDGE_GRAPH_EDGE' }] };
+    if (!edge || typeof edge.from !== 'string' || typeof edge.to !== 'string' ||
+        !byId.has(edge.from) || !byId.has(edge.to) ||
+        !['requires', 'produces', 'related'].includes(edge.relation) ||
+        (edge.weight !== undefined && (!Number.isFinite(edge.weight) || edge.weight < 0 || edge.weight > 1))) {
+      return { ...base, status: 'INVALID_REQUEST', plan: [], ranking, rejected: [...rejected, { capabilityId: typeof edge?.from === 'string' ? edge.from : 'knowledge-graph', reason: 'INVALID_KNOWLEDGE_GRAPH_EDGE' }] };
     }
   }
 
