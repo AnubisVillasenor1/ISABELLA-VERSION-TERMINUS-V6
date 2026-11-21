@@ -87,4 +87,43 @@ describe('IDR embedding provider configuration', () => {
     expect(String(fetchMock.mock.calls[0]?.[0])).toBe('http://127.0.0.1:8080/embed');
   });
 
+
+  it('coalesces concurrent identical requests into one provider call', async () => {
+    let release!: (response: Response) => void;
+    const responsePromise = new Promise<Response>((resolve) => { release = resolve; });
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => responsePromise);
+    vi.stubGlobal('fetch', fetchMock);
+    const configured = createConfiguredEmbeddingProvider({ IDR_EMBEDDINGS_PROVIDER: 'ollama' });
+    const first = configured.provider!.embed('misma intención');
+    const second = configured.provider!.embed('misma intención');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    release(new Response(JSON.stringify({ embeddings: [[0.4, 0.6]] }), {
+      status: 200, headers: { 'content-type': 'application/json' },
+    }));
+    await expect(Promise.all([first, second])).resolves.toEqual([[0.4, 0.6], [0.4, 0.6]]);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects Ollama base URLs containing paths, queries, or fragments', () => {
+    for (const baseUrl of [
+      'http://127.0.0.1:11434/proxy',
+      'http://127.0.0.1:11434/?target=internal',
+      'http://127.0.0.1:11434/#fragment',
+    ]) {
+      const configured = createConfiguredEmbeddingProvider({
+        IDR_EMBEDDINGS_PROVIDER: 'ollama',
+        IDR_OLLAMA_BASE_URL: baseUrl,
+      });
+      expect(configured.provider).toBeUndefined();
+      expect(configured.reason).toBe('invalid-configuration');
+    }
+  });
+
+  it('uses the documented multilingual Hugging Face model default', () => {
+    const configured = createConfiguredEmbeddingProvider({
+      IDR_EMBEDDINGS_PROVIDER: 'huggingface',
+      HF_TOKEN: 'test-token-not-a-real-secret',
+    });
+    expect(configured.model).toBe('sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2');
+  });
 });
