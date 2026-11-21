@@ -49,8 +49,8 @@ jobs:
       - name: Install locked dependencies
         run: corepack pnpm install --frozen-lockfile
       - name: Run IDR contract tests
-        run: corepack pnpm exec vitest run test/domain-runtime-semantic-router.test.ts test/domain-runtime-embedding-providers.test.ts
+        run: corepack pnpm exec vitest run test/domain-runtime-semantic-router.test.ts test/domain-runtime-embedding-providers.test.ts test/domain-runtime-routes.test.ts
       - name: Lint IDR implementation and tests
-        run: corepack pnpm exec eslint src/domain-runtime/semantic-router.ts src/domain-runtime/embedding-providers.ts src/routes/domain-runtime.ts test/domain-runtime-semantic-router.test.ts test/domain-runtime-embedding-providers.test.ts --max-warnings=0
+        run: corepack pnpm exec eslint src/domain-runtime/semantic-router.ts src/domain-runtime/embedding-providers.ts src/routes/domain-runtime.ts test/domain-runtime-semantic-router.test.ts test/domain-runtime-embedding-providers.test.ts test/domain-runtime-routes.test.ts --max-warnings=0
       - name: Type-check repository
         run: corepack pnpm typecheck
