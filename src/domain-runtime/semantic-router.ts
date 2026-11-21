@@ -246,7 +246,7 @@ export async function resolveSemanticIntent(input: ResolveIntentInput): Promise<
         }));
         vectors = new Map(entries.filter((entry) => entry[1].length && entry[1].every(Number.isFinite)));
         const dimensions = new Set([intentVector.length, ...[...vectors.values()].map((vector) => vector.length)]);
-        if (vectors.size && dimensions.size === 1) {
+        if (vectors.size === allowed.size && vectors.size > 0 && dimensions.size === 1) {
           ranking = 'hybrid-lexical-embedding';
         } else {
           // Mixed model versions/dimensions must not silently depress semantic scores.
