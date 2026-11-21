@@ -18,6 +18,7 @@ export interface ConfiguredEmbeddingProvider {
 
 const MAX_TEXT_CHARS = 4_000;
 const MAX_VECTOR_DIMENSIONS = 4_096;
+const MAX_RESPONSE_BYTES = 128 * 1024;
 const CACHE_LIMIT = 256;
 const IN_FLIGHT_LIMIT = 32;
 
@@ -26,21 +27,58 @@ function boundedTimeout(value: string | undefined): number {
   return Number.isFinite(parsed) ? Math.max(500, Math.min(15_000, Math.floor(parsed))) : 8_000;
 }
 
+async function readBoundedJson(response: Response): Promise<unknown> {
+  const declaredLength = Number(response.headers.get('content-length'));
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_RESPONSE_BYTES) {
+    throw new Error('IDR_EMBEDDING_RESPONSE_TOO_LARGE');
+  }
+  const reader = response.body?.getReader();
+  if (!reader) {
+    const text = await response.text();
+    if (new TextEncoder().encode(text).byteLength > MAX_RESPONSE_BYTES) {
+      throw new Error('IDR_EMBEDDING_RESPONSE_TOO_LARGE');
+    }
+    return JSON.parse(text) as unknown;
+  }
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > MAX_RESPONSE_BYTES) {
+      await reader.cancel();
+      throw new Error('IDR_EMBEDDING_RESPONSE_TOO_LARGE');
+    }
+    chunks.push(value);
+  }
+  const body = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return JSON.parse(new TextDecoder().decode(body)) as unknown;
+}
+
 function parseVector(value: unknown): number[] {
   let candidate: unknown = value;
-  // Hugging Face feature-extraction commonly returns [tokens, dimensions] or
-  // [dimensions]. Mean-pool token vectors to a single sentence vector.
+  // Hugging Face feature-extraction commonly returns [tokens, dimensions].
+  // Mean-pool token vectors to a single sentence vector, rejecting malformed output.
   if (Array.isArray(candidate) && Array.isArray(candidate[0])) {
     const rows = candidate as unknown[];
-    if (rows.every((row) => Array.isArray(row) && row.length > 0 && row.every((n) => typeof n === 'number' && Number.isFinite(n)))) {
-      const width = (rows[0] as number[]).length;
-      if (rows.some((row) => (row as number[]).length !== width)) throw new Error('IDR_EMBEDDING_DIMENSION_MISMATCH');
-      candidate = Array.from({ length: width }, (_, i) =>
-        (rows as number[][]).reduce((sum, row) => sum + row[i], 0) / rows.length,
-      );
-    } else {
-      candidate = rows[0];
+    if (!rows.length || !rows.every((row) =>
+      Array.isArray(row) && row.length > 0 && row.length <= MAX_VECTOR_DIMENSIONS &&
+      row.every((n) => typeof n === 'number' && Number.isFinite(n))
+    )) {
+      throw new Error('IDR_INVALID_EMBEDDING_RESPONSE');
     }
+    const vectors = rows as number[][];
+    const width = vectors[0]!.length;
+    if (vectors.some((row) => row.length !== width)) throw new Error('IDR_EMBEDDING_DIMENSION_MISMATCH');
+    candidate = Array.from({ length: width }, (_, i) =>
+      vectors.reduce((sum, row) => sum + row[i]!, 0) / vectors.length,
+    );
   }
   if (!Array.isArray(candidate) || candidate.length < 2 || candidate.length > MAX_VECTOR_DIMENSIONS ||
       !candidate.every((item) => typeof item === 'number' && Number.isFinite(item))) {
@@ -101,7 +139,7 @@ function ollamaProvider(env: NodeJS.ProcessEnv): ConfiguredEmbeddingProvider {
       signal: AbortSignal.timeout(timeout),
     });
     if (!response.ok) throw new Error(`IDR_OLLAMA_HTTP_${response.status}`);
-    const body = await response.json() as { embeddings?: unknown };
+    const body = await readBoundedJson(response) as { embeddings?: unknown };
     if (!Array.isArray(body.embeddings) || !body.embeddings.length) throw new Error('IDR_OLLAMA_INVALID_RESPONSE');
     return parseVector(body.embeddings[0]);
   });
@@ -130,7 +168,7 @@ function teiProvider(env: NodeJS.ProcessEnv): ConfiguredEmbeddingProvider {
       signal: AbortSignal.timeout(timeout),
     });
     if (!response.ok) throw new Error(`IDR_TEI_HTTP_${response.status}`);
-    return parseVector(await response.json());
+    return parseVector(await readBoundedJson(response));
   });
   return { provider, mode: 'tei', model, reason: 'configured' };
 }
@@ -153,7 +191,7 @@ function huggingFaceProvider(env: NodeJS.ProcessEnv): ConfiguredEmbeddingProvide
       signal: AbortSignal.timeout(timeout),
     });
     if (!response.ok) throw new Error(`IDR_HF_HTTP_${response.status}`);
-    return parseVector(await response.json());
+    return parseVector(await readBoundedJson(response));
   });
   return { provider, mode: 'huggingface', model, reason: 'configured' };
 }
