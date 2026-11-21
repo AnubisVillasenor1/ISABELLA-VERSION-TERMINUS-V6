@@ -233,6 +233,19 @@ export async function resolveSemanticIntent(input: ResolveIntentInput): Promise<
   }
   const rejectedIds = new Set(rejected.map((entry) => entry.capabilityId));
 
+  if (input.edges !== undefined && !Array.isArray(input.edges)) {
+    return { ...base, status: 'INVALID_REQUEST', plan: [], ranking, rejected: [{ capabilityId: 'knowledge-graph', reason: 'INVALID_KNOWLEDGE_GRAPH' }] };
+  }
+  const edges = input.edges ?? [];
+  for (const edge of edges) {
+    if (!edge || typeof edge.from !== 'string' || typeof edge.to !== 'string' ||
+        !byId.has(edge.from) || !byId.has(edge.to) ||
+        !['requires', 'produces', 'related'].includes(edge.relation) ||
+        (edge.weight !== undefined && (!Number.isFinite(edge.weight) || edge.weight < 0 || edge.weight > 1))) {
+      return { ...base, status: 'INVALID_REQUEST', plan: [], ranking, rejected: [...rejected, { capabilityId: typeof edge?.from === 'string' ? edge.from : 'knowledge-graph', reason: 'INVALID_KNOWLEDGE_GRAPH_EDGE' }] };
+    }
+  }
+
   let intentVector: number[] | null = null;
   let vectors = new Map<string, number[]>();
   let ranking: IntentResolution['ranking'] = 'deterministic-lexical';
@@ -270,19 +283,6 @@ export async function resolveSemanticIntent(input: ResolveIntentInput): Promise<
     return { capability, score, reasons: [lexical > 0 ? 'LEXICAL_MATCH' : 'LEXICAL_NO_MATCH', ...(vector ? ['EMBEDDING_MATCH'] : [])] };
   }).filter((entry) => entry.score >= policy.minScore)
     .sort((a, b) => b.score - a.score || a.capability.estimatedCost - b.capability.estimatedCost || a.capability.id.localeCompare(b.capability.id));
-
-  if (input.edges !== undefined && !Array.isArray(input.edges)) {
-    return { ...base, status: 'INVALID_REQUEST', plan: [], ranking, rejected: [{ capabilityId: 'knowledge-graph', reason: 'INVALID_KNOWLEDGE_GRAPH' }] };
-  }
-  const edges = input.edges ?? [];
-  for (const edge of edges) {
-    if (!edge || typeof edge.from !== 'string' || typeof edge.to !== 'string' ||
-        !byId.has(edge.from) || !byId.has(edge.to) ||
-        !['requires', 'produces', 'related'].includes(edge.relation) ||
-        (edge.weight !== undefined && (!Number.isFinite(edge.weight) || edge.weight < 0 || edge.weight > 1))) {
-      return { ...base, status: 'INVALID_REQUEST', plan: [], ranking, rejected: [...rejected, { capabilityId: typeof edge?.from === 'string' ? edge.from : 'knowledge-graph', reason: 'INVALID_KNOWLEDGE_GRAPH_EDGE' }] };
-    }
-  }
 
   for (const candidate of ranked) {
     const chain = dependencyOrder(candidate.capability.id, byId, rejectedIds, edges);
