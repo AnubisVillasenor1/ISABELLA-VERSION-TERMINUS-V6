@@ -61,7 +61,7 @@ El router combina coincidencia léxica determinista con embeddings opcionales, r
 
 **Límite de seguridad:** este módulo planea; no monta dominios, invoca capacidades, emite mandatos, prueba firmas, genera pruebas ZK, mueve fondos ni acredita producción. La política del endpoint es del servidor y no se puede rebajar desde el cuerpo HTTP. Los estados `production: false` y `executionPerformed: false` son intencionales.
 
-Verificación pendiente tras integrar: `pnpm exec vitest run test/domain-runtime-semantic-router.test.ts test/domain-runtime-embedding-providers.test.ts test/domain-runtime-routes.test.ts`, `pnpm typecheck`, lint, suite completa, assurance y despliegue preview. El hardening incluye deduplicación de peticiones concurrentes por texto, límites de concurrencia, validación de URLs base y fallback léxico cuando los vectores tienen dimensiones incompatibles. No se declara que esas comprobaciones hayan pasado hasta ejecutar CI.
+Verificación pendiente tras integrar: `pnpm exec vitest run test/domain-runtime-semantic-router.test.ts test/domain-runtime-embedding-providers.test.ts test/domain-runtime-routes.test.ts`, `pnpm typecheck`, lint, suite completa, assurance y despliegue preview. El hardening incluye deduplicación de peticiones concurrentes por texto, límites de concurrencia, respuestas de proveedor limitadas a 128 KiB, rechazo de vectores anidados malformados, validación estricta del grafo antes de cualquier egreso a proveedores, validación de URLs base y fallback léxico cuando los vectores tienen dimensiones incompatibles. No se declara que esas comprobaciones hayan pasado hasta ejecutar CI.
 
 ## Arquitectura
 
