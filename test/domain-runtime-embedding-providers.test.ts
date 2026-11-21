@@ -126,4 +126,22 @@ describe('IDR embedding provider configuration', () => {
     });
     expect(configured.model).toBe('sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2');
   });
+
+  it('rejects partial or malformed nested vectors instead of accepting the first row', async () => {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response(JSON.stringify({
+      embeddings: [[1, 2], ['invalid', 3]],
+    }), { status: 200, headers: { 'content-type': 'application/json' } }));
+    vi.stubGlobal('fetch', fetchMock);
+    const configured = createConfiguredEmbeddingProvider({ IDR_EMBEDDINGS_PROVIDER: 'ollama' });
+    await expect(configured.provider!.embed('malformed vector')).rejects.toThrow('IDR_INVALID_EMBEDDING_RESPONSE');
+  });
+
+  it('rejects provider responses above the bounded payload size', async () => {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response(' '.repeat(128 * 1024 + 1), {
+      status: 200, headers: { 'content-type': 'application/json' },
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+    const configured = createConfiguredEmbeddingProvider({ IDR_EMBEDDINGS_PROVIDER: 'ollama' });
+    await expect(configured.provider!.embed('oversized response')).rejects.toThrow('IDR_EMBEDDING_RESPONSE_TOO_LARGE');
+  });
 });
