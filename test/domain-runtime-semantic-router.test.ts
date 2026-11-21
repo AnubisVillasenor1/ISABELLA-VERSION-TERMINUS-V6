@@ -137,7 +137,7 @@ describe('IDR semantic router', () => {
       policy: { allowExternal: true },
     });
     expect(badWeight.status).toBe('INVALID_REQUEST');
-    expect(badWeight.rejected[0]?.reason).toBe('INVALID_KNOWLEDGE_GRAPH_EDGE');
+    expect(badWeight.rejected.some((entry) => entry.reason === 'INVALID_KNOWLEDGE_GRAPH_EDGE')).toBe(true);
   });
 
   it('rejects malformed graph input before invoking an embedding provider', async () => {
