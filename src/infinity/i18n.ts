@@ -73,7 +73,11 @@ export function selectLocale(value: unknown): Locale {
   return 'es-MX';
 }
 
-export function translate(locale: unknown, key: string, vars: Readonly<Record<string, string | number>> = {}): string {
+export function translate(
+  locale: unknown,
+  key: string,
+  vars: Readonly<Record<string, string | number>> = {}
+): string {
   const resolved = selectLocale(locale);
   const template = CATALOGS[resolved][key] ?? CATALOGS['es-MX'][key] ?? key;
   return template.replace(/\{(\w+)\}/g, (_, name: string) =>
