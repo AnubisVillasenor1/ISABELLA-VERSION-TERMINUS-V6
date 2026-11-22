@@ -44,6 +44,12 @@ Los resultados siguientes pertenecen a ejecuciones concretas registradas el 21 d
 
 La rama actual incluye una corrección posterior al resultado de Clippy. Hasta que se ejecute CI sobre el nuevo HEAD, el resultado del scheduler se clasifica como **corrección propuesta, validación pendiente**, no como fallo resuelto de manera demostrada.
 
+
+
+### Actualización de validación del 22 de noviembre
+
+La CI integral más reciente consultada sobre SHA 1282e965d106ab93d24192c752a89d18a2ca96d1 mostró 400/401 archivos y 2.871/2.872 pruebas aprobadas. El único fallo de Vitest era una aserción que exigía que el README publicara la cifra instrumental; el README ya fue corregido para incluir 19,8 % junto con su limitación de evidencia histórica. Rust fmt pasó después de corregir el orden de imports del scheduler. Clippy encontró tres préstamos innecesarios en bindings SQL (dos en MemoryRepository y uno en BookPiLedger); los tres se corrigieron en la rama. La CI del HEAD resultante todavía debe confirmar todos estos cambios conjuntamente.
+
 ## 4. Bloqueadores de producción
 
 1. **Readiness y persistencia:** la documentación del repo identifica el ledger legacy BookPI como VOLATILE_IN_MEMORY y advierte que /api/v1/readyz puede devolver 503. Debe verificarse el estado actual mediante un run del preflight y pruebas con el backend real.
@@ -60,7 +66,7 @@ La rama actual incluye una corrección posterior al resultado de Clippy. Hasta q
 - No activar proveedores remotos de embeddings por defecto; documentar explícitamente el egreso de texto y el coste potencial.
 - Mantener production: false y executionPerformed: false en IDR hasta que exista una capa de ejecución autorizada, autenticada, idempotente y auditada.
 - Separar evaluación, planificación, aprobación, ejecución, evidencia y aprendizaje como estados distintos.
-- No anunciar un porcentaje global de progreso mientras las cifras históricas 62,6 % y 19,8 % y sus denominadores no se reconcilien.
+- El instrumento scripts/production-progress.mjs actualmente emite AVANCE_REAL_GLOBAL_PRODUCCION_DESPLIEGUE=19.8%, con cuatro ejes con peso declarado y evidencia en docs/status/production-progress-evidence.json. Es avance ponderado, no aptitud; la evidencia versionada data del 4 de noviembre y marca health_readiness=failed. No se debe presentar el 19,8 % como certificación de producción ni conservar el 62,6 % histórico incompatible.
 - No fusionar la rama de hardening ni declarar producción hasta que los controles obligatorios estén verdes en el mismo commit y la preview se haya probado.
 
 ## 6. Orden de cierre recomendado
