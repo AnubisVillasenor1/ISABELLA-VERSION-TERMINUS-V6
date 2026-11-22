@@ -48,7 +48,7 @@ La rama actual incluye una corrección posterior al resultado de Clippy. Hasta q
 
 ### Actualización de validación del 22 de noviembre
 
-La ejecución integral 45063812580 sobre el commit de código 20bcf0da2e62a3fb18574266e7ea8ec2290d3372 confirmó 401 archivos y 2.873 pruebas aprobadas. ESLint, Prettier, typecheck y guardas de entorno pasaron; Security Scan, SBOM y Production Evidence and SBOM también pasaron. La ejecución IDR 45063812571 pasó contratos, lint específico y typecheck. En Rust Workspace CI, rust-verify, Clippy y pruebas pasaron; el release build seguía en ejecución en la última consulta. La preview de Vercel sigue pendiente. El estado de build debe actualizarse cuando la ejecución termine; no se declara producción lista.
+La ejecución integral 45064217391 sobre el commit de código 4845656da4006e7ba6b4571b4b315eb4bfa5e866 confirmó 401 archivos y 2.873 pruebas aprobadas. ESLint, Prettier, typecheck y guardas de entorno pasaron; Security Scan y SBOM también pasaron. La ejecución IDR 45064217300 pasó contratos, lint específico y typecheck. En Rust Workspace CI, rust-verify, Clippy, pruebas y release build pasaron. La generación de evidencia de producción seguía en ejecución y la validación Docker/Caddy no aparecía concluida. Vercel preview sigue pendiente. Estos checks no equivalen a readiness ni certifican producción.
 
 ## 4. Bloqueadores de producción
 
@@ -72,8 +72,8 @@ La ejecución integral 45063812580 sobre el commit de código 20bcf0da2e62a3fb18
 ## 6. Orden de cierre recomendado
 
 ### P0 — cierre de validación y despliegue
-1. Confirmar que Rust release build termina con éxito en la ejecución 45063812580.
-2. Confirmar el estado final de CI y registrar el SHA y los enlaces a los runs.
+1. Esperar el cierre de Production Evidence and SBOM y confirmar la validación Docker/Caddy en la ejecución 45064217391.
+2. Registrar el SHA exacto y los enlaces de los runs finales.
 3. Resolver el estado de Vercel preview y ejecutar smoke/readiness en el entorno desplegado.
 4. Regenerar la evidencia de avance después de que existan resultados actuales; la evidencia del 4 de noviembre no representa el estado validado hoy.
 
