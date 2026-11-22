@@ -364,7 +364,8 @@ export async function resolveSemanticIntent(input: ResolveIntentInput): Promise<
 
   let intentVector: number[] | null = null;
   let vectors = new Map<string, number[]>();
-  if (input.embeddingProvider) {
+  // Do not disclose intent text to an embedding provider when policy leaves no eligible candidates.
+  if (input.embeddingProvider && allowed.size > 0) {
     try {
       intentVector = await input.embeddingProvider.embed(intent);
       if (intentVector.length && intentVector.every(Number.isFinite)) {
