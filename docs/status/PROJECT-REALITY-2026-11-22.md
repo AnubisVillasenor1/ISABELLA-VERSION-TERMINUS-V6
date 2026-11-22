@@ -48,7 +48,7 @@ La rama actual incluye una corrección posterior al resultado de Clippy. Hasta q
 
 ### Actualización de validación del 22 de noviembre
 
-La ejecución integral 45064217391 sobre el commit de código 4845656da4006e7ba6b4571b4b315eb4bfa5e866 confirmó 401 archivos y 2.873 pruebas aprobadas. ESLint, Prettier, typecheck y guardas de entorno pasaron; Security Scan y SBOM también pasaron. La ejecución IDR 45064217300 pasó contratos, lint específico y typecheck. En Rust Workspace CI, rust-verify, Clippy, pruebas y release build pasaron. La generación de evidencia de producción seguía en ejecución y la validación Docker/Caddy no aparecía concluida. Vercel preview sigue pendiente. Estos checks no equivalen a readiness ni certifican producción.
+La ejecución integral 45064705340 sobre el commit de código 10e8481c3cdef3c0695e84cf7cd6b51757b70435 aprobó la suite integral, Security Scan, SBOM y Rust fmt/Clippy/tests/release build. La ejecución IDR 45064705297 pasó contratos, lint específico y typecheck; Repository Assurance 45064705365 también pasó. Lint & TypeCheck seguía en ejecución en la última consulta. La validación Caddy pasó en la ejecución anterior 45064217391. El Dockerfile y la prueba de artefactos se corrigieron para copiar pnpm-workspace.yaml, pero el Docker build del HEAD actual aún no había comenzado. Vercel preview sigue pendiente. Estos checks no equivalen a readiness ni certifican producción.
 
 ## 4. Bloqueadores de producción
 
@@ -72,10 +72,11 @@ La ejecución integral 45064217391 sobre el commit de código 4845656da4006e7ba6
 ## 6. Orden de cierre recomendado
 
 ### P0 — cierre de validación y despliegue
-1. Esperar el cierre de Production Evidence and SBOM y confirmar la validación Docker/Caddy en la ejecución 45064217391.
-2. Registrar el SHA exacto y los enlaces de los runs finales.
-3. Resolver el estado de Vercel preview y ejecutar smoke/readiness en el entorno desplegado.
-4. Regenerar la evidencia de avance después de que existan resultados actuales; la evidencia del 4 de noviembre no representa el estado validado hoy.
+1. Confirmar el cierre de Lint & TypeCheck en el run 45064705340.
+2. Confirmar que Docker build acepta pnpm-workspace.yaml y supera instalación congelada, build de aplicación y construcción de imagen.
+3. Registrar el SHA exacto y los enlaces de los runs finales.
+4. Resolver Vercel preview y ejecutar smoke/readiness en el entorno desplegado.
+5. Regenerar la evidencia de avance después de que existan resultados actuales; la evidencia del 4 de noviembre no representa el estado validado hoy.
 
 ### P1 — readiness y despliegue
 1. Ejecutar preflight y readiness en el entorno de preview.
