@@ -43,8 +43,8 @@ impl Scheduler {
 #[cfg(test)]
 mod tests {
     use super::Scheduler;
-    use shared::CognitiveEvent;
     use serde_json::json;
+    use shared::CognitiveEvent;
     use uuid::Uuid;
 
     fn event() -> CognitiveEvent {
