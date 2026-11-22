@@ -25,7 +25,7 @@ describe("container build artifact", () => {
 
   it("copies workspace overrides into both frozen dependency-install stages", () => {
     expect(workspace).toContain("overrides:");
-    expect(dockerfile.match(/COPY package\\.json pnpm-lock\\.yaml pnpm-workspace\\.yaml \.\//g)).toHaveLength(2);
+    expect(dockerfile.match(/COPY package\.json pnpm-lock\.yaml pnpm-workspace\.yaml \.\//g)).toHaveLength(2);
     expect(dockerfile).toContain("pnpm install --frozen-lockfile --prod");
     expect(dockerfile).toContain("pnpm install --frozen-lockfile");
   });
