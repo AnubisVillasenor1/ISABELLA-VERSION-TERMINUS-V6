@@ -55,6 +55,8 @@ jobs:
         env:
           GH_HEAD_REF: ${{ github.head_ref }}
         run: |
+          git fetch origin "$GH_HEAD_REF"
+          git checkout -B "$GH_HEAD_REF" FETCH_HEAD
           pnpm exec prettier --write src/health/preflight.ts src/infinity/accessibility.ts src/infinity/design-tokens.ts src/infinity/i18n.ts src/routes/infinity.ts src/server.ts
           if ! git diff --quiet -- src/health/preflight.ts src/infinity/accessibility.ts src/infinity/design-tokens.ts src/infinity/i18n.ts src/routes/infinity.ts src/server.ts; then
             git config user.name "github-actions[bot]"
