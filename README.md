@@ -2,7 +2,7 @@
 
 Isabella es un **Runtime Web Operativo y Sistema Federado de Inteligencia Artificial Gobernada (FGAIS)** construido, propiedad y creado por **Edwin Oswaldo Castillo Trejo (Anubis Villaseñor)** bajo la marca **TAMV ONLINE ENTERPRISE**. No es un chatbot: es un runtime con gobernanza determinista, memoria jerárquica, un motor de inferencia propio que **orquesta** LLM externos (no es un modelo fundacional entrenado por TAMV), RAG soberano, herramientas allowlisted, habilidades ejecutables, auditoría criptográfica y un sistema nativo de análisis audio-espectral en tiempo real: el **TAMV Kaos Audio System**.
 
-> **Estado real al 22 de noviembre de 2026:** repositorio de ingeniería en fase de hardening, con pruebas automatizadas y subsistemas operativos verificables, pero **no certificado para producción**. La última CI integral observada sobre SHA 1282e965d106ab93d24192c752a89d18a2ca96d1 pasó Rust fmt, pero falló en una aserción del README y en tres advertencias Clippy de préstamos innecesarios. Ya se corrigieron el README, los bindings SQL y el formato de los seis archivos; se añadió además una prueba de no-egreso de embeddings cuando la política rechaza todas las capacidades. Falta una nueva ejecución integral sobre el HEAD resultante. La vista previa de Vercel está pendiente. Consulta [el informe de estado y bloqueadores](docs/status/PROJECT-REALITY-2026-11-22.md).
+> **Estado real al 22 de noviembre de 2026:** repositorio de ingeniería en fase de hardening, con pruebas automatizadas y subsistemas operativos verificables, pero **no certificado para producción**. La validación integral más reciente consultada (run 45063812580) pasó la suite de 401 archivos y 2.873 pruebas, ESLint, Prettier, typecheck, Security Scan, SBOM y generación de evidencia. Rust fmt, Clippy y pruebas también pasaron; el release build de Rust seguía en ejecución al actualizar este documento. Vercel preview continúa pendiente. Estos resultados corresponden al commit de código 20bcf0da2e62a3fb18574266e7ea8ec2290d3372 y no certifican producción. La vista previa de Vercel está pendiente. Consulta [el informe de estado y bloqueadores](docs/status/PROJECT-REALITY-2026-11-22.md).
 >
 > No se declara conciencia, autonomía jurídica, autoridad propia ni entrenamiento de un modelo fundacional propio. **La implementación, las pruebas, el despliegue y la operación real son estados distintos.**
 >
@@ -129,13 +129,14 @@ El instrumento único es scripts/production-progress.mjs, que calcula el avance 
 
 ### Evidencia de CI disponible
 
-- Suite integral anterior: **401 archivos de prueba y 2.872 pruebas aprobadas** en la ejecución 44887228762.
-- IDR: ejecución 45063437589 aprobada; contratos, lint IDR y typecheck pasaron en una revisión que también ejecutó el formateo de los seis archivos.
-- Repository Assurance: ejecución 45063437479 aprobada para la revisión previa al último grupo de correcciones.
-- Security Scan y SBOM: aprobados en ejecuciones recientes; deben confirmarse de nuevo en el mismo SHA final.
-- Última CI integral observada para SHA 1282e965d106ab93d24192c752a89d18a2ca96d1: **400/401 archivos y 2.871/2.872 pruebas pasaron**; el único fallo fue una aserción de consistencia del README que exigía el porcentaje instrumental. El README ya se corrigió para volver a reflejar el 19,8 % que emite el instrumento.
-- En ese SHA, Rust fmt pasó tras corregir el orden de imports. Clippy detectó tres préstamos innecesarios en bindings SQL; se corrigieron en memoria y BookPI. Hace falta una nueva CI sobre el HEAD actual para confirmar que estos cambios cierran los bloqueos.
-- Vercel: el estado de preview seguía pendiente en la última consulta. No se afirma que haya despliegue nuevo, producción activa o dominio personalizado verificado.
+- **CI integral 45063812580:** 401 archivos y 2.873 pruebas aprobadas.
+- **Lint & TypeCheck:** ESLint, Prettier, typecheck, guardas de entorno y typecheck de capas aprobados.
+- **Security Scan, SBOM y Production Evidence and SBOM:** aprobados en esa ejecución.
+- **Repository Assurance:** ejecución 45063812567 aprobada.
+- **IDR contracts:** ejecución 45063812571 aprobada para tests, lint específico y typecheck.
+- **Rust Workspace CI:** rust-verify, Clippy y pruebas aprobados; el release build seguía ejecutándose en la última consulta.
+- **Vercel:** preview pendiente. No se afirma despliegue nuevo, producción activa ni dominio personalizado verificado.
+- La validación se refiere al commit de código 20bcf0da2e62a3fb18574266e7ea8ec2290d3372; la aprobación de CI no sustituye readiness ni pruebas operativas en producción.
 
 ### Bloqueadores de producción registrados
 
