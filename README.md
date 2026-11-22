@@ -2,7 +2,7 @@
 
 Isabella es un **Runtime Web Operativo y Sistema Federado de Inteligencia Artificial Gobernada (FGAIS)** construido, propiedad y creado por **Edwin Oswaldo Castillo Trejo (Anubis Villaseñor)** bajo la marca **TAMV ONLINE ENTERPRISE**. No es un chatbot: es un runtime con gobernanza determinista, memoria jerárquica, un motor de inferencia propio que **orquesta** LLM externos (no es un modelo fundacional entrenado por TAMV), RAG soberano, herramientas allowlisted, habilidades ejecutables, auditoría criptográfica y un sistema nativo de análisis audio-espectral en tiempo real: el **TAMV Kaos Audio System**.
 
-> **Estado real al 22 de noviembre de 2026:** repositorio de ingeniería en fase de hardening, con pruebas automatizadas y subsistemas operativos verificables, pero **no certificado para producción**. La validación integral más reciente consultada (run 45064217391) pasó la suite de 401 archivos y 2.873 pruebas, ESLint, Prettier, typecheck, Security Scan, SBOM y los controles Rust de fmt, Clippy, pruebas y release build. La validación IDR 45064217300 también pasó. El trabajo de generación de evidencia sigue en ejecución y la validación Docker/Caddy todavía no aparece concluida. El Caddyfile se corrigió después de que CI detectara una directiva no admitida. Vercel preview continúa pendiente. La evidencia citada corresponde al commit de código 4845656da4006e7ba6b4571b4b315eb4bfa5e866 y no certifica producción. La vista previa de Vercel está pendiente. Consulta [el informe de estado y bloqueadores](docs/status/PROJECT-REALITY-2026-11-22.md).
+> **Estado real al 22 de noviembre de 2026:** repositorio de ingeniería en fase de hardening, con pruebas automatizadas y subsistemas operativos verificables, pero **no certificado para producción**. La validación más reciente consultada (run 45064705340) aprobó la suite integral, Security Scan, SBOM y Rust fmt/Clippy/tests/release build; la ejecución IDR 45064705297 también pasó. La validación Caddy había pasado en el run 45064217391. El Dockerfile y la prueba de artefactos se corrigieron para incluir pnpm-workspace.yaml, pero el nuevo Docker build aún no ha empezado en el estado consultado y Lint & TypeCheck sigue en ejecución. Vercel preview continúa pendiente. La evidencia de código corresponde al commit 10e8481c3cdef3c0695e84cf7cd6b51757b70435 y no certifica producción. La vista previa de Vercel está pendiente. Consulta [el informe de estado y bloqueadores](docs/status/PROJECT-REALITY-2026-11-22.md).
 >
 > No se declara conciencia, autonomía jurídica, autoridad propia ni entrenamiento de un modelo fundacional propio. **La implementación, las pruebas, el despliegue y la operación real son estados distintos.**
 >
@@ -129,16 +129,15 @@ El instrumento único es scripts/production-progress.mjs, que calcula el avance 
 
 ### Evidencia de CI disponible
 
-- **CI integral 45064217391:** 401 archivos y 2.873 pruebas aprobadas.
-- **Lint & TypeCheck:** ESLint, Prettier, typecheck, guardas de entorno y typecheck de capas aprobados.
+- **CI integral 45064705340:** suite integral aprobada; la cifra observada en la ejecución anterior fue 401 archivos / 2.873 pruebas.
 - **Security Scan y SBOM:** aprobados.
 - **Rust Workspace CI:** rust-verify, Clippy, pruebas y release build aprobados.
-- **IDR contracts 45064217300:** pruebas, lint IDR y typecheck aprobados.
-- **Repository Assurance 45064217307:** aprobado.
-- **Production Evidence and SBOM:** sigue en ejecución en la última consulta.
-- **Docker/Caddy:** la configuración se corrigió en el commit 4845656da4006e7ba6b4571b4b315eb4bfa5e866, pero la validación de Caddy de esa revisión aún no aparece concluida.
+- **IDR contracts 45064705297:** pruebas, lint IDR y typecheck aprobados.
+- **Repository Assurance 45064705365:** aprobado.
+- **Lint & TypeCheck:** en ejecución en la última consulta; sin conclusión final todavía.
+- **Caddy:** validación aprobada en el run 45064217391.
+- **Docker build:** el error de instalación congelada se atribuyó a que las etapas no copiaban pnpm-workspace.yaml; Dockerfile y test se corrigieron en el HEAD actual, pero la validación de imagen aún no había comenzado.
 - **Vercel:** preview pendiente; no se afirma despliegue nuevo, producción activa ni dominio personalizado verificado.
-- La validación de código corresponde al commit 4845656da4006e7ba6b4571b4b315eb4bfa5e866; este documento se actualiza después solo para reflejar el estado de los checks.
 
 ### Bloqueadores de producción registrados
 
