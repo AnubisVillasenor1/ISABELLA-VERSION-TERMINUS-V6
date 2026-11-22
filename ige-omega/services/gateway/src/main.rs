@@ -452,7 +452,7 @@ async fn infer(
     .bind(decision_label(decision))
     .bind(reasoning)
     .bind(human_approval_required)
-    .bind(&created_at)
+    .bind(created_at)
     .execute(&mut *tx)
     .await
     .map_err(|error| {
