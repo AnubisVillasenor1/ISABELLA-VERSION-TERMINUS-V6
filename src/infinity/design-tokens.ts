@@ -13,14 +13,7 @@
  */
 import { digest, SkillInputError } from './skills';
 
-export const DESIGN_PALETTES = [
-  'neutral',
-  'stone',
-  'gothic',
-  'matcha',
-  'butter',
-  'y2k',
-] as const;
+export const DESIGN_PALETTES = ['neutral', 'stone', 'gothic', 'matcha', 'butter', 'y2k'] as const;
 export type DesignPalette = (typeof DESIGN_PALETTES)[number];
 
 export interface DesignToken {
@@ -107,10 +100,7 @@ function isMode(value: unknown): value is 'light' | 'dark' {
   return value === 'light' || value === 'dark';
 }
 
-export function generateDesignTokens(
-  palette: unknown,
-  mode: unknown = 'light'
-): DesignTokenSet {
+export function generateDesignTokens(palette: unknown, mode: unknown = 'light'): DesignTokenSet {
   if (!isPalette(palette)) {
     throw new SkillInputError('INVALID_PALETTE', `palette debe ser ${DESIGN_PALETTES.join(', ')}`);
   }
@@ -142,7 +132,11 @@ export function generateDesignTokens(
   const lines = tokens.map((token) => `  ${token.name}: ${token.value};`).join('\n');
   const css = `:root {\n${lines}\n}`;
 
-  const digestValue = digest({ palette, mode, tokens: tokens.map((token) => `${token.name}=${token.value}`) });
+  const digestValue = digest({
+    palette,
+    mode,
+    tokens: tokens.map((token) => `${token.name}=${token.value}`),
+  });
 
   return {
     palette,

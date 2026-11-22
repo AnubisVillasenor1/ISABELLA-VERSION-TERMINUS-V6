@@ -6208,7 +6208,12 @@ registerInfinityRoutes({
 });
 
 // IDR: intent-to-capability planning only; policy is server-owned and execution is disabled.
-registerDomainRuntimeRoutes({ app, enforceRateLimit, rateLimiter: publicCognitionLimiter, publicSurface: PLATFORM_PUBLIC_SURFACE });
+registerDomainRuntimeRoutes({
+  app,
+  enforceRateLimit,
+  rateLimiter: publicCognitionLimiter,
+  publicSurface: PLATFORM_PUBLIC_SURFACE,
+});
 
 // ── Nexus: grafo con procedencia, bucle de agente, workflow, salud y cuántica local ──
 // Todo es local y determinista; las escrituras exigen bearer administrativo verificado

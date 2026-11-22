@@ -270,7 +270,9 @@ export function registerInfinityRoutes(deps: InfinityRouteDeps): void {
     if (!deps.enforceRateLimit(req, res, deps.rateLimiter, 'infinity-a11y')) return;
     const body = bodyOf(req);
     const declaration =
-      typeof body.declaration === 'object' && body.declaration !== null && !Array.isArray(body.declaration)
+      typeof body.declaration === 'object' &&
+      body.declaration !== null &&
+      !Array.isArray(body.declaration)
         ? (body.declaration as Record<string, unknown>)
         : {};
     try {

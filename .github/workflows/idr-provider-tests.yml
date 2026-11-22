@@ -14,6 +14,7 @@ on:
     branches:
       - main
       - "feat/idr-semantic-router-v1"
+      - "hardening/idr-total-improvements-2026-11-21"
     paths:
       - "src/domain-runtime/**"
       - "src/routes/domain-runtime.ts"
@@ -38,16 +39,20 @@ jobs:
     steps:
       - name: Checkout exact revision
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v-pinned from tag v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@a3252b78c470c02df07e9d59298aecedc3ccdd6d # v3.0.0
+        with:
+          version: 10.28.0
       - name: Setup Node.js
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v-pinned from tag v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4 pinned by SHA
         with:
           node-version: 24
           cache: pnpm
-      - name: Enable pinned package manager
-        run: corepack enable
       - name: Install locked dependencies
-        run: corepack pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
       - name: Run IDR contract tests
-        run: corepack pnpm exec vitest run test/domain-runtime-semantic-router.test.ts test/domain-runtime-embedding-providers.test.ts
+        run: pnpm exec vitest run test/domain-runtime-semantic-router.test.ts test/domain-runtime-embedding-providers.test.ts test/domain-runtime-routes.test.ts
+      - name: Lint IDR implementation and tests
+        run: pnpm exec eslint src/domain-runtime/semantic-router.ts src/domain-runtime/embedding-providers.ts src/routes/domain-runtime.ts test/domain-runtime-semantic-router.test.ts test/domain-runtime-embedding-providers.test.ts test/domain-runtime-routes.test.ts --max-warnings=0
       - name: Type-check repository
-        run: corepack pnpm typecheck
+        run: pnpm typecheck
