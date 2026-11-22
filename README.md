@@ -125,7 +125,7 @@ node scripts/repository-assurance.mjs  # 44/44 gates
 
 ## Estado de verificación y preparación operativa (22 de noviembre de 2026)
 
-No se publica un porcentaje global de producción: los bloques históricos de avance contenían cifras incompatibles (62,6 % y 19,8 %) y no deben tratarse como una medición reproducible del mismo denominador. La métrica se publicará de nuevo cuando el script de avance y el archivo de evidencia estén reconciliados y verificados contra el árbol actual.
+El instrumento único es scripts/production-progress.mjs, que calcula el avance a partir de cuatro ejes con peso declarado y evidencia en docs/status/production-progress-evidence.json. La cifra que actualmente emite el instrumento es AVANCE_REAL_GLOBAL_PRODUCCION_DESPLIEGUE=19.8%. Esta es una métrica de avance ponderado, no aptitud de producción. La evidencia versionada data del 4 de noviembre y contiene health_readiness=failed; por ello la cifra no demuestra readiness ni despliegue. No se publica el 62,6 % histórico, porque contradice el instrumento actual. La evidencia debe regenerarse y pasar --check después de la validación integral del árbol actual.
 
 ### Evidencia de CI disponible
 
