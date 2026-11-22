@@ -28,7 +28,7 @@ La descripción más precisa es **plataforma de orquestación y evaluación gobe
 
 ## 3. Evidencia automatizada consultada
 
-Los resultados siguientes pertenecen a ejecuciones concretas registradas el 21 de noviembre de 2026. No se deben extrapolar automáticamente a los commits posteriores.
+Las primeras filas documentan la ejecución histórica del 21 de noviembre. La sección de actualización registra la validación más reciente consultada el 22 de noviembre; los resultados de CI prueban el commit de código indicado, no readiness ni operación de producción.
 
 | Control | Evidencia observada | Interpretación |
 | --- | --- | --- |
@@ -48,7 +48,7 @@ La rama actual incluye una corrección posterior al resultado de Clippy. Hasta q
 
 ### Actualización de validación del 22 de noviembre
 
-La CI integral más reciente consultada sobre SHA 1282e965d106ab93d24192c752a89d18a2ca96d1 mostró 400/401 archivos y 2.871/2.872 pruebas aprobadas. El único fallo de Vitest era una aserción que exigía que el README publicara la cifra instrumental; el README ya fue corregido para incluir 19,8 % junto con su limitación de evidencia histórica. Rust fmt pasó después de corregir el orden de imports del scheduler. Clippy encontró tres préstamos innecesarios en bindings SQL (dos en MemoryRepository y uno en BookPiLedger); los tres se corrigieron en la rama. La CI del HEAD resultante todavía debe confirmar todos estos cambios conjuntamente.
+La ejecución integral 45063812580 sobre el commit de código 20bcf0da2e62a3fb18574266e7ea8ec2290d3372 confirmó 401 archivos y 2.873 pruebas aprobadas. ESLint, Prettier, typecheck y guardas de entorno pasaron; Security Scan, SBOM y Production Evidence and SBOM también pasaron. La ejecución IDR 45063812571 pasó contratos, lint específico y typecheck. En Rust Workspace CI, rust-verify, Clippy y pruebas pasaron; el release build seguía en ejecución en la última consulta. La preview de Vercel sigue pendiente. El estado de build debe actualizarse cuando la ejecución termine; no se declara producción lista.
 
 ## 4. Bloqueadores de producción
 
@@ -71,11 +71,11 @@ La CI integral más reciente consultada sobre SHA 1282e965d106ab93d24192c752a89d
 
 ## 6. Orden de cierre recomendado
 
-### P0 — integridad de CI
-1. Formatear los seis archivos que fallaron Prettier.
-2. Repetir Clippy y tests Rust tras el cambio de tipo de error del scheduler.
-3. Ejecutar suite completa, typecheck, lint, formato, assurance, security suite, SBOM y build sobre el mismo SHA.
-4. Registrar el SHA exacto y los enlaces a cada run.
+### P0 — cierre de validación y despliegue
+1. Confirmar que Rust release build termina con éxito en la ejecución 45063812580.
+2. Confirmar el estado final de CI y registrar el SHA y los enlaces a los runs.
+3. Resolver el estado de Vercel preview y ejecutar smoke/readiness en el entorno desplegado.
+4. Regenerar la evidencia de avance después de que existan resultados actuales; la evidencia del 4 de noviembre no representa el estado validado hoy.
 
 ### P1 — readiness y despliegue
 1. Ejecutar preflight y readiness en el entorno de preview.
