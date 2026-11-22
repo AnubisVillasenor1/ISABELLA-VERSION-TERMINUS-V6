@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 const dockerfile = readFileSync(fileURLToPath(new URL("../../Dockerfile", import.meta.url)), "utf8");
+const workspace = readFileSync(fileURLToPath(new URL("../../pnpm-workspace.yaml", import.meta.url)), "utf8");
 const compose = readFileSync(fileURLToPath(new URL("../../docker-compose.yml", import.meta.url)), "utf8");
 const entrypoint = readFileSync(
   fileURLToPath(new URL("../../scripts/docker-entrypoint.sh", import.meta.url)),
@@ -22,8 +23,11 @@ describe("container build artifact", () => {
     expect(dockerfile).toContain("pnpm install --frozen-lockfile --prod");
   });
 
-  it("never references the workspace file absent from the repository", () => {
-    expect(dockerfile).not.toContain("pnpm-workspace.yaml");
+  it("copies workspace overrides into both frozen dependency-install stages", () => {
+    expect(workspace).toContain("overrides:");
+    expect(dockerfile.match(/COPY package\\.json pnpm-lock\\.yaml pnpm-workspace\\.yaml \.\//g)).toHaveLength(2);
+    expect(dockerfile).toContain("pnpm install --frozen-lockfile --prod");
+    expect(dockerfile).toContain("pnpm install --frozen-lockfile");
   });
 
   it("runs as a non-root numeric user and ships runtime assets", () => {
