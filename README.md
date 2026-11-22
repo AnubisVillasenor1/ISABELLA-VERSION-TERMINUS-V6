@@ -2,7 +2,9 @@
 
 Isabella es un **Runtime Web Operativo y Sistema Federado de Inteligencia Artificial Gobernada (FGAIS)** construido, propiedad y creado por **Edwin Oswaldo Castillo Trejo (Anubis Villaseñor)** bajo la marca **TAMV ONLINE ENTERPRISE**. No es un chatbot: es un runtime con gobernanza determinista, memoria jerárquica, un motor de inferencia propio que **orquesta** LLM externos (no es un modelo fundacional entrenado por TAMV), RAG soberano, herramientas allowlisted, habilidades ejecutables, auditoría criptográfica y un sistema nativo de análisis audio-espectral en tiempo real: el **TAMV Kaos Audio System**.
 
-> Estado del repositorio: `draft | engine-generated` hasta revisión humana nominal. No se declara conciencia, autonomía jurídica ni autoridad propia.
+> **Estado real al 22 de noviembre de 2026:** repositorio de ingeniería en fase de hardening, con pruebas automatizadas y subsistemas operativos verificables, pero **no certificado para producción**. La última ejecución integral registrada pasó la suite de pruebas y los controles de seguridad/SBOM/assurance, pero falló en Prettier (seis archivos preexistentes) y Clippy (scheduler); se ha preparado una corrección de Clippy en la rama de trabajo y todavía requiere una nueva ejecución de CI. La vista previa de Vercel está pendiente. Consulta [el informe de estado y bloqueadores](docs/status/PROJECT-REALITY-2026-11-22.md).
+>
+> No se declara conciencia, autonomía jurídica, autoridad propia ni entrenamiento de un modelo fundacional propio. **La implementación, las pruebas, el despliegue y la operación real son estados distintos.**
 >
 > Propiedad y uso: ver [`LICENSE`](LICENSE) y [`NOTICE.md`](NOTICE.md). La licencia publicada es **propietaria, con todos los derechos reservados**.
 
@@ -15,7 +17,9 @@ CAPABILITY ≠ AUTHORITY ≠ EXECUTION ≠ EVIDENCE
 
 Ningún documento, tabla o respuesta de API puede elevar una categoría a otra. El inventario de rutas (`docs/api/route-inventory.json`), el canon Ω∞ (`src/platform/omega-canon.ts`) y las auditorías de `src/infinity/` declaran la madurez real de cada capacidad, y hay pruebas que fallan si una cifra inventada reaparece.
 
-## Superficie HTTP (347 entradas en el inventario de rutas; madurez variable)
+## Superficie HTTP (inventario amplio; conteo canónico pendiente de reconciliación)
+
+El README y los artefactos de inventario han publicado conteos distintos (347 y 339). Hasta regenerar y verificar el inventario contra el registro real del servidor, esos números no se consideran una cifra canónica.
 
 ### Gobernanza y runtime
 - `GET /api/v1/nexus`, `GET /api/v1/nexus/health` — runtime Nexus (grafo, agente, workflows, cuántica local).
@@ -61,7 +65,7 @@ El router combina coincidencia léxica determinista con embeddings opcionales, r
 
 **Límite de seguridad:** este módulo planea; no monta dominios, invoca capacidades, emite mandatos, prueba firmas, genera pruebas ZK, mueve fondos ni acredita producción. La política del endpoint es del servidor y no se puede rebajar desde el cuerpo HTTP. Los estados `production: false` y `executionPerformed: false` son intencionales.
 
-Verificación pendiente tras integrar: `pnpm exec vitest run test/domain-runtime-semantic-router.test.ts test/domain-runtime-embedding-providers.test.ts test/domain-runtime-routes.test.ts`, `pnpm typecheck`, lint, suite completa, assurance y despliegue preview. El hardening incluye deduplicación de peticiones concurrentes por texto, límites de concurrencia, respuestas de proveedor limitadas a 128 KiB, rechazo de vectores anidados malformados, validación estricta del grafo antes de cualquier egreso a proveedores, validación de URLs base y fallback léxico cuando los vectores tienen dimensiones incompatibles. No se declara que esas comprobaciones hayan pasado hasta ejecutar CI.
+**Evidencia CI:** la ejecución IDR 44887228794 pasó los contratos IDR, ESLint específico y pnpm typecheck en la revisión que incorporó el hardening de proveedores. La suite integral 44887228762 pasó 401 archivos / 2.872 pruebas, Repository Assurance, Security Scan y SBOM; falló el chequeo global de formato en seis archivos ajenos al bloque IDR y Clippy en ige-omega/crates/neurokernel/src/scheduler.rs. La rama contiene una corrección posterior del scheduler, pero esta necesita volver a pasar CI. La evidencia corresponde a los SHA y ejecuciones documentados, no constituye certificación de producción. El hardening incluye deduplicación de peticiones concurrentes por texto, límites de concurrencia, respuestas de proveedor limitadas a 128 KiB, rechazo de vectores anidados malformados, validación estricta del grafo antes de cualquier egreso a proveedores, validación de URLs base y fallback léxico cuando los vectores tienen dimensiones incompatibles.
 
 ## Arquitectura
 
@@ -119,33 +123,34 @@ pnpm build:dist         # tsc + esbuild + node --check
 node scripts/repository-assurance.mjs  # 44/44 gates
 ```
 
-## Avance medido
+## Estado de verificación y preparación operativa (22 de noviembre de 2026)
 
-Un solo porcentaje, calculado por `scripts/production-progress.mjs` sobre cuatro ejes con peso declarado y evidencia sellada en `docs/status/production-progress-evidence.json`. Para reproducirlo: `node scripts/production-progress.mjs`; `--check` falla si la evidencia no corresponde al árbol actual.
+No se publica un porcentaje global de producción: los bloques históricos de avance contenían cifras incompatibles (62,6 % y 19,8 %) y no deben tratarse como una medición reproducible del mismo denominador. La métrica se publicará de nuevo cuando el script de avance y el archivo de evidencia estén reconciliados y verificados contra el árbol actual.
 
-- **62,6 % es avance ponderado, no aptitud.** Con `health_readiness` en `failed` el sistema **no es desplegable hoy**, y el número no afirma lo contrario.
+### Evidencia de CI disponible
 
-## Evidencia actual
+- Suite integral: **401 archivos de prueba y 2.872 pruebas aprobadas** en la ejecución 44887228762 (revisión anterior a la corrección del scheduler).
+- IDR: ejecución 44887228794 aprobada; contratos, lint específico y chequeo de tipos del repositorio pasaron.
+- Repository Assurance: ejecución 44887228779, aprobada.
+- Security Scan y generación SBOM: aprobadas en la ejecución integral registrada.
+- CI integral: **no verde** en la revisión que produjo esos resultados; Prettier falló en seis archivos y Clippy falló en el tipo de error de Scheduler::enqueue.
+- Corrección posterior de Clippy: incorporada a esta rama con pruebas unitarias nuevas; requiere validación CI en la revisión actual.
+- Vercel: estado de vista previa pendiente en el último estado consultado. No se afirma que haya despliegue nuevo, producción activa o dominio personalizado verificado.
 
-AVANCE_REAL_GLOBAL_PRODUCCION_DESPLIEGUE=19.8%
-Mientras no exista un denominador de requisitos ponderados y reproducible, una cifra agregada sería especulación y no se presenta como hecho.
+### Bloqueadores de producción registrados
 
-- **397 archivos de prueba / 2843 pruebas verdes**.
-- `tsc --noEmit` = 0, `tsc -p tsconfig.layers.json` = 0.
-- ESLint 0 warnings, Prettier limpio en archivos nuevos.
-- Build: 2.6 MB, `node --check` OK.
-- Repository assurance: 44/44 gates PASS.
-- Deploy Vercel: alias `isabella-terminus-v6-tamvonlinenetwork.vercel.app` (auto-deploy desde `main`).
+- PF-STRIPE-WEBHOOK-MISSING y PF-STRIPE-TEST-KEY: configuración de Stripe pendiente.
+- El dominio isabella-ai.visitarealdelmonte.online no está confirmado como resuelto y asociado al equipo de Vercel.
+- Migraciones SQL de permisos no portables sin ajustes entre Supabase y Neon.
+- OTEL_EXPORTER_OTLP_ENDPOINT ausente; observabilidad distribuida incompleta.
+- Backup/restore, RLS bajo el contexto de servicio, pruebas de concurrencia y rollback no demostrados mediante evidencia de producción.
+- Cuatro alertas moderadas de Dependabot en el informe consultado; revisar su estado actual antes de cerrar este punto.
+- Ledger BookPI legacy declarado VOLATILE_IN_MEMORY; la documentación del repositorio indica que /api/v1/readyz puede responder 503 hasta completar su refactor asíncrono.
+- La operación integral con credenciales reales, persistencia durable, recuperación de fallos y configuración de dominios no está acreditada.
 
-## Bloqueadores conocidos (no ocultos)
+### Interpretación
 
-- `PF-STRIPE-WEBHOOK-MISSING`, `PF-STRIPE-TEST-KEY` — requieren Stripe dashboard/live key.
-- Dominio custom `isabella-ai.visitarealdelmonte.online` no resuelve ni está en el team.
-- Migraciones Supabase/Neon con `grant ... to service_role` no aplicables en Neon.
-- `OTEL_EXPORTER_OTLP_ENDPOINT` ausente → observabilidad degradada.
-- Backup/restore, RLS bajo service role, concurrencia, rollback no demostrados.
-- 4 vulnerabilidades moderadas de Dependabot.
-- Ciclo completo fallo→recuperación de almacenes durables no observado en producción real.
+Isabella es hoy un **runtime de software con gobernanza, APIs, adaptadores de inferencia y capacidades deterministas**, no un modelo fundacional propio ni una plataforma cuya totalidad de módulos esté demostrada en producción. Parte de las capacidades son funcionales localmente o en pruebas; otras son evaluadores, simuladores, planes o contratos. El router IDR, en particular, **selecciona y planifica capacidades, pero no las ejecuta**.
 
 ## Estructura del repositorio
 
@@ -177,4 +182,4 @@ Propietaria, todos los derechos reservados. Ver [`LICENSE`](LICENSE) y [`NOTICE.
 
 ---
 
-*Estado actualizado: 11 de noviembre de 2026. `engine-generated` — revisión humana pendiente.*
+*Estado documental actualizado: 22 de noviembre de 2026. Revisión humana, validación de CI actual y preparación de producción siguen pendientes.*
