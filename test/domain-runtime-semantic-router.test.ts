@@ -140,6 +140,24 @@ describe('IDR semantic router', () => {
     expect(badWeight.rejected.some((entry) => entry.reason === 'INVALID_KNOWLEDGE_GRAPH_EDGE')).toBe(true);
   });
 
+  it('does not send intent to an embedding provider when policy rejects every capability', async () => {
+    let providerCalls = 0;
+    const result = await resolveSemanticIntent({
+      intent: 'crear publicación',
+      capabilities,
+      policy: { deniedCapabilities: capabilities.map((capability) => capability.id) },
+      embeddingProvider: {
+        embed: async () => {
+          providerCalls++;
+          return [1, 0];
+        },
+      },
+    });
+    expect(result.status).toBe('NO_SAFE_ROUTE');
+    expect(result.plan).toEqual([]);
+    expect(providerCalls).toBe(0);
+  });
+
   it('rejects malformed graph input before invoking an embedding provider', async () => {
     let providerCalls = 0;
     const result = await resolveSemanticIntent({
