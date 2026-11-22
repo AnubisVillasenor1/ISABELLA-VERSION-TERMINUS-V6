@@ -129,13 +129,13 @@ El instrumento único es scripts/production-progress.mjs, que calcula el avance 
 
 ### Evidencia de CI disponible
 
-- Suite integral: **401 archivos de prueba y 2.872 pruebas aprobadas** en la ejecución 44887228762 (revisión anterior a la corrección del scheduler).
-- IDR: ejecución 44887228794 aprobada; contratos, lint específico y chequeo de tipos del repositorio pasaron.
-- Repository Assurance: ejecución 44887228779, aprobada.
-- Security Scan y generación SBOM: aprobadas en la ejecución integral registrada.
-- CI integral: **no verde** en la revisión que produjo esos resultados; Prettier falló en seis archivos y Clippy falló en el tipo de error de Scheduler::enqueue.
-- Corrección posterior de Clippy: incorporada a esta rama con pruebas unitarias nuevas; requiere validación CI en la revisión actual.
-- Vercel: estado de vista previa pendiente en el último estado consultado. No se afirma que haya despliegue nuevo, producción activa o dominio personalizado verificado.
+- Suite integral anterior: **401 archivos de prueba y 2.872 pruebas aprobadas** en la ejecución 44887228762.
+- IDR: ejecución 45063437589 aprobada; contratos, lint IDR y typecheck pasaron en una revisión que también ejecutó el formateo de los seis archivos.
+- Repository Assurance: ejecución 45063437479 aprobada para la revisión previa al último grupo de correcciones.
+- Security Scan y SBOM: aprobados en ejecuciones recientes; deben confirmarse de nuevo en el mismo SHA final.
+- Última CI integral observada para SHA 1282e965d106ab93d24192c752a89d18a2ca96d1: **400/401 archivos y 2.871/2.872 pruebas pasaron**; el único fallo fue una aserción de consistencia del README que exigía el porcentaje instrumental. El README ya se corrigió para volver a reflejar el 19,8 % que emite el instrumento.
+- En ese SHA, Rust fmt pasó tras corregir el orden de imports. Clippy detectó tres préstamos innecesarios en bindings SQL; se corrigieron en memoria y BookPI. Hace falta una nueva CI sobre el HEAD actual para confirmar que estos cambios cierran los bloqueos.
+- Vercel: el estado de preview seguía pendiente en la última consulta. No se afirma que haya despliegue nuevo, producción activa o dominio personalizado verificado.
 
 ### Bloqueadores de producción registrados
 
