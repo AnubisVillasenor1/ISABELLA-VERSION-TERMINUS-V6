@@ -18,6 +18,10 @@ import {
   translate,
   selectLocale,
   evaluateA11y,
+  inspectJurisdiction,
+  modulatePrompt,
+  isCognitiveLayers,
+  generateProvenanceGenome,
   planBuild,
   parseBuildFiles,
   runMediaOperation,
@@ -291,6 +295,57 @@ export function registerInfinityRoutes(deps: InfinityRouteDeps): void {
         message: error instanceof Error ? error.message : 'declaración inválida',
       });
     }
+  });
+
+  app.post('/api/v1/infinity/jurisdiction/inspect', (req, res) => {
+    if (!deps.enforceRateLimit(req, res, deps.rateLimiter, 'infinity-jurisdiction')) return;
+    const body = bodyOf(req);
+    const content = typeof body.content === 'string' ? body.content : '';
+    const jurisdiction = typeof body.jurisdiction === 'string' ? body.jurisdiction : 'GLOBAL';
+    const consentGranted = body.consentGranted === true;
+    if (!content.trim()) {
+      res.status(400).json({ success: false, production: false, executionPerformed: false, error: 'CONTENT_REQUIRED', message: 'content es requerido' });
+      return;
+    }
+    try {
+      const result = inspectJurisdiction({ content, jurisdiction: jurisdiction as 'EU' | 'US' | 'MX' | 'GLOBAL', consentGranted });
+      res.json({ success: true, version: INFINITY_ROUTES_VERSION, production: false, ...result, disclaimers: DISCLAIMERS });
+    } catch (error) {
+      res.status(400).json({ success: false, production: false, executionPerformed: false, error: 'INVALID_INPUT', message: error instanceof Error ? error.message : 'entrada inválida' });
+    }
+  });
+
+  app.post('/api/v1/infinity/cognitive/modulate', (req, res) => {
+    if (!deps.enforceRateLimit(req, res, deps.rateLimiter, 'infinity-cognitive')) return;
+    const body = bodyOf(req);
+    const prompt = typeof body.prompt === 'string' ? body.prompt : '';
+    const layers = typeof body.layers === 'object' && body.layers !== null && !Array.isArray(body.layers) ? body.layers as { logic: number; empathy: number; resonance: number } : null;
+    if (!prompt.trim() || !layers || !isCognitiveLayers(layers)) {
+      res.status(400).json({ success: false, production: false, executionPerformed: false, error: 'INVALID_INPUT', message: 'prompt y layers válidos son requeridos' });
+      return;
+    }
+    try {
+      const result = modulatePrompt(prompt, layers);
+      res.json({ success: true, version: INFINITY_ROUTES_VERSION, production: false, ...result, disclaimers: DISCLAIMERS });
+    } catch (error) {
+      res.status(400).json({ success: false, production: false, executionPerformed: false, error: 'INVALID_INPUT', message: error instanceof Error ? error.message : 'entrada inválida' });
+    }
+  });
+
+  app.post('/api/v1/infinity/provenance/generate', (req, res) => {
+    if (!deps.enforceRateLimit(req, res, deps.rateLimiter, 'infinity-provenance')) return;
+    const body = bodyOf(req);
+    const intent = typeof body.intent === 'string' ? body.intent : '';
+    const context = typeof body.context === 'string' ? body.context : '';
+    const model = typeof body.model === 'string' ? body.model : '';
+    const authorDid = typeof body.authorDid === 'string' ? body.authorDid : '';
+    const timestamp = typeof body.timestamp === 'string' ? body.timestamp : '';
+    if (!intent.trim() || !context.trim() || !model.trim() || !authorDid.trim() || !timestamp.trim()) {
+      res.status(400).json({ success: false, production: false, executionPerformed: false, error: 'INVALID_INPUT', message: 'intent, context, model, authorDid y timestamp son requeridos' });
+      return;
+    }
+    const result = generateProvenanceGenome({ intent, context, model, authorDid, timestamp });
+    res.json({ success: true, version: INFINITY_ROUTES_VERSION, production: false, ...result, disclaimers: DISCLAIMERS });
   });
 
   app.post('/api/v1/infinity/media/evaluate', (req, res) => {

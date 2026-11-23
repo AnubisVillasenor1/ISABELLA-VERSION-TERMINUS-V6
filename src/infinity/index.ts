@@ -96,6 +96,33 @@ export {
 } from './media';
 
 export {
+  inspectJurisdiction,
+  isJurisdictionValue,
+  describeJurisdictionalGateway,
+  type Jurisdiction,
+  type JurisdictionalPayload,
+  type JurisdictionalResult,
+} from './jurisdictional-gateway';
+
+export {
+  TAMVProvenanceGenome,
+  generateProvenanceGenome,
+  verifyProvenanceGenome,
+  describeProvenanceGenome,
+  type ProvenanceGenomeInput,
+  type ProvenanceGenomeResult,
+} from './provenance-genome';
+
+export {
+  TAMVCognitiveModulator,
+  modulatePrompt,
+  isCognitiveLayers,
+  describeCognitiveModulation,
+  type CognitiveLayers,
+  type ModulatedPrompt,
+} from './cognitive-modulation';
+
+export {
   DESIGN_PALETTES,
   generateDesignTokens,
   isDesignPalette,
@@ -181,6 +208,9 @@ import { summarizeArchitecture, auditArchitecture } from './architecture';
 import { summarizeCatalog, auditCatalog } from './catalog';
 import { describeNativeSkills } from './skills';
 import { describeMediaOperations } from './media';
+import { describeJurisdictionalGateway } from './jurisdictional-gateway';
+import { describeProvenanceGenome } from './provenance-genome';
+import { describeCognitiveModulation } from './cognitive-modulation';
 import { describeDesignTokens } from './design-tokens';
 import { describeI18n } from './i18n';
 import { describeA11y } from './accessibility';
@@ -197,6 +227,9 @@ export interface InfinitySummary {
   readonly media: ReturnType<typeof describeMediaOperations>;
   readonly build: ReturnType<typeof describeBuildFabric>;
   readonly evolution: ReturnType<typeof describeEvolutionFabric>;
+  readonly jurisdictionalGateway: ReturnType<typeof describeJurisdictionalGateway>;
+  readonly provenanceGenome: ReturnType<typeof describeProvenanceGenome>;
+  readonly cognitiveModulation: ReturnType<typeof describeCognitiveModulation>;
   readonly designTokens: ReturnType<typeof describeDesignTokens>;
   readonly i18n: ReturnType<typeof describeI18n>;
   readonly accessibility: ReturnType<typeof describeA11y>;
@@ -224,6 +257,9 @@ export function describeInfinity(): InfinitySummary {
     media: describeMediaOperations(),
     build: describeBuildFabric(),
     evolution: describeEvolutionFabric(),
+    jurisdictionalGateway: describeJurisdictionalGateway(),
+    provenanceGenome: describeProvenanceGenome(),
+    cognitiveModulation: describeCognitiveModulation(),
     designTokens: describeDesignTokens(),
     i18n: describeI18n(),
     accessibility: describeA11y(),
