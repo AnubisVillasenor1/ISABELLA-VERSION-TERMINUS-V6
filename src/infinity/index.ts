@@ -123,6 +123,26 @@ export {
 } from './cognitive-modulation';
 
 export {
+  RecoveryStore,
+  RecoveryEngine,
+  MetaCognitiveRecoveryAdapter,
+  describeDurableRecovery,
+  type Job,
+  type JobState,
+  type OutboxEntry,
+  type RecoveryProvider,
+  type RecoveryConfig,
+  type ProviderResult,
+} from './durable-recovery';
+
+export {
+  MetaCognitiveOrchestrator,
+  describeMetaCognitiveOrchestrator,
+  type OrchestrationInput,
+  type OrchestrationResult,
+} from './meta-cognitive-orchestrator';
+
+export {
   DESIGN_PALETTES,
   generateDesignTokens,
   isDesignPalette,
@@ -211,6 +231,7 @@ import { describeMediaOperations } from './media';
 import { describeJurisdictionalGateway } from './jurisdictional-gateway';
 import { describeProvenanceGenome } from './provenance-genome';
 import { describeCognitiveModulation } from './cognitive-modulation';
+import { describeDurableRecovery } from './durable-recovery';
 import { describeDesignTokens } from './design-tokens';
 import { describeI18n } from './i18n';
 import { describeA11y } from './accessibility';
@@ -227,6 +248,7 @@ export interface InfinitySummary {
   readonly media: ReturnType<typeof describeMediaOperations>;
   readonly build: ReturnType<typeof describeBuildFabric>;
   readonly evolution: ReturnType<typeof describeEvolutionFabric>;
+  readonly durableRecovery: ReturnType<typeof describeDurableRecovery>;
   readonly jurisdictionalGateway: ReturnType<typeof describeJurisdictionalGateway>;
   readonly provenanceGenome: ReturnType<typeof describeProvenanceGenome>;
   readonly cognitiveModulation: ReturnType<typeof describeCognitiveModulation>;
@@ -257,6 +279,7 @@ export function describeInfinity(): InfinitySummary {
     media: describeMediaOperations(),
     build: describeBuildFabric(),
     evolution: describeEvolutionFabric(),
+    durableRecovery: describeDurableRecovery(),
     jurisdictionalGateway: describeJurisdictionalGateway(),
     provenanceGenome: describeProvenanceGenome(),
     cognitiveModulation: describeCognitiveModulation(),

@@ -22,6 +22,7 @@ import {
   modulatePrompt,
   isCognitiveLayers,
   generateProvenanceGenome,
+  MetaCognitiveOrchestrator,
   planBuild,
   parseBuildFiles,
   runMediaOperation,
@@ -346,6 +347,35 @@ export function registerInfinityRoutes(deps: InfinityRouteDeps): void {
     }
     const result = generateProvenanceGenome({ intent, context, model, authorDid, timestamp });
     res.json({ success: true, version: INFINITY_ROUTES_VERSION, production: false, ...result, disclaimers: DISCLAIMERS });
+  });
+
+  app.post('/api/v1/infinity/orchestrate', (req, res) => {
+    if (!deps.enforceRateLimit(req, res, deps.rateLimiter, 'infinity-orchestrate')) return;
+    const body = bodyOf(req);
+    const intent = typeof body.intent === 'string' ? body.intent : '';
+    const context = typeof body.context === 'string' ? body.context : '';
+    const model = typeof body.model === 'string' ? body.model : '';
+    const authorDid = typeof body.authorDid === 'string' ? body.authorDid : '';
+    const jurisdiction = typeof body.jurisdiction === 'string' ? body.jurisdiction : 'GLOBAL';
+    const timestamp = typeof body.timestamp === 'string' ? body.timestamp : '';
+    const layers = typeof body.layers === 'object' && body.layers !== null && !Array.isArray(body.layers) ? body.layers as { logic: number; empathy: number; resonance: number } : null;
+    if (!intent.trim() || !context.trim() || !model.trim() || !authorDid.trim() || !timestamp.trim() || !layers) {
+      res.status(400).json({ success: false, production: false, executionPerformed: false, error: 'INVALID_INPUT', message: 'intent, context, model, authorDid, timestamp y layers son requeridos' });
+      return;
+    }
+    try {
+      const orch = new MetaCognitiveOrchestrator();
+      const modulatedPrompt = orch['lcm'].modulate(intent, layers);
+      const tjgResult = orch['tjg'].inspect({ content: context, jurisdiction: jurisdiction as 'EU' | 'US' | 'MX' | 'GLOBAL' });
+      const tpgHash = orch['tpg'].generate({ intent, context, model, authorDid, timestamp });
+      if (!tjgResult.allowed) {
+        res.json({ success: true, version: INFINITY_ROUTES_VERSION, production: false, executionPerformed: false, status: 'blocked_pii', tpg: tpgHash, sanitizedContext: tjgResult.sanitized, modulatedPrompt, result: { error: 'PII detected, blocked' }, disclaimers: DISCLAIMERS });
+        return;
+      }
+      res.json({ success: true, version: INFINITY_ROUTES_VERSION, production: false, executionPerformed: false, status: 'ready_to_execute', tpg: tpgHash, sanitizedContext: tjgResult.sanitized, modulatedPrompt, note: 'Pipeline listo; la ejecución la realiza el llamador con executeFn.', disclaimers: DISCLAIMERS });
+    } catch (error) {
+      res.status(400).json({ success: false, production: false, executionPerformed: false, error: 'INVALID_INPUT', message: error instanceof Error ? error.message : 'entrada inválida' });
+    }
   });
 
   app.post('/api/v1/infinity/media/evaluate', (req, res) => {

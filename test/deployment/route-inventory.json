@@ -249,6 +249,7 @@
   "POST /api/v1/infinity/i18n/translate",
   "POST /api/v1/infinity/jurisdiction/inspect",
   "POST /api/v1/infinity/media/evaluate",
+  "POST /api/v1/infinity/orchestrate",
   "POST /api/v1/infinity/provenance/generate",
   "POST /api/v1/infinity/skills/run",
   "POST /api/v1/intelligence/triage",
