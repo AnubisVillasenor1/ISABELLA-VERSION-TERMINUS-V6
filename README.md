@@ -15,7 +15,7 @@ CAPABILITY ≠ AUTHORITY ≠ EXECUTION ≠ EVIDENCE
 
 Ningún documento, tabla o respuesta de API puede elevar una categoría a otra. El inventario de rutas (`docs/api/route-inventory.json`), el canon Ω∞ (`src/platform/omega-canon.ts`) y las auditorías de `src/infinity/` declaran la madurez real de cada capacidad, y hay pruebas que fallan si una cifra inventada reaparece.
 
-## Superficie HTTP (347 entradas en el inventario de rutas; madurez variable)
+## Superficie HTTP (355 entradas en el inventario de rutas; madurez variable)
 
 ### Gobernanza y runtime
 - `GET /api/v1/nexus`, `GET /api/v1/nexus/health` — runtime Nexus (grafo, agente, workflows, cuántica local).
@@ -90,7 +90,7 @@ ALLOW = IDENTITY × AUTHORITY × POLICY × EVIDENCE × SAFETY
 ## Gobernanza
 
 - **CROWN** (`src/omega-runtime`, `src/nexus`): policy, risk, compliance.
-- **BookPI** (`src/bookpi`): evidencia criptográfica SHA3-512, append-only.
+- **BookPI** (`src/bookpi`): evidencia criptográfica append-only. Hash canónico: SHA-256 sobre JSON canónico con `prevHash`. Integridad ligada a secreto: SHA3-512(secreto || hash del evento). Ledger legacy: `VOLATILE_IN_MEMORY` (ver §Memoria y persistencia).
 - **Blackout**: alcance `VOICE_SYNTHESIS` en `src/governance/blackout.ts`.
 - **MCP fail-closed**: sin `MCP_SERVER_TOKEN` no se exponen herramientas.
 - **Profit Guard** (`src/economy/profit-guard.ts`): `minimumProfitablePrice(cost, marginBps)` = `cost * (1 + marginBps/10000)` redondeado a centavos. Nunca por debajo del costo.
@@ -128,6 +128,8 @@ Un solo porcentaje, calculado por `scripts/production-progress.mjs` sobre cuatro
 ## Evidencia actual
 
 AVANCE_REAL_GLOBAL_PRODUCCION_DESPLIEGUE=19.8%
+
+> Nota: esta cifra es la que calcula `scripts/production-progress.mjs` en este árbol (19.8 %). El avance ponderado global declarado es 62,6 % (ver §Avance medido). Ambas cifras son válidas en su contexto; la primera es el output del instrumento, la segunda es la estimación ponderada de producción. Ninguna es aptitud: con `health_readiness` en `failed` el sistema no es desplegable hoy.
 Mientras no exista un denominador de requisitos ponderados y reproducible, una cifra agregada sería especulación y no se presenta como hecho.
 
 - **397 archivos de prueba / 2843 pruebas verdes**.
@@ -167,7 +169,7 @@ docs/
   canon/           # Documentos canónicos importados con SHA-256
   infinity/        # Mapa operativo de la fusión Master Consolidated
   rfc/             # RFC-0001..0012
-  api/             # Inventario de rutas (339)
+  api/             # Inventario de rutas (355)
 tests/             # 397 archivos, 2843 pruebas
 ```
 
