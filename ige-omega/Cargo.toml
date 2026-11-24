@@ -21,7 +21,6 @@ dotenvy = "0.15"
 sha2 = "0.10"
 futures-util = "0.3"
 shared = { path = "crates/shared" }
-neurokernel = { path = "crates/neurokernel" }
 cognition = { path = "crates/cognition" }
 memory = { path = "crates/memory" }
 worldmodel = { path = "crates/worldmodel" }
