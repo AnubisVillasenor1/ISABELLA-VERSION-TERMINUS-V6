@@ -56,7 +56,9 @@ mod tests {
         let mut scheduler = Scheduler::new(1);
         scheduler.enqueue(event("first")).expect("first event fits");
 
-        let rejected = scheduler.enqueue(event("second")).expect_err("queue is full");
+        let rejected = scheduler
+            .enqueue(event("second"))
+            .expect_err("queue is full");
 
         assert_eq!(rejected.event_type, "second");
         assert_eq!(scheduler.len(), 1);
@@ -66,7 +68,9 @@ mod tests {
     fn dequeue_preserves_fifo_order() {
         let mut scheduler = Scheduler::new(2);
         scheduler.enqueue(event("first")).expect("first event fits");
-        scheduler.enqueue(event("second")).expect("second event fits");
+        scheduler
+            .enqueue(event("second"))
+            .expect("second event fits");
 
         assert_eq!(
             scheduler.dequeue().map(|event| event.event_type),
