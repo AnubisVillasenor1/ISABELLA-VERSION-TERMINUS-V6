@@ -18,7 +18,7 @@ export {
   type EvidenceRef,
   type ExecutionMode,
   type AuditIssue,
-  type AuditReport,
+  type AuditReport as GovernanceAuditReport,
 } from './types';
 
 export {
@@ -123,6 +123,31 @@ export {
 } from './cognitive-modulation';
 
 export {
+  INCIDENT_TAXONOMY,
+  IncidentRegistry,
+  CrownOffice,
+  StandardsRegistry,
+  DataProvenance,
+  CapacityRegistry,
+  ForumRegistry,
+  generateAuditReport,
+  exportInterop,
+  summarizeGovernanceEvolution,
+  describeGovernanceEvolution,
+  type Incident,
+  type IncidentTaxonomy,
+  type IncidentSeverity,
+  type CrownDecision,
+  type Standard,
+  type DataAsset,
+  type CapacityModule,
+  type ForumRegistration,
+  type AuditReport,
+  type InteropExport,
+  type GovernanceEvolutionSummary,
+} from './governance-evolution';
+
+export {
   RecoveryStore,
   RecoveryEngine,
   MetaCognitiveRecoveryAdapter,
@@ -133,6 +158,11 @@ export {
   type RecoveryProvider,
   type RecoveryConfig,
   type ProviderResult,
+  Ed25519Signer,
+  EventLog,
+  type TAMVEvent,
+  stableOperationId,
+  merkleRoot,
 } from './durable-recovery';
 
 export {
@@ -231,6 +261,7 @@ import { describeMediaOperations } from './media';
 import { describeJurisdictionalGateway } from './jurisdictional-gateway';
 import { describeProvenanceGenome } from './provenance-genome';
 import { describeCognitiveModulation } from './cognitive-modulation';
+import { describeGovernanceEvolution } from './governance-evolution';
 import { describeDurableRecovery } from './durable-recovery';
 import { describeDesignTokens } from './design-tokens';
 import { describeI18n } from './i18n';
@@ -248,6 +279,7 @@ export interface InfinitySummary {
   readonly media: ReturnType<typeof describeMediaOperations>;
   readonly build: ReturnType<typeof describeBuildFabric>;
   readonly evolution: ReturnType<typeof describeEvolutionFabric>;
+  readonly governanceEvolution: ReturnType<typeof describeGovernanceEvolution>;
   readonly durableRecovery: ReturnType<typeof describeDurableRecovery>;
   readonly jurisdictionalGateway: ReturnType<typeof describeJurisdictionalGateway>;
   readonly provenanceGenome: ReturnType<typeof describeProvenanceGenome>;
@@ -279,6 +311,7 @@ export function describeInfinity(): InfinitySummary {
     media: describeMediaOperations(),
     build: describeBuildFabric(),
     evolution: describeEvolutionFabric(),
+    governanceEvolution: describeGovernanceEvolution(),
     durableRecovery: describeDurableRecovery(),
     jurisdictionalGateway: describeJurisdictionalGateway(),
     provenanceGenome: describeProvenanceGenome(),
@@ -300,3 +333,4 @@ export function describeInfinity(): InfinitySummary {
     ],
   };
 }
+
