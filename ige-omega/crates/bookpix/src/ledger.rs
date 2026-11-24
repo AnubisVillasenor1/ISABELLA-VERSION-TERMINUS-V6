@@ -90,7 +90,7 @@ impl BookPiLedger {
         .bind(&event.previous_hash)
         .bind(&event.event_hash)
         .bind(&event.payload)
-        .bind(&event.created_at)
+        .bind(event.created_at)
         .execute(&mut **tx)
         .await?;
 
