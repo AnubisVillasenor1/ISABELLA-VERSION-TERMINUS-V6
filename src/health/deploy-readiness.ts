@@ -83,7 +83,11 @@ function checkDurableStore(
 
 export function runDeployReadiness(env: Env): DeployReadinessReport {
   const findings: PreflightFinding[] = [
-    ...runPreflight({ ...env, NODE_ENV: 'production' }).findings,
+    ...runPreflight({
+      ...env,
+      APP_PUBLIC_URL: env.APP_PUBLIC_URL ?? env.ISABELLA_PUBLIC_URL,
+      NODE_ENV: 'production',
+    }).findings,
   ];
   const add = (id: string, severity: 'ERROR' | 'WARN', message: string): void => {
     findings.push({ id, severity, message });
@@ -103,9 +107,13 @@ export function runDeployReadiness(env: Env): DeployReadinessReport {
       add('DR-BOOKPI-SECRET-WEAK', 'ERROR', `BOOKPI_INTEGRITY_SECRET is weak (${weak}).`);
   }
 
-  // The production repository factory requires DATABASE_URL as the single authoritative
-  // connection string; POSTGRES_* integration aliases alone do not satisfy its contract.
-  const dbUrl = env.DATABASE_URL?.trim();
+  // Normalize Vercel/Postgres integration aliases to the same authoritative connection
+  // string accepted by the runtime; explicit provider selection remains a separate gate.
+  const dbUrl =
+    env.DATABASE_URL?.trim() ||
+    env.POSTGRES_URL?.trim() ||
+    env.POSTGRES_PRISMA_URL?.trim() ||
+    env.POSTGRES_URL_NON_POOLING?.trim();
   const storageProvider = env.ISABELLA_STORAGE_PROVIDER?.trim().toLowerCase();
   if (!storageProvider) {
     add(
@@ -128,7 +136,7 @@ export function runDeployReadiness(env: Env): DeployReadinessReport {
     add(
       'DR-DATABASE-MISSING',
       'ERROR',
-      'DATABASE_URL is required as the canonical durable database connection string for production.'
+      'DATABASE_URL or a supported POSTGRES_URL alias is required as the durable database connection string for production.'
     );
   } else if (looksLikeTemplate(dbUrl)) {
     add(

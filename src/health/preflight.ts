@@ -144,7 +144,7 @@ export function runPreflight(env: Env): PreflightReport {
     );
   }
 
-  const publicUrl = trimmed(env, 'APP_PUBLIC_URL');
+  const publicUrl = trimmed(env, 'APP_PUBLIC_URL') ?? trimmed(env, 'ISABELLA_PUBLIC_URL');
   if (publicUrl === undefined) {
     if (production)
       add(

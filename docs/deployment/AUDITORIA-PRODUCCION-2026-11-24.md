@@ -1,7 +1,7 @@
 # Auditoría de producción y despliegue — 2026-11-24
 
 **Estado:** `draft | auto_generated`; revisión y aprobación humana pendientes. Esta auditoría no certifica producción.  
-**Alcance:** checkout `v0/wire-mongodb-supabase`, commit observado `64b2eed1328704f03620eb65b11531387fb834b3`, configuración de CI/despliegue, Docker, gates de preparación, suite local y variables disponibles en el sandbox. No se modificó el estado de servicios externos ni se ejecutó un despliegue.
+**Alcance:** checkout `v0/wire-mongodb-supabase`, commit base observado antes de esta continuación `62ad60d`, configuración de CI/despliegue, Docker, gates de preparación, suite local y variables disponibles en el sandbox. La continuación alineó alias PostgreSQL y URL pública del runtime; no se modificó el estado de servicios externos ni se ejecutó un despliegue.
 
 ## Veredicto ejecutivo
 
@@ -14,7 +14,7 @@
 | TypeScript principal | PASS | `pnpm run typecheck` |
 | ESLint | PASS | `pnpm run lint`, cero warnings/error |
 | Compilación distribuible | PASS | `pnpm run build:dist`; `dist/server.js` y chequeo de JS completados |
-| Validación canónica | PASS | `pnpm run validate`: typecheck, lint, formato y build completo; 404 archivos y 2.899 pruebas aprobadas |
+| Validación canónica | PASS | `pnpm run validate`: typecheck, lint, formato y build completo; 404 archivos y 2.901 pruebas aprobadas |
 | Smoke runtime | PASS | `pnpm run smoke:runtime`; endpoints/guardrails locales pasan. IKES necesitó reintentos de hidratación inicial; inferencia externa se omitió sin credencial OpenRouter elegible. |
 | Smoke UI | PASS | `pnpm run smoke:ui`: navegación, intro, workspace y exportaciones |
 | Seguridad del repositorio | PASS | `pnpm run security:suite`: 14 controles, 0 fallidos |
@@ -27,14 +27,14 @@
 | Typecheck de capas | PASS | `pnpm run typecheck:layers` |
 | Typecheck de skills/lib | **FAIL / no gate CI actual** | `pnpm run typecheck:skills` encuentra referencias ausentes a Prisma generado, `@vercel/connect`, `commander`, `js-yaml` y errores de tipos asociados. No se debe presentar como verde; investigar si estos módulos son código activo u opcional y restaurar su fuente/generación o delimitar conscientemente el proyecto de tipos. |
 | Formato | PASS | `pnpm run format:check` pasó tras normalizar los 16 archivos inicialmente señalados. |
-| Preparación de despliegue | **BLOCKED** | Simulación del contexto de GitHub/Vercel (`VERCEL=1`, secretos reales omitidos) reporta: `PF-TOKEN-ADMIN-MISSING`, `PF-STRIPE-WEBHOOK-MISSING`, `PF-STRIPE-TEST-KEY`, `DR-BOOKPI-SECRET-MISSING`, `DR-STORAGE-PROVIDER-MISSING`, `DR-DATABASE-MISSING`, `DR-ORIGINS-LOCAL`, `DR-SERVERLESS-NON_DURABLE_API_KEYS` y `DR-SERVERLESS-NON_DURABLE_FEDERATION`. `PF-PUBLIC-URL-MISSING` es advertencia. No apareció falta de proveedor AI: en Vercel Gateway usa OIDC y no requiere clave estática. No es una lectura de configuración real de producción. |
+| Preparación de despliegue | **BLOCKED** | Reejecutada con el entorno disponible cargado y `NODE_ENV=production VERCEL=1` (simulación local, no producción): quedan `PF-TOKEN-ADMIN-MISSING`, `PF-STRIPE-WEBHOOK-MISSING`, `PF-STRIPE-TEST-KEY`, `DR-BOOKPI-SECRET-MISSING`, `DR-STORAGE-PROVIDER-MISSING`, `DR-ORIGINS-LOCAL`, `DR-SERVERLESS-NON_DURABLE_API_KEYS` y `DR-SERVERLESS-NON_DURABLE_FEDERATION`. Los aliases de PostgreSQL resuelven la base, Supabase/MongoDB aparecen configurados y `ISABELLA_PUBLIC_URL` resuelve la URL pública; ya no aparecen `DR-DATABASE-MISSING`, `DR-SUPABASE-ABSENT`, `DR-VERIFIED-KNOWLEDGE-MONGODB-URI-MISSING` ni `PF-PUBLIC-URL-MISSING`. No es una lectura de configuración real de producción. |
 | CI del SHA / evidencia atada | **NO OBSERVADA** | No se consultó un run exitoso de GitHub para este SHA. El deploy workflow exige evidencia del SHA exacto. |
 | Imagen Docker / K8s / smoke remoto | **NO VERIFICADOS** | El comando de construcción Docker no se pudo ejecutar porque `docker` no está instalado en el sandbox; tampoco se ejecutaron validación server-side de Kubernetes ni smoke del deployment. `pnpm run validate` sí pasó el build local del proyecto. |
 | Auth/RLS, canary y rollback productivo | **NO OBSERVADO** | Requiere auditoría específica en el entorno desplegado y evidencia operacional; no se infiere del unit test. |
 
 ## Hallazgos que requieren acción antes de producción
 
-1. **Variables y secretos de producción pendientes.** Configurar `GENESIS_ADMIN_API_TOKEN`, `BOOKPI_INTEGRITY_SECRET`, `DATABASE_URL`, `ISABELLA_STORAGE_PROVIDER=postgres|neon`, `ISABELLA_API_KEY_STORE=postgres`, `ISABELLA_FEDERATION_STORE=postgres`, `ALLOWED_ORIGINS` con orígenes HTTPS exactos y `APP_PUBLIC_URL`. Configurar también `STRIPE_WEBHOOK_SECRET` y cambiar la integración Stripe de test a live antes de procesar pagos. No copiar valores a Git, logs o este documento. Vercel AI Gateway ya está conectado y, en despliegue Vercel, usa OIDC; no se debe solicitar `AI_GATEWAY_API_KEY` ni una clave de otro proveedor por este gate.
+1. **Variables y secretos de producción pendientes.** La app ya normaliza `POSTGRES_URL`, `POSTGRES_PRISMA_URL` y `POSTGRES_URL_NON_POOLING` a `DATABASE_URL`; no hace falta duplicar el secreto de conexión cuando ya se inyecta uno de esos aliases. Sigue siendo necesaria la selección explícita `ISABELLA_STORAGE_PROVIDER=postgres|neon`, además de `ISABELLA_API_KEY_STORE=postgres|neon`, `ISABELLA_FEDERATION_STORE=postgres|neon` y `ALLOWED_ORIGINS` con orígenes HTTPS exactos. Configurar también `GENESIS_ADMIN_API_TOKEN`, `BOOKPI_INTEGRITY_SECRET`, `STRIPE_WEBHOOK_SECRET`; la clave Stripe disponible es de test y debe sustituirse por una clave Live antes de pagos de producción. `ISABELLA_PUBLIC_URL` ya se reconoce como alias de la URL pública. No copiar valores a Git, logs o este documento. Vercel AI Gateway usa OIDC en despliegue Vercel; no solicitar `AI_GATEWAY_API_KEY` por este gate.
 2. **Bloqueo de despliegue no sustituible por código.** `deploy-production.yml` exige Vercel production config y credenciales de workflow, evidencia CI del mismo SHA, aprobación del environment `production` y readiness satisfactorio. La cuenta/CI debe poder ejecutar y publicar artefactos.
 3. **`typecheck:skills` está fuera de la cobertura configurada de CI y falla localmente.** Resolver la procedencia de `src/lib/lib/accounting/*`, el cliente Prisma, y los módulos no declarados antes de afirmar cobertura total. No ocultar los errores agregando exclusiones sin contrato explícito.
 4. **Los documentos de estado/artefactos existentes son evidencia fechada.** `docs/status/production-progress-evidence.json` indica `state: auto_generated`, incluye puertas `failed`/`not_observed` y no debe interpretarse como aprobación vigente.
@@ -44,7 +44,7 @@
 
 ## Cambio aplicado en esta auditoría
 
-Se eliminó del `Dockerfile` el valor por defecto `ALLOWED_ORIGINS=http://localhost:8080`. La imagen de producción ya no habilita un origen local accidentalmente: Compose exige `ALLOWED_ORIGINS` explícito y el gate valida orígenes HTTPS exactos. Se corrigió el falso bloqueo del proveedor en Vercel al reconocer que AI Gateway obtiene OIDC de runtime sin clave estática. También se alineó readiness con el contrato de `config.ts`: producción requiere `DATABASE_URL` canónica y `ISABELLA_STORAGE_PROVIDER` explícito; no basta que existan variables alias `POSTGRES_*`. El smoke runtime reintenta únicamente la condición transitoria de hidratación IKES y continúa fallando ante cualquier error persistente. El README ahora documenta instalación reproducible y gates pendientes; assurance subió de 43/44 a 44/44.
+Se eliminó del `Dockerfile` el valor por defecto `ALLOWED_ORIGINS=http://localhost:8080`; Compose y readiness exigen orígenes HTTPS explícitos. AI Gateway en Vercel usa OIDC sin clave estática. En esta continuación, `src/config.ts`, la config runtime y readiness normalizan los aliases `POSTGRES_URL`, `POSTGRES_PRISMA_URL` y `POSTGRES_URL_NON_POOLING`; la URL pública también acepta `ISABELLA_PUBLIC_URL`. Se mantiene el bloqueo de selección explícita `ISABELLA_STORAGE_PROVIDER` y de modos durables para API keys/federación. El gate se ejecutó con el entorno del sandbox cargado y ya no reporta base/Supabase/MongoDB/URL pública ausentes; sigue **BLOCKED** por configuración/secrets de producción. Los resultados locales no certifican una conexión ni despliegue remoto.
 
 ## Criterio de salida
 
@@ -57,4 +57,4 @@ No declarar `100%`, `verified`, `wired` ni `production-ready` hasta que se cumpl
 - Despliegue aprobado por una persona responsable, smoke post-despliegue pasa, canary monitorizado, y rollback probado con restauración verificada.
 - Revisión humana de los cambios y aceptación explícita de riesgos residuales, responsable y fecha.
 
-**Próximo gate:** completar las variables de Vercel/GitHub `DATABASE_URL`, provider y modos de almacenamiento durable, token admin, secreto BookPI, orígenes/URL públicos y secreto webhook; cambiar Stripe a Live; ejecutar readiness usando la configuración real de producción. Después, CI del SHA, Docker/K8s, smoke remoto, aprobación humana, canary y rollback. Ningún valor de credencial se incluye en este reporte.
+**Próximo gate:** configurar en Vercel/GitHub el provider y modos durables, `GENESIS_ADMIN_API_TOKEN`, `BOOKPI_INTEGRITY_SECRET`, `ALLOWED_ORIGINS` y `STRIPE_WEBHOOK_SECRET`; cambiar Stripe a Live antes de cargos. La URL pública ya se toma de `ISABELLA_PUBLIC_URL`; la base ya acepta aliases PostgreSQL existentes. Ejecutar readiness contra configuración real de producción. Después, CI del SHA, Docker/K8s, smoke remoto, aprobación humana, canary y rollback. Ningún valor de credencial se incluye en este reporte.

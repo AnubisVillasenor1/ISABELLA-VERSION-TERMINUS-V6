@@ -27,7 +27,10 @@ function cleanEnvValue(value: string | undefined): string | undefined {
   return trimmed;
 }
 function resolvePublicUrl(source: RawEnv): string | undefined {
-  const explicit = cleanEnvValue(source.PUBLIC_URL);
+  const explicit =
+    cleanEnvValue(source.PUBLIC_URL) ||
+    cleanEnvValue(source.APP_PUBLIC_URL) ||
+    cleanEnvValue(source.ISABELLA_PUBLIC_URL);
   if (explicit) return explicit;
   const vercelUrl = cleanEnvValue(source.VERCEL_URL);
   if (vercelUrl) return /^https?:\/\//i.test(vercelUrl) ? vercelUrl : `https://${vercelUrl}`;
@@ -122,6 +125,7 @@ function assertProductionStorageProvider(mode: RuntimeMode, source: RawEnv, pars
       'DATABASE_URL debe declararse como autoridad durable única en staging/production.'
     );
   const providerAliases = [
+    'POSTGRES_URL',
     'NEON_DATABASE_POSTGRES_URL',
     'NEON_DATABASE_DATABASE_URL',
     'POSTGRES_PRISMA_URL',
@@ -142,7 +146,11 @@ function assertProductionStorageProvider(mode: RuntimeMode, source: RawEnv, pars
 export function loadConfig(source: RawEnv = process.env): Env {
   const fingerprint = environmentFingerprint(source);
   if (cached && cachedFingerprint === fingerprint) return cached;
-  const databaseUrl = cleanEnvValue(source.DATABASE_URL);
+  const databaseUrl =
+    cleanEnvValue(source.DATABASE_URL) ||
+    cleanEnvValue(source.POSTGRES_URL) ||
+    cleanEnvValue(source.POSTGRES_PRISMA_URL) ||
+    cleanEnvValue(source.POSTGRES_URL_NON_POOLING);
   const effectiveSource: RawEnv = {
     ...source,
     ISABELLA_RUNTIME_MODE:
