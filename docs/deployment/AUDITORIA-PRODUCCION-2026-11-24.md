@@ -14,7 +14,7 @@
 | TypeScript principal | PASS | `pnpm run typecheck` |
 | ESLint | PASS | `pnpm run lint`, cero warnings/error |
 | Compilación distribuible | PASS | `pnpm run build:dist`; `dist/server.js` y chequeo de JS completados |
-| Validación canónica | PASS | `pnpm run validate`: typecheck, lint, formato y build completo; 404 archivos y 2.896 pruebas aprobadas |
+| Validación canónica | PASS | `pnpm run validate`: typecheck, lint, formato y build completo; 404 archivos y 2.899 pruebas aprobadas |
 | Smoke runtime | PASS | `pnpm run smoke:runtime`; endpoints/guardrails locales pasan. IKES necesitó reintentos de hidratación inicial; inferencia externa se omitió sin credencial OpenRouter elegible. |
 | Smoke UI | PASS | `pnpm run smoke:ui`: navegación, intro, workspace y exportaciones |
 | Seguridad del repositorio | PASS | `pnpm run security:suite`: 14 controles, 0 fallidos |
