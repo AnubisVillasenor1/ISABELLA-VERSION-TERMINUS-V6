@@ -12,6 +12,7 @@ import {
   looksLikeTemplate,
   runPreflight,
   weakSecretReason,
+  isVercelGatewayConfigured,
   type PreflightFinding,
 } from './preflight';
 
@@ -102,11 +103,23 @@ export function runDeployReadiness(env: Env): DeployReadinessReport {
       add('DR-BOOKPI-SECRET-WEAK', 'ERROR', `BOOKPI_INTEGRITY_SECRET is weak (${weak}).`);
   }
 
-  const dbUrl =
-    env.DATABASE_URL?.trim() ||
-    env.POSTGRES_URL?.trim() ||
-    env.POSTGRES_PRISMA_URL?.trim() ||
-    env.POSTGRES_URL_NON_POOLING?.trim();
+  // The production repository factory requires DATABASE_URL as the single authoritative
+  // connection string; POSTGRES_* integration aliases alone do not satisfy its contract.
+  const dbUrl = env.DATABASE_URL?.trim();
+  const storageProvider = env.ISABELLA_STORAGE_PROVIDER?.trim().toLowerCase();
+  if (!storageProvider) {
+    add(
+      'DR-STORAGE-PROVIDER-MISSING',
+      'ERROR',
+      'ISABELLA_STORAGE_PROVIDER must explicitly select postgres or neon in production.'
+    );
+  } else if (!['postgres', 'neon'].includes(storageProvider)) {
+    add(
+      'DR-STORAGE-PROVIDER-INVALID',
+      'ERROR',
+      'ISABELLA_STORAGE_PROVIDER must be postgres or neon in production.'
+    );
+  }
   // Los almacenes durables sólo pueden usar una cadena que no sea plantilla; con `<host>` sin
   // rellenar el adaptador Postgres falla al conectar y cae a memoria, que es justo lo que el
   // contrato serverless quiere prohibir.
@@ -115,7 +128,7 @@ export function runDeployReadiness(env: Env): DeployReadinessReport {
     add(
       'DR-DATABASE-MISSING',
       'ERROR',
-      'No DATABASE_URL / POSTGRES_URL: BookPI and subscriptions would be volatile.'
+      'DATABASE_URL is required as the canonical durable database connection string for production.'
     );
   } else if (looksLikeTemplate(dbUrl)) {
     add(
@@ -217,7 +230,11 @@ export function runDeployReadiness(env: Env): DeployReadinessReport {
   }
 
   // Generative inference: without a provider the chat answers from the local deterministic engine only.
-  if (!PROVIDER_VARS.some((n) => has(env, n)) && !has(env, 'ISABELLA_KEYLESS_FREE_PROVIDER')) {
+  if (
+    !PROVIDER_VARS.some((n) => has(env, n)) &&
+    !has(env, 'ISABELLA_KEYLESS_FREE_PROVIDER') &&
+    !isVercelGatewayConfigured(env)
+  ) {
     add(
       'DR-NO-INFERENCE-PROVIDER',
       'WARN',

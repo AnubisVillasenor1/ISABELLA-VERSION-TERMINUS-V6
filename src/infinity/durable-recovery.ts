@@ -38,7 +38,13 @@ export function stableOperationId(
 ): string {
   const body = JSON.stringify(
     { tenant_id: tenantId, workflow_id: workflowId, step_id: stepId, payload, actor_did: actorDid },
-    Object.keys({ tenant_id: tenantId, workflow_id: workflowId, step_id: stepId, payload, actor_did: actorDid }).sort()
+    Object.keys({
+      tenant_id: tenantId,
+      workflow_id: workflowId,
+      step_id: stepId,
+      payload,
+      actor_did: actorDid,
+    }).sort()
   );
   // Use canonical key ordering
   const canonical = JSON.stringify(
@@ -46,7 +52,8 @@ export function stableOperationId(
     (key, value) => {
       if (value && typeof value === 'object' && !Array.isArray(value)) {
         const sorted: Record<string, unknown> = {};
-        for (const k of Object.keys(value).sort()) sorted[k] = (value as Record<string, unknown>)[k];
+        for (const k of Object.keys(value).sort())
+          sorted[k] = (value as Record<string, unknown>)[k];
         return sorted;
       }
       return value;
@@ -65,7 +72,11 @@ export function merkleRoot(hashes: readonly string[]): string | null {
     if (level.length % 2 === 1) level.push(level[level.length - 1]);
     const next: string[] = [];
     for (let i = 0; i < level.length; i += 2) {
-      next.push(createHash('sha256').update(level[i] + level[i + 1]).digest('hex'));
+      next.push(
+        createHash('sha256')
+          .update(level[i] + level[i + 1])
+          .digest('hex')
+      );
     }
     level = next;
   }
@@ -168,7 +179,13 @@ export class RecoveryStore {
 
 // ── Ed25519 Signer (TAMV Seal) ─────────────────────────────────────────────
 
-import { generateKeyPairSync, sign as edSign, verify as edVerify, createPublicKey, createPrivateKey } from 'node:crypto';
+import {
+  generateKeyPairSync,
+  sign as edSign,
+  verify as edVerify,
+  createPublicKey,
+  createPrivateKey,
+} from 'node:crypto';
 
 export class Ed25519Signer {
   private readonly privateKey: ReturnType<typeof createPrivateKey>;
@@ -176,7 +193,11 @@ export class Ed25519Signer {
 
   constructor(privateKeyBytes?: Buffer) {
     if (privateKeyBytes) {
-      this.privateKey = createPrivateKey({ key: privateKeyBytes, format: 'raw', type: 'pkcs8' } as any);
+      this.privateKey = createPrivateKey({
+        key: privateKeyBytes,
+        format: 'raw',
+        type: 'pkcs8',
+      } as any);
     } else {
       const { privateKey } = generateKeyPairSync('ed25519');
       this.privateKey = privateKey;
@@ -194,7 +215,10 @@ export class Ed25519Signer {
   static verify(publicHex: string, data: string | Buffer, signatureHex: string): boolean {
     try {
       // Construct SPKI DER from raw 32-byte public key
-      const spkiDer = Buffer.concat([Buffer.from('302a300506032b6570032100', 'hex'), Buffer.from(publicHex, 'hex')]);
+      const spkiDer = Buffer.concat([
+        Buffer.from('302a300506032b6570032100', 'hex'),
+        Buffer.from(publicHex, 'hex'),
+      ]);
       const pubKey = createPublicKey({ key: spkiDer, format: 'der', type: 'spki' });
       return edVerify(null, Buffer.from(data), pubKey, Buffer.from(signatureHex, 'hex'));
     } catch {
@@ -236,9 +260,12 @@ export class EventLog {
     if (this.events.some((e) => e.eventId === event.eventId)) {
       throw new Error('duplicate event_id');
     }
-    const previousHash = this.events.length > 0 ? this.events[this.events.length - 1].digest : '0'.repeat(64);
+    const previousHash =
+      this.events.length > 0 ? this.events[this.events.length - 1].digest : '0'.repeat(64);
     const body = { ...event, previousHash };
-    const digest = createHash('sha256').update(JSON.stringify(body, Object.keys(body).sort())).digest('hex');
+    const digest = createHash('sha256')
+      .update(JSON.stringify(body, Object.keys(body).sort()))
+      .digest('hex');
     const signature = this.signer.sign(digest);
     const fullEvent: TAMVEvent = { ...body, signature, digest };
     this.events.push(fullEvent);
@@ -249,13 +276,39 @@ export class EventLog {
     let previous = '0'.repeat(64);
     for (const event of this.events) {
       if (event.previousHash !== previous) return false;
-      const body = { eventId: event.eventId, kind: event.kind, tenantId: event.tenantId, workflowId: event.workflowId, stepId: event.stepId, payload: event.payload, actorDid: event.actorDid, previousHash: event.previousHash, timestamp: event.timestamp, signature: event.signature };
-      const expected = createHash('sha256').update(JSON.stringify(body, Object.keys(body).sort())).digest('hex');
+      const body = {
+        eventId: event.eventId,
+        kind: event.kind,
+        tenantId: event.tenantId,
+        workflowId: event.workflowId,
+        stepId: event.stepId,
+        payload: event.payload,
+        actorDid: event.actorDid,
+        previousHash: event.previousHash,
+        timestamp: event.timestamp,
+        signature: event.signature,
+      };
+      const expected = createHash('sha256')
+        .update(JSON.stringify(body, Object.keys(body).sort()))
+        .digest('hex');
       // Actually verify digest without signature
-      const bodyNoSig = { eventId: event.eventId, kind: event.kind, tenantId: event.tenantId, workflowId: event.workflowId, stepId: event.stepId, payload: event.payload, actorDid: event.actorDid, previousHash: event.previousHash, timestamp: event.timestamp };
-      const expectedDigest = createHash('sha256').update(JSON.stringify(bodyNoSig, Object.keys(bodyNoSig).sort())).digest('hex');
+      const bodyNoSig = {
+        eventId: event.eventId,
+        kind: event.kind,
+        tenantId: event.tenantId,
+        workflowId: event.workflowId,
+        stepId: event.stepId,
+        payload: event.payload,
+        actorDid: event.actorDid,
+        previousHash: event.previousHash,
+        timestamp: event.timestamp,
+      };
+      const expectedDigest = createHash('sha256')
+        .update(JSON.stringify(bodyNoSig, Object.keys(bodyNoSig).sort()))
+        .digest('hex');
       if (event.digest !== expectedDigest) return false;
-      if (!Ed25519Signer.verify(this.signer.publicHex(), event.digest, event.signature)) return false;
+      if (!Ed25519Signer.verify(this.signer.publicHex(), event.digest, event.signature))
+        return false;
       previous = event.digest;
     }
     return true;
@@ -269,7 +322,11 @@ export class EventLog {
       if (level.length % 2 === 1) level.push(level[level.length - 1]);
       const next: string[] = [];
       for (let i = 0; i < level.length; i += 2) {
-        next.push(createHash('sha256').update(level[i] + level[i + 1]).digest('hex'));
+        next.push(
+          createHash('sha256')
+            .update(level[i] + level[i + 1])
+            .digest('hex')
+        );
       }
       level = next;
     }
@@ -414,7 +471,14 @@ export class MetaCognitiveRecoveryAdapter {
 
 export function describeDurableRecovery(): Readonly<Record<string, unknown>> {
   return {
-    patterns: ['idempotency-key', 'lease-fencing', 'lookup-before-retry', 'crash-recovery', 'at-least-once-relay', 'compensation'],
+    patterns: [
+      'idempotency-key',
+      'lease-fencing',
+      'lookup-before-retry',
+      'crash-recovery',
+      'at-least-once-relay',
+      'compensation',
+    ],
     storage: 'in-memory (reference; use Postgres for production)',
     multiMachine: false,
     executionPerformed: false,

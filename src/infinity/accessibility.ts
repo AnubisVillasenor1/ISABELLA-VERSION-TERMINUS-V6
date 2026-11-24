@@ -66,7 +66,9 @@ export function evaluateA11y(declaration: unknown): A11yReport {
   const input = declaration as A11yDeclaration;
 
   const findings: A11yFinding[] = A11Y_CHECKS.map((check) => {
-    const key = check.replace(/-([a-z])/g, (_, letter: string) => letter.toUpperCase()) as keyof A11yDeclaration;
+    const key = check.replace(/-([a-z])/g, (_, letter: string) =>
+      letter.toUpperCase()
+    ) as keyof A11yDeclaration;
     // map check id to property name
     const propertyMap: Readonly<Record<A11yCheck, keyof A11yDeclaration>> = {
       'lang-declared': 'langDeclared',

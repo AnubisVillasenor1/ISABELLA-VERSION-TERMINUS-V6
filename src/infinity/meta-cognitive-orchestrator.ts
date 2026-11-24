@@ -23,7 +23,11 @@ export interface OrchestrationInput {
   readonly model: string;
   readonly authorDid: string;
   readonly jurisdiction: 'EU' | 'US' | 'MX' | 'GLOBAL';
-  readonly cognitiveLayers: { readonly logic: number; readonly empathy: number; readonly resonance: number };
+  readonly cognitiveLayers: {
+    readonly logic: number;
+    readonly empathy: number;
+    readonly resonance: number;
+  };
   readonly timestamp: string;
 }
 
@@ -88,7 +92,10 @@ export class MetaCognitiveOrchestrator {
     };
   }
 
-  async compensate(tpg: string, reason: string): Promise<{ status: string; tpg: string; reason: string }> {
+  async compensate(
+    tpg: string,
+    reason: string
+  ): Promise<{ status: string; tpg: string; reason: string }> {
     return { status: 'compensated', tpg, reason };
   }
 

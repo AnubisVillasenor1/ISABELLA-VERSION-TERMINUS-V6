@@ -16,6 +16,7 @@ const good = {
   APP_PUBLIC_URL: "https://isabella.example.org",
   BOOKPI_INTEGRITY_SECRET: strong("bookpi"),
   DATABASE_URL: "postgresql://u:p@db.example.org:5432/isabella?sslmode=require",
+  ISABELLA_STORAGE_PROVIDER: "postgres",
   ISABELLA_VERIFIED_KNOWLEDGE_BACKEND: "mongodb",
   MONGODB_URI: "mongodb+srv://user:password@cluster.example.org/isabella?retryWrites=true&w=majority",
   SUPABASE_URL: "https://x.supabase.co",
@@ -33,13 +34,29 @@ describe('deploy readiness', () => {
     expect(r.status).toBe('READY');
   });
 
-  it('blocks without the integrity secret or a database', () => {
-    const { BOOKPI_INTEGRITY_SECRET: _s, DATABASE_URL: _d, ...rest } = good;
+  it('blocks without the integrity secret, canonical provider, or database', () => {
+    const {
+      BOOKPI_INTEGRITY_SECRET: _s,
+      DATABASE_URL: _d,
+      ISABELLA_STORAGE_PROVIDER: _p,
+      ...rest
+    } = good;
     const r = runDeployReadiness(rest);
     expect(r.status).toBe('BLOCKED');
     const ids = r.findings.map((f) => f.id);
     expect(ids).toContain('DR-BOOKPI-SECRET-MISSING');
     expect(ids).toContain('DR-DATABASE-MISSING');
+    expect(ids).toContain('DR-STORAGE-PROVIDER-MISSING');
+  });
+
+  it('requires the canonical DATABASE_URL even when a provider alias exists', () => {
+    const { DATABASE_URL: _databaseUrl, ...rest } = good;
+    const report = runDeployReadiness({
+      ...rest,
+      POSTGRES_URL: 'postgresql://u:p@db.example.org:5432/isabella?sslmode=require',
+    });
+    expect(report.findings.map((finding) => finding.id)).toContain('DR-DATABASE-MISSING');
+    expect(report.status).toBe('BLOCKED');
   });
 
   it('rejects a weak integrity secret and a non-postgres URL', () => {
@@ -66,6 +83,17 @@ describe('deploy readiness', () => {
     const { SUPABASE_ANON_KEY: _anon, ...rest } = good;
     const ids = runDeployReadiness(rest).findings.map((f) => f.id);
     expect(ids).toContain('DR-SUPABASE-AUTH-KEY-MISSING');
+  });
+
+  it('accepts the Vercel OIDC-backed AI Gateway without a static provider key', () => {
+    const { GROQ_API_KEY: _g, ...rest } = good;
+    const report = runDeployReadiness({
+      ...rest,
+      VERCEL: '1',
+      ISABELLA_API_KEY_STORE: 'postgres',
+      ISABELLA_FEDERATION_STORE: 'postgres',
+    });
+    expect(report.findings.map((finding) => finding.id)).not.toContain('DR-NO-INFERENCE-PROVIDER');
   });
 
   it('warns about a missing inference provider and blocks local origins', () => {

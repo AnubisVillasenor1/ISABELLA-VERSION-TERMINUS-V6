@@ -31,18 +31,31 @@ function parseVector(value: unknown): number[] {
   // [dimensions]. Mean-pool token vectors to a single sentence vector.
   if (Array.isArray(candidate) && Array.isArray(candidate[0])) {
     const rows = candidate as unknown[];
-    if (rows.every((row) => Array.isArray(row) && row.length > 0 && row.every((n) => typeof n === 'number' && Number.isFinite(n)))) {
+    if (
+      rows.every(
+        (row) =>
+          Array.isArray(row) &&
+          row.length > 0 &&
+          row.every((n) => typeof n === 'number' && Number.isFinite(n))
+      )
+    ) {
       const width = (rows[0] as number[]).length;
-      if (rows.some((row) => (row as number[]).length !== width)) throw new Error('IDR_EMBEDDING_DIMENSION_MISMATCH');
-      candidate = Array.from({ length: width }, (_, i) =>
-        (rows as number[][]).reduce((sum, row) => sum + row[i], 0) / rows.length,
+      if (rows.some((row) => (row as number[]).length !== width))
+        throw new Error('IDR_EMBEDDING_DIMENSION_MISMATCH');
+      candidate = Array.from(
+        { length: width },
+        (_, i) => (rows as number[][]).reduce((sum, row) => sum + row[i], 0) / rows.length
       );
     } else {
       candidate = rows[0];
     }
   }
-  if (!Array.isArray(candidate) || candidate.length < 2 || candidate.length > MAX_VECTOR_DIMENSIONS ||
-      !candidate.every((item) => typeof item === 'number' && Number.isFinite(item))) {
+  if (
+    !Array.isArray(candidate) ||
+    candidate.length < 2 ||
+    candidate.length > MAX_VECTOR_DIMENSIONS ||
+    !candidate.every((item) => typeof item === 'number' && Number.isFinite(item))
+  ) {
     throw new Error('IDR_INVALID_EMBEDDING_RESPONSE');
   }
   return candidate as number[];
@@ -67,15 +80,28 @@ function cachedProvider(embedOne: (text: string) => Promise<number[]>): Embeddin
 }
 
 function ollamaProvider(env: NodeJS.ProcessEnv): ConfiguredEmbeddingProvider {
-  const baseUrl = (env.IDR_OLLAMA_BASE_URL ?? env.OLLAMA_BASE_URL ?? 'http://127.0.0.1:11434').replace(/\/+$/, '');
+  const baseUrl = (
+    env.IDR_OLLAMA_BASE_URL ??
+    env.OLLAMA_BASE_URL ??
+    'http://127.0.0.1:11434'
+  ).replace(/\/+$/, '');
   let parsed: URL;
-  try { parsed = new URL(baseUrl); } catch {
+  try {
+    parsed = new URL(baseUrl);
+  } catch {
     return { mode: 'ollama', model: null, reason: 'invalid-configuration' };
   }
-  const loopback = parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1' || parsed.hostname === '[::1]';
+  const loopback =
+    parsed.hostname === 'localhost' ||
+    parsed.hostname === '127.0.0.1' ||
+    parsed.hostname === '[::1]';
   const remoteOptIn = env.IDR_OLLAMA_ALLOW_REMOTE === 'true';
-  if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password ||
-      (!loopback && !(remoteOptIn && parsed.protocol === 'https:'))) {
+  if (
+    !['http:', 'https:'].includes(parsed.protocol) ||
+    parsed.username ||
+    parsed.password ||
+    (!loopback && !(remoteOptIn && parsed.protocol === 'https:'))
+  ) {
     return { mode: 'ollama', model: null, reason: 'invalid-configuration' };
   }
   const model = env.IDR_OLLAMA_EMBEDDING_MODEL ?? 'nomic-embed-text-v2-moe';
@@ -91,8 +117,9 @@ function ollamaProvider(env: NodeJS.ProcessEnv): ConfiguredEmbeddingProvider {
       signal: AbortSignal.timeout(timeout),
     });
     if (!response.ok) throw new Error(`IDR_OLLAMA_HTTP_${response.status}`);
-    const body = await response.json() as { embeddings?: unknown };
-    if (!Array.isArray(body.embeddings) || !body.embeddings.length) throw new Error('IDR_OLLAMA_INVALID_RESPONSE');
+    const body = (await response.json()) as { embeddings?: unknown };
+    if (!Array.isArray(body.embeddings) || !body.embeddings.length)
+      throw new Error('IDR_OLLAMA_INVALID_RESPONSE');
     return parseVector(body.embeddings[0]);
   });
   return { provider, mode: 'ollama', model, reason: 'configured' };
@@ -101,13 +128,22 @@ function ollamaProvider(env: NodeJS.ProcessEnv): ConfiguredEmbeddingProvider {
 function teiProvider(env: NodeJS.ProcessEnv): ConfiguredEmbeddingProvider {
   const baseUrl = (env.IDR_TEI_BASE_URL ?? 'http://127.0.0.1:8080').replace(/\/+$/, '');
   let parsed: URL;
-  try { parsed = new URL(baseUrl); } catch {
+  try {
+    parsed = new URL(baseUrl);
+  } catch {
     return { mode: 'tei', model: null, reason: 'invalid-configuration' };
   }
-  const loopback = parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1' || parsed.hostname === '[::1]';
+  const loopback =
+    parsed.hostname === 'localhost' ||
+    parsed.hostname === '127.0.0.1' ||
+    parsed.hostname === '[::1]';
   const remoteOptIn = env.IDR_TEI_ALLOW_REMOTE === 'true';
-  if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password ||
-      (!loopback && !(remoteOptIn && parsed.protocol === 'https:'))) {
+  if (
+    !['http:', 'https:'].includes(parsed.protocol) ||
+    parsed.username ||
+    parsed.password ||
+    (!loopback && !(remoteOptIn && parsed.protocol === 'https:'))
+  ) {
     return { mode: 'tei', model: null, reason: 'invalid-configuration' };
   }
   const model = env.IDR_TEI_MODEL ?? 'self-hosted-text-embeddings-inference';
@@ -150,7 +186,7 @@ function huggingFaceProvider(env: NodeJS.ProcessEnv): ConfiguredEmbeddingProvide
 
 /** Never chooses a remote provider implicitly. Set IDR_EMBEDDINGS_PROVIDER explicitly. */
 export function createConfiguredEmbeddingProvider(
-  env: NodeJS.ProcessEnv = process.env,
+  env: NodeJS.ProcessEnv = process.env
 ): ConfiguredEmbeddingProvider {
   const requested = (env.IDR_EMBEDDINGS_PROVIDER ?? 'none').toLowerCase();
   if (requested === 'none' || requested === 'off') {

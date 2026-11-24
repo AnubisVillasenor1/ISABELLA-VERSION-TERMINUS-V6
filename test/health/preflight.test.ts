@@ -53,6 +53,10 @@ describe("runPreflight", () => {
     const unpaired = runPreflight({ NODE_ENV: "production", GENESIS_ADMIN_API_TOKEN: rand, OPENROUTER_API_KEY: rand, LOCAL_VISION_BASE_URL: "https://vision.example" });
     expect(unpaired.findings.map((f) => f.id)).toContain("PF-LOCAL-VISION-KEY-MISSING");
   });
+  it("accepts Vercel OIDC-backed AI Gateway without a static provider key", () => {
+    const report = runPreflight({ NODE_ENV: "production", GENESIS_ADMIN_API_TOKEN: rand, VERCEL: "1" });
+    expect(report.findings.map((f) => f.id)).not.toContain("PF-AI-PROVIDER-MISSING");
+  });
   it("is lenient in development and warns when the kill switch is engaged", () => {
     const r = runPreflight({ ISA_KILL_SWITCH: "1" });
     expect(r.production).toBe(false);

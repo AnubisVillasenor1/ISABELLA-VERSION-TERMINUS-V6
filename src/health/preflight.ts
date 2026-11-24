@@ -79,6 +79,11 @@ function trimmed(env: Env, name: string): string | undefined {
   return v ? v : undefined;
 }
 
+/** Vercel issues short-lived OIDC for AI Gateway at runtime; CI does not receive that token from `vercel pull`. */
+export function isVercelGatewayConfigured(env: Env): boolean {
+  return envFlag(env, 'VERCEL') && trimmed(env, 'ISABELLA_GATEWAY_MODEL')?.toLowerCase() !== 'off';
+}
+
 export function runPreflight(env: Env): PreflightReport {
   const production = env.NODE_ENV === 'production';
   const findings: PreflightFinding[] = [];
@@ -111,7 +116,7 @@ export function runPreflight(env: Env): PreflightReport {
   }
 
   const configuredProviders = PROVIDER_KEYS.filter((name) => trimmed(env, name) !== undefined);
-  if (configuredProviders.length === 0) {
+  if (configuredProviders.length === 0 && !isVercelGatewayConfigured(env)) {
     add(
       'PF-AI-PROVIDER-MISSING',
       production ? 'ERROR' : 'WARN',
@@ -128,7 +133,10 @@ export function runPreflight(env: Env): PreflightReport {
       );
     }
   }
-  if (trimmed(env, 'LOCAL_VISION_BASE_URL') !== undefined && trimmed(env, 'LOCAL_VISION_API_KEY') === undefined) {
+  if (
+    trimmed(env, 'LOCAL_VISION_BASE_URL') !== undefined &&
+    trimmed(env, 'LOCAL_VISION_API_KEY') === undefined
+  ) {
     add(
       'PF-LOCAL-VISION-KEY-MISSING',
       production ? 'ERROR' : 'WARN',

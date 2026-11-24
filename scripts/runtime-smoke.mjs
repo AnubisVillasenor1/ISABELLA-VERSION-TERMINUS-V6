@@ -37,10 +37,21 @@ try {
   assert.equal(health.headers.get("x-frame-options"), "DENY", "API must reject framing");
   assert.equal(health.headers.get("referrer-policy"), "strict-origin-when-cross-origin", "API must set a conservative referrer policy");
   assert.equal(health.headers.get("x-powered-by"), null, "Express fingerprint header must be disabled");
-  const statusResponse = await fetch(baseUrl + "/api/v1/status", { signal: AbortSignal.timeout(5_000) });
-  assert.equal(statusResponse.status, 200, "runtime status must remain available");
+  let statusResponse;
+  let statusBody;
+  for (let attempt = 0; attempt < 60; attempt += 1) {
+    statusResponse = await fetch(baseUrl + "/api/v1/status", { signal: AbortSignal.timeout(5_000) });
+    assert.equal(statusResponse.status, 200, "runtime status must remain available");
+    statusBody = await statusResponse.json();
+    const startupHydrationPending = (statusBody.diagnostics?.probeFailures ?? []).some(
+      (failure) =>
+        failure.probe === "ikes-claims-count" &&
+        failure.reason === "IKES_PERSISTENCE_NOT_INITIALIZED",
+    );
+    if (!startupHydrationPending) break;
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
   assert.match(statusResponse.headers.get("content-security-policy") ?? "", /default-src 'none'/, "API responses must retain the strict CSP and must not be overwritten by the UI policy");
-  const statusBody = await statusResponse.json();
   assert.ok(["VOLATILE_IN_MEMORY_HASH_CHAIN", "DURABLE_APPEND_ONLY_JSONL_LOCAL_SCOPE", "POSTGRES_SHARED_DURABLE"].includes(statusBody.engines?.bookpi),
     "BookPI status must disclose the configured backend without asserting external durability");
   assert.ok(["PROCESS_MEMORY_NOT_DURABLE", "LOCAL_FILE_FSYNCED_NOT_SHARED_NOT_WORM", "POSTGRES_SHARED_DURABLE_NOT_WORM"].includes(statusBody.engines?.bookpiDurability),

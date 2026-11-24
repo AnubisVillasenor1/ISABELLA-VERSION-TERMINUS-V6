@@ -15,6 +15,18 @@ CAPABILITY ≠ AUTHORITY ≠ EXECUTION ≠ EVIDENCE
 
 Ningún documento, tabla o respuesta de API puede elevar una categoría a otra. El inventario de rutas (`docs/api/route-inventory.json`), el canon Ω∞ (`src/platform/omega-canon.ts`) y las auditorías de `src/infinity/` declaran la madurez real de cada capacidad, y hay pruebas que fallan si una cifra inventada reaparece.
 
+## Instalación reproducible
+
+Usa Node.js 24 y pnpm 10.28.0, fijados en `package.json`. En un checkout limpio instala dependencias sin modificar el lockfile:
+
+```sh
+corepack pnpm install --frozen-lockfile
+```
+
+## Gates pendientes para liberar
+
+Un build local no equivale a una liberación. Antes de desplegar, exige evidencia del SHA exacto para `pnpm run validate`, la suite de seguridad, auditoría de dependencias, SBOM, escaneo de secretos, `pnpm run deploy:readiness` con configuración real del entorno y smoke post-deploy. El flujo de producción además requiere aprobación humana en el environment protegido, readiness satisfactoria, verificación canary y rollback probado. Si una puerta no se observó, se reporta pendiente; no se infiere como aprobada.
+
 ## Superficie HTTP (355 entradas en el inventario de rutas; madurez variable)
 
 ### Gobernanza y runtime
