@@ -123,6 +123,17 @@ export {
 } from './cognitive-modulation';
 
 export {
+  ANCHOR_NETWORKS,
+  anchorMerkleRoot,
+  verifyMerkleProof,
+  describeBlockchainAnchor,
+  isAnchorNetwork,
+  type AnchorNetwork,
+  type AnchorRecord,
+  type AnchorProof,
+} from './blockchain-anchor';
+
+export {
   INCIDENT_TAXONOMY,
   IncidentRegistry,
   CrownOffice,
@@ -261,6 +272,7 @@ import { describeMediaOperations } from './media';
 import { describeJurisdictionalGateway } from './jurisdictional-gateway';
 import { describeProvenanceGenome } from './provenance-genome';
 import { describeCognitiveModulation } from './cognitive-modulation';
+import { describeBlockchainAnchor } from './blockchain-anchor';
 import { describeGovernanceEvolution } from './governance-evolution';
 import { describeDurableRecovery } from './durable-recovery';
 import { describeDesignTokens } from './design-tokens';
@@ -279,6 +291,7 @@ export interface InfinitySummary {
   readonly media: ReturnType<typeof describeMediaOperations>;
   readonly build: ReturnType<typeof describeBuildFabric>;
   readonly evolution: ReturnType<typeof describeEvolutionFabric>;
+  readonly blockchainAnchor: ReturnType<typeof describeBlockchainAnchor>;
   readonly governanceEvolution: ReturnType<typeof describeGovernanceEvolution>;
   readonly durableRecovery: ReturnType<typeof describeDurableRecovery>;
   readonly jurisdictionalGateway: ReturnType<typeof describeJurisdictionalGateway>;
@@ -311,6 +324,7 @@ export function describeInfinity(): InfinitySummary {
     media: describeMediaOperations(),
     build: describeBuildFabric(),
     evolution: describeEvolutionFabric(),
+    blockchainAnchor: describeBlockchainAnchor(),
     governanceEvolution: describeGovernanceEvolution(),
     durableRecovery: describeDurableRecovery(),
     jurisdictionalGateway: describeJurisdictionalGateway(),
