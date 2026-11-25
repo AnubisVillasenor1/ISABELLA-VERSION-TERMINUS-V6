@@ -123,6 +123,16 @@ export {
 } from './cognitive-modulation';
 
 export {
+  PQC_ALGORITHMS,
+  CLASSICAL_ALGORITHMS,
+  resolvePqcPolicy,
+  isPqcConstruction,
+  describePqcPolicy,
+  type PqcConstruction,
+  type PqcPolicy,
+} from './pqc-policy';
+
+export {
   ANCHOR_NETWORKS,
   anchorMerkleRoot,
   verifyMerkleProof,
@@ -272,6 +282,7 @@ import { describeMediaOperations } from './media';
 import { describeJurisdictionalGateway } from './jurisdictional-gateway';
 import { describeProvenanceGenome } from './provenance-genome';
 import { describeCognitiveModulation } from './cognitive-modulation';
+import { describePqcPolicy } from './pqc-policy';
 import { describeBlockchainAnchor } from './blockchain-anchor';
 import { describeGovernanceEvolution } from './governance-evolution';
 import { describeDurableRecovery } from './durable-recovery';
@@ -291,6 +302,7 @@ export interface InfinitySummary {
   readonly media: ReturnType<typeof describeMediaOperations>;
   readonly build: ReturnType<typeof describeBuildFabric>;
   readonly evolution: ReturnType<typeof describeEvolutionFabric>;
+  readonly pqcPolicy: ReturnType<typeof describePqcPolicy>;
   readonly blockchainAnchor: ReturnType<typeof describeBlockchainAnchor>;
   readonly governanceEvolution: ReturnType<typeof describeGovernanceEvolution>;
   readonly durableRecovery: ReturnType<typeof describeDurableRecovery>;
@@ -324,6 +336,7 @@ export function describeInfinity(): InfinitySummary {
     media: describeMediaOperations(),
     build: describeBuildFabric(),
     evolution: describeEvolutionFabric(),
+    pqcPolicy: describePqcPolicy(),
     blockchainAnchor: describeBlockchainAnchor(),
     governanceEvolution: describeGovernanceEvolution(),
     durableRecovery: describeDurableRecovery(),
