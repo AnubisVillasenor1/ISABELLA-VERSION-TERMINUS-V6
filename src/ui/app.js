@@ -1475,6 +1475,7 @@ const mountMeshCanvas = (host, canvas, options = {}) => {
   let height = 0;
   let frame = 0;
   let running = false;
+  let inViewport = false;
   const palette = ['159,247,255', '201,184,255', '169,245,208'];
   const resize = () => {
     const rect = canvas.getBoundingClientRect();
@@ -1549,22 +1550,25 @@ const mountMeshCanvas = (host, canvas, options = {}) => {
       if (!running) paint();
     });
   }
+  const syncAnimation = () => {
+    if (inViewport && !document.hidden) start();
+    else stop();
+  };
   if (typeof IntersectionObserver === 'function') {
     new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting) start();
-          else stop();
+          inViewport = entry.isIntersecting;
+          syncAnimation();
         });
       },
       { threshold: 0 }
     ).observe(host);
+  } else {
+    inViewport = true;
+    syncAnimation();
   }
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) stop();
-    else start();
-  });
-  start();
+  document.addEventListener('visibilitychange', syncAnimation);
 };
 
 const mountAmbientMesh = () => {
