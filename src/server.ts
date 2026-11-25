@@ -136,8 +136,9 @@ import { registerAgentRoutes } from './routes/agents';
 import { registerDevAgentMeshRoutes } from './routes/agents-mesh';
 import { registerInfinityRoutes } from './routes/infinity';
 import { registerDomainRuntimeRoutes } from './routes/domain-runtime';
-import { EvolutionFabric } from './infinity';
-import { registerNexusRoutes } from './routes/nexus';
+  import { EvolutionFabric } from './infinity';
+  import { createLatamvAssessmentStoreFromEnv } from './infinity/latamv-store';
+  import { registerNexusRoutes } from './routes/nexus';
 import { createNexusRuntime } from './nexus/runtime';
 import { PLATFORM_PUBLIC_SURFACE, registerPlatformRoutes } from './routes/platform';
 
@@ -409,6 +410,7 @@ let chatPlusAsset: StaticAsset | null = null;
 let cognitionClientAsset: StaticAsset | null = null;
 let nexusJsAsset: StaticAsset | null = null;
 let universeMapAsset: StaticAsset | null = null;
+let latamvJsAsset: StaticAsset | null = null;
 try {
   const rawHtml = fs.readFileSync(path.join(uiPath, 'index.html'), 'utf-8');
   const cinematicCss = fs.readFileSync(path.join(uiPath, 'cinematic.css'), 'utf-8');
@@ -419,6 +421,7 @@ try {
   const cognitionClientJs = fs.readFileSync(path.join(uiPath, 'cognition-client.js'), 'utf-8');
   const nexusJs = fs.readFileSync(path.join(uiPath, 'nexus.js'), 'utf-8');
   const universeMapJs = fs.readFileSync(path.join(uiPath, 'universe-map.js'), 'utf-8');
+  const latamvJs = fs.readFileSync(path.join(uiPath, 'latamv.js'), 'utf-8');
   const versioned = rawHtml
     .replace(/(\/styles\/cinematic\.css)\?v=[^"']*/, `$1?v=${contentHash(cinematicCss)}`)
     .replace(/(\/styles\/command-center\.css)\?v=[^"']*/, `$1?v=${contentHash(commandCenterCss)}`)
@@ -427,7 +430,8 @@ try {
     .replace(/(\/ui\/app\.js)\?v=[^"']*/, `$1?v=${contentHash(cinematicJs)}`)
     .replace(/(\/ui\/chat-plus\.js)\?v=[^"']*/, `$1?v=${contentHash(chatPlusJs)}`)
     .replace(/(\/ui\/nexus\.js)\?v=[^"']*/, `$1?v=${contentHash(nexusJs)}`)
-    .replace(/(\/ui\/universe-map\.js)\?v=[^"']*/, `$1?v=${contentHash(universeMapJs)}`);
+    .replace(/(\/ui\/universe-map\.js)\?v=[^"']*/, `$1?v=${contentHash(universeMapJs)}`)
+    .replace(/(\/ui\/latamv\.js)\?v=[^"']*/, `$1?v=${contentHash(latamvJs)}`);
   htmlAsset = buildAsset(versioned, 'text/html; charset=utf-8');
   cssAsset = buildAsset(cinematicCss, 'text/css; charset=utf-8');
   commandCenterCssAsset = buildAsset(commandCenterCss, 'text/css; charset=utf-8');
@@ -437,6 +441,7 @@ try {
   cognitionClientAsset = buildAsset(cognitionClientJs, 'text/javascript; charset=utf-8');
   nexusJsAsset = buildAsset(nexusJs, 'text/javascript; charset=utf-8');
   universeMapAsset = buildAsset(universeMapJs, 'text/javascript; charset=utf-8');
+  latamvJsAsset = buildAsset(latamvJs, 'text/javascript; charset=utf-8');
 } catch {
   console.warn('[Genesis] Cinematic UI assets are unavailable at startup.');
 }
@@ -558,6 +563,13 @@ app.get('/ui/nexus.js', (req, res) => {
     return;
   }
   serveAsset(req, res, nexusJsAsset, IMMUTABLE_CACHE);
+});
+app.get('/ui/latamv.js', (req, res) => {
+  if (latamvJsAsset === null) {
+    res.status(404).type('js').send('// LATAMV client unavailable');
+    return;
+  }
+  serveAsset(req, res, latamvJsAsset, IMMUTABLE_CACHE);
 });
 app.get('/ui/universe-map.js', (req, res) => {
   if (universeMapAsset === null) {
@@ -5017,43 +5029,46 @@ async function currentOpsState() {
   const bookPiReason = legacyLedgerProbe.reason;
   let atlasStatus: 'healthy' | 'degraded' | 'unavailable' = 'unavailable';
   let atlasReason = 'No Atlas persistence adapter is configured.';
-  if (runtime.persistence && typeof runtime.persistence.health === 'function') {
-    const probe = await atlasHealthCache.get(async () => {
-      try {
-        const healthy = await runtime.persistence!.health!();
-        return {
-          healthy,
-          reason: healthy
-            ? 'Read-only Atlas/Supabase query succeeded.'
-            : 'Atlas/Supabase health probe did not confirm a valid response.',
-        };
-      } catch (error) {
-        // Cache failed results briefly; do not turn every readiness request into
-        // a fresh 2-second timeout. Expose only a safe class/status, never the
-        // provider response body, URL, token, or connection string.
-        const message = error instanceof Error ? error.message : '';
-        const status = message.match(/Supabase REST error (\d{3})/u)?.[1];
-        const timedOut = /timeout|timed out|aborterror/iu.test(message);
-        const reason = status
-          ? `Read-only Atlas/Supabase query returned HTTP ${status}.`
-          : timedOut
-            ? 'Read-only Atlas/Supabase health probe timed out.'
-            : 'Read-only Atlas/Supabase health probe failed; inspect private server logs.';
-        return { healthy: false, reason };
-      }
-    });
-    atlasStatus = probe.healthy ? 'healthy' : 'unavailable';
-    atlasReason = probe.reason;
+  const [atlasProbe, pipelineLedgerProbe, ikesProbe] = await Promise.all([
+    runtime.persistence && typeof runtime.persistence.health === 'function'
+      ? atlasHealthCache.get(async () => {
+          try {
+            const healthy = await runtime.persistence!.health!();
+            return {
+              healthy,
+              reason: healthy
+                ? 'Read-only Atlas/Supabase query succeeded.'
+                : 'Atlas/Supabase health probe did not confirm a valid response.',
+            };
+          } catch (error) {
+            // Cache failed results briefly; do not turn every readiness request into
+            // a fresh 2-second timeout. Expose only a safe class/status, never the
+            // provider response body, URL, token, or connection string.
+            const message = error instanceof Error ? error.message : '';
+            const status = message.match(/Supabase REST error (\d{3})/u)?.[1];
+            const timedOut = /timeout|timed out|aborterror/iu.test(message);
+            const reason = status
+              ? `Read-only Atlas/Supabase query returned HTTP ${status}.`
+              : timedOut
+                ? 'Read-only Atlas/Supabase health probe timed out.'
+                : 'Read-only Atlas/Supabase health probe failed; inspect private server logs.';
+            return { healthy: false, reason };
+          }
+        })
+      : Promise.resolve(null),
+    pipelineBookPi.probe(),
+    ikesHealthCache.get(async () => runtime.memory.persistenceProbe()),
+  ]);
+  if (atlasProbe) {
+    atlasStatus = atlasProbe.healthy ? 'healthy' : 'unavailable';
+    atlasReason = atlasProbe.reason;
   } else if (runtime.persistence) {
     atlasStatus = 'degraded';
     atlasReason = 'Persistence adapter has no health probe; connectivity is unverified.';
   }
-
-  const pipelineLedgerProbe = await pipelineBookPi.probe();
   const pipelineLedgerStatus = pipelineLedgerProbe.healthy
     ? ('healthy' as const)
     : ('degraded' as const);
-  const ikesProbe = await ikesHealthCache.get(async () => runtime.memory.persistenceProbe());
   const ikesStatus = ikesProbe.healthy ? ('healthy' as const) : ('degraded' as const);
   // Observability is advisory: derive its evidence from the same configuration
   // probe the deep-readiness path uses, so the reason is measured, not hardcoded.
@@ -6205,6 +6220,7 @@ registerInfinityRoutes({
   isAdminAuthorized: (req) =>
     verifyBearerToken(req.get('authorization'), process.env.GENESIS_ADMIN_API_TOKEN) ===
     'AUTHORIZED',
+  latamvAssessmentStore: createLatamvAssessmentStoreFromEnv(),
 });
 
 // IDR: intent-to-capability planning only; policy is server-owned and execution is disabled.
@@ -6668,6 +6684,7 @@ registerRevenueFabricRoutes({
   authorizeProviderRoute: (req, res) => authorizeProviderRoute(req, res),
   resolveAuthenticatedUserId: (req) => resolveSupabaseUserId(req),
   stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+  billingEnabled: envFlag(process.env, 'ISABELLA_BILLING_ENABLED'),
   resolveCreatorEligibility: async (workspaceId) => {
     if (!subscriptionPersistencePool) return null;
     const subscription = await subscriptionStore.get(workspaceId);

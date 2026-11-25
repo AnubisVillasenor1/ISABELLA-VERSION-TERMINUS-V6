@@ -51,6 +51,7 @@ export default tseslint.config(
       'src/ui/cognition-client.js',
       'src/ui/nexus.js',
       'src/ui/universe-map.js',
+      'src/ui/latamv.js',
     ],
     languageOptions: {
       ecmaVersion: 'latest',
@@ -63,6 +64,7 @@ export default tseslint.config(
         sessionStorage: 'readonly',
         crypto: 'readonly',
         fetch: 'readonly',
+        FormData: 'readonly',
         URL: 'readonly',
         URLSearchParams: 'readonly',
         Blob: 'readonly',

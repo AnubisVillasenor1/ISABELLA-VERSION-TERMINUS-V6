@@ -215,6 +215,7 @@ export const envSchema = z
     // --- STRIPE & PAYOUTS ---
     STRIPE_SECRET_KEY: optionalString(),
     STRIPE_WEBHOOK_SECRET: optionalString(),
+    ISABELLA_BILLING_ENABLED: optionalString(),
     ISABELLA_PAYOUT_CIRCUIT_CERTIFIED: bool(false),
     // --- CONNECTOR WEBHOOKS (firma verificada de proveedores) ---
     GITHUB_WEBHOOK_SECRET: optionalMinString(16),
