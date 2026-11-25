@@ -123,21 +123,81 @@ export {
 } from './cognitive-modulation';
 
 export {
-  LATAMV_CONTROL_IDS,
-  LATAMV_CONTROLS,
-  LatamvInputError,
-  assessLatamv,
-  listLatamvPacks,
-  type LatamvControlId,
-  type LatamvControlStatus,
-  type LatamvJurisdiction,
-  type LatamvControlDeclaration,
-  type LatamvAssessmentInput,
-  type LatamvControlDefinition,
-  type LatamvPack,
-  type LatamvAssessedControl,
-  type LatamvAssessmentResult,
-} from './latamv-governance';
+  DEFAULT_THRESHOLDS,
+  M6FailClosedEngine,
+  describeM6FailClosed,
+  type M6State,
+  type M6Verdict,
+  type M6Thresholds,
+  type M6SafetyInputs,
+  type M6Factors,
+  type M6Command,
+  type M6Evaluation,
+  type EpochState,
+} from './m6-fail-closed';
+
+export {
+  TELEMETRY_TOPICS,
+  TELEMETRY_SCHEMAS,
+  validateTelemetryPayload,
+  detectAnomaly,
+  parseRecallAlert,
+  createVisionGuardMetadata,
+  AEGIS_MODULES,
+  describeAegisKineta,
+  type TelemetryTopic,
+  type TelemetryPayload,
+  type TelemetrySchema,
+  type TimeSeriesPoint,
+  type AnomalyResult,
+  type RecallAlert,
+  type VisionGuardMetadata,
+} from './aegis-kineta';
+
+export {
+  analyzeCode,
+  describeCodeAnalysis,
+  type CodeAnalysisResult,
+} from './code-analysis';
+
+export {
+  ResponseCache,
+  LatencyTracker,
+  cacheKey,
+  describePerformanceFabric,
+  type CacheEntry,
+  type PerformanceMetrics,
+} from './performance-fabric';
+
+export {
+  NATIVE_SKILLS_REGISTRY,
+  listNativeSkills,
+  getNativeSkill,
+  nativeSkillDigest,
+  describeNativeSkillRegistry,
+  type NativeSkill,
+} from './native-skill-registry';
+
+export {
+  PQC_ALGORITHMS,
+  CLASSICAL_ALGORITHMS,
+  resolvePqcPolicy,
+  isPqcConstruction,
+  describePqcPolicy,
+  type PqcConstruction,
+  type PqcPolicy,
+} from './pqc-policy';
+
+export {
+  ANCHOR_NETWORKS,
+  anchorMerkleRoot,
+  verifyMerkleProof,
+  describeBlockchainAnchor,
+  isAnchorNetwork,
+  type AnchorNetwork,
+  type AnchorRecord,
+  type AnchorProof,
+} from './blockchain-anchor';
 
 export {
   INCIDENT_TAXONOMY,
@@ -278,6 +338,13 @@ import { describeMediaOperations } from './media';
 import { describeJurisdictionalGateway } from './jurisdictional-gateway';
 import { describeProvenanceGenome } from './provenance-genome';
 import { describeCognitiveModulation } from './cognitive-modulation';
+import { describeM6FailClosed } from './m6-fail-closed';
+import { describeAegisKineta } from './aegis-kineta';
+import { describeCodeAnalysis } from './code-analysis';
+import { describePerformanceFabric } from './performance-fabric';
+import { describeNativeSkillRegistry } from './native-skill-registry';
+import { describePqcPolicy } from './pqc-policy';
+import { describeBlockchainAnchor } from './blockchain-anchor';
 import { describeGovernanceEvolution } from './governance-evolution';
 import { describeDurableRecovery } from './durable-recovery';
 import { describeDesignTokens } from './design-tokens';
@@ -296,6 +363,13 @@ export interface InfinitySummary {
   readonly media: ReturnType<typeof describeMediaOperations>;
   readonly build: ReturnType<typeof describeBuildFabric>;
   readonly evolution: ReturnType<typeof describeEvolutionFabric>;
+  readonly m6FailClosed: ReturnType<typeof describeM6FailClosed>;
+  readonly aegisKineta: ReturnType<typeof describeAegisKineta>;
+  readonly codeAnalysis: ReturnType<typeof describeCodeAnalysis>;
+  readonly performanceFabric: ReturnType<typeof describePerformanceFabric>;
+  readonly nativeSkillRegistry: ReturnType<typeof describeNativeSkillRegistry>;
+  readonly pqcPolicy: ReturnType<typeof describePqcPolicy>;
+  readonly blockchainAnchor: ReturnType<typeof describeBlockchainAnchor>;
   readonly governanceEvolution: ReturnType<typeof describeGovernanceEvolution>;
   readonly durableRecovery: ReturnType<typeof describeDurableRecovery>;
   readonly jurisdictionalGateway: ReturnType<typeof describeJurisdictionalGateway>;
@@ -328,6 +402,13 @@ export function describeInfinity(): InfinitySummary {
     media: describeMediaOperations(),
     build: describeBuildFabric(),
     evolution: describeEvolutionFabric(),
+    m6FailClosed: describeM6FailClosed(),
+    aegisKineta: describeAegisKineta(),
+    codeAnalysis: describeCodeAnalysis(),
+    performanceFabric: describePerformanceFabric(),
+    nativeSkillRegistry: describeNativeSkillRegistry(),
+    pqcPolicy: describePqcPolicy(),
+    blockchainAnchor: describeBlockchainAnchor(),
     governanceEvolution: describeGovernanceEvolution(),
     durableRecovery: describeDurableRecovery(),
     jurisdictionalGateway: describeJurisdictionalGateway(),
