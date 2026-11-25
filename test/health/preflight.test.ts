@@ -61,6 +61,7 @@ describe('runPreflight', () => {
   it('fails on weak/reused tokens, insecure URL, bad proxy/port, stripe misconfig', () => {
     const r = runPreflight({
       NODE_ENV: 'production',
+      ISABELLA_BILLING_ENABLED: 'true',
       GENESIS_ADMIN_API_TOKEN: 'changeme',
       OPS_API_TOKEN: 'changeme',
       APP_PUBLIC_URL: 'http://x.test',

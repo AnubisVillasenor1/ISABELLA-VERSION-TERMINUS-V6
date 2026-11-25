@@ -192,15 +192,27 @@ export function runPreflight(env: Env): PreflightReport {
     );
 
   const stripeKey = trimmed(env, 'STRIPE_SECRET_KEY');
-  if (stripeKey !== undefined) {
+  if (envFlag(env, 'ISABELLA_BILLING_ENABLED')) {
+    if (stripeKey === undefined)
+      add(
+        'PF-STRIPE-SECRET-MISSING',
+        production ? 'ERROR' : 'WARN',
+        'ISABELLA_BILLING_ENABLED is true but STRIPE_SECRET_KEY is not configured.'
+      );
     if (trimmed(env, 'STRIPE_WEBHOOK_SECRET') === undefined)
       add(
         'PF-STRIPE-WEBHOOK-MISSING',
-        'ERROR',
-        'STRIPE_SECRET_KEY is set without STRIPE_WEBHOOK_SECRET: subscription events cannot be verified.'
+        production ? 'ERROR' : 'WARN',
+        'ISABELLA_BILLING_ENABLED is true without STRIPE_WEBHOOK_SECRET: subscription events cannot be verified.'
       );
-    if (production && stripeKey.startsWith('sk_test_'))
+    if (production && stripeKey?.startsWith('sk_test_'))
       add('PF-STRIPE-TEST-KEY', 'ERROR', 'A Stripe test key is configured in production.');
+  } else if (stripeKey !== undefined || trimmed(env, 'STRIPE_WEBHOOK_SECRET') !== undefined) {
+    add(
+      'PF-STRIPE-BILLING-DISABLED',
+      'WARN',
+      'Stripe credentials exist but billing routes are disabled until ISABELLA_BILLING_ENABLED is true.'
+    );
   }
 
   if (env.ISA_KILL_SWITCH === '1' || env.ISA_KILL_SWITCH === 'true')

@@ -107,19 +107,21 @@ export function runDeployReadiness(env: Env): DeployReadinessReport {
       add('DR-BOOKPI-SECRET-WEAK', 'ERROR', `BOOKPI_INTEGRITY_SECRET is weak (${weak}).`);
   }
 
-  // Normalize Vercel/Postgres integration aliases to the same authoritative connection
-  // string accepted by the runtime; explicit provider selection remains a separate gate.
+  // Normalize Vercel/Postgres integration aliases exactly as runtime config does.
   const dbUrl =
     env.DATABASE_URL?.trim() ||
     env.POSTGRES_URL?.trim() ||
     env.POSTGRES_PRISMA_URL?.trim() ||
     env.POSTGRES_URL_NON_POOLING?.trim();
-  const storageProvider = env.ISABELLA_STORAGE_PROVIDER?.trim().toLowerCase();
+  // Runtime defaults to Postgres when a database URL exists; readiness must not
+  // reject that same valid production configuration for omitting a redundant selector.
+  const storageProvider =
+    env.ISABELLA_STORAGE_PROVIDER?.trim().toLowerCase() || (dbUrl ? 'postgres' : undefined);
   if (!storageProvider) {
     add(
       'DR-STORAGE-PROVIDER-MISSING',
       'ERROR',
-      'ISABELLA_STORAGE_PROVIDER must explicitly select postgres or neon in production.'
+      'ISABELLA_STORAGE_PROVIDER must resolve to postgres or neon in production.'
     );
   } else if (!['postgres', 'neon'].includes(storageProvider)) {
     add(

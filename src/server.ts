@@ -5029,43 +5029,46 @@ async function currentOpsState() {
   const bookPiReason = legacyLedgerProbe.reason;
   let atlasStatus: 'healthy' | 'degraded' | 'unavailable' = 'unavailable';
   let atlasReason = 'No Atlas persistence adapter is configured.';
-  if (runtime.persistence && typeof runtime.persistence.health === 'function') {
-    const probe = await atlasHealthCache.get(async () => {
-      try {
-        const healthy = await runtime.persistence!.health!();
-        return {
-          healthy,
-          reason: healthy
-            ? 'Read-only Atlas/Supabase query succeeded.'
-            : 'Atlas/Supabase health probe did not confirm a valid response.',
-        };
-      } catch (error) {
-        // Cache failed results briefly; do not turn every readiness request into
-        // a fresh 2-second timeout. Expose only a safe class/status, never the
-        // provider response body, URL, token, or connection string.
-        const message = error instanceof Error ? error.message : '';
-        const status = message.match(/Supabase REST error (\d{3})/u)?.[1];
-        const timedOut = /timeout|timed out|aborterror/iu.test(message);
-        const reason = status
-          ? `Read-only Atlas/Supabase query returned HTTP ${status}.`
-          : timedOut
-            ? 'Read-only Atlas/Supabase health probe timed out.'
-            : 'Read-only Atlas/Supabase health probe failed; inspect private server logs.';
-        return { healthy: false, reason };
-      }
-    });
-    atlasStatus = probe.healthy ? 'healthy' : 'unavailable';
-    atlasReason = probe.reason;
+  const [atlasProbe, pipelineLedgerProbe, ikesProbe] = await Promise.all([
+    runtime.persistence && typeof runtime.persistence.health === 'function'
+      ? atlasHealthCache.get(async () => {
+          try {
+            const healthy = await runtime.persistence!.health!();
+            return {
+              healthy,
+              reason: healthy
+                ? 'Read-only Atlas/Supabase query succeeded.'
+                : 'Atlas/Supabase health probe did not confirm a valid response.',
+            };
+          } catch (error) {
+            // Cache failed results briefly; do not turn every readiness request into
+            // a fresh 2-second timeout. Expose only a safe class/status, never the
+            // provider response body, URL, token, or connection string.
+            const message = error instanceof Error ? error.message : '';
+            const status = message.match(/Supabase REST error (\d{3})/u)?.[1];
+            const timedOut = /timeout|timed out|aborterror/iu.test(message);
+            const reason = status
+              ? `Read-only Atlas/Supabase query returned HTTP ${status}.`
+              : timedOut
+                ? 'Read-only Atlas/Supabase health probe timed out.'
+                : 'Read-only Atlas/Supabase health probe failed; inspect private server logs.';
+            return { healthy: false, reason };
+          }
+        })
+      : Promise.resolve(null),
+    pipelineBookPi.probe(),
+    ikesHealthCache.get(async () => runtime.memory.persistenceProbe()),
+  ]);
+  if (atlasProbe) {
+    atlasStatus = atlasProbe.healthy ? 'healthy' : 'unavailable';
+    atlasReason = atlasProbe.reason;
   } else if (runtime.persistence) {
     atlasStatus = 'degraded';
     atlasReason = 'Persistence adapter has no health probe; connectivity is unverified.';
   }
-
-  const pipelineLedgerProbe = await pipelineBookPi.probe();
   const pipelineLedgerStatus = pipelineLedgerProbe.healthy
     ? ('healthy' as const)
     : ('degraded' as const);
-  const ikesProbe = await ikesHealthCache.get(async () => runtime.memory.persistenceProbe());
   const ikesStatus = ikesProbe.healthy ? ('healthy' as const) : ('degraded' as const);
   // Observability is advisory: derive its evidence from the same configuration
   // probe the deep-readiness path uses, so the reason is measured, not hardcoded.
@@ -6681,6 +6684,7 @@ registerRevenueFabricRoutes({
   authorizeProviderRoute: (req, res) => authorizeProviderRoute(req, res),
   resolveAuthenticatedUserId: (req) => resolveSupabaseUserId(req),
   stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+  billingEnabled: envFlag(process.env, 'ISABELLA_BILLING_ENABLED'),
   resolveCreatorEligibility: async (workspaceId) => {
     if (!subscriptionPersistencePool) return null;
     const subscription = await subscriptionStore.get(workspaceId);

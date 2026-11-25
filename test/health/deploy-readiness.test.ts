@@ -53,28 +53,49 @@ describe('deploy readiness', () => {
     expect(r.status).toBe('READY');
   });
 
-  it('blocks without the integrity secret, canonical provider, or database', () => {
-    const {
-      BOOKPI_INTEGRITY_SECRET: _s,
-      DATABASE_URL: _d,
-      ISABELLA_STORAGE_PROVIDER: _p,
-      ...rest
-    } = good;
+  it('allows an initial deployment when Stripe credentials exist but billing stays disabled', () => {
+    const report = runDeployReadiness({ ...good, STRIPE_SECRET_KEY: 'sk_test_deferred' });
+    const ids = report.findings.map((finding) => finding.id);
+    expect(ids).toContain('PF-STRIPE-BILLING-DISABLED');
+    expect(ids).not.toContain('PF-STRIPE-WEBHOOK-MISSING');
+    expect(ids).not.toContain('PF-STRIPE-TEST-KEY');
+    expect(report.status).toBe('READY_WITH_WARNINGS');
+  });
+
+  it('blocks production billing when a test key or webhook secret is missing', () => {
+    const report = runDeployReadiness({
+      ...good,
+      ISABELLA_BILLING_ENABLED: 'true',
+      STRIPE_SECRET_KEY: 'sk_test_deferred',
+    });
+    const ids = report.findings.map((finding) => finding.id);
+    expect(ids).toContain('PF-STRIPE-WEBHOOK-MISSING');
+    expect(ids).toContain('PF-STRIPE-TEST-KEY');
+    expect(ids).not.toContain('PF-STRIPE-BILLING-DISABLED');
+  });
+
+  it('blocks without the integrity secret or database', () => {
+    const { BOOKPI_INTEGRITY_SECRET: _s, DATABASE_URL: _d, ...rest } = good;
     const r = runDeployReadiness(rest);
     expect(r.status).toBe('BLOCKED');
     const ids = r.findings.map((f) => f.id);
     expect(ids).toContain('DR-BOOKPI-SECRET-MISSING');
     expect(ids).toContain('DR-DATABASE-MISSING');
-    expect(ids).toContain('DR-STORAGE-PROVIDER-MISSING');
   });
 
-  it('accepts Vercel Postgres connection-string aliases when DATABASE_URL is absent', () => {
-    const { DATABASE_URL: _databaseUrl, ...rest } = good;
+  it('accepts Vercel Postgres connection-string aliases and runtime provider defaults', () => {
+    const {
+      DATABASE_URL: _databaseUrl,
+      ISABELLA_STORAGE_PROVIDER: _storageProvider,
+      ...rest
+    } = good;
     const report = runDeployReadiness({
       ...rest,
       POSTGRES_URL: 'postgresql://u:p@db.example.org:5432/isabella?sslmode=require',
     });
-    expect(report.findings.map((finding) => finding.id)).not.toContain('DR-DATABASE-MISSING');
+    const ids = report.findings.map((finding) => finding.id);
+    expect(ids).not.toContain('DR-DATABASE-MISSING');
+    expect(ids).not.toContain('DR-STORAGE-PROVIDER-MISSING');
     expect(report.status).toBe('READY');
   });
 

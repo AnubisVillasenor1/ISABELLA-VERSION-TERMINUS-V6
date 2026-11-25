@@ -58,6 +58,7 @@ export interface RevenueFabricDeps {
   readonly storage?: RevenueFabricStorage;
   readonly stripePublicKey?: string;
   readonly stripeWebhookSecret?: string;
+  readonly billingEnabled?: boolean;
   readonly resolveCreatorEligibility?: (
     workspaceId: string
   ) => Promise<{ plan: PlanId; status: SubscriptionStatus } | null>;
@@ -97,6 +98,7 @@ export function registerRevenueFabricRoutes(deps: RevenueFabricDeps): void {
     providerTimeoutMs,
     stripePublicKey,
     stripeWebhookSecret,
+    billingEnabled = false,
     resolveAuthenticatedUserId,
   } = deps;
 
@@ -744,6 +746,7 @@ export function registerRevenueFabricRoutes(deps: RevenueFabricDeps): void {
   // ============================================================
 
   app.post('/api/v1/billing/checkout', async (req, res) => {
+    if (!billingEnabled) return res.status(503).json({ success: false, error: 'BILLING_DISABLED' });
     if (!enforceRateLimit(req, res, rateLimiter, 'billing-checkout')) return;
 
     try {
@@ -788,6 +791,7 @@ export function registerRevenueFabricRoutes(deps: RevenueFabricDeps): void {
   });
 
   app.post('/api/v1/billing/portal', async (req, res) => {
+    if (!billingEnabled) return res.status(503).json({ success: false, error: 'BILLING_DISABLED' });
     if (!enforceRateLimit(req, res, rateLimiter, 'billing-portal')) return;
     try {
       const userId = resolveAuthenticatedUserId ? await resolveAuthenticatedUserId(req) : null;
@@ -815,6 +819,7 @@ export function registerRevenueFabricRoutes(deps: RevenueFabricDeps): void {
   });
 
   app.post('/api/v1/billing/stripe/webhook', async (req, res) => {
+    if (!billingEnabled) return res.status(404).json({ success: false, error: 'NOT_FOUND' });
     const signature = req.get('stripe-signature');
     const rawBody =
       (req as Request & { rawBody?: string }).rawBody ??
@@ -906,10 +911,11 @@ export function registerRevenueFabricRoutes(deps: RevenueFabricDeps): void {
       persistenceSchema: storage.getSchemaState().status,
       // A database URL does not prove that the subscription migration is applied.
       subscriptionPersistenceSchema: 'unverified' as const,
+      billingEnabled,
       stripeCheckoutEnvConfigured: Boolean(
-        process.env.STRIPE_SECRET_KEY && process.env.ISABELLA_PUBLIC_URL
+        billingEnabled && process.env.STRIPE_SECRET_KEY && process.env.ISABELLA_PUBLIC_URL
       ),
-      stripeWebhookSecretConfigured: Boolean(stripeWebhookSecret),
+      stripeWebhookSecretConfigured: Boolean(billingEnabled && stripeWebhookSecret),
       supabaseAuthEnvConfigured: Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY),
       creatorPayoutsEnabled: false,
     };
