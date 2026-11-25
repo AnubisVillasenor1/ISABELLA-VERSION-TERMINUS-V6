@@ -115,5 +115,5 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v-pinned from tag v4
         with:
           name: rust-build-evidence-${{ github.sha }}
-          path: evidence/rust-build.json
+          path: ige-omega/evidence/rust-build.json
           if-no-files-found: error

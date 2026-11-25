@@ -48,8 +48,8 @@ impl MemoryRepository {
         .bind(record.importance)
         .bind(record.provenance.trim())
         .bind(record.epistemic_state.as_str())
-        .bind(&record.created_at)
-        .bind(&record.expires_at)
+        .bind(record.created_at)
+        .bind(record.expires_at)
         .execute(&mut **tx)
         .await
         .map_err(db)?;

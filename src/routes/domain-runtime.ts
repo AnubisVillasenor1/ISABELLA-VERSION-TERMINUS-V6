@@ -4,25 +4,91 @@
  */
 import type { Application, Request, Response } from 'express';
 import type { FixedWindowRateLimiter } from '../security/rate-limit';
-import { resolveSemanticIntent, type CapabilityNode, type RouterPolicy } from '../domain-runtime/semantic-router';
+import {
+  resolveSemanticIntent,
+  type CapabilityNode,
+  type RouterPolicy,
+} from '../domain-runtime/semantic-router';
 import { createConfiguredEmbeddingProvider } from '../domain-runtime/embedding-providers';
 
 export interface DomainRuntimeRouteDeps {
   readonly app: Application;
-  readonly enforceRateLimit: (req: Request, res: Response, limiter: FixedWindowRateLimiter, bucket: string) => boolean;
+  readonly enforceRateLimit: (
+    req: Request,
+    res: Response,
+    limiter: FixedWindowRateLimiter,
+    bucket: string
+  ) => boolean;
   readonly rateLimiter: FixedWindowRateLimiter;
   readonly publicSurface?: string;
 }
 
 export const IDR_CAPABILITY_REGISTRY: readonly CapabilityNode[] = [
-  { id: 'cap.creator.draft', domainId: 'dom.creator-os', description: 'Planificar y redactar contenido para creadores', intents: ['crear contenido', 'redactar publicación', 'planificar contenido'], tags: ['creator', 'texto', 'planificación'], risk: 'low', estimatedCost: 0.01, enabled: true, external: false, piiAllowed: false, retention: 'session', requiresHumanApproval: false },
-  { id: 'cap.growth.analyze', domainId: 'dom.growth-engine', description: 'Analizar crecimiento, audiencia y rendimiento de contenido', intents: ['analizar crecimiento', 'métricas de audiencia', 'estrategia de crecimiento'], tags: ['growth', 'analytics', 'audiencia'], risk: 'low', estimatedCost: 0.02, enabled: true, external: false, piiAllowed: false, retention: 'session', requiresHumanApproval: false },
-  { id: 'cap.audio.analyze', domainId: 'dom.audio-intelligence', description: 'Analizar características espectrales y estructura de audio', intents: ['analizar audio', 'análisis espectral', 'evaluar sonido'], tags: ['audio', 'fft', 'espectro'], risk: 'low', estimatedCost: 0.02, enabled: true, external: false, piiAllowed: false, retention: 'session', requiresHumanApproval: false },
-  { id: 'cap.platform.plan', domainId: 'dom.sovereign-platform', description: 'Diseñar un plan de integración de capacidades y dominios soberanos', intents: ['integrar capacidades', 'plan de plataforma', 'arquitectura de dominios'], tags: ['platform', 'architecture', 'federation'], risk: 'medium', estimatedCost: 0.03, enabled: true, external: false, piiAllowed: false, retention: 'user-controlled', requiresHumanApproval: false },
+  {
+    id: 'cap.creator.draft',
+    domainId: 'dom.creator-os',
+    description: 'Planificar y redactar contenido para creadores',
+    intents: ['crear contenido', 'redactar publicación', 'planificar contenido'],
+    tags: ['creator', 'texto', 'planificación'],
+    risk: 'low',
+    estimatedCost: 0.01,
+    enabled: true,
+    external: false,
+    piiAllowed: false,
+    retention: 'session',
+    requiresHumanApproval: false,
+  },
+  {
+    id: 'cap.growth.analyze',
+    domainId: 'dom.growth-engine',
+    description: 'Analizar crecimiento, audiencia y rendimiento de contenido',
+    intents: ['analizar crecimiento', 'métricas de audiencia', 'estrategia de crecimiento'],
+    tags: ['growth', 'analytics', 'audiencia'],
+    risk: 'low',
+    estimatedCost: 0.02,
+    enabled: true,
+    external: false,
+    piiAllowed: false,
+    retention: 'session',
+    requiresHumanApproval: false,
+  },
+  {
+    id: 'cap.audio.analyze',
+    domainId: 'dom.audio-intelligence',
+    description: 'Analizar características espectrales y estructura de audio',
+    intents: ['analizar audio', 'análisis espectral', 'evaluar sonido'],
+    tags: ['audio', 'fft', 'espectro'],
+    risk: 'low',
+    estimatedCost: 0.02,
+    enabled: true,
+    external: false,
+    piiAllowed: false,
+    retention: 'session',
+    requiresHumanApproval: false,
+  },
+  {
+    id: 'cap.platform.plan',
+    domainId: 'dom.sovereign-platform',
+    description: 'Diseñar un plan de integración de capacidades y dominios soberanos',
+    intents: ['integrar capacidades', 'plan de plataforma', 'arquitectura de dominios'],
+    tags: ['platform', 'architecture', 'federation'],
+    risk: 'medium',
+    estimatedCost: 0.03,
+    enabled: true,
+    external: false,
+    piiAllowed: false,
+    retention: 'user-controlled',
+    requiresHumanApproval: false,
+  },
 ];
 
 const SERVER_POLICY: RouterPolicy = {
-  allowedDomains: ['dom.creator-os', 'dom.growth-engine', 'dom.audio-intelligence', 'dom.sovereign-platform'],
+  allowedDomains: [
+    'dom.creator-os',
+    'dom.growth-engine',
+    'dom.audio-intelligence',
+    'dom.sovereign-platform',
+  ],
   maxRisk: 'medium',
   allowExternal: false,
   allowPii: false,
@@ -35,7 +101,8 @@ const SERVER_POLICY: RouterPolicy = {
 
 function bodyOf(req: Request): Record<string, unknown> {
   return typeof req.body === 'object' && req.body !== null && !Array.isArray(req.body)
-    ? req.body as Record<string, unknown> : {};
+    ? (req.body as Record<string, unknown>)
+    : {};
 }
 
 export function registerDomainRuntimeRoutes(deps: DomainRuntimeRouteDeps): void {
@@ -52,7 +119,9 @@ export function registerDomainRuntimeRoutes(deps: DomainRuntimeRouteDeps): void 
       embeddingProvider: embedding.mode,
       embeddingModel: embedding.model,
       embeddingConfiguration: embedding.reason,
-      mode: embedding.provider ? 'hybrid-lexical-embedding-with-policy-gates' : 'deterministic-lexical',
+      mode: embedding.provider
+        ? 'hybrid-lexical-embedding-with-policy-gates'
+        : 'deterministic-lexical',
       production: false,
       executionPerformed: false,
     });
@@ -63,9 +132,11 @@ export function registerDomainRuntimeRoutes(deps: DomainRuntimeRouteDeps): void 
     const body = bodyOf(req);
     if (typeof body.intent !== 'string' || !body.intent.trim() || body.intent.length > 2000) {
       res.status(400).json({
-        success: false, error: 'INVALID_INTENT',
+        success: false,
+        error: 'INVALID_INTENT',
         message: 'intent debe ser texto no vacío de máximo 2000 caracteres',
-        production: false, executionPerformed: false,
+        production: false,
+        executionPerformed: false,
       });
       return;
     }
@@ -86,8 +157,10 @@ export function registerDomainRuntimeRoutes(deps: DomainRuntimeRouteDeps): void 
       });
     } catch {
       res.status(400).json({
-        success: false, error: 'INVALID_ROUTER_POLICY',
-        production: false, executionPerformed: false,
+        success: false,
+        error: 'INVALID_ROUTER_POLICY',
+        production: false,
+        executionPerformed: false,
       });
     }
   });

@@ -42,7 +42,16 @@ export const config: PidConfig = {
 };
 
 export function loadConfig(env: Record<string, string | undefined> = process.env): AppConfig {
-  const parsed = envSchema.safeParse(env);
+  const effectiveEnv = {
+    ...env,
+    DATABASE_URL:
+      env.DATABASE_URL?.trim() ||
+      env.POSTGRES_URL?.trim() ||
+      env.POSTGRES_PRISMA_URL?.trim() ||
+      env.POSTGRES_URL_NON_POOLING?.trim(),
+    APP_PUBLIC_URL: env.APP_PUBLIC_URL?.trim() || env.ISABELLA_PUBLIC_URL?.trim(),
+  };
+  const parsed = envSchema.safeParse(effectiveEnv);
   if (!parsed.success) {
     const issues = parsed.error.issues
       .map((i) => `${i.path.join('.') || 'env'}: ${i.message}`)
@@ -60,7 +69,10 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
       'GENESIS_HUMAN_APPROVER_ID',
     ];
 
-    const missing = required.filter((key) => !env[key] || env[key]!.trim().length === 0);
+    const missing = required.filter((key) => {
+      if (key === 'DATABASE_URL') return !config.DATABASE_URL;
+      return !env[key] || env[key]!.trim().length === 0;
+    });
     if (missing.length > 0) {
       throw new Error(`CONFIG_MISSING_PRODUCTION: ${missing.join(', ')}`);
     }

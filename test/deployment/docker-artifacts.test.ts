@@ -22,6 +22,11 @@ describe("container build artifact", () => {
     expect(dockerfile).toContain("pnpm install --frozen-lockfile --prod");
   });
 
+  it("requires production CORS origins from deployment configuration", () => {
+    expect(dockerfile).not.toMatch(/^\\s*ALLOWED_ORIGINS=/m);
+    expect(compose).toContain("ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:?define ALLOWED_ORIGINS in .env}");
+  });
+
   it("never references the workspace file absent from the repository", () => {
     expect(dockerfile).not.toContain("pnpm-workspace.yaml");
   });

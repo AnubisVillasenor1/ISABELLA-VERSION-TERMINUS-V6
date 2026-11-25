@@ -25,10 +25,20 @@ import { digest, SkillInputError } from './skills';
 // ── Taxonomy ───────────────────────────────────────────────────────────────
 
 export const INCIDENT_TAXONOMY = [
-  'information_integrity', 'malicious_use', 'bias', 'human_rights',
-  'unintended_autonomy', 'multi_agent', 'privacy', 'security',
-  'environmental', 'labor_displacement', 'concentration', 'transparency',
-  'accountability', 'safety',
+  'information_integrity',
+  'malicious_use',
+  'bias',
+  'human_rights',
+  'unintended_autonomy',
+  'multi_agent',
+  'privacy',
+  'security',
+  'environmental',
+  'labor_displacement',
+  'concentration',
+  'transparency',
+  'accountability',
+  'safety',
 ] as const;
 export type IncidentTaxonomy = (typeof INCIDENT_TAXONOMY)[number];
 
@@ -66,7 +76,13 @@ export class IncidentRegistry {
     if (!Number.isInteger(severity) || severity < 1 || severity > 5) {
       throw new SkillInputError('INVALID_SEVERITY', 'severity debe ser 1-5');
     }
-    const incidentId = digest({ t: tenantId, tax: taxonomy, sev: severity, h: horizonMonths, ts: status }).slice(0, 32);
+    const incidentId = digest({
+      t: tenantId,
+      tax: taxonomy,
+      sev: severity,
+      h: horizonMonths,
+      ts: status,
+    }).slice(0, 32);
     const incident: Incident = {
       incidentId,
       taxonomy: taxonomy as IncidentTaxonomy,
@@ -146,7 +162,8 @@ export class CrownOffice {
     safety: boolean,
     overrideHuman: string | null = null
   ): CrownDecision {
-    const verdict: 'ALLOW' | 'DENY' = identity && authority && policy && evidence && safety ? 'ALLOW' : 'DENY';
+    const verdict: 'ALLOW' | 'DENY' =
+      identity && authority && policy && evidence && safety ? 'ALLOW' : 'DENY';
     const decisionId = digest({ a: action, actor: actorDid, v: verdict }).slice(0, 32);
     const decision: CrownDecision = {
       decisionId,
@@ -192,7 +209,13 @@ export interface Standard {
 export class StandardsRegistry {
   private readonly standards: Standard[] = [];
 
-  register(standardId: string, source: string, title: string, status: string, gap: string | null): Standard {
+  register(
+    standardId: string,
+    source: string,
+    title: string,
+    status: string,
+    gap: string | null
+  ): Standard {
     const standard: Standard = {
       standardId,
       source,
@@ -228,7 +251,13 @@ export interface DataAsset {
 export class DataProvenance {
   private readonly assets: DataAsset[] = [];
 
-  register(assetId: string, source: string, consent: string, language: string, diversityScore: number): DataAsset {
+  register(
+    assetId: string,
+    source: string,
+    consent: string,
+    language: string,
+    diversityScore: number
+  ): DataAsset {
     const asset: DataAsset = {
       assetId,
       source,
@@ -275,7 +304,13 @@ export interface CapacityModule {
 export class CapacityRegistry {
   private readonly modules: CapacityModule[] = [];
 
-  register(moduleId: string, name: string, inSpanish: boolean, alcAligned: boolean, ods: readonly number[]): CapacityModule {
+  register(
+    moduleId: string,
+    name: string,
+    inSpanish: boolean,
+    alcAligned: boolean,
+    ods: readonly number[]
+  ): CapacityModule {
     const mod: CapacityModule = {
       moduleId,
       name,

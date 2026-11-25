@@ -61,8 +61,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
 # Environment
 ENV NODE_ENV=production \
     PORT=8080 \
-    HOST=0.0.0.0 \
-    ALLOWED_ORIGINS=http://localhost:8080
+    HOST=0.0.0.0
 
 # Expose port
 EXPOSE 8080
