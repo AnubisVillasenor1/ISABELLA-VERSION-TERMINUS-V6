@@ -1816,6 +1816,49 @@ body.chat-focus #chat .scroll-bottom { bottom: 140px; }
   .tamv-global-footer small { line-height: 1.4; }
 }
 
+.latamv-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; margin: 18px 0 24px; }
+.latamv-heading h2 { margin: 0; color: var(--crystal-text); font-size: clamp(30px, 5vw, 56px); line-height: 1; letter-spacing: -.045em; }
+.latamv-heading h2 em { color: var(--crystal-cyan); font-family: var(--font-serif); font-weight: 400; }
+.latamv-heading p:not(.eyebrow) { max-width: 690px; color: var(--crystal-muted); line-height: 1.65; }
+.latamv-state { flex: none; padding: 8px 10px; border: 1px solid rgba(255, 213, 138, .35); border-radius: 999px; color: #ffe1a8; font: 700 8px/1.2 var(--font-mono); letter-spacing: .1em; }
+.latamv-form { display: grid; gap: 20px; }
+.latamv-system-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.latamv-field-label { display: grid; gap: 7px; color: var(--crystal-muted); font: 700 9px/1.4 var(--font-mono); letter-spacing: .08em; }
+.latamv-field-label input, .latamv-field-label select { width: 100%; min-height: 42px; padding: 10px 12px; border: 1px solid var(--crystal-line); border-radius: 10px; background: rgba(4, 10, 17, .72); color: var(--crystal-text); font: 500 13px/1.4 system-ui, sans-serif; }
+.latamv-field-label input::placeholder { color: rgba(157, 176, 194, .62); }
+.latamv-field-label.is-required::after { content: "requerido para estado implementado"; color: #ffe1a8; font: 600 8px/1.2 var(--font-mono); }
+.latamv-pack-fieldset { min-width: 0; margin: 0; padding: 16px; border: 1px solid var(--crystal-line); border-radius: 14px; }
+.latamv-pack-fieldset legend { padding: 0 7px; color: var(--crystal-text); font: 700 10px/1.4 var(--font-mono); letter-spacing: .1em; }
+.latamv-pack-fieldset > p, .latamv-controls-heading p { color: var(--crystal-muted); font-size: 12px; line-height: 1.6; }
+.latamv-pack-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 8px; }
+.latamv-pack-option { display: flex; align-items: flex-start; gap: 10px; min-height: 60px; padding: 11px; border: 1px solid var(--crystal-line); border-radius: 10px; background: rgba(255,255,255,.025); cursor: pointer; }
+.latamv-pack-option input { margin: 3px 0 0; accent-color: var(--crystal-cyan); }
+.latamv-pack-copy { display: grid; gap: 4px; }
+.latamv-pack-copy strong { color: var(--crystal-text); font-size: 11px; }
+.latamv-pack-copy small { color: var(--crystal-muted); font: 500 8px/1.4 var(--font-mono); }
+.latamv-controls-heading { margin-top: 4px; }
+.latamv-controls-heading h3 { margin: 0; color: var(--crystal-text); font-size: 18px; }
+.latamv-control-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.latamv-control-card { min-width: 0; margin: 0; padding: 14px; border: 1px solid var(--crystal-line); border-radius: 13px; background: rgba(7, 14, 22, .65); }
+.latamv-control-card legend { max-width: 100%; padding: 0 6px; color: var(--crystal-cyan); font: 700 9px/1.5 var(--font-mono); letter-spacing: .04em; }
+.latamv-control-objective { min-height: 38px; margin: 0 0 12px; color: var(--crystal-muted); font-size: 11px; line-height: 1.5; }
+.latamv-control-card .latamv-field-label { margin-top: 10px; }
+.latamv-submit-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.latamv-submit-row p, #latamvStatus { margin: 0; color: var(--crystal-muted); font-size: 11px; }
+.latamv-result:not(:empty) { display: grid; gap: 12px; margin-top: 20px; padding: 16px; border: 1px solid var(--crystal-line); border-radius: 14px; background: rgba(7, 14, 22, .65); }
+.latamv-result-summary { display: grid; gap: 6px; color: var(--crystal-mint); }
+.latamv-result-summary.is-incomplete { color: #ffe1a8; }
+.latamv-result-summary strong { font: 750 12px/1.4 var(--font-mono); }
+.latamv-result-summary span, .latamv-claims, .latamv-disclaimer { margin: 0; color: var(--crystal-muted); font-size: 11px; line-height: 1.6; }
+.latamv-hash { display: grid; gap: 6px; margin: 0; color: var(--crystal-cyan); font: 700 8px/1.5 var(--font-mono); }
+.latamv-hash code { overflow-wrap: anywhere; color: var(--crystal-muted); font-weight: 500; }
+#latamvSubmit:disabled { opacity: .55; cursor: wait; }
+@media (max-width: 700px) {
+  .latamv-heading { flex-direction: column; }
+  .latamv-system-fields, .latamv-control-list { grid-template-columns: 1fr; }
+  .latamv-pack-list { grid-template-columns: 1fr; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; }
   .context-dot, .hero.hero-product::after, .core, .icon-button.is-listening, .reveal { animation: none !important; }

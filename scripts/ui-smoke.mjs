@@ -8,6 +8,7 @@ const chatPlus = fs.readFileSync('src/ui/chat-plus.js', 'utf8');
 const css = fs.readFileSync('src/ui/cinematic.css', 'utf8');
 const nexusCss = fs.readFileSync('src/ui/nexus.css', 'utf8');
 const nexusJs = fs.readFileSync('src/ui/nexus.js', 'utf8');
+const latamvJs = fs.readFileSync('src/ui/latamv.js', 'utf8');
 const server = fs.readFileSync('src/server.ts', 'utf8');
 const vercelConfig = JSON.parse(fs.readFileSync('vercel.json', 'utf8'));
 
@@ -44,6 +45,10 @@ assert.equal(vercelConfig.rewrites?.[0]?.destination, '/api', 'Vercel rewrite mu
 assert.ok(fs.existsSync('api/index.js'), 'The serverless Express entrypoint must exist');
 assert.ok(server.includes('serveAsset(req, res, htmlAsset'), 'The root UI must use the startup-cached, compressed HTML asset');
 assert.ok(server.includes("app.get('/ui/chat-plus.js'"), 'Runtime must serve the Chat+ enhancement layer');
+assert.ok(server.includes("app.get('/ui/latamv.js'"), 'Runtime must serve the LATAMV assessment client');
+assert.ok(fs.existsSync('src/ui/latamv.js') && !/innerHTML\\s*=/.test(latamvJs), 'LATAMV client must exist and construct accessible output without innerHTML');
+assert.ok(html.includes('id="latamvAssessmentForm"') && html.includes('/ui/latamv.js'), 'The real LATAMV evaluation form and client must be mounted in the control panel');
+assert.ok(latamvJs.includes("fetch('/api/v1/infinity/latamv/assess'"), 'The PEV UI must submit to the real assessment route');
 assert.ok(fs.existsSync('src/ui/chat-plus.js') && !/innerHTML\s*=/.test(chatPlus), 'Chat+ must exist and never assign innerHTML');
 assert.ok(fs.existsSync('src/assets/video/IntroVideoIsabella-web.mp4'), 'The fast-start web rendition of the intro must be present');
 assert.ok(server.includes("fs.readFileSync(path.join(uiPath, 'cinematic.css')"), 'The stylesheet route must serve the current CSS asset');

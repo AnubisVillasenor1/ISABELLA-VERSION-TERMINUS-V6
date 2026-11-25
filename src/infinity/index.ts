@@ -123,6 +123,23 @@ export {
 } from './cognitive-modulation';
 
 export {
+  LATAMV_CONTROL_IDS,
+  LATAMV_CONTROLS,
+  LatamvInputError,
+  assessLatamv,
+  listLatamvPacks,
+  type LatamvControlId,
+  type LatamvControlStatus,
+  type LatamvJurisdiction,
+  type LatamvControlDeclaration,
+  type LatamvAssessmentInput,
+  type LatamvControlDefinition,
+  type LatamvPack,
+  type LatamvAssessedControl,
+  type LatamvAssessmentResult,
+} from './latamv-governance';
+
+export {
   INCIDENT_TAXONOMY,
   IncidentRegistry,
   CrownOffice,

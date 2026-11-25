@@ -139,7 +139,7 @@ Un solo porcentaje, calculado por `scripts/production-progress.mjs` sobre cuatro
 
 ## Evidencia actual
 
-AVANCE_REAL_GLOBAL_PRODUCCION_DESPLIEGUE=19.8%
+AVANCE_REAL_GLOBAL_PRODUCCION_DESPLIEGUE=19.7%
 
 > Nota: esta cifra es la que calcula `scripts/production-progress.mjs` en este árbol (19.8 %). El avance ponderado global declarado es 62,6 % (ver §Avance medido). Ambas cifras son válidas en su contexto; la primera es el output del instrumento, la segunda es la estimación ponderada de producción. Ninguna es aptitud: con `health_readiness` en `failed` el sistema no es desplegable hoy.
 Mientras no exista un denominador de requisitos ponderados y reproducible, una cifra agregada sería especulación y no se presenta como hecho.

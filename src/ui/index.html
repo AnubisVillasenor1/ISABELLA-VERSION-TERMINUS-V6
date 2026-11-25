@@ -225,8 +225,21 @@
       <h2 id="design-title">Diseño y artefactos</h2><p>Espacio preparado para explorar documentos, interfaces y entregables junto a la conversación.</p>
     </section>
     <section id="control" class="workspace-pane control-pane" aria-labelledby="control-title">
-      <div class="pane-label">CONTROL SURFACE <span>REPLEGADO</span></div>
-      <h2 id="control-title">Panel de control</h2><p>Estado, gobernanza, herramientas y evidencia de la sesión activa.</p>
+      <div class="pane-label">LATAMV · PERFIL DE EVIDENCIA VERIFICABLE <span>EN REVISIÓN</span></div>
+      <div class="latamv-heading"><div><p class="eyebrow">GOBERNANZA · OCHO CONTROLES · PACKS JURISDICCIONALES</p><h2 id="control-title">Evaluación operativa<br><em>con registro durable.</em></h2><p>Genera y persiste perfiles PEV privados. El resultado organiza evidencia declarada; no determina cumplimiento legal ni autentica las referencias.</p></div><span class="latamv-state">BORRADOR · NO CERTIFICADO</span></div>
+      <form id="latamvAssessmentForm" class="latamv-form">
+        <label class="latamv-field-label" for="latamvAdminToken">Bearer administrativo de Isabella<input id="latamvAdminToken" name="adminToken" type="password" autocomplete="current-password" required /></label>
+        <div class="latamv-system-fields">
+          <label class="latamv-field-label" for="latamvSystemName">Sistema evaluado<input id="latamvSystemName" name="systemName" value="Isabella Villaseñor AI" maxlength="160" required /></label>
+          <label class="latamv-field-label" for="latamvSystemVersion">Versión<input id="latamvSystemVersion" name="systemVersion" value="Next-Gen draft" maxlength="80" required /></label>
+        </div>
+        <fieldset class="latamv-pack-fieldset"><legend>Jurisdicciones para revisión</legend><p>Selecciona todas las jurisdicciones relevantes. Cada pack permanece en estado de borrador.</p><div id="latamvPacks" class="latamv-pack-list"><span>Consultando packs desde el servidor…</span></div></fieldset>
+        <div class="latamv-controls-heading"><h3>Controles universales C1–C8</h3><p>“Implementado” es una declaración del operador, no una verificación independiente. Añade una referencia por control.</p></div>
+        <div id="latamvControls" class="latamv-control-list"><p role="status">Cargando controles…</p></div>
+        <div class="latamv-submit-row"><button id="latamvSubmit" class="primary" type="submit">EVALUAR Y GUARDAR PEV <span aria-hidden="true">↗</span></button><button id="latamvHistoryRefresh" type="button">CONSULTAR HISTORIAL</button><p id="latamvStatus" role="status" aria-live="polite">Esperando el catálogo del runtime…</p></div>
+      </form>
+      <section id="latamvResult" class="latamv-result" aria-label="Resultado de evaluación LATAMV" aria-live="polite"></section>
+      <section id="latamvHistory" class="latamv-result" aria-label="Historial de evaluaciones LATAMV"><h3>Evaluaciones persistidas</h3><p>El historial requiere autorización administrativa.</p></section>
     </section>
     <section id="nexus" class="nexus" aria-labelledby="nexus-title">
       <div class="nexus-head">
@@ -418,6 +431,7 @@
   <script src="/ui/chat-plus.js?v=enterprise-3" defer></script>
   <script src="/ui/nexus.js?v=nexus-1" defer></script>
   <script src="/ui/universe-map.js?v=universe-1" defer></script>
+  <script src="/ui/latamv.js?v=latamv-1" defer></script>
   <script>
     window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
   </script>

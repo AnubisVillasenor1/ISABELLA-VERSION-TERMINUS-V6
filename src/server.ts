@@ -136,8 +136,9 @@ import { registerAgentRoutes } from './routes/agents';
 import { registerDevAgentMeshRoutes } from './routes/agents-mesh';
 import { registerInfinityRoutes } from './routes/infinity';
 import { registerDomainRuntimeRoutes } from './routes/domain-runtime';
-import { EvolutionFabric } from './infinity';
-import { registerNexusRoutes } from './routes/nexus';
+  import { EvolutionFabric } from './infinity';
+  import { createLatamvAssessmentStoreFromEnv } from './infinity/latamv-store';
+  import { registerNexusRoutes } from './routes/nexus';
 import { createNexusRuntime } from './nexus/runtime';
 import { PLATFORM_PUBLIC_SURFACE, registerPlatformRoutes } from './routes/platform';
 
@@ -409,6 +410,7 @@ let chatPlusAsset: StaticAsset | null = null;
 let cognitionClientAsset: StaticAsset | null = null;
 let nexusJsAsset: StaticAsset | null = null;
 let universeMapAsset: StaticAsset | null = null;
+let latamvJsAsset: StaticAsset | null = null;
 try {
   const rawHtml = fs.readFileSync(path.join(uiPath, 'index.html'), 'utf-8');
   const cinematicCss = fs.readFileSync(path.join(uiPath, 'cinematic.css'), 'utf-8');
@@ -419,6 +421,7 @@ try {
   const cognitionClientJs = fs.readFileSync(path.join(uiPath, 'cognition-client.js'), 'utf-8');
   const nexusJs = fs.readFileSync(path.join(uiPath, 'nexus.js'), 'utf-8');
   const universeMapJs = fs.readFileSync(path.join(uiPath, 'universe-map.js'), 'utf-8');
+  const latamvJs = fs.readFileSync(path.join(uiPath, 'latamv.js'), 'utf-8');
   const versioned = rawHtml
     .replace(/(\/styles\/cinematic\.css)\?v=[^"']*/, `$1?v=${contentHash(cinematicCss)}`)
     .replace(/(\/styles\/command-center\.css)\?v=[^"']*/, `$1?v=${contentHash(commandCenterCss)}`)
@@ -427,7 +430,8 @@ try {
     .replace(/(\/ui\/app\.js)\?v=[^"']*/, `$1?v=${contentHash(cinematicJs)}`)
     .replace(/(\/ui\/chat-plus\.js)\?v=[^"']*/, `$1?v=${contentHash(chatPlusJs)}`)
     .replace(/(\/ui\/nexus\.js)\?v=[^"']*/, `$1?v=${contentHash(nexusJs)}`)
-    .replace(/(\/ui\/universe-map\.js)\?v=[^"']*/, `$1?v=${contentHash(universeMapJs)}`);
+    .replace(/(\/ui\/universe-map\.js)\?v=[^"']*/, `$1?v=${contentHash(universeMapJs)}`)
+    .replace(/(\/ui\/latamv\.js)\?v=[^"']*/, `$1?v=${contentHash(latamvJs)}`);
   htmlAsset = buildAsset(versioned, 'text/html; charset=utf-8');
   cssAsset = buildAsset(cinematicCss, 'text/css; charset=utf-8');
   commandCenterCssAsset = buildAsset(commandCenterCss, 'text/css; charset=utf-8');
@@ -437,6 +441,7 @@ try {
   cognitionClientAsset = buildAsset(cognitionClientJs, 'text/javascript; charset=utf-8');
   nexusJsAsset = buildAsset(nexusJs, 'text/javascript; charset=utf-8');
   universeMapAsset = buildAsset(universeMapJs, 'text/javascript; charset=utf-8');
+  latamvJsAsset = buildAsset(latamvJs, 'text/javascript; charset=utf-8');
 } catch {
   console.warn('[Genesis] Cinematic UI assets are unavailable at startup.');
 }
@@ -558,6 +563,13 @@ app.get('/ui/nexus.js', (req, res) => {
     return;
   }
   serveAsset(req, res, nexusJsAsset, IMMUTABLE_CACHE);
+});
+app.get('/ui/latamv.js', (req, res) => {
+  if (latamvJsAsset === null) {
+    res.status(404).type('js').send('// LATAMV client unavailable');
+    return;
+  }
+  serveAsset(req, res, latamvJsAsset, IMMUTABLE_CACHE);
 });
 app.get('/ui/universe-map.js', (req, res) => {
   if (universeMapAsset === null) {
@@ -6205,6 +6217,7 @@ registerInfinityRoutes({
   isAdminAuthorized: (req) =>
     verifyBearerToken(req.get('authorization'), process.env.GENESIS_ADMIN_API_TOKEN) ===
     'AUTHORIZED',
+  latamvAssessmentStore: createLatamvAssessmentStoreFromEnv(),
 });
 
 // IDR: intent-to-capability planning only; policy is server-owned and execution is disabled.

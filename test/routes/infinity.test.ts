@@ -3,15 +3,16 @@ import type { Application, Request, Response } from 'express';
 import type { FixedWindowRateLimiter } from '../../src/security/rate-limit';
 import { registerInfinityRoutes } from '../../src/routes/infinity';
 import { EvolutionFabric } from '../../src/infinity';
+import type { LatamvAssessmentStore, LatamvAssessmentRecord } from '../../src/infinity/latamv-store';
 
-type Handler = (req: Request, res: Response) => void;
+type Handler = (req: Request, res: Response) => void | Promise<void>;
 
 interface Captured {
   status: number;
   body: unknown;
 }
 
-function harness(options: { admin?: boolean; allow?: boolean } = {}) {
+function harness(options: { admin?: boolean; allow?: boolean; store?: LatamvAssessmentStore } = {}) {
   const handlers = new Map<string, Handler>();
   const app = {
     get: (path: string, handler: Handler) => handlers.set(`GET ${path}`, handler),
@@ -23,6 +24,7 @@ function harness(options: { admin?: boolean; allow?: boolean } = {}) {
     enforceRateLimit: () => options.allow ?? true,
     rateLimiter: {} as FixedWindowRateLimiter,
     isAdminAuthorized: () => options.admin ?? false,
+    latamvAssessmentStore: options.store,
   });
   return handlers;
 }
@@ -48,8 +50,40 @@ function call(
   body: Record<string, unknown> = {}
 ): Captured {
   const { res, captured } = makeRes();
-  handlers.get(key)!({ body, query: {}, get: () => undefined } as unknown as Request, res);
+  void handlers.get(key)!({ body, query: {}, get: () => undefined } as unknown as Request, res);
   return captured;
+}
+
+async function callAsync(
+  handlers: Map<string, Handler>,
+  key: string,
+  body: Record<string, unknown> = {},
+  query: Record<string, unknown> = {}
+): Promise<Captured> {
+  const { res, captured } = makeRes();
+  await handlers.get(key)!({ body, query, params: { assessmentId: 'route-assessment' }, get: () => undefined } as unknown as Request, res);
+  return captured;
+}
+
+function createFakeAssessmentStore(): LatamvAssessmentStore {
+  const rows: LatamvAssessmentRecord[] = [];
+  return {
+    async save(assessment) {
+      const record: LatamvAssessmentRecord = {
+        assessment_id: assessment.assessmentId,
+        system_name: assessment.system.name,
+        system_version: assessment.system.version,
+        jurisdictions: assessment.jurisdictions.map(({ id }) => id),
+        assessment,
+        assessment_hash: assessment.hash.value,
+        created_at: '2026-11-24T12:00:00.000Z',
+      };
+      rows.push(record);
+      return record;
+    },
+    async list() { return rows; },
+    async get(assessmentId) { return rows.find((row) => row.assessment_id === assessmentId) ?? null; },
+  };
 }
 
 const VECTORS = {
@@ -123,6 +157,79 @@ describe('Master Consolidated routes', () => {
     });
     expect(captured.status).toBe(400);
     expect((captured.body as { error: string }).error).toBe('INVALID_ACTION');
+  });
+
+  it('exposes draft packs and persists an authenticated LATAMV assessment', async () => {
+    const catalog = call(harness(), 'GET /api/v1/infinity/latamv');
+    const catalogBody = catalog.body as {
+      production: boolean;
+      executionPerformed: boolean;
+      controls: unknown[];
+      packs: Array<{ id: string; reviewRequired: boolean }>;
+    };
+    expect(catalogBody.production).toBe(false);
+    expect(catalogBody.executionPerformed).toBe(false);
+    expect(catalogBody.controls).toHaveLength(8);
+    expect(catalogBody.packs.map((pack) => pack.id)).toEqual(['EU', 'US', 'CN', 'LATAM', 'MX', 'SV']);
+    expect(catalogBody.packs.every((pack) => pack.reviewRequired)).toBe(true);
+
+    const assessed = await callAsync(harness({ admin: true, store: createFakeAssessmentStore() }), 'POST /api/v1/infinity/latamv/assess', {
+      assessmentId: 'route-assessment',
+      systemName: 'Isabella',
+      systemVersion: 'V6',
+      jurisdictions: ['MX'],
+      assessedAt: '2026-11-24T12:00:00.000Z',
+      controls: [],
+    });
+    const body = assessed.body as {
+      success: boolean;
+      summary: { state: string; completenessPercent: number };
+      claims: { legalConformity: string; signature: string; persistence: string };
+      production: boolean;
+      storedAt: string;
+    };
+    expect(assessed.status).toBe(201);
+    expect(body.success).toBe(true);
+    expect(body.summary.state).toBe('INCOMPLETE');
+    expect(body.summary.completenessPercent).toBe(0);
+    expect(body.claims.legalConformity).toBe('NOT_ASSESSED');
+    expect(body.claims.signature).toBe('UNSIGNED');
+    expect(body.claims.persistence).toBe('PERSISTED');
+    expect(body.storedAt).toBe('2026-11-24T12:00:00.000Z');
+    expect(body.production).toBe(false);
+  });
+
+  it('lists and retrieves persisted assessments only for authenticated operators', async () => {
+    const store = createFakeAssessmentStore();
+    const handlers = harness({ admin: true, store });
+    await callAsync(handlers, 'POST /api/v1/infinity/latamv/assess', {
+      assessmentId: 'route-assessment',
+      systemName: 'Isabella',
+      systemVersion: 'V6',
+      jurisdictions: ['MX'],
+      assessedAt: '2026-11-24T12:00:00.000Z',
+      controls: [],
+    });
+    const listed = await callAsync(handlers, 'GET /api/v1/infinity/latamv/assessments', {}, { limit: '1' });
+    expect(listed.status).toBe(200);
+    expect((listed.body as { count: number }).count).toBe(1);
+    const fetched = await callAsync(handlers, 'GET /api/v1/infinity/latamv/assessments/:assessmentId');
+    expect(fetched.status).toBe(200);
+    expect((fetched.body as { record: LatamvAssessmentRecord }).record.assessment_id).toBe('route-assessment');
+    const forbidden = await callAsync(harness({ store }), 'GET /api/v1/infinity/latamv/assessments');
+    expect(forbidden.status).toBe(401);
+  });
+
+  it('rejects unauthenticated and invalid LATAMV writes and enforces rate limiting', async () => {
+    const unauthenticated = await callAsync(harness(), 'POST /api/v1/infinity/latamv/assess', {});
+    expect(unauthenticated.status).toBe(401);
+
+    const invalid = await callAsync(harness({ admin: true, store: createFakeAssessmentStore() }), 'POST /api/v1/infinity/latamv/assess', { assessmentId: 'missing' });
+    expect(invalid.status).toBe(400);
+    expect((invalid.body as { error: string }).error).toBe('INVALID_LATAMV_ASSESSMENT');
+
+    const limited = call(harness({ allow: false }), 'POST /api/v1/infinity/latamv/assess', {});
+    expect(limited.body).toBeUndefined();
   });
 
   it('runs a native skill and reports no external calls', () => {

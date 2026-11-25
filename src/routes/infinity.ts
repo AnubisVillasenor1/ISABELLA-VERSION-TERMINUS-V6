@@ -9,9 +9,14 @@
  */
 import type { Application, Request, Response } from 'express';
 import type { FixedWindowRateLimiter } from '../security/rate-limit';
+import type { LatamvAssessmentStore } from '../infinity/latamv-store';
 import {
   describeInfinity,
   evaluateA2A,
+  assessLatamv,
+  LATAMV_CONTROLS,
+  listLatamvPacks,
+  LatamvInputError,
   evaluateConstitutional,
   generateDesignTokens,
   isDesignPalette,
@@ -52,6 +57,7 @@ export interface InfinityRouteDeps {
   readonly rateLimiter: FixedWindowRateLimiter;
   /** Server-side check of the administrative bearer token. Never reads the body. */
   readonly isAdminAuthorized: (req: Request) => boolean;
+  readonly latamvAssessmentStore?: LatamvAssessmentStore;
 }
 
 const DISCLAIMERS = [
@@ -131,6 +137,106 @@ export function registerInfinityRoutes(deps: InfinityRouteDeps): void {
       ...describeInfinity(),
       disclaimers: DISCLAIMERS,
     });
+  });
+
+  app.get('/api/v1/infinity/latamv', (req, res) => {
+    if (!deps.enforceRateLimit(req, res, deps.rateLimiter, 'infinity-latamv-catalog')) return;
+    res.json({
+      success: true,
+      version: INFINITY_ROUTES_VERSION,
+      production: false,
+      executionPerformed: false,
+      controls: LATAMV_CONTROLS,
+      packs: listLatamvPacks(),
+    });
+  });
+
+  app.post('/api/v1/infinity/latamv/assess', async (req, res) => {
+    if (!deps.enforceRateLimit(req, res, deps.rateLimiter, 'infinity-latamv-assess')) return;
+    if (!deps.isAdminAuthorized(req)) {
+      res.status(401).json({ success: false, error: 'ADMIN_AUTH_REQUIRED' });
+      return;
+    }
+    if (!deps.latamvAssessmentStore) {
+      res.status(503).json({ success: false, error: 'LATAMV_STORAGE_UNAVAILABLE' });
+      return;
+    }
+    try {
+      const assessed = assessLatamv(bodyOf(req));
+      const assessment = {
+        ...assessed,
+        claims: { ...assessed.claims, persistence: 'PERSISTED' as const },
+      };
+      const saved = await deps.latamvAssessmentStore.save(assessment);
+      res.status(201).json({
+        success: true,
+        version: INFINITY_ROUTES_VERSION,
+        ...assessment,
+        storedAt: saved.created_at,
+      });
+    } catch (error) {
+      const status = (error as { status?: number })?.status;
+      if (status === 409) {
+        res.status(409).json({ success: false, error: 'ASSESSMENT_ID_EXISTS' });
+        return;
+      }
+      if (error instanceof LatamvInputError) {
+        res.status(400).json({
+          success: false,
+          production: false,
+          executionPerformed: false,
+          error: error.code,
+          message: error.message,
+        });
+        return;
+      }
+      res.status(503).json({ success: false, error: 'LATAMV_STORAGE_UNAVAILABLE' });
+    }
+  });
+
+  app.get('/api/v1/infinity/latamv/assessments', async (req, res) => {
+    if (!deps.enforceRateLimit(req, res, deps.rateLimiter, 'infinity-latamv-history')) return;
+    if (!deps.isAdminAuthorized(req)) {
+      res.status(401).json({ success: false, error: 'ADMIN_AUTH_REQUIRED' });
+      return;
+    }
+    if (!deps.latamvAssessmentStore) {
+      res.status(503).json({ success: false, error: 'LATAMV_STORAGE_UNAVAILABLE' });
+      return;
+    }
+    const requestedLimit = Number(req.query.limit ?? 25);
+    if (!Number.isInteger(requestedLimit) || requestedLimit < 1 || requestedLimit > 100) {
+      res.status(400).json({ success: false, error: 'INVALID_LIMIT' });
+      return;
+    }
+    try {
+      const assessments = await deps.latamvAssessmentStore.list(requestedLimit);
+      res.json({ success: true, count: assessments.length, assessments });
+    } catch {
+      res.status(503).json({ success: false, error: 'LATAMV_STORAGE_UNAVAILABLE' });
+    }
+  });
+
+  app.get('/api/v1/infinity/latamv/assessments/:assessmentId', async (req, res) => {
+    if (!deps.enforceRateLimit(req, res, deps.rateLimiter, 'infinity-latamv-history-item')) return;
+    if (!deps.isAdminAuthorized(req)) {
+      res.status(401).json({ success: false, error: 'ADMIN_AUTH_REQUIRED' });
+      return;
+    }
+    if (!deps.latamvAssessmentStore) {
+      res.status(503).json({ success: false, error: 'LATAMV_STORAGE_UNAVAILABLE' });
+      return;
+    }
+    try {
+      const record = await deps.latamvAssessmentStore.get(req.params.assessmentId);
+      if (!record) {
+        res.status(404).json({ success: false, error: 'ASSESSMENT_NOT_FOUND' });
+        return;
+      }
+      res.json({ success: true, record });
+    } catch {
+      res.status(503).json({ success: false, error: 'LATAMV_STORAGE_UNAVAILABLE' });
+    }
   });
 
   app.post('/api/v1/infinity/constitution/evaluate', (req, res) => {
